@@ -7,7 +7,7 @@
  * 出力: results/judge.json, results/judge.md
  */
 import { execSync } from 'node:child_process';
-import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { loadMatrix, comboRunDirs, rootDir, resultsDir } from './lib.ts';
@@ -36,36 +36,55 @@ interface JudgeResult {
   error?: string;
 }
 
-const RUBRIC = `あなたはコード品質の審判です。cron 式パーサーの実装を採点してください。
+const RUBRIC = `あなたはコード品質の審判です。イベントソーシングの在庫管理ライブラリの実装を採点してください。
 
-仕様: 5 フィールド cron 式の解析（*、数値、リスト、範囲、ステップ、曜日 7=0 正規化）と、
-UTC 基準の次回実行時刻計算（strictly after、日/曜日両制限時は OR）。
+仕様: decide/evolve の純粋なドメイン層、EventStore ポートと InMemory 実装（楽観的並行性制御）、
+load → replay → decide → append の CommandHandler、イベントのみから構築する StockProjection。
 テストは既に全件通っている前提なので、テスト合否ではなく「コードの質」だけを見ること。
 
 採点観点（各 1-10 点）:
-- correctness: テストが覆っていないエッジケースへの正しさ（境界値、不正入力の網羅）
-- design: 構造の筋の良さ（責務分割、重複のなさ、データフローの明瞭さ）
+- correctness: テストが覆っていないエッジケースへの正しさ（境界値、不変条件の網羅）
+- design: アーキテクチャの筋の良さ（層分離、依存方向がドメイン→ポートに向いているか、
+  ドメインの純粋性、プロジェクションの独立性、モジュール分割の妥当性。
+  全部を 1 ファイルに詰め込んでいないか、逆に過剰分割していないか）
 - readability: 可読性（命名、複雑度、コメントの過不足）
-- robustness: 堅牢性（Fail Fast、フォールバックで誤魔化していないか、型の使い方）
+- robustness: 堅牢性（Fail Fast、フォールバックで誤魔化していないか、不変性の維持、型の使い方）
 - overall: 総合（上記の加重ではなく、このコードをレビューなしでマージできるかの度合い）
 
 summary は 1-2 文の総評、issues は具体的な問題点のリスト（なければ空配列）。`;
 
+/** ディレクトリ配下の .ts を再帰的に集め、パスヘッダ付きで連結する */
+function bundleSources(root: string): string {
+  const chunks: string[] = [];
+  const walk = (dir: string): void => {
+    for (const entry of readdirSync(dir, { withFileTypes: true })) {
+      const path = join(dir, entry.name);
+      if (entry.isDirectory()) {
+        walk(path);
+      } else if (entry.name.endsWith('.ts')) {
+        chunks.push(`// ===== ${path.slice(root.length + 1)} =====\n${readFileSync(path, 'utf-8')}`);
+      }
+    }
+  };
+  walk(root);
+  return chunks.join('\n\n');
+}
+
 function judgeOne(comboId: string, rep: number, dir: string): JudgeResult {
-  const codePath = join(dir, 'src', 'cron.ts');
-  if (!existsSync(codePath)) {
-    return { comboId, rep, judgeModel: JUDGE_MODEL, score: null, error: 'src/cron.ts not found' };
+  const srcDir = join(dir, 'src');
+  if (!existsSync(srcDir)) {
+    return { comboId, rep, judgeModel: JUDGE_MODEL, score: null, error: 'src/ not found' };
   }
-  const code = readFileSync(codePath, 'utf-8');
+  const code = bundleSources(srcDir);
   if (code.includes("throw new Error('Not implemented')")) {
     return { comboId, rep, judgeModel: JUDGE_MODEL, score: null, error: 'unimplemented (skeleton)' };
   }
-  const reference = readFileSync(join(rootDir, 'reference', 'cron-reference.ts'), 'utf-8');
+  const reference = bundleSources(join(rootDir, 'reference', 'src'));
 
   const prompt = [
     RUBRIC,
     '',
-    '--- 採点対象のコード (src/cron.ts) ---',
+    '--- 採点対象のコード（src/ 全ファイル、パスヘッダ付き） ---',
     '```typescript',
     code,
     '```',

@@ -1,3 +1,4 @@
-README.md の仕様に従って、src/cron.ts の parseCron と nextRun を実装してください。
-src/cron.test.ts の全テスト（40 件）が成功する状態にしてください。
-テストコード（src/cron.test.ts）の変更は禁止です。
+README.md の仕様と src/types.ts の公開契約に従って、イベントソーシングの在庫管理ライブラリを実装してください。
+tests/ 配下の全テスト（51 件）が成功する状態にしてください。
+テストコード（tests/）と src/types.ts の変更は禁止です。src/index.ts の公開 API シグネチャも変更禁止です。
+README の「アーキテクチャ要件」セクション（ドメインの純粋性、ポートへの依存、プロジェクションの独立性、モジュール分割）を守ってください。

@@ -2,7 +2,7 @@
 
 TAKT のプロバイダ/モデルの組み合わせをベンチマークするハーネス。
 
-同一の題材タスク（`subject/` の cron パーサー実装）を、`matrix.yaml` に定義した
+同一の題材タスク（`subject/` のイベントソーシング在庫管理ライブラリ実装）を、`matrix.yaml` に定義した
 プロバイダ/モデルの組み合わせ（combo）ごとに独立したディレクトリで TAKT に解かせ、
 客観メトリクス（テスト合否・型チェック・所要時間・トークン消費・差分規模）で比較する。
 
@@ -53,7 +53,7 @@ node scripts/collect.ts             # results/summary.{md,json} を出力
 
 | 指標 | 出所 | 意味 |
 |------|------|------|
-| テスト | combo ディレクトリで `vitest run` | 40 件中何件成功したか（成果の客観判定） |
+| テスト | combo ディレクトリで `vitest run` | 51 件中何件成功したか（成果の客観判定） |
 | 型 | `tsc --noEmit` | 型チェック合否 |
 | 所要時間 | `meta.run.json` | takt 実行のウォールクロック |
 | トークン | `.takt/runs/*/logs/*-usage-events.jsonl` | ステップ×プロバイダ×モデル別の消費量 |
@@ -68,5 +68,5 @@ node scripts/collect.ts             # results/summary.{md,json} を出力
 - 同一プロバイダを使う combo を並列実行すると rate limit で時間計測が歪む。
   時間を比較したいときは逐次（デフォルト）で流す。
 - トークン→金額の換算は TAKT は行わない。必要なら集計側で単価表を持つ。
-- テスト（`subject/src/cron.test.ts`)を変更したら `npm run verify-tests` で
-  参照実装（`reference/cron-reference.ts`）に対して全テストが通ることを必ず確認する。
+- テスト（`subject/tests/`）を変更したら `npm run verify-tests` で
+  参照実装（`reference/src/`）に対して全テストが通ることを必ず確認する。

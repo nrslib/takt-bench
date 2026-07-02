@@ -125,9 +125,12 @@ function collectUsage(dir: string): { usage: StepUsage[]; missing: number } {
 
 function collectDiff(dir: string): string {
   try {
-    const out = execSync('git diff HEAD --shortstat -- . ":(exclude).takt" ":(exclude).bench-test.json"', {
-      cwd: dir, stdio: 'pipe', encoding: 'utf-8',
-    });
+    // 新規モジュール（未追跡ファイル）も差分に含めるため、いったん index に載せて計測する
+    execSync('git add -A', { cwd: dir, stdio: 'pipe' });
+    const out = execSync(
+      'git diff --cached --shortstat -- . ":(exclude).takt" ":(exclude).bench-test.json" ":(exclude)meta.json"',
+      { cwd: dir, stdio: 'pipe', encoding: 'utf-8' },
+    );
     return out.trim() || '(no diff)';
   } catch {
     return '(git error)';
