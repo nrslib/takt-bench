@@ -1,13 +1,44 @@
 # ベンチマーク用ワークフロー。
 # provider / model は書かない — .takt/config.yaml の provider_routing.personas で
-# bench-coder / bench-reviewer ごとに差し替える（ここに直書きすると routing より優先され上書き不能になる）。
+# ペルソナごとに差し替える（ここに直書きすると routing より優先され上書き不能になる）。
+# レビューは takt-default（default-peer-review）ベースの 4 並列構成（pure-review は
+# 小規模題材では arch / supervise と重複するため除外）を builtin
+# ファセット（persona / policy / knowledge / instruction / output-contract）の
+# 3 層解決でそのまま使う。
 name: bench
-description: ベンチマーク用 implement → review → fix ループ
-max_steps: 10
+description: ベンチマーク用 implement → 並列レビュー（arch + ai-antipattern + coding + supervise） ⇄ fix ループ
+max_steps: 16
 initial_step: implement
+workflow_config:
+  provider_options:
+    codex:
+      network_access: true
+    opencode:
+      network_access: true
+
+loop_monitors:
+  - cycle:
+      - reviewers
+      - fix
+    threshold: 3
+    judge:
+      persona: supervisor
+      # judge は provider_routing の対象外（発火元ステップのプロバイダを継承する）
+      # ため、combo の coder モデルに judge が揺れないようここで固定する。
+      # 審査インフラでありベンチ変数ではないので直書きが正しい。
+      provider: codex
+      model: gpt-5.5
+      instruction: loop-monitor-reviewers-fix
+      rules:
+        - condition: 健全（指摘数が減少、修正が反映されている）
+          next: reviewers
+        - condition: 非生産的（同じ指摘が繰り返される）
+          next: ABORT
 
 steps:
   - name: implement
+    tags:
+      - coding
     persona: bench-coder
     instruction: bench-implement
     edit: true
@@ -16,26 +47,91 @@ steps:
       - "`npm run typecheck` を実行し、型エラーがないこと"
     rules:
       - condition: 実装完了
-        next: review
+        next: reviewers
       - condition: 実装を進められない（環境問題・情報不足）
         next: ABORT
 
-  - name: review
-    persona: bench-reviewer
-    policy: bench-review
-    instruction: bench-review
-    edit: false
-    output_contracts:
-      report:
-        - name: review.md
-          format: bench-review
+  - name: reviewers
+    tags:
+      - review
+    parallel:
+      - name: arch-review
+        tags:
+          - review
+        edit: false
+        persona: architecture-reviewer
+        policy: review
+        knowledge: architecture
+        instruction: review-arch
+        rules:
+          - condition: approved
+          - condition: needs_fix
+        output_contracts:
+          report:
+            - name: architect-review.md
+              format: architecture-review
+
+      - name: ai-antipattern-review
+        tags:
+          - review
+        edit: false
+        persona: ai-antipattern-reviewer
+        policy:
+          - review
+          - ai-antipattern
+        instruction: ai-antipattern-review
+        rules:
+          - condition: AI特有の問題なし
+          - condition: AI特有の問題あり
+        output_contracts:
+          report:
+            - name: ai-antipattern-review.md
+              format: ai-antipattern-review
+
+      - name: coding-review
+        tags:
+          - review
+        edit: false
+        persona: coding-reviewer
+        policy:
+          - review
+          - coding
+        pass_previous_response: false
+        instruction: review-coding
+        rules:
+          - condition: approved
+          - condition: needs_fix
+        output_contracts:
+          report:
+            - name: coding-review.md
+              format: coding-review
+
+      - name: supervise
+        tags:
+          - review
+        edit: false
+        persona: supervisor
+        policy: review
+        instruction: supervise
+        rules:
+          - condition: すべて問題なし
+          - condition: 要求未達成、テスト失敗、ビルドエラー
+        output_contracts:
+          report:
+            - name: supervisor-validation.md
+              format: supervisor-validation
+            - name: summary.md
+              format: summary
+              use_judge: false
     rules:
-      - condition: APPROVE（要修正の指摘なし）
+      - condition: all("approved", "AI特有の問題なし", "approved", "すべて問題なし")
         next: COMPLETE
-      - condition: REJECT（要修正の指摘あり）
+      - condition: any("needs_fix", "AI特有の問題あり", "needs_fix", "要求未達成、テスト失敗、ビルドエラー")
         next: fix
 
   - name: fix
+    tags:
+      - coding
     persona: bench-coder
     instruction: bench-fix
     edit: true
@@ -44,6 +140,6 @@ steps:
       - "`npm run typecheck` を実行し、型エラーがないこと"
     rules:
       - condition: 修正完了
-        next: review
+        next: reviewers
       - condition: 修正を進められない
         next: ABORT

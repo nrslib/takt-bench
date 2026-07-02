@@ -1,31 +1,34 @@
 # ベンチマークマトリクス定義。
-# routing.personas は各 combo ディレクトリの .takt/config.yaml の
-# provider_routing.personas にそのまま書き込まれる。
-# キーはワークフローステップの persona キー（bench-coder / bench-reviewer）。
+# routing はタグ単位（provider_routing.tags）。ワークフロー側のステップに
+# coding（implement / fix）と review（レビュー4本 + supervise）のタグを
+# 付けてあり、combo は「coding タグ = コーダー」だけを差し替える。
+# review タグは全 combo で codex (gpt-5.5) に固定し、審査条件を一定にする。
+# loop monitor の judge は provider_routing を通らないため、workflow 側で
+# codex に直接固定してある（bench.yaml の loop_monitors 参照）。
 workflow: bench
 task_file: task.md
 repetitions: 1
 
 combos:
   - id: codex-all
-    description: coder / reviewer とも codex (gpt-5.5)
+    description: coder も codex (gpt-5.5)。レビュアーも codex
     routing:
-      personas:
-        bench-coder: { provider: codex, model: gpt-5.5 }
-        bench-reviewer: { provider: codex, model: gpt-5.5 }
+      tags:
+        coding: { provider: codex, model: gpt-5.5 }
+        review: { provider: codex, model: gpt-5.5 }
 
   - id: qwen-coder
-    description: coder のみ Qwen3-Coder-next、reviewer は codex (gpt-5.5)
+    description: coder のみ Qwen3-Coder-next。レビュアーは codex (gpt-5.5)
     routing:
-      personas:
-        bench-coder: { provider: opencode, model: ollama-cloud/qwen3-coder-next }
-        bench-reviewer: { provider: codex, model: gpt-5.5 }
+      tags:
+        coding: { provider: opencode, model: ollama-cloud/qwen3-coder-next }
+        review: { provider: codex, model: gpt-5.5 }
 
 # ハーネス疎通確認用（--smoke 指定時のみ生成・実行、API 消費なし）
 smoke:
   id: mock-smoke
   description: mock プロバイダによるハーネス疎通確認
   routing:
-    personas:
-      bench-coder: { provider: mock }
-      bench-reviewer: { provider: mock }
+    tags:
+      coding: { provider: mock }
+      review: { provider: mock }

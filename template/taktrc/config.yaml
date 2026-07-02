@@ -1,5 +1,12 @@
 # ベンチ実行用の TAKT グローバル設定（TAKT_CONFIG_DIR でこのディレクトリを指す）。
 # ~/.takt を汚さず、実験条件を固定するために独立させている。
+#
+# provider/model は engine レベルのフォールバック。実際のステップ割り当ては
+# 各 combo の provider_routing.personas が優先される。ここを codex に固定して
+# いるのは、並列レビューの usage-events が親ステップ名義でこのフォールバック
+# ラベルで記録されるため（レビュアーは全 combo で codex 固定 = ラベルが実態と一致）。
 language: ja
+provider: codex
+model: gpt-5.5
 logging:
   usage_events: true

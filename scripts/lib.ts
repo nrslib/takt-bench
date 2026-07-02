@@ -11,8 +11,11 @@ export interface PersonaRouting {
 export interface Combo {
   id: string;
   description?: string;
+  /** provider_routing にそのまま書き込む（tags / personas / steps） */
   routing: {
-    personas: Record<string, PersonaRouting>;
+    tags?: Record<string, PersonaRouting>;
+    personas?: Record<string, PersonaRouting>;
+    steps?: Record<string, PersonaRouting>;
   };
 }
 

@@ -1,0 +1,14 @@
+{
+  "type": "object",
+  "properties": {
+    "correctness": { "type": "integer", "minimum": 1, "maximum": 10 },
+    "design": { "type": "integer", "minimum": 1, "maximum": 10 },
+    "readability": { "type": "integer", "minimum": 1, "maximum": 10 },
+    "robustness": { "type": "integer", "minimum": 1, "maximum": 10 },
+    "overall": { "type": "integer", "minimum": 1, "maximum": 10 },
+    "summary": { "type": "string" },
+    "issues": { "type": "array", "items": { "type": "string" } }
+  },
+  "required": ["correctness", "design", "readability", "robustness", "overall", "summary", "issues"],
+  "additionalProperties": false
+}

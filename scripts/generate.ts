@@ -27,9 +27,7 @@ function sh(cmd: string, cwd: string): void {
 
 function buildProjectConfig(combo: Combo): string {
   return stringify({
-    provider_routing: {
-      personas: combo.routing.personas,
-    },
+    provider_routing: combo.routing,
     observability: {
       enabled: true,
       monitor: true,
