@@ -1,0 +1,10 @@
+[
+  { "status": "done", "content": "実装しました。\n[IMPLEMENT:1]" },
+  { "status": "done", "content": "[IMPLEMENT:1]" },
+  { "status": "done", "content": "# レビュー結果\n## 結果: APPROVE\nサマリー: 問題なし。\n[REVIEW:1]" },
+  { "status": "done", "content": "# レビュー結果\n## 結果: APPROVE\nサマリー: 問題なし。" },
+  { "status": "done", "content": "[REVIEW:1]" },
+  { "status": "done", "content": "[IMPLEMENT:1] [REVIEW:1] [FIX:1]" },
+  { "status": "done", "content": "[IMPLEMENT:1] [REVIEW:1] [FIX:1]" },
+  { "status": "done", "content": "[IMPLEMENT:1] [REVIEW:1] [FIX:1]" }
+]

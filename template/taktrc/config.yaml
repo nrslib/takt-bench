@@ -1,0 +1,5 @@
+# ベンチ実行用の TAKT グローバル設定（TAKT_CONFIG_DIR でこのディレクトリを指す）。
+# ~/.takt を汚さず、実験条件を固定するために独立させている。
+language: ja
+logging:
+  usage_events: true

@@ -1,0 +1,15 @@
+{
+  "name": "takt-bench",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "generate": "node scripts/generate.ts",
+    "bench": "node scripts/run.ts",
+    "collect": "node scripts/collect.ts",
+    "verify-tests": "bash scripts/verify-tests.sh"
+  },
+  "dependencies": {
+    "yaml": "^2.6.0"
+  }
+}

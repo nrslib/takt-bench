@@ -1,0 +1,49 @@
+# ベンチマーク用ワークフロー。
+# provider / model は書かない — .takt/config.yaml の provider_routing.personas で
+# bench-coder / bench-reviewer ごとに差し替える（ここに直書きすると routing より優先され上書き不能になる）。
+name: bench
+description: ベンチマーク用 implement → review → fix ループ
+max_steps: 10
+initial_step: implement
+
+steps:
+  - name: implement
+    persona: bench-coder
+    instruction: bench-implement
+    edit: true
+    quality_gates:
+      - "`npm test` を実行し、全テストが成功すること"
+      - "`npm run typecheck` を実行し、型エラーがないこと"
+    rules:
+      - condition: 実装完了
+        next: review
+      - condition: 実装を進められない（環境問題・情報不足）
+        next: ABORT
+
+  - name: review
+    persona: bench-reviewer
+    policy: bench-review
+    instruction: bench-review
+    edit: false
+    output_contracts:
+      report:
+        - name: review.md
+          format: bench-review
+    rules:
+      - condition: APPROVE（要修正の指摘なし）
+        next: COMPLETE
+      - condition: REJECT（要修正の指摘あり）
+        next: fix
+
+  - name: fix
+    persona: bench-coder
+    instruction: bench-fix
+    edit: true
+    quality_gates:
+      - "`npm test` を実行し、全テストが成功すること"
+      - "`npm run typecheck` を実行し、型エラーがないこと"
+    rules:
+      - condition: 修正完了
+        next: review
+      - condition: 修正を進められない
+        next: ABORT

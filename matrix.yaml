@@ -1,0 +1,31 @@
+# ベンチマークマトリクス定義。
+# routing.personas は各 combo ディレクトリの .takt/config.yaml の
+# provider_routing.personas にそのまま書き込まれる。
+# キーはワークフローステップの persona キー（bench-coder / bench-reviewer）。
+workflow: bench
+task_file: task.md
+repetitions: 1
+
+combos:
+  - id: codex-all
+    description: coder / reviewer とも codex (gpt-5.5)
+    routing:
+      personas:
+        bench-coder: { provider: codex, model: gpt-5.5 }
+        bench-reviewer: { provider: codex, model: gpt-5.5 }
+
+  - id: qwen-coder
+    description: coder のみ Qwen3-Coder-next、reviewer は codex (gpt-5.5)
+    routing:
+      personas:
+        bench-coder: { provider: opencode, model: ollama-cloud/qwen3-coder-next }
+        bench-reviewer: { provider: codex, model: gpt-5.5 }
+
+# ハーネス疎通確認用（--smoke 指定時のみ生成・実行、API 消費なし）
+smoke:
+  id: mock-smoke
+  description: mock プロバイダによるハーネス疎通確認
+  routing:
+    personas:
+      bench-coder: { provider: mock }
+      bench-reviewer: { provider: mock }
