@@ -24,6 +24,27 @@ combos:
         coding: { provider: opencode, model: ollama-cloud/qwen3-coder-next }
         review: { provider: codex, model: gpt-5.5 }
 
+  - id: qwen-coder_gemma-reviewer
+    description: coder は Qwen3-Coder-next、レビュアーは Gemma 4 31B（どちらも ollama-cloud）。レビュアー品質の比較用で、review 固定の他 combo とは比較軸が異なる
+    routing:
+      tags:
+        coding: { provider: opencode, model: ollama-cloud/qwen3-coder-next }
+        review: { provider: opencode, model: ollama-cloud/gemma4:31b }
+
+  - id: qwen-coder_qwen-coder-reviewer
+    description: coder もレビュアーも Qwen3-Coder-next。コーダー特化モデルをレビューに転用するミスマッチ検証（当初の「coder 系はレビューで幻覚する」仮説の有効測定）
+    routing:
+      tags:
+        coding: { provider: opencode, model: ollama-cloud/qwen3-coder-next }
+        review: { provider: opencode, model: ollama-cloud/qwen3-coder-next }
+
+  - id: qwen-coder_qwen-instruct-reviewer
+    description: coder は Qwen3-Coder-next、レビュアーは Qwen3.5 397B instruct（ollama-cloud）。コーダー系ではなく instruct 系をレビュアーに立てる実験
+    routing:
+      tags:
+        coding: { provider: opencode, model: ollama-cloud/qwen3-coder-next }
+        review: { provider: opencode, model: ollama-cloud/qwen3.5:397b }
+
 # ハーネス疎通確認用（--smoke 指定時のみ生成・実行、API 消費なし）
 smoke:
   id: mock-smoke
