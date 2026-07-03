@@ -1,0 +1,48 @@
+# 2周目挙動の A/B: ベース facet vs 再走査強制 facet（実験③）
+description: 2周目レビューで前回指摘の答え合わせに留まらず新規欠陥を検出できるか
+prompts:
+  - id: file://prompts/round2-base.txt
+    label: base-facet
+  - id: file://prompts/round2-rescan.txt
+    label: rescan-facet
+providers:
+  - id: 'exec: bash providers/gemma.sh'
+    label: gemma4-31b
+  - id: 'exec: bash providers/qwen-coder-next.sh'
+    label: qwen3-coder-next
+  - id: 'exec: bash providers/qwen-instruct.sh'
+    label: qwen3.5-397b
+defaultTest:
+  vars:
+    code: file://fixtures/flawed-index.ts.txt
+    previous_report: file://fixtures/previous-report.md
+tests:
+  - description: 既知欠陥の検出と幻覚チェック
+    assert:
+      - type: javascript
+        value: "/(出荷|Ship)/i.test(output) && /(全予約|予約合計|reserved 全体|すべての予約|全ての予約|reservations = \\{\\}|reserved = 0|合計を減算|全額|全量)/.test(output)"
+        metric: T1-ship-bug
+      - type: javascript
+        value: "/version/.test(output) && /(二重|重複|別々|導出|events\\.length|配列長|配列の長さ)/.test(output)"
+        metric: T3-version-dual
+      - type: javascript
+        value: "/(分割|単一ファイル|モノリ|複数の責務|1ファイル|一つのファイル)/.test(output)"
+        metric: T5-monolith
+      - type: javascript
+        value: "/initialState/.test(output) && /(freeze|可変|mutable|変更可能|不変|readonly|凍結)/i.test(output)"
+        metric: T6-mutable-initstate
+      - type: javascript
+        value: |
+          return (() => {
+            const cited = [...output.matchAll(/src\/[\w./-]+\.ts/g)].map(m => m[0]);
+            const allowed = new Set(['src/index.ts', 'src/types.ts']);
+            const bad = cited.filter(c => !allowed.has(c));
+            return bad.length === 0 || `捏造引用: ${bad.join(', ')}`;
+          })()
+        metric: no-hallucinated-files
+      - type: javascript
+        value: "/## 結果: *(REJECT|IMPROVE)/.test(output)"
+        metric: verdict-reject
+      - type: javascript
+        value: "/再走査証跡/.test(output)"
+        metric: rescan-evidence-table

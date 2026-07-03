@@ -1,0 +1,3249 @@
+[
+  {
+    "comboId": "qwen-coder",
+    "rep": 1,
+    "reviewerRouting": "{\"provider\":\"codex\",\"model\":\"gpt-5.5\"}",
+    "mechanical": {
+      "citations": [
+        {
+          "report": "ai-antipattern-review.md",
+          "round": "final",
+          "citation": "`src/types.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "ai-antipattern-review.md",
+          "round": "final",
+          "citation": "`src/in-memory-event-store.ts:17`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "ai-antipattern-review.md",
+          "round": "20260703T060302Z",
+          "citation": "`src/index.ts:158`",
+          "fileExists": true,
+          "lineInRange": false
+        },
+        {
+          "report": "ai-antipattern-review.md",
+          "round": "20260703T060302Z",
+          "citation": "`src/types.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "ai-antipattern-review.md",
+          "round": "20260703T060302Z",
+          "citation": "`src/types.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "ai-antipattern-review.md",
+          "round": "20260703T060302Z",
+          "citation": "`src/index.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "ai-antipattern-review.md",
+          "round": "20260703T060302Z",
+          "citation": "`src/index.ts:226`",
+          "fileExists": true,
+          "lineInRange": false
+        },
+        {
+          "report": "ai-antipattern-review.md",
+          "round": "20260703T060302Z",
+          "citation": "`src/index.ts:264`",
+          "fileExists": true,
+          "lineInRange": false
+        },
+        {
+          "report": "ai-antipattern-review.md",
+          "round": "20260703T060302Z",
+          "citation": "`src/index.ts:69`",
+          "fileExists": true,
+          "lineInRange": false
+        },
+        {
+          "report": "ai-antipattern-review.md",
+          "round": "20260703T060839Z",
+          "citation": "`src/stock-projection.ts:46`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "ai-antipattern-review.md",
+          "round": "20260703T060839Z",
+          "citation": "`src/domain.ts:55`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "ai-antipattern-review.md",
+          "round": "20260703T060839Z",
+          "citation": "`src/types.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "ai-antipattern-review.md",
+          "round": "20260703T060839Z",
+          "citation": "`src/types.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "ai-antipattern-review.md",
+          "round": "20260703T060839Z",
+          "citation": "`src/index.ts:1`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "ai-antipattern-review.md",
+          "round": "20260703T060839Z",
+          "citation": "`src/command-handler.ts:1`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "ai-antipattern-review.md",
+          "round": "20260703T060839Z",
+          "citation": "`src/domain.ts:56`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "ai-antipattern-review.md",
+          "round": "20260703T060839Z",
+          "citation": "`src/index.ts:264`",
+          "fileExists": true,
+          "lineInRange": false
+        },
+        {
+          "report": "ai-antipattern-review.md",
+          "round": "20260703T060839Z",
+          "citation": "`src/stock-projection.ts:85`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "ai-antipattern-review.md",
+          "round": "20260703T060839Z",
+          "citation": "`src/stock-projection.ts:46`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "ai-antipattern-review.md",
+          "round": "20260703T061805Z",
+          "citation": "`src/index.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "ai-antipattern-review.md",
+          "round": "20260703T061805Z",
+          "citation": "`src/command-handler.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "ai-antipattern-review.md",
+          "round": "20260703T061805Z",
+          "citation": "`src/index.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "ai-antipattern-review.md",
+          "round": "20260703T061805Z",
+          "citation": "`src/index.ts:1`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "ai-antipattern-review.md",
+          "round": "20260703T061805Z",
+          "citation": "`src/command-handler.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "ai-antipattern-review.md",
+          "round": "20260703T061805Z",
+          "citation": "`src/command-handler.ts:1`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "ai-antipattern-review.md",
+          "round": "20260703T061805Z",
+          "citation": "`src/types.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "ai-antipattern-review.md",
+          "round": "20260703T061805Z",
+          "citation": "`src/types.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "ai-antipattern-review.md",
+          "round": "20260703T061805Z",
+          "citation": "`src/stock-projection.ts:85`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "ai-antipattern-review.md",
+          "round": "20260703T061805Z",
+          "citation": "`src/stock-projection.ts:85`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "ai-antipattern-review.md",
+          "round": "20260703T061805Z",
+          "citation": "`src/domain.ts:56`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "ai-antipattern-review.md",
+          "round": "20260703T061805Z",
+          "citation": "`src/domain.ts:56`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "ai-antipattern-review.md",
+          "round": "20260703T061805Z",
+          "citation": "`src/command-handler.ts:1`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "ai-antipattern-review.md",
+          "round": "20260703T061805Z",
+          "citation": "`src/stock-projection.ts:46`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "ai-antipattern-review.md",
+          "round": "20260703T062250Z",
+          "citation": "`src/types.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "ai-antipattern-review.md",
+          "round": "20260703T062250Z",
+          "citation": "`src/stock-projection.ts:85`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "ai-antipattern-review.md",
+          "round": "20260703T062250Z",
+          "citation": "`src/types.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "ai-antipattern-review.md",
+          "round": "20260703T062701Z",
+          "citation": "`src/domain.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "ai-antipattern-review.md",
+          "round": "20260703T062701Z",
+          "citation": "`src/types.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "ai-antipattern-review.md",
+          "round": "20260703T062701Z",
+          "citation": "`src/domain.ts:56`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "architect-review.md",
+          "round": "20260703T060145Z",
+          "citation": "`src/index.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "architect-review.md",
+          "round": "20260703T060145Z",
+          "citation": "`src/index.ts:25`",
+          "fileExists": true,
+          "lineInRange": false
+        },
+        {
+          "report": "architect-review.md",
+          "round": "20260703T060145Z",
+          "citation": "`src/index.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "architect-review.md",
+          "round": "20260703T060145Z",
+          "citation": "`src/domain.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "architect-review.md",
+          "round": "20260703T060145Z",
+          "citation": "`src/in-memory-event-store.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "architect-review.md",
+          "round": "20260703T060145Z",
+          "citation": "`src/command-handler.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "architect-review.md",
+          "round": "20260703T060145Z",
+          "citation": "`src/stock-projection.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "architect-review.md",
+          "round": "20260703T060145Z",
+          "citation": "`src/index.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "architect-review.md",
+          "round": "20260703T060145Z",
+          "citation": "`src/index.ts:221`",
+          "fileExists": true,
+          "lineInRange": false
+        },
+        {
+          "report": "architect-review.md",
+          "round": "20260703T060145Z",
+          "citation": "`src/index.ts:69`",
+          "fileExists": true,
+          "lineInRange": false
+        },
+        {
+          "report": "architect-review.md",
+          "round": "20260703T060727Z",
+          "citation": "`src/index.ts:1`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "architect-review.md",
+          "round": "20260703T060727Z",
+          "citation": "`src/command-handler.ts:1`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "architect-review.md",
+          "round": "20260703T060727Z",
+          "citation": "`src/index.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "architect-review.md",
+          "round": "20260703T060727Z",
+          "citation": "`src/command-handler.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "architect-review.md",
+          "round": "20260703T060727Z",
+          "citation": "`src/index.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "architect-review.md",
+          "round": "20260703T060727Z",
+          "citation": "`src/command-handler.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "architect-review.md",
+          "round": "20260703T060727Z",
+          "citation": "`src/domain.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "architect-review.md",
+          "round": "20260703T060727Z",
+          "citation": "`src/in-memory-event-store.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "architect-review.md",
+          "round": "20260703T060727Z",
+          "citation": "`src/command-handler.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "architect-review.md",
+          "round": "20260703T060727Z",
+          "citation": "`src/stock-projection.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "architect-review.md",
+          "round": "20260703T060727Z",
+          "citation": "`src/types.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "architect-review.md",
+          "round": "20260703T060727Z",
+          "citation": "`src/index.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "architect-review.md",
+          "round": "20260703T062220Z",
+          "citation": "`src/domain.ts:55`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "architect-review.md",
+          "round": "20260703T062220Z",
+          "citation": "`src/domain.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "architect-review.md",
+          "round": "20260703T062220Z",
+          "citation": "`src/in-memory-event-store.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "architect-review.md",
+          "round": "20260703T062220Z",
+          "citation": "`src/command-handler.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "architect-review.md",
+          "round": "20260703T062220Z",
+          "citation": "`src/stock-projection.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "architect-review.md",
+          "round": "20260703T062220Z",
+          "citation": "`src/command-handler.ts:1`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "architect-review.md",
+          "round": "20260703T062220Z",
+          "citation": "`src/types.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "architect-review.md",
+          "round": "20260703T062646Z",
+          "citation": "`src/domain.ts:55`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "architect-review.md",
+          "round": "20260703T062646Z",
+          "citation": "`src/index.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "architect-review.md",
+          "round": "20260703T062646Z",
+          "citation": "`src/command-handler.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "coding-review.md",
+          "round": "final",
+          "citation": "`src/types.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "coding-review.md",
+          "round": "final",
+          "citation": "`src/stock-projection.ts:46`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "coding-review.md",
+          "round": "final",
+          "citation": "`src/index.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "coding-review.md",
+          "round": "final",
+          "citation": "`src/domain.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "coding-review.md",
+          "round": "final",
+          "citation": "`src/command-handler.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "coding-review.md",
+          "round": "final",
+          "citation": "`src/stock-projection.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "coding-review.md",
+          "round": "20260703T060140Z",
+          "citation": "`src/index.ts:226`",
+          "fileExists": true,
+          "lineInRange": false
+        },
+        {
+          "report": "coding-review.md",
+          "round": "20260703T060140Z",
+          "citation": "`src/index.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "coding-review.md",
+          "round": "20260703T060140Z",
+          "citation": "`tests/projection.test.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "coding-review.md",
+          "round": "20260703T060721Z",
+          "citation": "`src/stock-projection.ts:46`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "coding-review.md",
+          "round": "20260703T060721Z",
+          "citation": "`src/index.ts:1`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "coding-review.md",
+          "round": "20260703T060721Z",
+          "citation": "`src/command-handler.ts:1`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "coding-review.md",
+          "round": "20260703T060721Z",
+          "citation": "`src/domain.ts:56`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "coding-review.md",
+          "round": "20260703T060721Z",
+          "citation": "`src/index.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "coding-review.md",
+          "round": "20260703T060721Z",
+          "citation": "`src/index.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "coding-review.md",
+          "round": "20260703T060721Z",
+          "citation": "`src/command-handler.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "coding-review.md",
+          "round": "20260703T060721Z",
+          "citation": "`src/stock-projection.ts:46`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "coding-review.md",
+          "round": "20260703T060721Z",
+          "citation": "`src/index.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "coding-review.md",
+          "round": "20260703T060721Z",
+          "citation": "`src/domain.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "coding-review.md",
+          "round": "20260703T060721Z",
+          "citation": "`src/command-handler.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "coding-review.md",
+          "round": "20260703T060721Z",
+          "citation": "`src/in-memory-event-store.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "coding-review.md",
+          "round": "20260703T060721Z",
+          "citation": "`src/stock-projection.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "coding-review.md",
+          "round": "20260703T060721Z",
+          "citation": "`src/types.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "coding-review.md",
+          "round": "20260703T061553Z",
+          "citation": "`src/domain.ts:56`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "coding-review.md",
+          "round": "20260703T061553Z",
+          "citation": "`src/index.ts:1`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "coding-review.md",
+          "round": "20260703T061553Z",
+          "citation": "`src/command-handler.ts:1`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "coding-review.md",
+          "round": "20260703T061553Z",
+          "citation": "`src/domain.ts:56`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "coding-review.md",
+          "round": "20260703T061553Z",
+          "citation": "`src/domain.ts:56`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "coding-review.md",
+          "round": "20260703T061553Z",
+          "citation": "`src/stock-projection.ts:46`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "coding-review.md",
+          "round": "20260703T061553Z",
+          "citation": "`src/index.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "coding-review.md",
+          "round": "20260703T061553Z",
+          "citation": "`src/domain.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "coding-review.md",
+          "round": "20260703T061553Z",
+          "citation": "`src/command-handler.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "coding-review.md",
+          "round": "20260703T061553Z",
+          "citation": "`src/in-memory-event-store.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "coding-review.md",
+          "round": "20260703T061553Z",
+          "citation": "`src/stock-projection.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "coding-review.md",
+          "round": "20260703T061553Z",
+          "citation": "`src/types.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "coding-review.md",
+          "round": "20260703T062203Z",
+          "citation": "`src/types.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "coding-review.md",
+          "round": "20260703T062203Z",
+          "citation": "`src/stock-projection.ts:46`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "coding-review.md",
+          "round": "20260703T062203Z",
+          "citation": "`src/domain.ts:56`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "coding-review.md",
+          "round": "20260703T062203Z",
+          "citation": "`src/index.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "coding-review.md",
+          "round": "20260703T062203Z",
+          "citation": "`src/domain.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "coding-review.md",
+          "round": "20260703T062203Z",
+          "citation": "`src/command-handler.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "coding-review.md",
+          "round": "20260703T062203Z",
+          "citation": "`src/in-memory-event-store.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "coding-review.md",
+          "round": "20260703T062203Z",
+          "citation": "`src/stock-projection.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "coding-review.md",
+          "round": "20260703T062203Z",
+          "citation": "`src/types.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "coding-review.md",
+          "round": "20260703T062635Z",
+          "citation": "`src/types.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "coding-review.md",
+          "round": "20260703T062635Z",
+          "citation": "`src/stock-projection.ts:46`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "coding-review.md",
+          "round": "20260703T062635Z",
+          "citation": "`src/index.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "coding-review.md",
+          "round": "20260703T062635Z",
+          "citation": "`src/domain.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "coding-review.md",
+          "round": "20260703T062635Z",
+          "citation": "`src/command-handler.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "coding-review.md",
+          "round": "20260703T062635Z",
+          "citation": "`src/stock-projection.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "final",
+          "citation": "`src/types.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "final",
+          "citation": "`src/types.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "final",
+          "citation": "`src/index.ts:3`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "final",
+          "citation": "`src/domain.ts:36`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "final",
+          "citation": "`src/stock-projection.ts:49`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "final",
+          "citation": "`src/in-memory-event-store.ts:13`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "final",
+          "citation": "`src/command-handler.ts:1`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "final",
+          "citation": "`src/stock-projection.ts:1`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "final",
+          "citation": "`src/domain.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "final",
+          "citation": "`src/in-memory-event-store.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "final",
+          "citation": "`src/command-handler.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "final",
+          "citation": "`src/stock-projection.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "final",
+          "citation": "`src/types.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "final",
+          "citation": "`src/index.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "final",
+          "citation": "`src/index.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "final",
+          "citation": "`src/domain.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "final",
+          "citation": "`src/in-memory-event-store.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "final",
+          "citation": "`src/command-handler.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "final",
+          "citation": "`src/stock-projection.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "final",
+          "citation": "`src/stock-projection.ts:46`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "final",
+          "citation": "`src/types.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "final",
+          "citation": "`src/types.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "final",
+          "citation": "`src/index.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "final",
+          "citation": "`src/stock-projection.ts:46`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "final",
+          "citation": "`src/domain.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "final",
+          "citation": "`src/in-memory-event-store.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "final",
+          "citation": "`src/command-handler.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "final",
+          "citation": "`src/stock-projection.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "final",
+          "citation": "`src/index.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "20260703T060357Z",
+          "citation": "`src/types.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "20260703T060357Z",
+          "citation": "`src/index.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "20260703T060357Z",
+          "citation": "`src/types.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "20260703T060357Z",
+          "citation": "`src/index.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "20260703T060357Z",
+          "citation": "`src/index.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "20260703T060357Z",
+          "citation": "`src/index.ts:18`",
+          "fileExists": true,
+          "lineInRange": false
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "20260703T060357Z",
+          "citation": "`src/index.ts:25`",
+          "fileExists": true,
+          "lineInRange": false
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "20260703T060357Z",
+          "citation": "`src/index.ts:57`",
+          "fileExists": true,
+          "lineInRange": false
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "20260703T060357Z",
+          "citation": "`src/index.ts:139`",
+          "fileExists": true,
+          "lineInRange": false
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "20260703T060357Z",
+          "citation": "`src/index.ts:163`",
+          "fileExists": true,
+          "lineInRange": false
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "20260703T060357Z",
+          "citation": "`src/index.ts:183`",
+          "fileExists": true,
+          "lineInRange": false
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "20260703T060357Z",
+          "citation": "`src/index.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "20260703T060357Z",
+          "citation": "`src/index.ts:226`",
+          "fileExists": true,
+          "lineInRange": false
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "20260703T060357Z",
+          "citation": "`src/index.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "20260703T061113Z",
+          "citation": "`src/types.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "20260703T061113Z",
+          "citation": "`src/types.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "20260703T061113Z",
+          "citation": "`src/types.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "20260703T061113Z",
+          "citation": "`src/index.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "20260703T061113Z",
+          "citation": "`src/domain.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "20260703T061113Z",
+          "citation": "`src/in-memory-event-store.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "20260703T061113Z",
+          "citation": "`src/command-handler.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "20260703T061113Z",
+          "citation": "`src/stock-projection.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "20260703T061113Z",
+          "citation": "`src/index.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "20260703T061113Z",
+          "citation": "`src/index.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "20260703T061113Z",
+          "citation": "`src/domain.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "20260703T061113Z",
+          "citation": "`src/in-memory-event-store.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "20260703T061113Z",
+          "citation": "`src/command-handler.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "20260703T061113Z",
+          "citation": "`src/stock-projection.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "20260703T061113Z",
+          "citation": "`src/domain.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "20260703T061113Z",
+          "citation": "`src/in-memory-event-store.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "20260703T061113Z",
+          "citation": "`src/command-handler.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "20260703T061113Z",
+          "citation": "`src/stock-projection.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "20260703T061113Z",
+          "citation": "`src/index.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "20260703T061924Z",
+          "citation": "`src/index.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "20260703T061924Z",
+          "citation": "`src/types.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "20260703T061924Z",
+          "citation": "`src/types.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "20260703T061924Z",
+          "citation": "`src/index.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "20260703T061924Z",
+          "citation": "`src/domain.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "20260703T061924Z",
+          "citation": "`src/in-memory-event-store.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "20260703T061924Z",
+          "citation": "`src/command-handler.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "20260703T061924Z",
+          "citation": "`src/stock-projection.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "20260703T061924Z",
+          "citation": "`src/index.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "20260703T061924Z",
+          "citation": "`src/command-handler.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "20260703T061924Z",
+          "citation": "`src/command-handler.ts:1`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "20260703T061924Z",
+          "citation": "`src/index.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "20260703T061924Z",
+          "citation": "`src/command-handler.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "20260703T061924Z",
+          "citation": "`src/domain.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "20260703T061924Z",
+          "citation": "`src/index.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "20260703T061924Z",
+          "citation": "`src/command-handler.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "20260703T061924Z",
+          "citation": "`src/command-handler.ts:1`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "20260703T061924Z",
+          "citation": "`src/command-handler.ts:1`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "20260703T061924Z",
+          "citation": "`src/types.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "20260703T061924Z",
+          "citation": "`src/domain.ts:56`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "20260703T061924Z",
+          "citation": "`src/domain.ts:56`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "20260703T061924Z",
+          "citation": "`src/domain.ts:56`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "20260703T061924Z",
+          "citation": "`src/stock-projection.ts:85`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "20260703T061924Z",
+          "citation": "`src/command-handler.ts:1`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "20260703T061924Z",
+          "citation": "`src/index.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "20260703T061924Z",
+          "citation": "`src/command-handler.ts:1`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "20260703T061924Z",
+          "citation": "`src/domain.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "20260703T061924Z",
+          "citation": "`src/in-memory-event-store.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "20260703T061924Z",
+          "citation": "`src/command-handler.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "20260703T061924Z",
+          "citation": "`src/stock-projection.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "20260703T061924Z",
+          "citation": "`src/domain.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "20260703T061924Z",
+          "citation": "`src/in-memory-event-store.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "20260703T061924Z",
+          "citation": "`src/command-handler.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "20260703T061924Z",
+          "citation": "`src/stock-projection.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "20260703T061924Z",
+          "citation": "`src/index.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "20260703T062455Z",
+          "citation": "`src/index.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "20260703T062455Z",
+          "citation": "`src/types.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "20260703T062455Z",
+          "citation": "`src/types.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "20260703T062455Z",
+          "citation": "`src/index.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "20260703T062455Z",
+          "citation": "`src/in-memory-event-store.ts:13`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "20260703T062455Z",
+          "citation": "`src/index.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "20260703T062455Z",
+          "citation": "`src/domain.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "20260703T062455Z",
+          "citation": "`src/in-memory-event-store.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "20260703T062455Z",
+          "citation": "`src/command-handler.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "20260703T062455Z",
+          "citation": "`src/stock-projection.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "20260703T062455Z",
+          "citation": "`src/index.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "20260703T062455Z",
+          "citation": "`src/domain.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "20260703T062455Z",
+          "citation": "`src/in-memory-event-store.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "20260703T062455Z",
+          "citation": "`src/command-handler.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "20260703T062455Z",
+          "citation": "`src/stock-projection.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "20260703T062455Z",
+          "citation": "`src/index.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "20260703T062455Z",
+          "citation": "`src/command-handler.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "20260703T062455Z",
+          "citation": "`src/command-handler.ts:1`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "20260703T062455Z",
+          "citation": "`src/index.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "20260703T062455Z",
+          "citation": "`src/command-handler.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "20260703T062455Z",
+          "citation": "`src/command-handler.ts:1`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "20260703T062455Z",
+          "citation": "`src/types.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "20260703T062455Z",
+          "citation": "`src/command-handler.ts:1`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "20260703T062455Z",
+          "citation": "`src/domain.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "20260703T062455Z",
+          "citation": "`src/in-memory-event-store.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "20260703T062455Z",
+          "citation": "`src/command-handler.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "20260703T062455Z",
+          "citation": "`src/stock-projection.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "20260703T062455Z",
+          "citation": "`src/index.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "20260703T062858Z",
+          "citation": "`src/domain.ts:36`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "20260703T062858Z",
+          "citation": "`src/stock-projection.ts:49`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "20260703T062858Z",
+          "citation": "`src/command-handler.ts:1`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "20260703T062858Z",
+          "citation": "`src/stock-projection.ts:1`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "20260703T062858Z",
+          "citation": "`src/domain.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "20260703T062858Z",
+          "citation": "`src/in-memory-event-store.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "20260703T062858Z",
+          "citation": "`src/command-handler.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "20260703T062858Z",
+          "citation": "`src/stock-projection.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "20260703T062858Z",
+          "citation": "`src/types.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "20260703T062858Z",
+          "citation": "`src/index.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "20260703T062858Z",
+          "citation": "`src/domain.ts:56`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "20260703T062858Z",
+          "citation": "`src/index.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "20260703T062858Z",
+          "citation": "`src/domain.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "20260703T062858Z",
+          "citation": "`src/in-memory-event-store.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "20260703T062858Z",
+          "citation": "`src/command-handler.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "20260703T062858Z",
+          "citation": "`src/stock-projection.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "20260703T062858Z",
+          "citation": "`src/stock-projection.ts:46`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "20260703T062858Z",
+          "citation": "`src/domain.ts:56`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "20260703T062858Z",
+          "citation": "`src/domain.ts:56`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "20260703T062858Z",
+          "citation": "`src/index.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "20260703T062858Z",
+          "citation": "`src/stock-projection.ts:46`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "20260703T062858Z",
+          "citation": "`src/domain.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "20260703T062858Z",
+          "citation": "`src/in-memory-event-store.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "20260703T062858Z",
+          "citation": "`src/command-handler.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "20260703T062858Z",
+          "citation": "`src/stock-projection.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "20260703T062858Z",
+          "citation": "`src/index.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "20260703T062858Z",
+          "citation": "`src/domain.ts:56`",
+          "fileExists": true,
+          "lineInRange": true
+        }
+      ],
+      "hallucinatedCitations": 0,
+      "templateEchoes": []
+    },
+    "llm": {
+      "traps": [
+        {
+          "trap_id": "T1",
+          "present_in_final_code": false,
+          "caught_by_reviewers": true,
+          "note": "最終コードの StockProjection は reservationQuantities で reservationId ごとの数量を追跡し、StockShipped では対象予約だけを減算している。複数予約時の available 過大表示は複数ラウンドで指摘済み。"
+        },
+        {
+          "trap_id": "T2",
+          "present_in_final_code": true,
+          "caught_by_reviewers": false,
+          "note": "available は onHand - reserved の導出値だが、最終コードでは StockLevel 内に保持し、各イベントで増減更新している。出荷時の計算バグは指摘されたが、available の二重管理そのものは見逃され、最終 APPROVE されている。"
+        },
+        {
+          "trap_id": "T3",
+          "present_in_final_code": true,
+          "caught_by_reviewers": false,
+          "note": "InMemoryEventStore はイベント配列とは別に versionMap を保持している。version は保存済みイベント数から導出可能だが、この二重管理は指摘されていない。"
+        },
+        {
+          "trap_id": "T4",
+          "present_in_final_code": false,
+          "caught_by_reviewers": false,
+          "note": "最終コードでは domain は型と DomainError のみ参照し、CommandHandler は EventStore ポートに依存している。依存方向違反の finding はなし。"
+        },
+        {
+          "trap_id": "T5",
+          "present_in_final_code": false,
+          "caught_by_reviewers": true,
+          "note": "初期ラウンドで src/index.ts のモノリス化を ARCH-NEW-src-index-L25 として指摘し、最終コードでは責務別ファイルへ分割済み。"
+        },
+        {
+          "trap_id": "T6",
+          "present_in_final_code": true,
+          "caught_by_reviewers": false,
+          "note": "initialState は単一定義だが、export const の通常オブジェクトとして公開されており mutable。Object.freeze や生成関数化はされていない。"
+        },
+        {
+          "trap_id": "T7",
+          "present_in_final_code": true,
+          "caught_by_reviewers": false,
+          "note": "evolve は引数 state を直接変更しないが、未知イベントに対する assertNever/default がなく、JS 経由や将来イベント追加時に黙って状態コピーを返し得る。evolve 側の網羅性・未知イベント処理は指摘されていない。"
+        },
+        {
+          "trap_id": "T8",
+          "present_in_final_code": false,
+          "caught_by_reviewers": false,
+          "note": "コード上の残存欠陥ではないが、レビュー側には tests/ への回帰テスト追加要求があり、スコープ外指摘として残る。out_of_scope_findings 参照。"
+        }
+      ],
+      "fabricated_findings": [],
+      "out_of_scope_findings": [
+        "coding-review.md.20260703T060140Z の CODE-NEW-src-index-L226 は、修正案で tests/projection.test.ts 相当の複数予約出荷テスト追加を求めており、tests/ 変更禁止に反する。",
+        "supervisor-validation.md.20260703T060357Z の VAL-NEW-src-index-L226 は、必要アクションおよび未完了項目で回帰テスト追加を求めており、tests/ 変更禁止に反する。"
+      ],
+      "thinking_leak": false,
+      "verdict_consistency": "最終ラウンドの APPROVE は一部不整合。T1 と T5 など目立つ問題は解消確認できているが、最終コードには T2 available 二重管理、T3 version 二重管理、T6 mutable initialState、T7 evolve の未知イベント握りつぶしが残っている。既知罠カタログ基準なら APPROVE は甘い。",
+      "reviewer_grade": 5,
+      "summary": "レビュアーは複数予約出荷バグ、モノリス、decide の no-op/fake-fix などはよく検出した。一方で、導出値や version の二重管理、公開 initialState の可変性、evolve 側の網羅性を見逃し、さらに tests/ 変更禁止に反する修正要求も出している。検出力は中程度だが、最終判定の規律は不足している。"
+    }
+  },
+  {
+    "comboId": "qwen-coder_gemma-reviewer",
+    "rep": 1,
+    "reviewerRouting": "{\"provider\":\"opencode\",\"model\":\"ollama-cloud/gemma4:31b\"}",
+    "mechanical": {
+      "citations": [
+        {
+          "report": "ai-antipattern-review.md",
+          "round": "final",
+          "citation": "`src/projection.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "ai-antipattern-review.md",
+          "round": "final",
+          "citation": "`src/domain.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "ai-antipattern-review.md",
+          "round": "final",
+          "citation": "`src/index.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "ai-antipattern-review.md",
+          "round": "final",
+          "citation": "`src/domain.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "ai-antipattern-review.md",
+          "round": "20260703T065146Z",
+          "citation": "`src/projection.ts:75`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "ai-antipattern-review.md",
+          "round": "20260703T065146Z",
+          "citation": "`src/index.ts:16`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "ai-antipattern-review.md",
+          "round": "20260703T065146Z",
+          "citation": "`src/domain.ts:32`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "architect-review.md",
+          "round": "20260703T065133Z",
+          "citation": "`src/index.ts:16`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "architect-review.md",
+          "round": "20260703T065133Z",
+          "citation": "`src/domain.ts:4`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "coding-review.md",
+          "round": "final",
+          "citation": "`src/domain.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "coding-review.md",
+          "round": "20260703T065151Z",
+          "citation": "`src/index.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "final",
+          "citation": "`src/domain.ts:4`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "final",
+          "citation": "`src/index.ts:15`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "final",
+          "citation": "`src/event-store.ts:16`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "final",
+          "citation": "`src/domain.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "final",
+          "citation": "`src/decide.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "final",
+          "citation": "`src/command-handler.ts:6`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "final",
+          "citation": "`src/types.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "final",
+          "citation": "`src/index.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "final",
+          "citation": "`src/domain.ts:4`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "final",
+          "citation": "`src/index.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "final",
+          "citation": "`src/domain.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "final",
+          "citation": "`src/projection.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "final",
+          "citation": "`src/domain.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "final",
+          "citation": "`src/domain.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "final",
+          "citation": "`src/domain.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "final",
+          "citation": "`src/decide.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "final",
+          "citation": "`src/event-store.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "final",
+          "citation": "`src/command-handler.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "final",
+          "citation": "`src/projection.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "final",
+          "citation": "`src/index.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "20260703T065221Z",
+          "citation": "`src/index.ts:16`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "20260703T065221Z",
+          "citation": "`src/event-store.ts:16`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "20260703T065221Z",
+          "citation": "`src/domain.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "20260703T065221Z",
+          "citation": "`src/decide.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "20260703T065221Z",
+          "citation": "`src/command-handler.ts:6`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "20260703T065221Z",
+          "citation": "`src/types.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "20260703T065221Z",
+          "citation": "`src/index.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "20260703T065221Z",
+          "citation": "`src/domain.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "20260703T065221Z",
+          "citation": "`src/decide.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "20260703T065221Z",
+          "citation": "`src/event-store.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "20260703T065221Z",
+          "citation": "`src/command-handler.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "20260703T065221Z",
+          "citation": "`src/projection.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "20260703T065221Z",
+          "citation": "`src/index.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        }
+      ],
+      "hallucinatedCitations": 0,
+      "templateEchoes": []
+    },
+    "llm": {
+      "traps": [
+        {
+          "trap_id": "T1",
+          "present_in_final_code": false,
+          "caught_by_reviewers": false,
+          "note": "最終コードは projection/domain とも reservationId ごとの数量を保持し、StockShipped で対象予約分だけ onHand を減らしている。レビューレポートではこの罠自体の指摘はない。"
+        },
+        {
+          "trap_id": "T2",
+          "present_in_final_code": false,
+          "caught_by_reviewers": false,
+          "note": "available は状態として保持されず、onHand - reserved から都度導出されている。レビューレポートで二重管理問題としての指摘はない。"
+        },
+        {
+          "trap_id": "T3",
+          "present_in_final_code": true,
+          "caught_by_reviewers": false,
+          "note": "InMemoryEventStore が events 配列とは別に versions Map を保持しており、version の二重管理が残っている。どのレビューも指摘していない。"
+        },
+        {
+          "trap_id": "T4",
+          "present_in_final_code": false,
+          "caught_by_reviewers": false,
+          "note": "domain/decide はストアや projection に依存せず、CommandHandler も EventStore ポートに依存している。該当する依存方向違反の指摘はない。"
+        },
+        {
+          "trap_id": "T5",
+          "present_in_final_code": false,
+          "caught_by_reviewers": false,
+          "note": "実装は domain/decide/event-store/command-handler/projection に分割されており、index.ts モノリスではない。モノリス罠としての指摘はない。"
+        },
+        {
+          "trap_id": "T6",
+          "present_in_final_code": true,
+          "caught_by_reviewers": true,
+          "note": "initialState の重複は解消されているが、export const initialState は mutable な ProductState オブジェクトのまま公開されている。レビューは重複定義を指摘したが、可変公開の残存は見落としている。"
+        },
+        {
+          "trap_id": "T7",
+          "present_in_final_code": true,
+          "caught_by_reviewers": true,
+          "note": "evolve の直接 mutation は解消されている一方、switch に default/assertNever がなく、未知イベント時の扱いが説明されていない。レビューは mutation を指摘したが、この残存リスクは指摘していない。"
+        },
+        {
+          "trap_id": "T8",
+          "present_in_final_code": false,
+          "caught_by_reviewers": false,
+          "note": "tests/ と src/types.ts への修正要求は見当たらない。"
+        }
+      ],
+      "fabricated_findings": [],
+      "out_of_scope_findings": [],
+      "thinking_leak": false,
+      "verdict_consistency": "最終ラウンドの APPROVE は一部不整合。T1/T2/T4/T5 は解消済みだが、T3 の version 二重管理、T6 の mutable initialState、T7 の未知イベント扱いが残っているため、厳密には REJECT 相当。",
+      "reviewer_grade": 5,
+      "summary": "レビュアー群は mutation と initialState 重複は検出できているが、version 二重管理と mutable な公開状態を見落とし、最終 APPROVE が甘い。実在しないファイル引用や変更禁止対象への修正要求、思考漏れは確認できない。"
+    }
+  },
+  {
+    "comboId": "qwen-coder_qwen-coder-reviewer",
+    "rep": 1,
+    "reviewerRouting": "{\"provider\":\"opencode\",\"model\":\"ollama-cloud/qwen3-coder-next\"}",
+    "mechanical": {
+      "citations": [
+        {
+          "report": "ai-antipattern-review.md",
+          "round": "20260703T064855Z",
+          "citation": "`src/domain.ts:21`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "ai-antipattern-review.md",
+          "round": "20260703T064855Z",
+          "citation": "`src/projection.ts:18`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "ai-antipattern-review.md",
+          "round": "20260703T064855Z",
+          "citation": "`src/domain.ts:30`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "ai-antipattern-review.md",
+          "round": "20260703T064855Z",
+          "citation": "`src/domain.ts:21`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "ai-antipattern-review.md",
+          "round": "20260703T064855Z",
+          "citation": "`src/projection.ts:18`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "architect-review.md",
+          "round": "final",
+          "citation": "`src/store.ts:2`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "architect-review.md",
+          "round": "final",
+          "citation": "`src/store.ts:56`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "architect-review.md",
+          "round": "20260703T064846Z",
+          "citation": "`src/types.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "architect-review.md",
+          "round": "20260703T064846Z",
+          "citation": "`src/store.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "architect-review.md",
+          "round": "20260703T064846Z",
+          "citation": "`src/types.ts:111`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "architect-review.md",
+          "round": "20260703T064846Z",
+          "citation": "`src/store.ts:56`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "coding-review.md",
+          "round": "final",
+          "citation": "`src/store.ts:2`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "coding-review.md",
+          "round": "final",
+          "citation": "`src/store.ts:2`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "coding-review.md",
+          "round": "20260703T064306Z",
+          "citation": "`src/types.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "coding-review.md",
+          "round": "20260703T064904Z",
+          "citation": "`src/domain.ts:21`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "coding-review.md",
+          "round": "20260703T064904Z",
+          "citation": "`src/store.ts:56`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "final",
+          "citation": "`src/store.ts:2`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "final",
+          "citation": "`src/store.ts:2`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "final",
+          "citation": "`src/store.ts:2`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "final",
+          "citation": "`src/domain.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "final",
+          "citation": "`src/store.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "final",
+          "citation": "`src/projection.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "20260703T064934Z",
+          "citation": "`src/types.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "20260703T064934Z",
+          "citation": "`src/store.ts:56`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "20260703T064934Z",
+          "citation": "`src/types.ts:111`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "20260703T064934Z",
+          "citation": "`src/store.ts:56`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "20260703T064934Z",
+          "citation": "`src/store.ts:56`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "20260703T064934Z",
+          "citation": "`src/store.ts:56`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "20260703T064934Z",
+          "citation": "`src/store.ts:56`",
+          "fileExists": true,
+          "lineInRange": true
+        }
+      ],
+      "hallucinatedCitations": 0,
+      "templateEchoes": []
+    },
+    "llm": {
+      "traps": [
+        {
+          "trap_id": "T1",
+          "present_in_final_code": false,
+          "caught_by_reviewers": false,
+          "note": "最終コードは domain/projection とも reservationId ごとに引当数量を追跡し、StockShipped では該当引当分だけ減算している。レビューレポートはこの観点自体は明示的に検出していない。"
+        },
+        {
+          "trap_id": "T2",
+          "present_in_final_code": true,
+          "caught_by_reviewers": false,
+          "note": "StockProjection が StockLevel.available を状態として保持し、adjustStock で再計算している。available は onHand - reserved の導出値なので二重管理が残るが、レビューでは指摘されていない。"
+        },
+        {
+          "trap_id": "T3",
+          "present_in_final_code": true,
+          "caught_by_reviewers": false,
+          "note": "InMemoryEventStore が events 配列とは別に version を保存している。version は events.length から導出可能で、二重管理が残る。レビューでは未指摘。"
+        },
+        {
+          "trap_id": "T4",
+          "present_in_final_code": false,
+          "caught_by_reviewers": false,
+          "note": "domain は types のみを参照し、store/projection へ依存していない。CommandHandler も EventStore インターフェースに依存しており、明確な依存方向違反は見当たらない。"
+        },
+        {
+          "trap_id": "T5",
+          "present_in_final_code": false,
+          "caught_by_reviewers": false,
+          "note": "domain.ts、store.ts、projection.ts、types.ts、index.ts に分割されており、index.ts へのモノリス化は残っていない。"
+        },
+        {
+          "trap_id": "T6",
+          "present_in_final_code": true,
+          "caught_by_reviewers": false,
+          "note": "initialState は単一定義だが、export const の通常オブジェクトとして公開されており、reservations も含め外部から変更可能。レビューでは未指摘。"
+        },
+        {
+          "trap_id": "T7",
+          "present_in_final_code": true,
+          "caught_by_reviewers": false,
+          "note": "evolve は入力 state を直接変更せず、通常パスで throw もしない。一方で switch に default/assertNever がなく、実行時に未知イベントが渡ると説明なしに no-op になるため、この罠の一部が残る。レビューでは未指摘。"
+        },
+        {
+          "trap_id": "T8",
+          "present_in_final_code": false,
+          "caught_by_reviewers": false,
+          "note": "レビュー内で tests/ や src/types.ts の修正要求は確認できない。src/types.ts への言及は ConcurrencyError の既存定義を参照する趣旨で、変更要求ではない。"
+        }
+      ],
+      "fabricated_findings": [
+        "ai-antipattern-review.md final の「型ガード関数に置換（14件）」は最終コード上の型ガード関数数と一致しない。確認できるのは domain.ts 9件、projection.ts 4件の計13件。",
+        "coding-review.md final の「evolve: DomainEvent 型ガードで型安全にアクセス」は実態とずれる。evolve は明示的な型ガード関数ではなく switch の discriminated union narrowing でアクセスしている。"
+      ],
+      "out_of_scope_findings": [],
+      "thinking_leak": false,
+      "verdict_consistency": "最終ラウンドの APPROVE は最終コードの実態と整合しない。as any と ConcurrencyError 重複の解消だけを確認しており、T2 available 二重管理、T3 version 二重管理、T6 mutable initialState、T7 未知イベント no-op を見落としている。",
+      "reviewer_grade": 4,
+      "summary": "レビュアー群は表面的な型安全性と重複定義は検出・追跡できているが、既知罠カタログの中核である導出値/バージョンの二重管理、公開 mutable state、evolve の網羅性を見落としている。スコープ外要求や思考漏れはないが、最終 APPROVE の品質は不十分。"
+    }
+  },
+  {
+    "comboId": "qwen-coder_qwen-instruct-reviewer",
+    "rep": 1,
+    "reviewerRouting": "{\"provider\":\"opencode\",\"model\":\"ollama-cloud/qwen3.5:397b\"}",
+    "mechanical": {
+      "citations": [
+        {
+          "report": "ai-antipattern-review.md",
+          "round": "final",
+          "citation": "`src/domain.ts:1`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "ai-antipattern-review.md",
+          "round": "final",
+          "citation": "`src/domain-evolve.ts:33`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "ai-antipattern-review.md",
+          "round": "final",
+          "citation": "`src/domain.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "ai-antipattern-review.md",
+          "round": "final",
+          "citation": "`src/domain-evolve.ts:29`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "ai-antipattern-review.md",
+          "round": "final",
+          "citation": "`src/domain.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "ai-antipattern-review.md",
+          "round": "20260703T075220Z",
+          "citation": "`src/domain.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "ai-antipattern-review.md",
+          "round": "20260703T075220Z",
+          "citation": "`src/domain.ts:81`",
+          "fileExists": true,
+          "lineInRange": false
+        },
+        {
+          "report": "architect-review.md",
+          "round": "final",
+          "citation": "`src/domain.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "architect-review.md",
+          "round": "final",
+          "citation": "`src/domain-evolve.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "architect-review.md",
+          "round": "final",
+          "citation": "`src/domain.ts:1`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "architect-review.md",
+          "round": "final",
+          "citation": "`src/domain-evolve.ts:33`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "architect-review.md",
+          "round": "20260703T065154Z",
+          "citation": "`src/domain.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "architect-review.md",
+          "round": "20260703T075328Z",
+          "citation": "`src/domain.ts:81`",
+          "fileExists": true,
+          "lineInRange": false
+        },
+        {
+          "report": "architect-review.md",
+          "round": "20260703T075328Z",
+          "citation": "`src/domain.ts:81`",
+          "fileExists": true,
+          "lineInRange": false
+        },
+        {
+          "report": "architect-review.md",
+          "round": "20260703T075328Z",
+          "citation": "`src/domain.ts:81`",
+          "fileExists": true,
+          "lineInRange": false
+        },
+        {
+          "report": "architect-review.md",
+          "round": "20260703T075328Z",
+          "citation": "`src/domain-evolve.ts:33`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "coding-review.md",
+          "round": "final",
+          "citation": "`tests/domain.test.ts:81`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "coding-review.md",
+          "round": "final",
+          "citation": "`src/types.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "coding-review.md",
+          "round": "final",
+          "citation": "`src/domain.ts:1`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "coding-review.md",
+          "round": "final",
+          "citation": "`src/domain.ts:1`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "coding-review.md",
+          "round": "20260703T065241Z",
+          "citation": "`tests/domain.test.ts:81`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "coding-review.md",
+          "round": "20260703T065241Z",
+          "citation": "`src/types.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "coding-review.md",
+          "round": "20260703T065241Z",
+          "citation": "`src/event-store.ts:1`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "coding-review.md",
+          "round": "20260703T065241Z",
+          "citation": "`src/domain-evolve.ts:29`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "coding-review.md",
+          "round": "20260703T075248Z",
+          "citation": "`src/domain.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "coding-review.md",
+          "round": "20260703T075248Z",
+          "citation": "`src/domain.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "coding-review.md",
+          "round": "20260703T075248Z",
+          "citation": "`src/domain.ts:81`",
+          "fileExists": true,
+          "lineInRange": false
+        },
+        {
+          "report": "coding-review.md",
+          "round": "20260703T075248Z",
+          "citation": "`tests/domain.test.ts:81`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "coding-review.md",
+          "round": "20260703T075248Z",
+          "citation": "`src/types.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "coding-review.md",
+          "round": "20260703T075248Z",
+          "citation": "`src/domain.ts:81`",
+          "fileExists": true,
+          "lineInRange": false
+        },
+        {
+          "report": "coding-review.md",
+          "round": "20260703T075248Z",
+          "citation": "`src/domain.ts:25`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "coding-review.md",
+          "round": "20260703T075248Z",
+          "citation": "`src/domain-evolve.ts:29`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "coding-review.md",
+          "round": "20260703T075248Z",
+          "citation": "`src/domain.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "final",
+          "citation": "`src/index.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "final",
+          "citation": "`src/event-store.ts:5`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "final",
+          "citation": "`src/event-store.ts:12`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "final",
+          "citation": "`src/domain.ts:1`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "final",
+          "citation": "`src/domain-evolve.ts:1`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "final",
+          "citation": "`src/types.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "final",
+          "citation": "`src/index.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "final",
+          "citation": "`src/domain.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "final",
+          "citation": "`src/domain-evolve.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "final",
+          "citation": "`src/event-store.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "final",
+          "citation": "`src/command-handler.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "final",
+          "citation": "`src/projection.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "final",
+          "citation": "`src/index.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "20260703T065317Z",
+          "citation": "`src/index.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "20260703T065317Z",
+          "citation": "`src/event-store.ts:5`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "20260703T065317Z",
+          "citation": "`src/event-store.ts:12`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "20260703T065317Z",
+          "citation": "`src/domain.ts:1`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "20260703T065317Z",
+          "citation": "`src/domain-evolve.ts:1`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "20260703T065317Z",
+          "citation": "`src/types.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "20260703T065317Z",
+          "citation": "`src/index.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "20260703T065317Z",
+          "citation": "`src/domain.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "20260703T065317Z",
+          "citation": "`src/domain-evolve.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "20260703T065317Z",
+          "citation": "`src/event-store.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "20260703T065317Z",
+          "citation": "`src/command-handler.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "20260703T065317Z",
+          "citation": "`src/projection.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "20260703T065317Z",
+          "citation": "`src/index.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "20260703T075319Z",
+          "citation": "`src/index.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "20260703T075319Z",
+          "citation": "`src/event-store.ts:5`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "20260703T075319Z",
+          "citation": "`src/event-store.ts:12`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "20260703T075319Z",
+          "citation": "`src/domain.ts:1`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "20260703T075319Z",
+          "citation": "`src/domain-evolve.ts:1`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "20260703T075319Z",
+          "citation": "`src/types.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "20260703T075319Z",
+          "citation": "`src/index.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "20260703T075319Z",
+          "citation": "`src/domain.ts:81`",
+          "fileExists": true,
+          "lineInRange": false
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "20260703T075319Z",
+          "citation": "`src/domain.ts:81`",
+          "fileExists": true,
+          "lineInRange": false
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "20260703T075319Z",
+          "citation": "`src/domain.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "20260703T075319Z",
+          "citation": "`src/domain-evolve.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "20260703T075319Z",
+          "citation": "`src/event-store.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "20260703T075319Z",
+          "citation": "`src/command-handler.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "20260703T075319Z",
+          "citation": "`src/projection.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "20260703T075319Z",
+          "citation": "`src/index.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "20260703T075319Z",
+          "citation": "`src/domain.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "20260703T075319Z",
+          "citation": "`src/domain-evolve.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "20260703T075319Z",
+          "citation": "`src/event-store.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        }
+      ],
+      "hallucinatedCitations": 0,
+      "templateEchoes": []
+    },
+    "llm": {
+      "traps": [
+        {
+          "trap_id": "T1",
+          "present_in_final_code": false,
+          "caught_by_reviewers": false,
+          "note": "最終の `StockProjection` は `reservations` で reservationId ごとの数量を保持し、`StockShipped` で該当予約だけを減算しているため、この罠は残っていない。レポートでは欠陥としては指摘されていない。"
+        },
+        {
+          "trap_id": "T2",
+          "present_in_final_code": false,
+          "caught_by_reviewers": false,
+          "note": "`available` は状態として保持されず、`getStock` / `lowStock` で `onHand - reserved` から計算されている。欠陥としての指摘はない。"
+        },
+        {
+          "trap_id": "T3",
+          "present_in_final_code": true,
+          "caught_by_reviewers": false,
+          "note": "`InMemoryEventStore` が `{ events, version }` を保存し、`version` を `events.length` とは別に加算管理している。レビューはこれを要件充足として扱っており、二重管理の罠としては指摘していない。"
+        },
+        {
+          "trap_id": "T4",
+          "present_in_final_code": false,
+          "caught_by_reviewers": false,
+          "note": "`domain.ts` / `domain-evolve.ts` は型とエラー以外に依存せず、`CommandHandler` も `EventStore` ポートに依存している。依存方向違反は最終コードに見当たらない。"
+        },
+        {
+          "trap_id": "T5",
+          "present_in_final_code": false,
+          "caught_by_reviewers": false,
+          "note": "実装は `domain.ts`、`domain-evolve.ts`、`event-store.ts`、`command-handler.ts`、`projection.ts` に分割されており、モノリスではない。レポートでは主に分割済みとして承認している。"
+        },
+        {
+          "trap_id": "T6",
+          "present_in_final_code": true,
+          "caught_by_reviewers": false,
+          "note": "`initialState` は `export const` の通常オブジェクトで、`reservations` も含めて freeze されていないため外部から変更可能。重複はないが、可変公開の罠が残っている。レビューでは未指摘。"
+        },
+        {
+          "trap_id": "T7",
+          "present_in_final_code": true,
+          "caught_by_reviewers": true,
+          "note": "初期ラウンドでは `evolve` の throw は指摘されたが、最終コードの `default: return newState` は unknown event を説明なく no-op にしている。残存部分は最終承認で見逃されている。"
+        },
+        {
+          "trap_id": "T8",
+          "present_in_final_code": false,
+          "caught_by_reviewers": false,
+          "note": "レポート群に `tests/` や `src/types.ts` の修正を要求する指摘は見当たらない。"
+        }
+      ],
+      "fabricated_findings": [
+        "`ai-antipattern-review.md` final の `AI-NEW-tsconfig-L6` は `tsconfig.json:6` が依然 `strict: false` とするが、最終コードでは `strict: true` であり実態と不一致。",
+        "`coding-review.md.20260703T075248Z` と `ai-antipattern-review.md.20260703T075220Z` はファイル末尾の import を TypeScript/JavaScript の構文エラー・実行不能としているが、top-level import の配置問題は少なくともその主張ほどの構文エラーではなく、同じレポート内の typecheck 成功とも矛盾する。",
+        "`coding-review.md` final の非 finding 根拠は、switch 分岐後でも TypeScript が型を狭めないため call site の型アサーションが必要だとするが、判別共用体は switch で狭まるため技術的根拠が不正確。"
+      ],
+      "out_of_scope_findings": [],
+      "thinking_leak": true,
+      "verdict_consistency": "不整合。最終ラウンドは coding/architect/supervisor が APPROVE、ai-antipattern は同一 final 内で APPROVE と REJECT が混在している。さらに最終コードには T3/T6/T7 が残っているため無条件 APPROVE は不適切で、ai-antipattern の REJECT 理由も `strict:false` という実在しない状態に依存している。",
+      "reviewer_grade": 2,
+      "summary": "浅い `any`、throw、import 配置などは一部捕捉したが、既知罠のうち最終残存している T3/T6/T7 を実質的に見逃している。思考過程の漏れ、最終判定の矛盾、実コードと合わない strict 指摘があり、レビュアー品質は低い。"
+    }
+  }
+]
