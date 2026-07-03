@@ -1,0 +1,42 @@
+# アーキテクチャレビュー
+
+## 結果: REJECT
+
+## サマリー
+`src/domain.ts:55-58` の網羅性チェックは `command as never` により型検査を迂回しており、前回指摘の受入条件を満たしていません。新しい `Command` variant が追加されてもコンパイルエラーにならないため、契約追加時の配線漏れを検出できません。
+
+## 確認した観点
+- [x] 構造・設計
+- [x] コード品質
+- [x] 変更スコープ
+- [x] テストカバレッジ
+- [x] デッドコード
+- [x] 呼び出しチェーン検証
+
+## 今回の指摘（new）
+| # | finding_id | family_tag | スコープ | 場所 | 問題 | 修正案 |
+|---|------------|------------|---------|------|------|--------|
+
+## 継続指摘（persists）
+| # | finding_id | family_tag | 前回根拠 | 今回根拠 | 問題 | 修正案 |
+|---|------------|------------|----------|----------|------|--------|
+| 1 | ARCH-NEW-src-domain-L55 | dead-code | `src/domain.ts:55` | `src/domain.ts:55-58` | `default` 分岐内で `const _exhaustiveCheck: never = command as never;` としており、`as never` が網羅性チェックを無効化している。 | `as never` を削除し、`const _exhaustiveCheck: never = command; void _exhaustiveCheck;` とする。もしくは `assertNever(value: never): never` に `command` を渡して網羅漏れをコンパイルエラーにする。 |
+
+## 解消済み（resolved）
+| finding_id | 解消根拠 |
+|------------|----------|
+| ARCH-NEW-src-index-L25 | `src/index.ts:1-7` は re-export のみで、実装は責務別ファイルに分割済み。 |
+| ARCH-NEW-src-index-L221 | `src/stock-projection.ts:41-47` で `available` を `onHand - reserved` で算出している。 |
+| ARCH-NEW-unused-type-imports-L1 | `src/index.ts` と `src/command-handler.ts` の未使用 import は解消済み。 |
+
+## 再開指摘（reopened）
+| # | finding_id | family_tag | 解消根拠（前回） | 再発根拠 | 問題 | 修正案 |
+|---|------------|------------|----------------|---------|------|--------|
+
+## 検証証跡
+- ビルド: `npm run typecheck` 成功。
+- テスト: `npm test -- --run` 成功、4 ファイル 51 件通過。
+- 動作確認: `src/domain.ts:55-58` を直接確認し、`as never` による型検査迂回を確認。
+
+## REJECT判定条件
+- `persists` が 1 件あるため REJECT。

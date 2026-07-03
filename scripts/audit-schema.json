@@ -1,0 +1,35 @@
+{
+  "type": "object",
+  "properties": {
+    "traps": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "trap_id": { "type": "string" },
+          "present_in_final_code": { "type": "boolean" },
+          "caught_by_reviewers": { "type": "boolean" },
+          "note": { "type": "string" }
+        },
+        "required": ["trap_id", "present_in_final_code", "caught_by_reviewers", "note"],
+        "additionalProperties": false
+      }
+    },
+    "fabricated_findings": { "type": "array", "items": { "type": "string" } },
+    "out_of_scope_findings": { "type": "array", "items": { "type": "string" } },
+    "thinking_leak": { "type": "boolean" },
+    "verdict_consistency": { "type": "string" },
+    "reviewer_grade": { "type": "integer", "minimum": 1, "maximum": 10 },
+    "summary": { "type": "string" }
+  },
+  "required": [
+    "traps",
+    "fabricated_findings",
+    "out_of_scope_findings",
+    "thinking_leak",
+    "verdict_consistency",
+    "reviewer_grade",
+    "summary"
+  ],
+  "additionalProperties": false
+}

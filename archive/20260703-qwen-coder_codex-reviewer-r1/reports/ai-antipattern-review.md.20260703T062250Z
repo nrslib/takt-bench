@@ -1,0 +1,25 @@
+# AI生成コードレビュー
+
+## 結果: APPROVE
+
+## サマリー
+前回継続指摘だった `quantity ?? 0` フォールバックと `_exhaustive` 未使用変数は解消され、新規のAI生成コード特有の問題は検出しませんでした。
+
+## 検証した項目
+| 観点 | 結果 | 備考 |
+|------|------|------|
+| 仮定の妥当性 | ✅ | 必須予約数量欠落は `src/stock-projection.ts:85-87` で fail fast |
+| API/ライブラリの実在 | ✅ | 幻覚 API は検出なし |
+| コンテキスト適合 | ✅ | `npm test` 51件成功、`npm run typecheck` 成功、`tsc --noEmit --noUnusedLocals` 成功 |
+| スコープ | ✅ | `README.md` / `src/types.ts` / `tests/` に差分なし |
+
+## 非finding化した懸念
+| 項目 | 場所 | 分類 | finding化しない根拠 |
+|------|------|------|---------------------|
+| 投影の予約数量欠落時に `Error` を throw | `src/stock-projection.ts:85` | no_issue_after_verification | 前回指摘の受入条件は `0` 扱いをやめ fail fast すること。README / `src/types.ts` に Projection 異常系の専用エラー契約はない |
+
+## 解消済み（resolved）
+| finding_id | 解消根拠 |
+|------------|----------|
+| AI-NEW-src-index-L264 | `src/stock-projection.ts:85-88` で `quantity === undefined` を検出して throw しており、`quantity ?? 0` は存在しない |
+| AI-NEW-src-domain-L56 | `src/domain.ts:55-56` に `_exhaustive` 変数は存在せず、`tsc --noEmit --noUnusedLocals` も成功 |

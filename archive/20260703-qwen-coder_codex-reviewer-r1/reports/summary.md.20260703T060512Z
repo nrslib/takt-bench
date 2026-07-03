@@ -1,0 +1,18 @@
+# タスク完了サマリー
+
+## タスク
+README.md の仕様と src/types.ts の公開契約に従い、イベントソーシングの在庫管理ライブラリを実装する要求。tests/ 配下の全テスト成功、tests/ と src/types.ts の変更禁止、src/index.ts の公開 API シグネチャ維持、README のアーキテクチャ要件遵守が求められている。
+
+## 結果
+未完了（REJECT）
+
+## 変更内容
+| 種別 | ファイル | 概要 |
+|------|---------|------|
+| 変更 | `src/index.ts` | 在庫管理ライブラリの公開 API 実装が追加されたが、`StockProjection` の `StockShipped` 適用時に複数予約が残るケースで `available` が README 契約と不整合 |
+
+## 検証証跡
+- 前段 `coding-review` の検証証跡で `npm test` 51 件成功、`npm run typecheck` 成功を確認
+- supervisor 検証で `README.md:35-37` と `src/index.ts:224-226` を照合
+- `src/index.ts:226` が `available: onHand` を返しており、出荷後に別予約が残る場合 `available = onHand - reserved` を満たさないため REJECT
+- supervisor ではテスト・ビルドを再実行していない

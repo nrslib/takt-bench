@@ -8,6 +8,7 @@
     "bench": "node scripts/run.ts",
     "collect": "node scripts/collect.ts",
     "judge": "node scripts/judge.ts",
+    "audit": "node scripts/review-audit.ts",
     "verify-tests": "bash scripts/verify-tests.sh"
   },
   "dependencies": {

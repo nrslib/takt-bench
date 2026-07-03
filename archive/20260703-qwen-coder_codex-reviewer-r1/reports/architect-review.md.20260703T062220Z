@@ -1,0 +1,42 @@
+# アーキテクチャレビュー
+
+## 結果: REJECT
+
+## サマリー
+モジュール分割、未使用 import、`StockProjection` の fallback は解消されています。ただし `decide` の `Command` union 網羅性が型で固定されない `default` 分岐に戻っており、契約追加時の配線漏れをコンパイル時に検出できません。
+
+## 確認した観点
+- [x] 構造・設計
+- [x] コード品質
+- [x] 変更スコープ
+- [x] テストカバレッジ
+- [x] デッドコード
+- [x] 呼び出しチェーン検証
+
+## 今回の指摘（new）
+| # | finding_id | family_tag | スコープ | 場所 | 問題 | 修正案 |
+|---|------------|------------|---------|------|------|--------|
+| 1 | ARCH-NEW-src-domain-L55 | dead-code | スコープ内 | `src/domain.ts:55` | `decide(command: Command)` は `Command` union を switch しているが、`default` が単に `throw new Error(...)` しているため、新しい command 型が追加されても TypeScript が網羅漏れを検出できない。呼び出しチェーン検証の「型で制約している条件に対する不要な防御分岐」に該当する。 | `default` を削除して switch 後に到達不能にするか、`assertNever(command: never): never` のような `never` 引数の関数へ渡して網羅漏れをコンパイルエラーにする。 |
+
+## 継続指摘（persists）
+| # | finding_id | family_tag | 前回根拠 | 今回根拠 | 問題 | 修正案 |
+|---|------------|------------|----------|----------|------|--------|
+
+## 解消済み（resolved）
+| finding_id | 解消根拠 |
+|------------|----------|
+| ARCH-NEW-src-index-L25 | `src/index.ts:1-7` は re-export のみで、実装は `src/domain.ts`、`src/in-memory-event-store.ts`、`src/command-handler.ts`、`src/stock-projection.ts` に分割済み。 |
+| ARCH-NEW-src-index-L221 | `src/stock-projection.ts:41-47` で `StockShipped` 後の `available` を `onHand - reserved` で算出している。 |
+| ARCH-NEW-unused-type-imports-L1 | `src/index.ts:1-7` に import はなく、`src/command-handler.ts:1` も使用中の型だけを import している。 |
+
+## 再開指摘（reopened）
+| # | finding_id | family_tag | 解消根拠（前回） | 再発根拠 | 問題 | 修正案 |
+|---|------------|------------|----------------|---------|------|--------|
+
+## 検証証跡
+- ビルド: `npm run typecheck` を実行し、`tsc --noEmit` 成功。
+- テスト: `npm test -- --run` を実行し、4 ファイル 51 件成功。
+- 動作確認: `README.md`、`src/types.ts`、`src/*.ts`、前回 `reports/architect-review.md` を再読し、現在実装と照合。
+
+## REJECT判定条件
+- `new` が 1 件あるため REJECT。

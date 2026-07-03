@@ -1,0 +1,17 @@
+{
+  "comboId": "qwen-coder",
+  "description": "coder のみ Qwen3-Coder-next。レビュアーは codex (gpt-5.5)",
+  "routing": {
+    "tags": {
+      "coding": {
+        "provider": "opencode",
+        "model": "ollama-cloud/qwen3-coder-next"
+      },
+      "review": {
+        "provider": "codex",
+        "model": "gpt-5.5"
+      }
+    }
+  },
+  "generatedAt": "2026-07-03T05:47:43.043Z"
+}

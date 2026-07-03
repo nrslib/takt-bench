@@ -1,0 +1,93 @@
+# 最終検証結果
+
+## 結果: REJECT
+
+## 要件充足チェック
+
+| # | 分解した要件 | 元要件の出典 | 充足 | 根拠（ファイル:行） | 例外・optional 化の根拠 |
+|---|------------|--------------|------|-------------------|--------------------------|
+| 1 | README.md の仕様に従う | User Request / `README.md:5-17` | ❌ | `README.md:35-37`, `src/index.ts:221-227` | なし |
+| 2 | `src/types.ts` の公開契約に従う | User Request / `src/types.ts:40-120` | ✅ | `src/index.ts:1-3`, `src/index.ts:18-270` | なし |
+| 3 | `tests/` 配下の全テスト 51 件が成功する状態 | User Request / `README.md:50-52` | ⚠️ | 前段 `coding-review` 検証証跡で `npm test` 51 件成功を確認 | supervisor では再実行禁止のため生ログは未確認 |
+| 4 | `tests/` を変更しない | User Request | ✅ | 差分確認で変更対象は `src/index.ts` のみ | なし |
+| 5 | `src/types.ts` を変更しない | User Request | ✅ | 差分確認で変更対象は `src/index.ts` のみ | なし |
+| 6 | `src/index.ts` の公開 API シグネチャを変更しない | User Request / `README.md:7-17` | ✅ | `src/index.ts:18`, `src/index.ts:25`, `src/index.ts:57`, `src/index.ts:139`, `src/index.ts:163`, `src/index.ts:183` | なし |
+| 7 | ドメインロジック `decide` / `evolve` はストアやプロジェクションに依存しない | `README.md:43` | ✅ | `src/index.ts:25-137` | なし |
+| 8 | `CommandHandler` は `EventStore` ポートにのみ依存する | `README.md:44` | ✅ | `src/index.ts:163-180`, `src/types.ts:115-120` | なし |
+| 9 | プロジェクションは書き込みモデルを参照せずイベントのみから構築する | `README.md:45` | ✅ | `src/index.ts:183-270` | なし |
+| 10 | `StockShipped` 後の読み取りモデルで `onHand` と `reserved` が予約数量ぶん減り、`available` が整合する | `README.md:35-37` | ❌ | `src/index.ts:224-226` | なし |
+| 11 | 削除・要求外の除去がない | Supervisor スコープクリープ手順 | ✅ | 差分確認で削除ファイルなし、変更は `src/index.ts` のみ | なし |
+
+## 前段 finding の再評価
+
+| finding_id | 前段判定 | 元の期待結果 | 再評価 | 根拠 |
+|------------|----------|--------------|--------|------|
+| `CODE-NEW-src-index-L226` | new | 複数予約が残る `StockShipped` 後も `available = onHand - reserved` を満たす | 妥当 | `src/index.ts:224-226` は `reserved` を計算しているが `available: onHand` を返すため、残予約がある場合に過大になる |
+
+## 未分類の懸念チェック
+
+| レビュー | 懸念 | finding化状態 | 監督判定 | 根拠 |
+|----------|------|---------------|----------|------|
+| coding-review | `StockShipped` 後の `available` 不整合 | finding化済み | REJECT理由 | `src/index.ts:226`, `README.md:35-37` |
+| その他 | なし | 該当なし | 妥当 | 追加の未分類ブロッキング懸念は確認していない |
+
+## 保守スコープチェック（保守 workflow の場合のみ）
+
+| 観点 | 結果 | 根拠 |
+|------|------|------|
+| 必須変更のみか | 対象外 | 本 workflow は bench |
+| 関連変更の理由が明確か | 対象外 | 本 workflow は bench |
+| 不要変更が残っていないか | 対象外 | 本 workflow は bench |
+| コメント削除が要求外で起きていないか | 対象外 | 本 workflow は bench |
+| 型名・ファイル配置・公開APIが要求外で変わっていないか | 対象外 | 本 workflow は bench |
+| UI文言・アクセシビリティ名・テスト期待値が要求外で変わっていないか | 対象外 | 本 workflow は bench |
+
+## 検証サマリー
+
+| 項目 | 状態 | 確認方法 |
+|------|------|---------|
+| テスト | ⚠️ | 前段 `coding-review` の検証証跡で `npm test` 51 件成功を確認。supervisor では再実行していない |
+| ビルド | ⚠️ | 前段 `coding-review` の検証証跡で `npm run typecheck` 成功を確認。supervisor では再実行していない |
+| 動作確認 | ❌ | 実コード照合で `StockProjection` の `StockShipped` 複数予約ケースが README 契約を満たさない |
+
+## 未確認範囲
+
+| 項目 | 影響 | 扱い |
+|------|------|------|
+| 生の `vitest` / `tsc` 標準出力 | 補助要件 | 前段レポートを補助証跡として扱う。REJECT理由は実コード上の仕様不一致 |
+| 複数予約が残る `StockShipped` のテスト | 主要要件 | REJECT理由。既存テストは単一予約のみで、この不整合を検出できていない |
+
+## 今回の指摘（new）
+
+| # | finding_id | 項目 | 根拠 | 理由 | 必要アクション |
+|---|------------|------|------|------|----------------|
+| 1 | `VAL-NEW-src-index-L226` | 要求不一致 | `src/index.ts:224-226`, `README.md:35-37` | `StockShipped` 適用時に `available: onHand` を返しており、出荷後に別予約が残る場合 `available` が過大になる。例: onHand 10、r1=3、r2=2 の状態で r1 を出荷すると、期待は `{ onHand: 7, reserved: 2, available: 5 }` だが実装は `{ onHand: 7, reserved: 2, available: 7 }` になる | `available` を `onHand - reserved` で再計算し、複数予約が残る `StockShipped` のテストを追加する |
+
+## 継続指摘（persists）
+
+| # | finding_id | 前回根拠 | 今回根拠 | 理由 | 必要アクション |
+|---|------------|----------|----------|------|----------------|
+| なし | なし | なし | なし | なし | なし |
+
+## 解消済み（resolved）
+
+| finding_id | 元の期待結果 | 解消根拠 |
+|------------|--------------|----------|
+| なし | なし | なし |
+
+## 成果物
+
+- 作成: なし
+- 変更: `src/index.ts`
+
+## 未完了項目（REJECTの場合）
+
+| # | 項目 | 理由 |
+|---|------|------|
+| 1 | `StockProjection` の `StockShipped` 複数予約ケース | README の読み取りモデル契約と不整合 |
+| 2 | 回帰テスト追加 | 既存テストは単一予約の出荷のみで、残予約がある場合の `available` 不整合を検出できない |
+
+## REJECT判定条件
+
+- `new` または `persists` が1件以上ある場合のみ REJECT 可
+- `finding_id` なしの指摘は無効

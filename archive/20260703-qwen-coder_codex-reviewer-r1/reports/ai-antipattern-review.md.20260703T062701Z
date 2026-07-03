@@ -1,0 +1,34 @@
+# AI生成コードレビュー
+
+## 結果: REJECT
+
+## サマリー
+`src/domain.ts` の網羅性チェックが `as never` による強制キャストで、レビュー指摘への見かけ上の対応になっています。
+
+## 検証した項目
+| 観点 | 結果 | 備考 |
+|------|------|------|
+| 仮定の妥当性 | ❌ | 新しい `Command` 追加時にコンパイルエラーになるという前提が `command as never` で無効化されている |
+| API/ライブラリの実在 | ✅ | 幻覚 API は検出なし |
+| コンテキスト適合 | ❌ | `void _exhaustiveCheck` は未使用検出を回避するだけの見かけ上の使用 |
+| スコープ | ✅ | `README.md` / `src/types.ts` / `tests/` に差分なし |
+
+## 今回の指摘（new）
+| # | finding_id | family_tag | カテゴリ | 場所 | 問題 | 修正案 |
+|---|------------|------------|---------|------|------|--------|
+| 1 | AI-NEW-src-domain-L56 | fake-fix | レビュー指摘への不適切な対応 | `src/domain.ts:56` | `const _exhaustiveCheck: never = command as never;` は `as never` で型を強制しており、新しい `Command` が追加されても網羅漏れを検出できない。`void _exhaustiveCheck` も未使用警告を避けるための見かけ上の使用になっている | `as never` を削除し、`function assertNever(value: never): never { throw new Error(...) }` を定義して `default: return assertNever(command);` のように `command` を直接 `never` パラメータへ渡す |
+
+## 継続指摘（persists）
+| # | finding_id | family_tag | 前回根拠 | 今回根拠 | 問題 | 修正案 |
+|---|------------|------------|----------|----------|------|--------|
+| なし | - | - | - | - | - | - |
+
+## 解消済み（resolved）
+| finding_id | 解消根拠 |
+|------------|----------|
+| AI-NEW-src-index-L264 | `src/stock-projection.ts:85-88` は `quantity === undefined` で fail fast しており、`quantity ?? 0` は存在しない |
+| AI-NEW-src-domain-L56（前回） | 前回の `_exhaustive` 未使用変数そのものは `tsc --noEmit --noUnusedLocals` 成功で解消済み |
+
+## REJECT判定条件
+- `new`、`persists`、または `reopened` が1件以上ある場合のみ REJECT 可
+- `finding_id` なしの指摘は無効

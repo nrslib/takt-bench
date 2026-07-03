@@ -1,0 +1,16 @@
+# コーディングレビュー
+
+## 結果: REJECT
+
+## サマリー
+`npm test` は 51 件成功し、`npm run typecheck` も成功しました。ただし `StockProjection` の `StockShipped` 適用時に、複数予約が残るケースで `available` が README の読み取りモデル契約と不整合になります。
+
+## 今回の指摘（new）
+| # | finding_id | family_tag | 重大度 | 場所 | 問題 | 影響 | 修正案 |
+|---|------------|------------|--------|------|------|------|--------|
+| 1 | CODE-NEW-src-index-L226 | bug | High | `src/index.ts:226` | `StockShipped` で `available: onHand` を返しており、出荷後に別予約が残る場合の `available` が過大になります。例: onHand 10、r1=3、r2=2 の状態で r1 を出荷すると、期待値は `{ onHand: 7, reserved: 2, available: 5 }` ですが、実装は `available: 7` になります。 | `getStock(productId)` の `{ onHand, reserved, available }` 契約が崩れ、`lowStock(threshold)` も誤判定します。既存テストは単一予約の出荷のみで、この回帰を検出できません。 | `StockShipped` 適用後の `available` を `onHand - reserved` で再計算してください。併せて、複数予約がある状態で片方を出荷しても残予約分が `available` から差し引かれるテストを追加してください。 |
+
+## 検証証跡
+- 差分確認: `src/index.ts` の実装差分、README のプロジェクション仕様、`tests/projection.test.ts` の対象ケースを確認
+- ビルド: `npm run typecheck` 成功
+- テスト: `npm test` 成功、4 ファイル 51 件成功

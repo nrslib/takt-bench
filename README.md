@@ -70,3 +70,20 @@ node scripts/collect.ts             # results/summary.{md,json} を出力
 - トークン→金額の換算は TAKT は行わない。必要なら集計側で単価表を持つ。
 - テスト（`subject/tests/`）を変更したら `npm run verify-tests` で
   参照実装（`reference/src/`）に対して全テストが通ることを必ず確認する。
+
+## レビュアー監査（review-audit）
+
+レビュアーモデルの品質を、レビュー本人の自己申告ではなく外部監査で採点する。
+
+```bash
+npm run audit                    # 全 combo を監査（codex + 機械検証）
+npm run audit -- --filter gemma  # combo 絞り込み
+npm run audit -- --no-llm        # 機械検証のみ（API 消費なし）
+```
+
+2 層で検証し、`results/review-audit.{md,json}` にレポートする。
+
+- 機械検証（決定的・無料）: レビュー指摘が引用する `file:line` の実在チェック（存在しないファイルへの言及 = 捏造）、出力契約テンプレート例示行の丸写し検出。全ラウンドのレポート（`.md.<timestamp>` 含む）が対象
+- codex 監査: `audit/known-traps.md`（既知の罠カタログ）と最終コードに照らして、罠の検出/見逃し、捏造指摘、スコープ外指摘（変更禁止ファイルへの修正要求）、思考漏れ、判定と実態の整合性を採点
+
+`audit/known-traps.md` は combo ディレクトリにコピーされない（レビュアーに見えるとカンニングになるため subject/ に置かない）。テストや仕様を変えて罠が変わったら、このカタログも更新すること。

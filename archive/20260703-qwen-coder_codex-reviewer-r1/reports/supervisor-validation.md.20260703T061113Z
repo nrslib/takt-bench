@@ -1,0 +1,107 @@
+# 最終検証結果
+
+## 結果: APPROVE
+
+## 要件充足チェック
+
+| # | 分解した要件 | 元要件の出典 | 充足 | 根拠（ファイル:行） | 例外・optional 化の根拠 |
+|---|------------|--------------|------|-------------------|--------------------------|
+| 1 | README.md の公開 API を実装する | `README.md:5-17` | ✅ | `src/index.ts:9-15`, `src/domain.ts:4-124`, `src/in-memory-event-store.ts:4-26`, `src/command-handler.ts:5-22`, `src/stock-projection.ts:3-92` | なし |
+| 2 | `src/types.ts` の公開契約に従う | `src/types.ts:40-120` | ✅ | `src/index.ts:9-15` で型と実装 API を re-export | なし |
+| 3 | `tests/` 配下 51 件が成功する状態 | User Request / `README.md:50-52` | ✅ | fix step の実行結果記録で `npm test`: 51/51 通過 | なし |
+| 4 | 型チェックが成功する状態 | `README.md:50-52` | ✅ | fix step の実行結果記録で `npm run typecheck`: 型エラーなし | なし |
+| 5 | `tests/` を変更しない | User Request | ✅ | `tests/` に差分なし | なし |
+| 6 | `src/types.ts` を変更しない | User Request | ✅ | `src/types.ts` に差分なし | なし |
+| 7 | `src/index.ts` の公開 API シグネチャを変更しない | `README.md:7-17`, `README.md:46` | ✅ | `src/index.ts:9-15` で同じ公開名を re-export | なし |
+| 8 | `CreateProduct` ルールを満たす | `README.md:21` | ✅ | `src/domain.ts:61-70` | なし |
+| 9 | `ReceiveStock` ルールを満たす | `README.md:22` | ✅ | `src/domain.ts:73-81`, `src/domain.ts:118-120` | なし |
+| 10 | `ReserveStock` ルールを満たす | `README.md:23` | ✅ | `src/domain.ts:84-99`, `src/domain.ts:122-124` | なし |
+| 11 | `ReleaseReservation` ルールを満たす | `README.md:24` | ✅ | `src/domain.ts:102-107`, `src/stock-projection.ts:32-40` | なし |
+| 12 | `ShipStock` ルールを満たす | `README.md:25`, `README.md:35-37` | ✅ | `src/domain.ts:110-115`, `src/stock-projection.ts:41-49` | なし |
+| 13 | イベントストアの version / concurrency / copy semantics を満たす | `README.md:27-31` | ✅ | `src/in-memory-event-store.ts:8-24` | なし |
+| 14 | `getStock` / `lowStock` セマンティクスを満たす | `README.md:33-37` | ✅ | `src/stock-projection.ts:54-65` | なし |
+| 15 | ドメインロジックはストアやプロジェクションに依存しない | `README.md:43` | ✅ | `src/domain.ts:1-124` | なし |
+| 16 | `CommandHandler` は `EventStore` ポートに依存する | `README.md:44` | ✅ | `src/command-handler.ts:1-20` | なし |
+| 17 | プロジェクションはイベントのみから構築する | `README.md:45` | ✅ | `src/stock-projection.ts:7-51` | なし |
+| 18 | モジュール分割を守る | `README.md:39-46` | ✅ | `src/domain.ts`, `src/in-memory-event-store.ts`, `src/command-handler.ts`, `src/stock-projection.ts`, `src/index.ts` | なし |
+| 19 | 削除・要求外除去がない | Supervisor スコープクリープ手順 | ✅ | 削除ファイルなし。追加は責務分割用の `src/*.ts` | なし |
+
+## 前段 finding の再評価
+
+| finding_id | 前段判定 | 元の期待結果 | 再評価 | 根拠 |
+|------------|----------|--------------|--------|------|
+| `ARCH-NEW-src-index-L25` | new | 責務単位にモジュール分割し、`src/index.ts` は re-export 中心 | resolved | `src/index.ts:9-15`, `src/domain.ts`, `src/in-memory-event-store.ts`, `src/command-handler.ts`, `src/stock-projection.ts` |
+| `ARCH-NEW-src-index-L221` / `CODE-NEW-src-index-L226` / `AI-NEW-src-index-L226` / `VAL-NEW-src-index-L226` | new | 複数予約が残る `StockShipped` 後も `available = onHand - reserved` を満たす | resolved | `src/stock-projection.ts:43-47` |
+| `ARCH-NEW-src-index-L69` / `AI-NEW-src-index-L69` | new | `default: return []` で未処理 command を成功扱いしない | resolved | `src/domain.ts:55-58` |
+| `AI-NEW-src-index-L264` | new | 予約数量欠落を `0` で隠さない | overreach | README は valid な event history の投影を契約化しており、invalid event stream の fail-fast は明示要件外。通常経路では `decide` が未知予約の release/ship を `DomainError` にする（`src/domain.ts:102-115`） |
+
+## 未分類の懸念チェック
+
+| レビュー | 懸念 | finding化状態 | 監督判定 | 根拠 |
+|----------|------|---------------|----------|------|
+| architecture-review | モジュール責務混在、shipment available 不整合、default no-op | finding化済み | 妥当 / resolved | `src/index.ts:9-15`, `src/stock-projection.ts:43-47`, `src/domain.ts:55-58` |
+| coding-review | shipment available 不整合 | finding化済み | 妥当 / resolved | `src/stock-projection.ts:43-47` |
+| ai-antipattern-review | 予約数量 `0` fallback | finding化済み | overreach | invalid event stream の fail-fast は元要件外 |
+| supervisor-validation 前回 | shipment available 不整合 | finding化済み | 妥当 / resolved | `src/stock-projection.ts:43-47` |
+
+## 保守スコープチェック（保守 workflow の場合のみ）
+
+| 観点 | 結果 | 根拠 |
+|------|------|------|
+| 必須変更のみか | 対象外 | 本 workflow は bench |
+| 関連変更の理由が明確か | 対象外 | 本 workflow は bench |
+| 不要変更が残っていないか | 対象外 | 本 workflow は bench |
+| コメント削除が要求外で起きていないか | 対象外 | 本 workflow は bench |
+| 型名・ファイル配置・公開APIが要求外で変わっていないか | 対象外 | 本 workflow は bench |
+| UI文言・アクセシビリティ名・テスト期待値が要求外で変わっていないか | 対象外 | 本 workflow は bench |
+
+## 検証サマリー
+
+| 項目 | 状態 | 確認方法 |
+|------|------|---------|
+| テスト | ✅ | fix step の実行結果記録で `npm test`: 51/51 通過を確認 |
+| ビルド | ✅ | fix step の実行結果記録で `npm run typecheck`: 型エラーなしを確認 |
+| 動作確認 | ✅ | 実コードで `StockShipped` 後の `available = onHand - reserved` を確認 |
+
+## 未確認範囲
+
+| 項目 | 影響 | 扱い |
+|------|------|------|
+| 生の `vitest` / `tsc` 標準出力 | 補助証跡 | fix step の実行結果記録を証跡として採用。supervisor では再実行していない |
+| invalid event stream を `StockProjection` に直接投入した場合の fail-fast | 元要件外 | APPROVE可。通常経路では `decide` が未知予約を拒否 |
+
+## 今回の指摘（new）
+
+| # | finding_id | 項目 | 根拠 | 理由 | 必要アクション |
+|---|------------|------|------|------|----------------|
+| なし | なし | なし | なし | なし | なし |
+
+## 継続指摘（persists）
+
+| # | finding_id | 前回根拠 | 今回根拠 | 理由 | 必要アクション |
+|---|------------|----------|----------|------|----------------|
+| なし | なし | なし | なし | なし | なし |
+
+## 解消済み（resolved）
+
+| finding_id | 元の期待結果 | 解消根拠 |
+|------------|--------------|----------|
+| `ARCH-NEW-src-index-L25` | 責務単位のモジュール分割 | `src/index.ts:9-15` と新規 `src/*.ts` |
+| `ARCH-NEW-src-index-L221` / `CODE-NEW-src-index-L226` / `AI-NEW-src-index-L226` / `VAL-NEW-src-index-L226` | `StockShipped` 後の `available` 整合 | `src/stock-projection.ts:43-47` |
+| `ARCH-NEW-src-index-L69` / `AI-NEW-src-index-L69` | 到達不能 no-op の排除 | `src/domain.ts:55-58` |
+
+## 成果物
+
+- 作成: `src/domain.ts`, `src/in-memory-event-store.ts`, `src/command-handler.ts`, `src/stock-projection.ts`
+- 変更: `src/index.ts`
+
+## 未完了項目（REJECTの場合）
+
+| # | 項目 | 理由 |
+|---|------|------|
+| なし | なし | なし |
+
+## REJECT判定条件
+
+- `new` または `persists` が1件以上ある場合のみ REJECT 可
+- `finding_id` なしの指摘は無効
