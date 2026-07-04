@@ -1,0 +1,42 @@
+# コーディングレビュー
+
+## 結果: APPROVE
+
+## サマリー
+累積差分および全テストを確認し、実装が要件を完全に満たしていることを確認しました。`StockProjection` における状態更新が完全にイミュータブルな形式に変更され、システム全体の不変性と整合性が極めて高いレベルで確保されています。
+
+## 契約入口チェック
+| 入口・経路 | 元要件 | 実装根拠 | テスト根拠 | 判定 | 例外・未確認の根拠 |
+|-----------|--------|----------|------------|------|-------------------|
+| `decide` (CreateProduct) | 名前trim後空でないこと | `src/domain.ts:66` | `tests/domain.test.ts` | ✅ | なし |
+| `decide` (ReserveStock) | available以内であること | `src/domain.ts:95` | `tests/domain.test.ts` | ✅ | なし |
+| `EventStore.append` | version不一致でConcurrencyError | `src/event-store.ts:18` | `tests/event-store.test.ts` | ✅ | なし |
+
+## 非finding化した懸念
+なし
+
+## 今回の指摘（new）
+なし
+
+## 継続指摘（persists）
+なし
+
+## 解消済み（resolved）
+なし
+
+## 再開指摘（reopened）
+なし
+
+## 検証証跡
+- 差分確認: `src/projection.ts` における予約管理の不変的更新（スプレッド演算子および分割代入の利用）へのリファクタリング、`src/index.ts` の `deepFreeze` 適用、`src/command-handler.ts` の状態局所化を再確認
+- ビルド: 型チェック合格を確認
+- テスト: `npm test` 実行。51/51 件成功を確認
+
+## 再走査証跡（2回目以降のレビューで必須）
+| 照合した Policy/Knowledge の章 | 差分側の根拠（`file:line` または「該当なし」） |
+|-------------------------------|---------------------------------------------|
+| 状態整合性 (原則) | `src/command-handler.ts:10-21` (状態をローカル変数に閉じ込め、リクエスト間の汚染を排除) |
+| 状態管理 (構造) | `src/domain.ts:5-45`, `src/projection.ts:12-84` (不変的な状態遷移の徹底) |
+| 意味契約 (原則) | `src/domain.ts:66` (名前のtrim要件の遵守) |
+| 元要件固定 (原則) | `src/event-store.ts:18` (楽観的並行性制御の要件遵守) |
+| ボーイスカウト (判定基準) | `src/index.ts:14-22` (`deepFreeze` による不変性の強化) |

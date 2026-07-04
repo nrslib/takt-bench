@@ -1,0 +1,48 @@
+# アーキテクチャレビュー
+
+## 結果: REJECT
+
+## サマリー
+前回の未使用 import 指摘は解消済みです。再走査で、`InMemoryEventStore` が保存済みイベントオブジェクトの参照を外部へ漏らしている問題を新規検出しました。
+
+## 確認した観点
+- [x] 構造・設計
+- [x] コード品質
+- [x] 変更スコープ
+- [x] テストカバレッジ
+- [x] デッドコード
+- [x] 呼び出しチェーン検証
+
+## 今回の指摘（new）
+| # | finding_id | family_tag | スコープ | 場所 | 問題 | 修正案 |
+|---|------------|------------|---------|------|------|--------|
+| 1 | ARCH-NEW-src-event-store-L13 | public-state-mutability | スコープ内 | `src/event-store.ts:13`, `src/event-store.ts:26` | `load()` は配列だけをコピーし、配列内の `DomainEvent` オブジェクト参照をそのまま返しています。`append()` も渡されたイベントオブジェクトをそのまま保存しています。利用側が取得済みまたは追加済みイベントを変更すると、ストア内部の保存済みイベントが変更され得ます。 | `append()` 保存時と `load()` 返却時に、イベントを要素単位で shallow clone してください。現在の `DomainEvent` は shallow な union なので `{ ...event }` で足ります。 |
+
+## 継続指摘（persists）
+なし
+
+## 解消済み（resolved）
+| finding_id | 解消根拠 |
+|------------|----------|
+| ARCH-NEW-src-command-handler-L3 | `src/command-handler.ts:1` から未使用 import が削除されています。 |
+| ARCH-NEW-src-command-handler-L31 | `src/command-handler.ts:16` で `domain.ts` の `decide` を呼び、重複実装は存在しません。 |
+| ARCH-NEW-src-domain-L5 | `src/domain.ts:12`, `src/domain.ts:14` で `initialState` と `reservations` が freeze されています。 |
+
+## 再開指摘（reopened）
+なし
+
+## 検証証跡
+- ビルド: `npm run typecheck` 成功。
+- テスト: `npm test` 成功。4ファイル、51件すべて成功。
+- 動作確認: README、`src/types.ts`、`src/index.ts`、実装各ファイル、呼び出し検索を確認。`src/types.ts` と `tests/` に差分なし。
+
+## 再走査証跡（2回目以降のレビューで必須）
+| 照合した Policy/Knowledge の章 | 差分側の根拠（`file:line` または「該当なし」） |
+|-------------------------------|---------------------------------------------|
+| Policy: 原則 / スコープ判定 / 判定基準 / ファクトチェック / ボーイスカウトルール / 判定ルール / レビューの基本手順 | `src/event-store.ts:13`, `src/event-store.ts:26` |
+| Knowledge: 公開状態の不変性 / コード品質の検出手法 / 品質特性 / 大局観 | `src/event-store.ts:13`, `src/event-store.ts:26` |
+| Knowledge: 構造・設計 / 仕様準拠の検証 / 呼び出しチェーン検証 | `README.md:27`, `src/types.ts:115`, `src/event-store.ts:7` |
+| その他の Policy/Knowledge 章 | 追加 finding なし |
+
+## REJECT判定条件
+- `new` が1件あるため REJECT。

@@ -1,0 +1,77 @@
+The user is asking me to output a review report based on my previous analysis. I need to follow the exact format provided and output only the report content as plain text.
+
+From my analysis:
+1. Tests: 51 passed (all tests passing)
+2. Type check: 14 errors - this is a blocking issue
+
+The main issues I found:
+1. Type narrowing is lost when passing commands to helper functions in src/domain.ts
+2. Potential undefined reference in src/domain.ts:34
+3. Type safety issue in src/projection.ts:35
+
+This should be a REJECT because there are type check errors that prevent the code from compiling properly.
+
+Let me format the report according to the template provided.
+
+# コーディングレビュー
+
+## 結果: REJECT
+
+## サマリー
+テスト 51 件は全て成功していますが、TypeScript 型チェックで 14 エラーが発生しています。`npm run typecheck` が失敗する状態はマージ基準を満たしていません。主な問題は `src/domain.ts` のヘルパー関数で型絞り込みが失われていること、および `src/projection.ts` の型安全性です。
+
+## 契約入口チェック
+| 入口・経路 | 元要件 | 実装根拠 | テスト根拠 | 判定 | 例外・未確認の根拠 |
+|-----------|--------|----------|------------|------|-------------------|
+| 公開 API (`src/index.ts`) | 変更禁止 | `src/index.ts:1-10` | tests/ 全ファイル | ✅ | 型は re-export のみ |
+| `initialState` | 未作成の商品状態 | `src/domain.ts:4-9` | `tests/domain.test.ts:29-35` | ✅ | |
+| `evolve` | 純粋関数、不変 | `src/domain.ts:11-40` | `tests/domain.test.ts:37-84` | ✅ | |
+| `decide` | 純粋関数、DomainError | `src/domain.ts:42-119` | `tests/domain.test.ts:86-187` | ⚠️ | 型エラー 13 件 |
+| `InMemoryEventStore` | 楽観的並行性制御 | `src/event-store.ts:4-23` | `tests/event-store.test.ts:6-56` | ✅ | |
+| `CommandHandler` | load→replay→decide→append | `src/command-handler.ts:4-21` | `tests/command-handler.test.ts:8-79` | ✅ | |
+| `StockProjection` | イベントから読み取りモデル | `src/projection.ts:3-85` | `tests/projection.test.ts:10-69` | ⚠️ | 型エラー 1 件 |
+
+## 非 finding 化した懸念
+| 項目 | 場所 | 分類 | finding 化しない根拠 |
+|------|------|------|---------------------|
+| `evolve` の不変性保証 | `src/domain.ts:11-40` | no_issue_after_verification | テスト `does not mutate the input state` で検証済み |
+| `InMemoryEventStore` の配列コピー | `src/event-store.ts:10,20` | no_issue_after_verification | テスト `returns a copy so callers cannot mutate` で検証済み |
+
+## 今回の指摘（new）
+| # | finding_id | family_tag | 重大度 | 場所 | 問題 | 影響 | 修正案 |
+|---|------------|------------|--------|------|------|------|--------|
+| 1 | CODE-NEW-domain-L65-L116 | type-error | High | `src/domain.ts:65,76,79,86,89,93,96,103,106,113,116` | ヘルパー関数の引数型が `Command` のまま。switch で絞り込んだ型が失われ、特定コマンドのプロパティアクセスでエラー | `npm run typecheck` 失敗 | 各ヘルパー関数の引数型を `CreateProduct` `ReceiveStock` 等へ明示 |
+| 2 | CODE-NEW-domain-L34 | type-error | Medium | `src/domain.ts:34` | `newState.reservations[event.reservationId]` が undefined の可能性。NaN になるリスク | 型チェックエラー | `!` アサーションまたは存在確認を追加 |
+| 3 | CODE-NEW-projection-L35 | type-error | Medium | `src/projection.ts:35` | `this.reservationQuantities[productId]?.[reservationId]` の型安全性 | 型チェックエラー | 明示的な変数代入で型を安定化 |
+
+## 継続指摘（persists）
+| # | finding_id | family_tag | 前回根拠 | 今回根拠 | 問題 | 修正案 |
+|---|------------|------------|----------|----------|------|--------|
+| - | - | - | - | - | - | - | 初回レビューのため該当なし |
+
+## 解消済み（resolved）
+| finding_id | 元の期待結果 | 解消根拠 |
+|------------|--------------|----------|
+| - | - | - | 初回レビューのため該当なし |
+
+## 再開指摘（reopened）
+| # | finding_id | family_tag | 解消根拠（前回） | 再発根拠 | 問題 | 修正案 |
+|---|------------|------------|----------------|---------|------|--------|
+| - | - | - | - | - | - | - | 初回レビューのため該当なし |
+
+## 検証証跡
+- 差分確認: `git diff HEAD` で `src/index.ts` の変更と新規 4 ファイルを確認
+- ビルド: `npm run typecheck` — **14 エラーで失敗**
+- テスト: `npm test` — **51 件全て成功**
+
+## 再走査証跡
+| 照合した Policy/Knowledge の章 | 差分側の根拠（`file:line` または「該当なし」） |
+|-------------------------------|---------------------------------------------|
+| フォールバック・デフォルト引数の禁止 | 該当なし |
+| 状態の正規化 | `src/domain.ts:11-40` — 不変コピー使用 |
+| エラーハンドリング | `src/domain.ts:61-116` — DomainError を適切に throw |
+| 契約変更の整合性 | `src/types.ts` 変更なし、実装は契約に準拠 |
+| 未完成コード | 該当なし（TODO/FIXME なし） |
+
+## REJECT 判定条件
+- `new` が 3 件存在するため REJECT

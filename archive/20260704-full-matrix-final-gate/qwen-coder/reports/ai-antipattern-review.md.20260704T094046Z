@@ -1,0 +1,51 @@
+# AI生成コードレビュー
+
+## 結果: REJECT
+
+## サマリー
+前回指摘のうち重複実装と公開共有状態は解消済みだが、`CommandHandler` に未使用 import が残っているため REJECT。
+
+## 検証した項目
+| 観点 | 結果 | 備考 |
+|------|------|------|
+| 仮定の妥当性 | ✅ | `CommandHandler` は `domain.ts` の `decide` を呼ぶ構造に修正済み |
+| API/ライブラリの実在 | ✅ | 幻覚API・存在しないメソッドは確認されなかった |
+| コンテキスト適合 | ❌ | 未使用 import が残っており、AI生成コード特有のデッドコードが未解消 |
+| スコープ | ✅ | 修正差分に adapter、normalizer、builder、外部通知、中断・キャンセル経路、新しい公開入口、意味付きメタデータ、外部副作用、保存・表示・再利用される識別子の追加は確認されなかった |
+
+## 非finding化した懸念
+| 項目 | 場所 | 分類 | finding化しない根拠 |
+|------|------|------|---------------------|
+| `StockShipped` / `ReservationReleased` の `|| 0` フォールバック | `src/domain.ts:39`, `src/projection.ts:27`, `src/projection.ts:36` | no_issue_after_verification | README とテストは正常なイベント履歴を前提にしており、無効イベント履歴の挙動は未定義。`decide` は未知予約の出荷・解放を拒否することを確認済み |
+
+## 今回の指摘（new）
+| # | finding_id | family_tag | カテゴリ | 場所 | 問題 | 修正案 |
+|---|------------|------------|---------|------|------|--------|
+| なし | - | - | - | - | - | - |
+
+## 継続指摘（persists）
+| # | finding_id | family_tag | 前回根拠 | 今回根拠 | 問題 | 修正案 |
+|---|------------|------------|----------|----------|------|--------|
+| 1 | AAI-002 | dead_code | `src/command-handler.ts:3` の未使用 import と `src/command-handler.ts:18` の冗長 `try/catch` | `src/command-handler.ts:3` に `DomainError` の未使用 import が残存 | 前回の `ConcurrencyError` と冗長 `try/catch` は解消済みだが、同じ import 行に未使用コードが残っている | `import { DomainError } from './types.js';` を削除する |
+
+## 解消済み（resolved）
+| finding_id | 解消根拠 |
+|------------|----------|
+| AAI-001 | `src/command-handler.ts:2` で `decide` を import し、`src/command-handler.ts:17` で呼び出している。private `decide` と重複 `isValidQuantity` は存在しない |
+| AAI-003 | `src/domain.ts:12` で `initialState` を freeze し、`src/domain.ts:14` で `reservations` も freeze している |
+
+## 再開指摘（reopened）
+| # | finding_id | family_tag | 解消根拠（前回） | 再発根拠 | 問題 | 修正案 |
+|---|------------|------------|----------------|---------|------|--------|
+| なし | - | - | - | - | - | - |
+
+## 再走査証跡（2回目以降のレビューで必須）
+| 照合した Policy/Knowledge の章 | 差分側の根拠（`file:line` または「該当なし」） |
+|-------------------------------|---------------------------------------------|
+| Policy: 原則 / スコープ判定 / 判定基準 / ファクトチェック / 指摘ID管理 / 前回指摘の追跡 / 判定の最終手順 / デッドコード検出 / 未使用コードの検出 | `src/command-handler.ts:3` |
+| Policy: コピペパターン検出 / レビュー指摘への不適切な対応検出 / スコープクリープ検出 / 不要な後方互換コードの検出 | 該当なし |
+| Knowledge: 構造・設計 / DRY違反の検出 / 呼び出しチェーン検証 / 公開状態の不変性 | `src/command-handler.ts:2`, `src/command-handler.ts:17`, `src/domain.ts:12`, `src/domain.ts:14` |
+| Knowledge: 境界での解決 / コード品質の検出手法 / セキュリティ / テスタビリティ / アンチパターン検出 / 抽象化レベルの評価 / 仕様準拠の検証 / 変更スコープの評価 | 該当なし |
+
+## REJECT判定条件
+- `persists` が1件あるため REJECT。

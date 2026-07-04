@@ -1,0 +1,34 @@
+# アーキテクチャレビュー
+
+## 結果: REJECT
+
+## サマリー
+状態の直接変更（ミューテーション）が依然として残存しており、不完全な修正となっています。また、ファイル分割および公開状態の不変性に関する構造的課題も未解消です。
+
+## 確認した観点
+- [x] 構造・設計
+- [x] コード品質
+- [x] 変更スコープ
+- [x] テストカバレッジ
+- [x] デッドコード
+- [x] 呼び出しチェーン検証
+
+## 継続指摘（persists）
+| # | finding_id | family_tag | 前回根拠 | 今回根拠 | 問題 | 修正案 |
+|---|------------|------------|----------|----------|------|--------|
+| 1 | ARCH-NEW-index-state | design-violation | `src/index.ts:25-53` | `src/index.ts:34-50, 234-253` | `evolve` および `StockProjection` 内で状態を直接変更している | 完全に新しいオブジェクトを返すイミュータブルな更新に統一する |
+| 2 | ARCH-NEW-index-freeze | design-violation | `src/index.ts:17-22` | `src/index.ts:17-22` | `initialState` の `reservations` が可変のまま露出（浅いFreeze） | 再帰的なfreezeを適用するか、ファクトリ関数を提供して保護する |
+| 3 | ARCH-NEW-index-split | design-violation | `src/index.ts` | `src/index.ts` | 全ての責務が1ファイルに同居し、責務分離がなされていない | `domain.ts`, `store.ts`, `handler.ts`, `projection.ts` 等に分割する |
+
+## 検証証跡
+- ビルド: 未確認
+- テスト: 未確認
+- 動作確認: 未確認
+
+## 再走査証跡（2回目以降のレビューで必須）
+| 照合した Policy/Knowledge の章 | 差分側の根拠（`file:line` または「該当なし」） |
+|-------------------------------|---------------------------------------------|
+| 構造・設計（ファイル分割） | `src/index.ts` (全責務が同居) |
+| 構造・設計（状態の直接変更） | `src/index.ts:34, 234, 247` 等 |
+| 公開状態の不変性 | `src/index.ts:17` (shallow freeze) |
+| 判定基準（REJECT） | 上記設計違反が解消されず残存しているため |

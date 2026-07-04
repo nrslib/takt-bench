@@ -1,0 +1,1723 @@
+[
+  {
+    "comboId": "qwen-coder_gemma-reviewer",
+    "rep": 1,
+    "reviewerRouting": "{\"provider\":\"opencode\",\"model\":\"ollama-cloud/gemma4:31b\"}",
+    "mechanical": {
+      "citations": [
+        {
+          "report": "ai-antipattern-review.md",
+          "round": "20260704T025745Z",
+          "citation": "`src/domain.ts:5`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "ai-antipattern-review.md",
+          "round": "20260704T025745Z",
+          "citation": "`src/command-handler.ts:5`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "ai-antipattern-review.md",
+          "round": "20260704T025745Z",
+          "citation": "`src/command-handler.ts:19`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "ai-antipattern-review.md",
+          "round": "20260704T030223Z",
+          "citation": "`src/command-handler.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "ai-antipattern-review.md",
+          "round": "20260704T030223Z",
+          "citation": "`src/command-handler.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "ai-antipattern-review.md",
+          "round": "20260704T030223Z",
+          "citation": "`src/command-handler.ts:5`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "ai-antipattern-review.md",
+          "round": "20260704T030223Z",
+          "citation": "`src/command-handler.ts:16`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "ai-antipattern-review.md",
+          "round": "20260704T030223Z",
+          "citation": "`src/command-handler.ts:5`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "ai-antipattern-review.md",
+          "round": "20260704T031314Z",
+          "citation": "`src/index.ts:33`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "ai-antipattern-review.md",
+          "round": "20260704T032604Z",
+          "citation": "`src/index.ts:6`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "ai-antipattern-review.md",
+          "round": "20260704T032604Z",
+          "citation": "`src/command-handler.ts:1`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "ai-antipattern-review.md",
+          "round": "20260704T032604Z",
+          "citation": "`src/event-store.ts:1`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "ai-antipattern-review.md",
+          "round": "20260704T032604Z",
+          "citation": "`src/index.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "ai-antipattern-review.md",
+          "round": "20260704T032604Z",
+          "citation": "`src/command-handler.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "ai-antipattern-review.md",
+          "round": "20260704T032604Z",
+          "citation": "`src/event-store.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "ai-antipattern-review.md",
+          "round": "20260704T033355Z",
+          "citation": "`src/projection.ts:48`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "ai-antipattern-review.md",
+          "round": "20260704T033355Z",
+          "citation": "`src/projection.ts:64`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "ai-antipattern-review.md",
+          "round": "20260704T033355Z",
+          "citation": "`src/projection.ts:80`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "ai-antipattern-review.md",
+          "round": "20260704T033355Z",
+          "citation": "`src/projection.ts:41`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "architect-review.md",
+          "round": "final",
+          "citation": "`src/index.ts:29`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "architect-review.md",
+          "round": "final",
+          "citation": "`src/projection.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "architect-review.md",
+          "round": "final",
+          "citation": "`src/index.ts:33`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "architect-review.md",
+          "round": "20260704T025728Z",
+          "citation": "`src/index.ts:16`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "architect-review.md",
+          "round": "20260704T025728Z",
+          "citation": "`src/domain.ts:5`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "architect-review.md",
+          "round": "20260704T025728Z",
+          "citation": "`src/projection.ts:12`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "architect-review.md",
+          "round": "20260704T025728Z",
+          "citation": "`src/index.ts:23`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "architect-review.md",
+          "round": "20260704T030203Z",
+          "citation": "`src/index.ts:23`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "architect-review.md",
+          "round": "20260704T030203Z",
+          "citation": "`src/index.ts:23`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "architect-review.md",
+          "round": "20260704T030203Z",
+          "citation": "`src/index.ts:25`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "architect-review.md",
+          "round": "20260704T030203Z",
+          "citation": "`src/domain.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "architect-review.md",
+          "round": "20260704T030203Z",
+          "citation": "`src/projection.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "architect-review.md",
+          "round": "20260704T030203Z",
+          "citation": "`src/index.ts:23`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "architect-review.md",
+          "round": "20260704T031247Z",
+          "citation": "`src/index.ts:25`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "architect-review.md",
+          "round": "20260704T031247Z",
+          "citation": "`src/domain.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "architect-review.md",
+          "round": "20260704T031247Z",
+          "citation": "`src/projection.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "architect-review.md",
+          "round": "20260704T031247Z",
+          "citation": "`src/index.ts:33`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "architect-review.md",
+          "round": "20260704T032525Z",
+          "citation": "`src/index.ts:29`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "architect-review.md",
+          "round": "20260704T032525Z",
+          "citation": "`src/domain.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "architect-review.md",
+          "round": "20260704T032525Z",
+          "citation": "`src/projection.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "architect-review.md",
+          "round": "20260704T032525Z",
+          "citation": "`src/index.ts:33`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "architect-review.md",
+          "round": "20260704T033302Z",
+          "citation": "`src/projection.ts:48`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "architect-review.md",
+          "round": "20260704T033302Z",
+          "citation": "`src/index.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "architect-review.md",
+          "round": "20260704T033302Z",
+          "citation": "`src/index.ts:29`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "architect-review.md",
+          "round": "20260704T033302Z",
+          "citation": "`src/projection.ts:48`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "architect-review.md",
+          "round": "20260704T033302Z",
+          "citation": "`src/index.ts:33`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "coding-review.md",
+          "round": "final",
+          "citation": "`src/domain.ts:66`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "coding-review.md",
+          "round": "final",
+          "citation": "`tests/domain.test.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "coding-review.md",
+          "round": "final",
+          "citation": "`src/domain.ts:95`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "coding-review.md",
+          "round": "final",
+          "citation": "`tests/domain.test.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "coding-review.md",
+          "round": "final",
+          "citation": "`src/event-store.ts:18`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "coding-review.md",
+          "round": "final",
+          "citation": "`tests/event-store.test.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "coding-review.md",
+          "round": "final",
+          "citation": "`src/projection.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "coding-review.md",
+          "round": "final",
+          "citation": "`src/index.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "coding-review.md",
+          "round": "final",
+          "citation": "`src/command-handler.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "coding-review.md",
+          "round": "final",
+          "citation": "`src/domain.ts:66`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "coding-review.md",
+          "round": "final",
+          "citation": "`src/event-store.ts:18`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "coding-review.md",
+          "round": "20260704T025813Z",
+          "citation": "`src/domain.ts:55`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "coding-review.md",
+          "round": "20260704T025813Z",
+          "citation": "`tests/domain.test.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "coding-review.md",
+          "round": "20260704T025813Z",
+          "citation": "`src/domain.ts:84`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "coding-review.md",
+          "round": "20260704T025813Z",
+          "citation": "`tests/domain.test.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "coding-review.md",
+          "round": "20260704T025813Z",
+          "citation": "`src/event-store.ts:18`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "coding-review.md",
+          "round": "20260704T025813Z",
+          "citation": "`tests/event-store.test.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "coding-review.md",
+          "round": "20260704T025813Z",
+          "citation": "`src/command-handler.ts:5`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "coding-review.md",
+          "round": "20260704T025813Z",
+          "citation": "`src/index.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "coding-review.md",
+          "round": "20260704T025813Z",
+          "citation": "`src/domain.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "coding-review.md",
+          "round": "20260704T025813Z",
+          "citation": "`src/event-store.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "coding-review.md",
+          "round": "20260704T025813Z",
+          "citation": "`src/command-handler.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "coding-review.md",
+          "round": "20260704T025813Z",
+          "citation": "`src/projection.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "coding-review.md",
+          "round": "20260704T030253Z",
+          "citation": "`src/domain.ts:66`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "coding-review.md",
+          "round": "20260704T030253Z",
+          "citation": "`tests/domain.test.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "coding-review.md",
+          "round": "20260704T030253Z",
+          "citation": "`src/domain.ts:95`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "coding-review.md",
+          "round": "20260704T030253Z",
+          "citation": "`tests/domain.test.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "coding-review.md",
+          "round": "20260704T030253Z",
+          "citation": "`src/event-store.ts:18`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "coding-review.md",
+          "round": "20260704T030253Z",
+          "citation": "`tests/event-store.test.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "coding-review.md",
+          "round": "20260704T030253Z",
+          "citation": "`src/command-handler.ts:14`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "coding-review.md",
+          "round": "20260704T030253Z",
+          "citation": "`src/command-handler.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "coding-review.md",
+          "round": "20260704T030253Z",
+          "citation": "`src/domain.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "coding-review.md",
+          "round": "20260704T030253Z",
+          "citation": "`src/projection.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "coding-review.md",
+          "round": "20260704T030253Z",
+          "citation": "`src/index.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "coding-review.md",
+          "round": "20260704T030253Z",
+          "citation": "`src/domain.ts:66`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "coding-review.md",
+          "round": "20260704T030253Z",
+          "citation": "`src/event-store.ts:18`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "coding-review.md",
+          "round": "20260704T030253Z",
+          "citation": "`src/index.ts:16`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "coding-review.md",
+          "round": "20260704T031355Z",
+          "citation": "`src/domain.ts:66`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "coding-review.md",
+          "round": "20260704T031355Z",
+          "citation": "`tests/domain.test.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "coding-review.md",
+          "round": "20260704T031355Z",
+          "citation": "`src/domain.ts:95`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "coding-review.md",
+          "round": "20260704T031355Z",
+          "citation": "`tests/domain.test.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "coding-review.md",
+          "round": "20260704T031355Z",
+          "citation": "`src/event-store.ts:18`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "coding-review.md",
+          "round": "20260704T031355Z",
+          "citation": "`tests/event-store.test.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "coding-review.md",
+          "round": "20260704T031355Z",
+          "citation": "`src/command-handler.ts:14`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "coding-review.md",
+          "round": "20260704T031355Z",
+          "citation": "`src/index.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "coding-review.md",
+          "round": "20260704T031355Z",
+          "citation": "`src/command-handler.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "coding-review.md",
+          "round": "20260704T031355Z",
+          "citation": "`src/domain.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "coding-review.md",
+          "round": "20260704T031355Z",
+          "citation": "`src/projection.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "coding-review.md",
+          "round": "20260704T031355Z",
+          "citation": "`src/domain.ts:66`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "coding-review.md",
+          "round": "20260704T031355Z",
+          "citation": "`src/event-store.ts:18`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "coding-review.md",
+          "round": "20260704T032655Z",
+          "citation": "`src/domain.ts:66`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "coding-review.md",
+          "round": "20260704T032655Z",
+          "citation": "`tests/domain.test.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "coding-review.md",
+          "round": "20260704T032655Z",
+          "citation": "`src/domain.ts:95`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "coding-review.md",
+          "round": "20260704T032655Z",
+          "citation": "`tests/domain.test.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "coding-review.md",
+          "round": "20260704T032655Z",
+          "citation": "`src/event-store.ts:18`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "coding-review.md",
+          "round": "20260704T032655Z",
+          "citation": "`tests/event-store.test.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "coding-review.md",
+          "round": "20260704T032655Z",
+          "citation": "`src/index.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "coding-review.md",
+          "round": "20260704T032655Z",
+          "citation": "`src/command-handler.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "coding-review.md",
+          "round": "20260704T032655Z",
+          "citation": "`src/domain.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "coding-review.md",
+          "round": "20260704T032655Z",
+          "citation": "`src/projection.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "coding-review.md",
+          "round": "20260704T032655Z",
+          "citation": "`src/domain.ts:66`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "coding-review.md",
+          "round": "20260704T032655Z",
+          "citation": "`src/event-store.ts:18`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "coding-review.md",
+          "round": "20260704T033505Z",
+          "citation": "`src/domain.ts:66`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "coding-review.md",
+          "round": "20260704T033505Z",
+          "citation": "`tests/domain.test.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "coding-review.md",
+          "round": "20260704T033505Z",
+          "citation": "`src/domain.ts:95`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "coding-review.md",
+          "round": "20260704T033505Z",
+          "citation": "`tests/domain.test.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "coding-review.md",
+          "round": "20260704T033505Z",
+          "citation": "`src/event-store.ts:18`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "coding-review.md",
+          "round": "20260704T033505Z",
+          "citation": "`tests/event-store.test.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "coding-review.md",
+          "round": "20260704T033505Z",
+          "citation": "`src/projection.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "coding-review.md",
+          "round": "20260704T033505Z",
+          "citation": "`src/index.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "coding-review.md",
+          "round": "20260704T033505Z",
+          "citation": "`src/command-handler.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "coding-review.md",
+          "round": "20260704T033505Z",
+          "citation": "`src/domain.ts:66`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "coding-review.md",
+          "round": "20260704T033505Z",
+          "citation": "`src/event-store.ts:18`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "merge-readiness-review.md",
+          "round": "final",
+          "citation": "`src/types.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "merge-readiness-review.md",
+          "round": "final",
+          "citation": "`src/types.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "merge-readiness-review.md",
+          "round": "final",
+          "citation": "`src/event-store.ts:1`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "merge-readiness-review.md",
+          "round": "final",
+          "citation": "`src/projection.ts:1`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "final",
+          "citation": "`src/types.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "final",
+          "citation": "`src/index.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "final",
+          "citation": "`src/index.ts:8`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "final",
+          "citation": "`src/index.ts:27`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "final",
+          "citation": "`src/index.ts:27`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "final",
+          "citation": "`src/event-store.ts:11`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "final",
+          "citation": "`src/projection.ts:10`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "final",
+          "citation": "`src/projection.ts:35`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "final",
+          "citation": "`src/projection.ts:42`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "final",
+          "citation": "`src/projection.ts:56`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "final",
+          "citation": "`src/projection.ts:10`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "final",
+          "citation": "`src/projection.ts:35`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "final",
+          "citation": "`src/projection.ts:1`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "final",
+          "citation": "`src/types.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "final",
+          "citation": "`src/index.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "final",
+          "citation": "`src/index.ts:8`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "final",
+          "citation": "`src/index.ts:27`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "final",
+          "citation": "`src/index.ts:6`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "final",
+          "citation": "`src/command-handler.ts:1`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "final",
+          "citation": "`src/event-store.ts:1`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "final",
+          "citation": "`src/projection.ts:10`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "final",
+          "citation": "`src/projection.ts:35`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "final",
+          "citation": "`src/projection.ts:42`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "final",
+          "citation": "`src/projection.ts:56`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "final",
+          "citation": "`src/projection.ts:10`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "final",
+          "citation": "`src/projection.ts:35`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "final",
+          "citation": "`src/projection.ts:56`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "final",
+          "citation": "`src/projection.ts:10`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "final",
+          "citation": "`src/projection.ts:10`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "final",
+          "citation": "`src/projection.ts:35`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "final",
+          "citation": "`src/projection.ts:42`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "final",
+          "citation": "`src/projection.ts:56`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "final",
+          "citation": "`src/projection.ts:10`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "final",
+          "citation": "`src/projection.ts:35`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "final",
+          "citation": "`src/projection.ts:42`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "final",
+          "citation": "`src/projection.ts:56`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "final",
+          "citation": "`src/index.ts:6`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "final",
+          "citation": "`src/command-handler.ts:1`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "final",
+          "citation": "`src/event-store.ts:1`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "merge-readiness-review.md",
+          "round": "final",
+          "citation": "`src/types.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "merge-readiness-review.md",
+          "round": "final",
+          "citation": "`src/types.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "final",
+          "citation": "`src/types.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "final",
+          "citation": "`src/index.ts:8`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "final",
+          "citation": "`src/command-handler.ts:1`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "final",
+          "citation": "`src/projection.ts:1`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "final",
+          "citation": "`src/types.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "final",
+          "citation": "`src/index.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "final",
+          "citation": "`src/index.ts:8`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "final",
+          "citation": "`src/projection.ts:12`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "final",
+          "citation": "`src/index.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "final",
+          "citation": "`src/command-handler.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "final",
+          "citation": "`src/domain.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "final",
+          "citation": "`src/event-store.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "final",
+          "citation": "`src/projection.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "final",
+          "citation": "`src/types.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "final",
+          "citation": "`src/index.ts:8`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "final",
+          "citation": "`src/projection.ts:12`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "final",
+          "citation": "`src/projection.ts:12`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "final",
+          "citation": "`src/domain.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "final",
+          "citation": "`src/event-store.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "final",
+          "citation": "`src/command-handler.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "final",
+          "citation": "`src/projection.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "final",
+          "citation": "`src/index.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "merge-readiness-review.md",
+          "round": "final",
+          "citation": "`src/domain.ts:4`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "merge-readiness-review.md",
+          "round": "final",
+          "citation": "`src/event-store.ts:14`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "merge-readiness-review.md",
+          "round": "final",
+          "citation": "`src/command-handler.ts:10`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "merge-readiness-review.md",
+          "round": "final",
+          "citation": "`src/projection.ts:12`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "merge-readiness-review.md",
+          "round": "final",
+          "citation": "`src/types.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "merge-readiness-review.md",
+          "round": "final",
+          "citation": "`src/index.ts:6`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "merge-readiness-review.md",
+          "round": "final",
+          "citation": "`src/command-handler.ts:1`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "merge-readiness-review.md",
+          "round": "final",
+          "citation": "`src/event-store.ts:1`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "merge-readiness-review.md",
+          "round": "final",
+          "citation": "`src/domain.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "merge-readiness-review.md",
+          "round": "final",
+          "citation": "`src/projection.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "merge-readiness-review.md",
+          "round": "final",
+          "citation": "`src/index.ts:6`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "merge-readiness-review.md",
+          "round": "final",
+          "citation": "`src/command-handler.ts:1`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "merge-readiness-review.md",
+          "round": "final",
+          "citation": "`src/event-store.ts:1`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "merge-readiness-review.md",
+          "round": "final",
+          "citation": "`src/index.ts:6`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "merge-readiness-review.md",
+          "round": "final",
+          "citation": "`src/command-handler.ts:1`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "merge-readiness-review.md",
+          "round": "final",
+          "citation": "`src/event-store.ts:1`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "merge-readiness-review.md",
+          "round": "final",
+          "citation": "`src/index.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "merge-readiness-review.md",
+          "round": "final",
+          "citation": "`src/event-store.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "merge-readiness-review.md",
+          "round": "final",
+          "citation": "`src/command-handler.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "merge-readiness-review.md",
+          "round": "final",
+          "citation": "`tests/domain.test.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "merge-readiness-review.md",
+          "round": "final",
+          "citation": "`tests/event-store.test.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "merge-readiness-review.md",
+          "round": "final",
+          "citation": "`tests/command-handler.test.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "merge-readiness-review.md",
+          "round": "final",
+          "citation": "`tests/projection.test.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "final",
+          "citation": "`src/types.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "final",
+          "citation": "`src/index.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "final",
+          "citation": "`src/index.ts:14`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "final",
+          "citation": "`src/index.ts:33`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "final",
+          "citation": "`src/event-store.ts:11`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "final",
+          "citation": "`src/projection.ts:10`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "final",
+          "citation": "`src/projection.ts:35`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "final",
+          "citation": "`src/projection.ts:42`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "final",
+          "citation": "`src/projection.ts:56`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "final",
+          "citation": "`src/projection.ts:10`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "final",
+          "citation": "`src/projection.ts:35`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "final",
+          "citation": "`src/projection.ts:1`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "final",
+          "citation": "`src/types.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "final",
+          "citation": "`src/index.ts`",
+          "fileExists": true,
+          "lineInRange": null
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "final",
+          "citation": "`src/index.ts:14`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "final",
+          "citation": "`src/index.ts:33`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "final",
+          "citation": "`src/command-handler.ts:14`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "final",
+          "citation": "`src/projection.ts:10`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "final",
+          "citation": "`src/projection.ts:35`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "final",
+          "citation": "`src/projection.ts:56`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "final",
+          "citation": "`src/projection.ts:10`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "final",
+          "citation": "`src/projection.ts:35`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "final",
+          "citation": "`src/projection.ts:56`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "final",
+          "citation": "`src/projection.ts:10`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "final",
+          "citation": "`src/projection.ts:35`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "final",
+          "citation": "`src/projection.ts:42`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "final",
+          "citation": "`src/projection.ts:56`",
+          "fileExists": true,
+          "lineInRange": true
+        },
+        {
+          "report": "supervisor-validation.md",
+          "round": "final",
+          "citation": "`src/command-handler.ts:14`",
+          "fileExists": true,
+          "lineInRange": true
+        }
+      ],
+      "hallucinatedCitations": 0,
+      "templateEchoes": []
+    },
+    "llm": {
+      "traps": [
+        {
+          "trap_id": "T1",
+          "present_in_final_code": false,
+          "caught_by_reviewers": true,
+          "note": "最終コードの StockProjection は productId ごとの reservations に reservationId→quantity を保持し、StockShipped で対象予約数量だけ onHand/reserved を減らしているため残存していない。全ラウンド中では supervisor-validation が projection の予約数量管理不備を指摘しており、最終版で resolved として扱っている。"
+        },
+        {
+          "trap_id": "T2",
+          "present_in_final_code": false,
+          "caught_by_reviewers": false,
+          "note": "available は getStock/lowStock/decide 内で onHand - reserved 合計から都度導出されており、状態として保持されていない。明示的な finding としては指摘されていない。"
+        },
+        {
+          "trap_id": "T3",
+          "present_in_final_code": true,
+          "caught_by_reviewers": false,
+          "note": "InMemoryEventStore は events 配列とは別に version を store 内へ保持しており、append 時にも current.version を参照している。イベント配列長から導出できる値を二重管理しているため T3 は残存。レビュー群は version 要件充足として扱っており、二重管理リスクは指摘していない。"
+        },
+        {
+          "trap_id": "T4",
+          "present_in_final_code": false,
+          "caught_by_reviewers": false,
+          "note": "domain.ts は types のみに依存し、CommandHandler は EventStore ポート型に依存している。依存方向違反は見当たらない。"
+        },
+        {
+          "trap_id": "T5",
+          "present_in_final_code": false,
+          "caught_by_reviewers": false,
+          "note": "domain/event-store/command-handler/projection/index に分割されており、index.ts への単一ファイル詰め込みではない。"
+        },
+        {
+          "trap_id": "T6",
+          "present_in_final_code": false,
+          "caught_by_reviewers": true,
+          "note": "initialState は index.ts で一箇所定義され、deepFreeze された値として公開されている。過去ラウンドで shallow freeze / deepFreeze が指摘・確認されている。"
+        },
+        {
+          "trap_id": "T7",
+          "present_in_final_code": false,
+          "caught_by_reviewers": true,
+          "note": "evolve は throw せず、入力 state を直接変更していない。architect-review が初期ラウンドで evolve の直接変更を指摘し、その後 resolved としている。"
+        },
+        {
+          "trap_id": "T8",
+          "present_in_final_code": false,
+          "caught_by_reviewers": false,
+          "note": "レビュー本文に tests/ や src/types.ts の変更要求は見当たらない。むしろ変更なしを確認している。"
+        }
+      ],
+      "fabricated_findings": [],
+      "out_of_scope_findings": [],
+      "thinking_leak": false,
+      "verdict_consistency": "最終ラウンドは複数系統で APPROVE だが、最終コードには T3（EventStore version の二重管理）が残っているため、最終 APPROVE は完全には整合しない。",
+      "reviewer_grade": 6,
+      "summary": "主要な projection 予約管理、initialState 不変性、CommandHandler 状態汚染は最終的に検出・解消確認できている。一方で version 二重管理というカタログ罠を見落としており、最終 APPROVE は監査基準では甘い。捏造・スコープ外要求・思考漏れは確認できない。"
+    }
+  }
+]

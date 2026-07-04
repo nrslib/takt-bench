@@ -1,8 +1,11 @@
 # ベンチマークマトリクス定義。
 # routing はタグ単位（provider_routing.tags）。ワークフロー側のステップに
-# coding（implement / fix）と review（レビュー4本 + supervise）のタグを
-# 付けてあり、combo は「coding タグ = コーダー」だけを差し替える。
-# review タグは全 combo で codex (gpt-5.5) に固定し、審査条件を一定にする。
+# coding（implement / fix）と review（3並列レビュー）のタグを付けてあり、
+# combo は coding / review タグを差し替える。final-gate タグ（takt#954、
+# merge-readiness-final-gate のサブステップに review と併記。後のタグが
+# 上書きするため review 定義があっても final-gate 定義が勝つ）は全 combo で
+# codex (gpt-5.5) に固定し、「merge 可能」の合格バーを一定にする —
+# ベンチは「ローカル構成が codex の品質バーに何周で到達するか」を測る。
 # loop monitor の judge は provider_routing を通らないため、workflow 側で
 # codex に直接固定してある（bench.yaml の loop_monitors 参照）。
 workflow: bench
@@ -16,6 +19,7 @@ combos:
       tags:
         coding: { provider: codex, model: gpt-5.5 }
         review: { provider: codex, model: gpt-5.5 }
+        final-gate: { provider: codex, model: gpt-5.5 }
 
   - id: qwen-coder
     description: coder のみ Qwen3-Coder-next。レビュアーは codex (gpt-5.5)
@@ -23,6 +27,7 @@ combos:
       tags:
         coding: { provider: opencode, model: ollama-cloud/qwen3-coder-next }
         review: { provider: codex, model: gpt-5.5 }
+        final-gate: { provider: codex, model: gpt-5.5 }
 
   - id: qwen-coder_gemma-reviewer
     description: coder は Qwen3-Coder-next、レビュアーは Gemma 4 31B（どちらも ollama-cloud）。レビュアー品質の比較用で、review 固定の他 combo とは比較軸が異なる
@@ -30,6 +35,7 @@ combos:
       tags:
         coding: { provider: opencode, model: ollama-cloud/qwen3-coder-next }
         review: { provider: opencode, model: ollama-cloud/gemma4:31b }
+        final-gate: { provider: codex, model: gpt-5.5 }
 
   - id: qwen-coder_qwen-coder-reviewer
     description: coder もレビュアーも Qwen3-Coder-next。コーダー特化モデルをレビューに転用するミスマッチ検証（当初の「coder 系はレビューで幻覚する」仮説の有効測定）
@@ -37,6 +43,7 @@ combos:
       tags:
         coding: { provider: opencode, model: ollama-cloud/qwen3-coder-next }
         review: { provider: opencode, model: ollama-cloud/qwen3-coder-next }
+        final-gate: { provider: codex, model: gpt-5.5 }
 
   - id: qwen-coder_qwen-instruct-reviewer
     description: coder は Qwen3-Coder-next、レビュアーは Qwen3.5 397B instruct（ollama-cloud）。コーダー系ではなく instruct 系をレビュアーに立てる実験
@@ -44,6 +51,7 @@ combos:
       tags:
         coding: { provider: opencode, model: ollama-cloud/qwen3-coder-next }
         review: { provider: opencode, model: ollama-cloud/qwen3.5:397b }
+        final-gate: { provider: codex, model: gpt-5.5 }
 
 # ハーネス疎通確認用（--smoke 指定時のみ生成・実行、API 消費なし）
 smoke:
@@ -53,3 +61,4 @@ smoke:
     tags:
       coding: { provider: mock }
       review: { provider: mock }
+      final-gate: { provider: mock }

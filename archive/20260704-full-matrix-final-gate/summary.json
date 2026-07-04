@@ -1,0 +1,257 @@
+[
+  {
+    "comboId": "codex-all",
+    "rep": 1,
+    "dir": "/Users/nrs/work/git/takt-bench/runs/codex-all-r1",
+    "exitCode": 0,
+    "durationMs": 975328,
+    "testsPassed": 51,
+    "testsTotal": 51,
+    "typecheckOk": true,
+    "diffShortstat": "5 files changed, 247 insertions(+), 57 deletions(-)",
+    "usage": [
+      {
+        "step": "implement",
+        "provider": "codex",
+        "model": "gpt-5.5",
+        "calls": 1,
+        "inputTokens": 324397,
+        "outputTokens": 5164,
+        "totalTokens": 329561
+      },
+      {
+        "step": "reviewers",
+        "provider": "codex",
+        "model": "gpt-5.5",
+        "calls": 2,
+        "inputTokens": 0,
+        "outputTokens": 0,
+        "totalTokens": 0
+      },
+      {
+        "step": "fix",
+        "provider": "codex",
+        "model": "gpt-5.5",
+        "calls": 1,
+        "inputTokens": 770522,
+        "outputTokens": 11162,
+        "totalTokens": 781684
+      },
+      {
+        "step": "final_gate",
+        "provider": "codex",
+        "model": "gpt-5.5",
+        "calls": 2,
+        "inputTokens": 0,
+        "outputTokens": 0,
+        "totalTokens": 0
+      }
+    ],
+    "usageMissingCalls": 4,
+    "totalTokens": 1111245
+  },
+  {
+    "comboId": "qwen-coder",
+    "rep": 1,
+    "dir": "/Users/nrs/work/git/takt-bench/runs/qwen-coder-r1",
+    "exitCode": 0,
+    "durationMs": 2572648,
+    "testsPassed": 51,
+    "testsTotal": 51,
+    "typecheckOk": true,
+    "diffShortstat": "5 files changed, 262 insertions(+), 57 deletions(-)",
+    "usage": [
+      {
+        "step": "implement",
+        "provider": "opencode",
+        "model": "ollama-cloud/qwen3-coder-next",
+        "calls": 1,
+        "inputTokens": 0,
+        "outputTokens": 0,
+        "totalTokens": 0
+      },
+      {
+        "step": "reviewers",
+        "provider": "codex",
+        "model": "gpt-5.5",
+        "calls": 7,
+        "inputTokens": 0,
+        "outputTokens": 0,
+        "totalTokens": 0
+      },
+      {
+        "step": "fix",
+        "provider": "opencode",
+        "model": "ollama-cloud/qwen3-coder-next",
+        "calls": 6,
+        "inputTokens": 0,
+        "outputTokens": 0,
+        "totalTokens": 0
+      },
+      {
+        "step": "final_gate",
+        "provider": "codex",
+        "model": "gpt-5.5",
+        "calls": 2,
+        "inputTokens": 0,
+        "outputTokens": 0,
+        "totalTokens": 0
+      }
+    ],
+    "usageMissingCalls": 16,
+    "totalTokens": 0
+  },
+  {
+    "comboId": "qwen-coder_gemma-reviewer",
+    "rep": 1,
+    "dir": "/Users/nrs/work/git/takt-bench/runs/qwen-coder_gemma-reviewer-r1",
+    "exitCode": 3,
+    "durationMs": 2981499,
+    "testsPassed": 51,
+    "testsTotal": 51,
+    "typecheckOk": true,
+    "diffShortstat": "5 files changed, 376 insertions(+), 56 deletions(-)",
+    "usage": [
+      {
+        "step": "implement",
+        "provider": "opencode",
+        "model": "ollama-cloud/qwen3-coder-next",
+        "calls": 1,
+        "inputTokens": 0,
+        "outputTokens": 0,
+        "totalTokens": 0
+      },
+      {
+        "step": "reviewers",
+        "provider": "opencode",
+        "model": "ollama-cloud/gemma4:31b",
+        "calls": 5,
+        "inputTokens": 0,
+        "outputTokens": 0,
+        "totalTokens": 0
+      },
+      {
+        "step": "fix",
+        "provider": "opencode",
+        "model": "ollama-cloud/qwen3-coder-next",
+        "calls": 4,
+        "inputTokens": 0,
+        "outputTokens": 0,
+        "totalTokens": 0
+      }
+    ],
+    "usageMissingCalls": 10,
+    "totalTokens": 0
+  },
+  {
+    "comboId": "qwen-coder_qwen-coder-reviewer",
+    "rep": 1,
+    "dir": "/Users/nrs/work/git/takt-bench/runs/qwen-coder_qwen-coder-reviewer-r1",
+    "exitCode": 3,
+    "durationMs": 2124206,
+    "testsPassed": 51,
+    "testsTotal": 51,
+    "typecheckOk": true,
+    "diffShortstat": "5 files changed, 230 insertions(+), 57 deletions(-)",
+    "usage": [
+      {
+        "step": "implement",
+        "provider": "opencode",
+        "model": "ollama-cloud/qwen3-coder-next",
+        "calls": 1,
+        "inputTokens": 0,
+        "outputTokens": 0,
+        "totalTokens": 0
+      },
+      {
+        "step": "reviewers",
+        "provider": "opencode",
+        "model": "ollama-cloud/qwen3-coder-next",
+        "calls": 3,
+        "inputTokens": 0,
+        "outputTokens": 0,
+        "totalTokens": 0
+      },
+      {
+        "step": "final_gate",
+        "provider": "codex",
+        "model": "gpt-5.5",
+        "calls": 6,
+        "inputTokens": 0,
+        "outputTokens": 0,
+        "totalTokens": 0
+      },
+      {
+        "step": "fix",
+        "provider": "opencode",
+        "model": "ollama-cloud/qwen3-coder-next",
+        "calls": 3,
+        "inputTokens": 0,
+        "outputTokens": 0,
+        "totalTokens": 0
+      },
+      {
+        "step": "_loop_judge_reviewers_final-gate_fix",
+        "provider": "codex",
+        "model": "gpt-5.5",
+        "calls": 1,
+        "inputTokens": 4964226,
+        "outputTokens": 47251,
+        "totalTokens": 5011477
+      }
+    ],
+    "usageMissingCalls": 13,
+    "totalTokens": 5011477
+  },
+  {
+    "comboId": "qwen-coder_qwen-instruct-reviewer",
+    "rep": 1,
+    "dir": "/Users/nrs/work/git/takt-bench/runs/qwen-coder_qwen-instruct-reviewer-r1",
+    "exitCode": 0,
+    "durationMs": 3186013,
+    "testsPassed": 51,
+    "testsTotal": 51,
+    "typecheckOk": true,
+    "diffShortstat": "5 files changed, 275 insertions(+), 55 deletions(-)",
+    "usage": [
+      {
+        "step": "implement",
+        "provider": "opencode",
+        "model": "ollama-cloud/qwen3-coder-next",
+        "calls": 1,
+        "inputTokens": 0,
+        "outputTokens": 0,
+        "totalTokens": 0
+      },
+      {
+        "step": "reviewers",
+        "provider": "opencode",
+        "model": "ollama-cloud/qwen3.5:397b",
+        "calls": 6,
+        "inputTokens": 0,
+        "outputTokens": 0,
+        "totalTokens": 0
+      },
+      {
+        "step": "fix",
+        "provider": "opencode",
+        "model": "ollama-cloud/qwen3-coder-next",
+        "calls": 5,
+        "inputTokens": 0,
+        "outputTokens": 0,
+        "totalTokens": 0
+      },
+      {
+        "step": "final_gate",
+        "provider": "codex",
+        "model": "gpt-5.5",
+        "calls": 6,
+        "inputTokens": 0,
+        "outputTokens": 0,
+        "totalTokens": 0
+      }
+    ],
+    "usageMissingCalls": 18,
+    "totalTokens": 0
+  }
+]

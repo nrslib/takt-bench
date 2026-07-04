@@ -1,0 +1,50 @@
+# アーキテクチャレビュー
+
+## 結果: REJECT
+
+## サマリー
+前回指摘のうち、ドメイン判定の重複実装と公開 `initialState` の可変公開は解消済みです。ただし `src/command-handler.ts` に未使用 import が残っており、dead-code 指摘は継続です。
+
+## 確認した観点
+- [x] 構造・設計
+- [x] コード品質
+- [x] 変更スコープ
+- [x] テストカバレッジ
+- [x] デッドコード
+- [x] 呼び出しチェーン検証
+
+## 今回の指摘（new）
+なし
+
+## 継続指摘（persists）
+| # | finding_id | family_tag | 前回根拠 | 今回根拠 | 問題 | 修正案 |
+|---|------------|------------|----------|----------|------|--------|
+| 1 | ARCH-NEW-src-command-handler-L3 | dead-code | `src/command-handler.ts:3` の未使用 import / `src/command-handler.ts:18` の no-op try/catch | `src/command-handler.ts:3` | `DomainError` が import されていますが、このファイル内で使用されていません。前回の未使用 import 指摘が形を変えて残っています。 | `import { DomainError } from './types.js';` を削除してください。 |
+
+## 解消済み（resolved）
+| finding_id | 解消根拠 |
+|------------|----------|
+| ARCH-NEW-src-command-handler-L31 | `src/command-handler.ts:17` で `domain.ts` の `decide` を呼び出しており、private `decide` の重複実装は存在しません。 |
+| ARCH-NEW-src-domain-L5 | `src/domain.ts:12` と `src/domain.ts:14` で `initialState` と `reservations` が runtime freeze されています。 |
+
+## 再開指摘（reopened）
+なし
+
+## 検証証跡
+- ビルド: `npm run typecheck` 成功。
+- テスト: `npm test` 成功。4ファイル、51件すべて成功。
+- 動作確認: README、`src/types.ts`、`src/index.ts`、実装各ファイル、呼び出し検索を確認。`src/types.ts` と `tests/` に差分なし。
+
+## 再走査証跡（2回目以降のレビューで必須）
+| 照合した Policy/Knowledge の章 | 差分側の根拠（`file:line` または「該当なし」） |
+|-------------------------------|---------------------------------------------|
+| Policy: 原則 / スコープ判定 / 判定基準 / ファクトチェック / 指摘ID管理 / ボーイスカウトルール / 判定ルール / レビューの基本手順 / 堂々巡りの検出 | `src/command-handler.ts:3` |
+| Policy: 振る舞い証跡の判定 / テストファイルの扱い | `npm test` 51件成功、`src/types.ts` と `tests/` 差分なし |
+| Policy: 具体的な指摘の書き方 / 再オープン条件 / finding_id の意味固定 / 変更履歴ファイルの扱い | 該当なし |
+| Knowledge: 構造・設計 / アンチパターン検出 / DRY違反の検出 / 呼び出しチェーン検証 | `src/command-handler.ts:17` で解消済み |
+| Knowledge: 公開状態の不変性 | `src/domain.ts:12`, `src/domain.ts:14` で解消済み |
+| Knowledge: コード品質の検出手法 / その場しのぎの検出 / 品質特性 / 大局観 | `src/command-handler.ts:3` |
+| Knowledge: 境界での解決 / セキュリティ / テスタビリティ / 抽象化レベルの評価 / 未完成コードの検出 / 仕様準拠の検証 / 変更スコープの評価 | 追加 finding なし |
+
+## REJECT判定条件
+- `persists` が1件あるため REJECT。

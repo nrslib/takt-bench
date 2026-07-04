@@ -1,13 +1,15 @@
 # ベンチマーク用ワークフロー。
-# provider / model は書かない — .takt/config.yaml の provider_routing.personas で
-# ペルソナごとに差し替える（ここに直書きすると routing より優先され上書き不能になる）。
-# レビューは takt-default（default-peer-review）ベースの 4 並列構成（pure-review は
-# 小規模題材では arch / supervise と重複するため除外）を builtin
-# ファセット（persona / policy / knowledge / instruction / output-contract）の
-# 3 層解決でそのまま使う。
+# provider / model は書かない — .takt/config.yaml の provider_routing で
+# 差し替える（ここに直書きすると routing より優先され上書き不能になる）。
+# レビュー構成は takt-default（default-peer-review、#949 以降の形）を builtin
+# ファセットの 3 層解決でそのまま使う: 3 並列レビュー（arch + ai-antipattern +
+# coding） ⇄ fix ループの後、merge-readiness-final-gate（merge-readiness-review
+# + supervise 並列）を workflow_call で実行する。
+# final-gate のサブステップにも review タグが付いているため、combo の
+# レビュアーモデルがそのまま最終ゲートも担当する（= ベンチ対象に含まれる）。
 name: bench
-description: ベンチマーク用 implement → 並列レビュー（arch + ai-antipattern + coding + supervise） ⇄ fix ループ
-max_steps: 16
+description: ベンチマーク用 implement → 3並列レビュー ⇄ fix ループ → merge-readiness 最終ゲート
+max_steps: 20
 initial_step: implement
 workflow_config:
   provider_options:
@@ -19,6 +21,7 @@ workflow_config:
 loop_monitors:
   - cycle:
       - reviewers
+      - final-gate
       - fix
     threshold: 3
     judge:
@@ -105,29 +108,27 @@ steps:
           report:
             - name: coding-review.md
               format: coding-review
-
-      - name: supervise
-        tags:
-          - review
-        edit: false
-        persona: supervisor
-        policy: review
-        instruction: supervise
-        rules:
-          - condition: すべて問題なし
-          - condition: 要求未達成、テスト失敗、ビルドエラー
-        output_contracts:
-          report:
-            - name: supervisor-validation.md
-              format: supervisor-validation
-            - name: summary.md
-              format: summary
-              use_judge: false
     rules:
-      - condition: all("approved", "AI特有の問題なし", "approved", "すべて問題なし")
-        next: COMPLETE
-      - condition: any("needs_fix", "AI特有の問題あり", "needs_fix", "要求未達成、テスト失敗、ビルドエラー")
+      - condition: all("approved", "AI特有の問題なし", "approved")
+        next: final-gate
+      - condition: any("needs_fix", "AI特有の問題あり", "needs_fix")
         next: fix
+
+  # merge 可能品質の最終ゲート（builtin サブワークフロー）。
+  # merge-readiness-review + supervise を並列実行し、needs_fix なら fix へ戻す。
+  # ベンチには replan ステップがないため、need_replan は収束失敗として ABORT に落とす。
+  - name: final-gate
+    kind: workflow_call
+    call: merge-readiness-final-gate
+    rules:
+      - condition: COMPLETE
+        next: COMPLETE
+      - condition: needs_fix
+        next: fix
+      - condition: need_replan
+        next: ABORT
+      - condition: ABORT
+        next: ABORT
 
   - name: fix
     tags:

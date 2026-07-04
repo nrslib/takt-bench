@@ -1,0 +1,65 @@
+The user wants me to output the architecture review report. I already completed the review and found one REJECT issue about `initialState` not being frozen. Let me format the report according to the template provided.
+
+The key finding is:
+- ARCH-NEW-domain-L13-L18: `initialState` is exported as a mutable object without freeze protection
+
+Tests pass (51/51) and typecheck passes, but this is a REJECT according to the policy's "公開状態の不変性" (Public State Immutability) criteria.
+
+# アーキテクチャレビュー
+
+## 結果: REJECT
+
+## サマリー
+テスト 51 件すべて成功、型チェックもパスしています。しかし、`initialState` が freeze されず可変のまま公開されているため、公開状態の不変性基準に抵触します。
+
+## 確認した観点
+- [x] 構造・設計
+- [x] コード品質
+- [x] 変更スコープ
+- [x] テストカバレッジ
+- [x] デッドコード
+- [x] 呼び出しチェーン検証
+
+## 今回の指摘（new）
+
+| # | finding_id | family_tag | スコープ | 場所 | 問題 | 修正案 |
+|---|------------|------------|---------|------|------|--------|
+| 1 | ARCH-NEW-domain-L13-L18 | immutability | スコープ内 | `src/domain.ts:13-18` | `initialState` が freeze されず可変のまま公開。利用側が書き換えると全 replay の起点が汚染される | `Object.freeze()` で深層保護するか、ファクトリ関数 `createInitialState()` に変更 |
+
+## 継続指摘（persists）
+
+該当なし
+
+## 解消済み（resolved）
+
+| finding_id | 解消根拠 |
+|------------|----------|
+| ARCH-NEW-projection-getStock | `src/projection.ts:65-71` — `getStock()` が内部状態のコピーを返すように修正済み |
+
+## 再開指摘（reopened）
+
+該当なし
+
+## 検証証跡
+- ビルド: `npm run typecheck` — エラー 0 件（パス）
+- テスト: `npm test` — 51 件中 51 件 PASS
+- 動作確認: 型チェック・テストともにパス
+
+## 再走査証跡
+
+| 照合した Policy/Knowledge の章 | 差分側の根拠（`file:line` または「該当なし」） |
+|-------------------------------|---------------------------------------------|
+| 公開状態の不変性 | `src/domain.ts:13-18` — `initialState` が freeze されていない |
+| 構造・設計 — ファイル分割 | `src/domain.ts:1-130`（130 行）— 警告基準未満 |
+| 構造・設計 — モジュール構成 | 責務分離済み（domain/event-store/projection） |
+| 構造・設計 — パブリック API の公開範囲 | `src/index.ts:7-12` — ドメインレベルの抽象のみ |
+| 構造・設計 — 関数設計 | 最大関数 `evolve`（29 行）— 30 行基準クリア |
+| 構造・設計 — レイヤー設計 | `src/command-handler.ts:5` — `EventStore` ポート依存 |
+| 構造・設計 — 責務の分離 | `src/projection.ts:7-62` — イベントのみから構築 |
+| コード品質 — 状態の直接変更 | `src/domain.ts:48` — イミュータブル |
+| 仕様準拠の検証 | `README.md` のアーキテクチャ要件を満たしている |
+| DRY 違反の検出 | `src/domain.ts:128-130` — `isValidQuantity` 共通関数に抽出 |
+
+## REJECT 判定条件
+
+`new` が 1 件（ARCH-NEW-domain-L13-L18）あるため REJECT と判定。

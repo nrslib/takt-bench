@@ -1,0 +1,41 @@
+# AI生成コードレビュー
+
+## 結果: REJECT
+
+## サマリー
+`StockProjection` において、`this.reservations` 内部オブジェクトへの破壊的変更が残っており、不変性の保証が不十分であるため。
+
+## 検証した項目
+| 観点 | 結果 | 備考 |
+|------|------|------|
+| 仮定の妥当性 | ✅ | - |
+| API/ライブラリの実在 | ✅ | - |
+| コンテキスト適合 | ✅ | - |
+| スコープ | ✅ | - |
+
+## 非finding化した懸念
+なし
+
+## 今回の指摘（new）
+| # | finding_id | family_tag | カテゴリ | 場所 | 問題 | 修正案 |
+|---|------------|------------|---------|------|------|--------|
+| 1 | AI-NEW-projection-L48 | state-mutation | 破壊的変更 | `src/projection.ts:48` | `productReservations` オブジェクトを直接変更している | スプレッド構文を用いて新オブジェクトを作成し再代入する |
+| 2 | AI-NEW-projection-L64 | state-mutation | 破壊的変更 | `src/projection.ts:64` | `productReservations` から直接 `delete` している | スプレッド構文等を用いて不変的に更新する |
+| 3 | AI-NEW-projection-L80 | state-mutation | 破壊的変更 | `src/projection.ts:80` | `productReservations` から直接 `delete` している | スプレッド構文等を用いて不変的に更新する |
+| 4 | AI-NEW-projection-L41 | redundant-logic | 冗長な分岐 | `src/projection.ts:41` | `productReservations` の存在確認を連続して行っている | `if-else` または早期リターンへ整理する |
+
+## 継続指摘（persists）
+なし
+
+## 解消済み（resolved）
+なし
+
+## 再開指摘（reopened）
+なし
+
+## 再走査証跡（2回目以降のレビューで必須）
+| 照合した Policy/Knowledge の章 | 差分側の根拠（`file:line` または「該当なし」） |
+|-------------------------------|---------------------------------------------|
+| 判定基準: オブジェクト/配列の直接変更 | `src/projection.ts:48, 64, 80` |
+| AI Antipattern: 冗長な条件分岐パターン | `src/projection.ts:41-44` |
+| 原則: 状態整合性 | `src/projection.ts:12-85` |

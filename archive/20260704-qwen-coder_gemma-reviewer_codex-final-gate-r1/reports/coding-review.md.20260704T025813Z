@@ -1,0 +1,43 @@
+# コーディングレビュー
+
+## 結果: REJECT
+
+## サマリー
+全テストをパスしており、ドメインルールも正確に実装されていますが、CommandHandlerに重大な状態管理のバグがあり、マルチプロダクト処理時に状態が汚染されるため差し戻します。
+
+## 契約入口チェック
+| 入口・経路 | 元要件 | 実装根拠 | テスト根拠 | 判定 | 例外・未確認の根拠 |
+|-----------|--------|----------|------------|------|-------------------|
+| `decide` (CreateProduct) | 名前trim後空でないこと | `src/domain.ts:55` | `tests/domain.test.ts` | ✅ | なし |
+| `decide` (ReserveStock) | available以内であること | `src/domain.ts:84` | `tests/domain.test.ts` | ✅ | なし |
+| `EventStore.append` | version不一致でConcurrencyError | `src/event-store.ts:18` | `tests/event-store.test.ts` | ✅ | なし |
+
+## 非finding化した懸念
+| 項目 | 場所 | 分類 | finding化しない根拠 |
+|------|------|------|---------------------|
+| なし | - | - | - |
+
+## 今回の指摘（new）
+| # | finding_id | family_tag | 重大度 | 場所 | 問題 | 影響 | 修正案 |
+|---|------------|------------|--------|------|------|------|--------|
+| 1 | CODE-NEW-src-command-handler-L5 | bug | High | `src/command-handler.ts:5` | `currentState` をクラスメンバとして保持している | 異なる productId のコマンドを連続的に処理した際、前回の状態が残り、不正な状態遷移やデータ汚染が発生する | `currentState` をメンバ変数から削除し、`handle` メソッド内のローカル変数として定義する |
+
+## 継続指摘（persists）
+なし
+
+## 解消済み（resolved）
+なし
+
+## 再開指摘（reopened）
+なし
+
+## 検証証跡
+- 差分確認: `src/index.ts`, `src/domain.ts`, `src/event-store.ts`, `src/command-handler.ts`, `src/projection.ts` を精査
+- ビルド: 未確認（型チェックは `npm run typecheck` で合格することを想定）
+- テスト: `npm test` 実行。51/51 件成功を確認。
+
+## 再走査証跡（2回目以降のレビューで必須）
+該当なし（1回目のレビューのため）
+
+## REJECT判定条件
+- `new` が 1 件あるため REJECT

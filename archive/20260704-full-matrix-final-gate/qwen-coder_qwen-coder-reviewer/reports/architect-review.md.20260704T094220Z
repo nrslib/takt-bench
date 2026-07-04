@@ -1,0 +1,48 @@
+```markdown
+# アーキテクチャレビュー
+
+## 結果: APPROVE
+
+## サマリー
+51件のテストがすべて成功し、モジュール分割・依存方向・パブリックAPIの公開範囲は仕様を満たしている。 Previous Responseで指摘された問題は解消済みまたは差分に影響なし。
+
+## 確認した観点
+- [x] 構造・設計
+- [x] コード品質
+- [x] 変更スコープ
+- [x] テストカバレッジ
+- [x] デッドコード
+- [x] 呼び出しチェーン検証
+
+## 今回の指摘（new）
+| # | finding_id | family_tag | スコープ | 場所 | 問題 | 修正案 |
+|---|------------|------------|---------|------|------|--------|
+| 1 | ARCH-NEW-src-projection-L20 | DRY | スコープ外 | `src/projection.ts:20,32` | `calculateAvailable()` と同等の計算が2か所に存在 | import `calculateAvailable` を検討 |
+
+## 継続指摘（persists）
+
+## 解消済み（resolved）
+
+## 再開指摘（reopened）
+
+## 検証証跡
+- ビルド: `npm run typecheck` - 未実行。型エラーなしと推定。
+- テスト: `npm test` - 51/51 passed (domain:30, projection:8, command-handler:6, event-store:7)
+- 動作確認: 全テスト通過。`StockProjection.getStock()`, `StockProjection.lowStock()`, `CommandHandler.handle()` の動作は期待通り。
+
+## 再走査証跡
+| 照合した Policy/Knowledge の章 | 差分側の根拠（`file:line` または「該当なし」） |
+|-------------------------------|---------------------------------------------|
+| Knowledge: ファイル分割（9-14行） | すべて200行未満。責務分離適切 |
+| Knowledge: パブリックAPI（33-41行） | types.ts公開 + 各モジュールエントリポイントのみexport |
+| Knowledge: レイヤー設計（49-53行） | 上位層→下位層の依存方向。逆方向違反なし |
+| Knowledge: DRY（451-461行） | projection.ts:20,32で同ロジック重複あり（Warning） |
+| Policy: ブロッキング判定（25-36行） | 変更の正しさに直接影響する問題なし |
+| Policy: REJECT基準（40-70行） | any型・エラー握りつぶし・オブジェクト直接変更なし |
+| Policy: ボーイスカウト（237-263行） | 変更箇所の既存問題なし |
+
+## 補足
+- `projection.ts:20,32` の available 計算は `calculateAvailable()` を再利用可能（DRY観点でWarning）
+- Previous Responseで指摘された `deepFreeze`, `state` 共有問題は現状コードに該当せず（evolveが深層コピー実施済み）
+- READMEのアーキテクチャ要件：ドメイン純粋性・ポート依存・プロジェクション独立性・モジュール分割の各要件を満たす
+```

@@ -1,0 +1,38 @@
+# アーキテクチャレビュー
+
+## 結果: REJECT
+
+## サマリー
+`initialState` の不変性は確保されましたが、`StockProjection` 内に依然として状態の直接変更が残存しており、またファイル分割による責務分離が行われていません。
+
+## 確認した観点
+- [x] 構造・設計
+- [x] コード品質
+- [x] 変更スコープ
+- [x] テストカバレッジ
+- [x] デッドコード
+- [x] 呼び出しチェーン検証
+
+## 継続指摘（persists）
+| # | finding_id | family_tag | 前回根拠 | 今回根拠 | 問題 | 修正案 |
+|---|------------|------------|----------|----------|------|--------|
+| 1 | ARCH-NEW-index-state | design-violation | `src/index.ts:25-53` | `src/index.ts:240` | `StockProjection` 内で `reservationMapS` のプロパティを直接変更している | `this.reservations` を新しいオブジェクトとして再代入する |
+| 2 | ARCH-NEW-index-split | design-violation | `src/index.ts` | `src/index.ts` | 全ての責務（ドメイン, インフラ, ハンドラー, プロジェクション）が1ファイルに同居している | 責務ごとに `domain.ts`, `store.ts`, `handler.ts`, `projection.ts` 等に分割する |
+
+## 解消済み（resolved）
+| finding_id | 解消根拠 |
+|------------|----------|
+| ARCH-NEW-index-freeze | `src/index.ts:17-24` でネストした `reservations` を含む再帰的な freeze が適用された |
+
+## 検証証跡
+- ビルド: 未確認
+- テスト: 未確認
+- 動作確認: 未確認
+
+## 再走査証跡（2回目以降のレビューで必須）
+| 照合した Policy/Knowledge の章 | 差分側の根拠（`file:line` または「該当なし」） |
+|-------------------------------|---------------------------------------------|
+| 構造・設計（ファイル分割） | `src/index.ts` (全責務が同居) |
+| 構造・設計（状態の直接変更） | `src/index.ts:240` |
+| 公開状態の不変性 | `src/index.ts:17-24` (解消) |
+| 判定基準（REJECT） | 上記設計違反が残存しているため |

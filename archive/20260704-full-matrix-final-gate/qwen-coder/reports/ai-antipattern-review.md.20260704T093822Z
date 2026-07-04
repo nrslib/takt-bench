@@ -1,0 +1,50 @@
+# AI生成コードレビュー
+
+## 結果: REJECT
+
+## サマリー
+テストと型チェックは成功しているが、AI生成コード特有の重複実装・未使用コード・公開共有状態の可変性が残っているため REJECT。
+
+## 検証した項目
+| 観点 | 結果 | 備考 |
+|------|------|------|
+| 仮定の妥当性 | ❌ | `CommandHandler` が `decide` を呼ぶのではなく同じドメイン判定を複製している |
+| API/ライブラリの実在 | ✅ | 幻覚API・存在しないメソッドは確認されなかった |
+| コンテキスト適合 | ❌ | README の `load → replay → decide → append` に対し、オーケストレーション層へドメインルールが混入 |
+| スコープ | ✅ | 変更対象は実装に必要な `src/` 配下に収まっている |
+
+## 非finding化した懸念
+| 項目 | 場所 | 分類 | finding化しない根拠 |
+|------|------|------|---------------------|
+| `StockShipped` / `ReservationReleased` の `|| 0` フォールバック | `src/domain.ts:34`, `src/projection.ts:27`, `src/projection.ts:36` | no_issue_after_verification | README とテストは正常なイベント履歴を前提にしており、無効イベント履歴の挙動は未定義。`decide` は未知予約の出荷・解放を拒否することを確認済み |
+
+## 今回の指摘（new）
+| # | finding_id | family_tag | カテゴリ | 場所 | 問題 | 修正案 |
+|---|------------|------------|---------|------|------|--------|
+| 1 | AAI-001 | copy_paste | DRY違反 / 配線漏れ | `src/command-handler.ts:31` | `CommandHandler` が `src/domain.ts:42` の `decide` と同じ判定ロジックを private method として複製している。今後 `decide` と `CommandHandler` のドメインルールが乖離する | `decide` を `domain.ts` から import して `handle` で呼び、private `decide` と重複 `isValidQuantity` を削除する |
+| 2 | AAI-002 | dead_code | 未使用コード / 念のためコード | `src/command-handler.ts:3` | `ConcurrencyError` が未使用。さらに `src/command-handler.ts:18` の `try/catch` は捕まえた例外をそのまま再 throw するだけで意味がない | 未使用 import と冗長な `try/catch` を削除する |
+| 3 | AAI-003 | shared_state | 公開共有状態の可変性 | `src/domain.ts:5` | 公開定数 `initialState` の `reservations` が可変のまま露出しており、利用側の変更が replay の起点へ伝播しうる | ネストを含めて freeze する、または共有可変オブジェクトを公開しない形にする |
+
+## 継続指摘（persists）
+| # | finding_id | family_tag | 前回根拠 | 今回根拠 | 問題 | 修正案 |
+|---|------------|------------|----------|----------|------|--------|
+| なし | - | - | - | - | - | - |
+
+## 解消済み（resolved）
+| finding_id | 解消根拠 |
+|------------|----------|
+| なし | 初回レビューのため該当なし |
+
+## 再開指摘（reopened）
+| # | finding_id | family_tag | 解消根拠（前回） | 再発根拠 | 問題 | 修正案 |
+|---|------------|------------|----------------|---------|------|--------|
+| なし | - | - | - | - | - | - |
+
+## 再走査証跡（2回目以降のレビューで必須）
+| 照合した Policy/Knowledge の章 | 差分側の根拠（`file:line` または「該当なし」） |
+|-------------------------------|---------------------------------------------|
+| Policy: 原則 / スコープ判定 / 判定基準 / ボーイスカウトルール / AI Antipattern 検出基準 / コピペパターン検出 / デッドコード検出 / 未使用コードの検出 | `src/command-handler.ts:3`, `src/command-handler.ts:18`, `src/command-handler.ts:31` |
+| Knowledge: 構造・設計 / DRY違反の検出 / 呼び出しチェーン検証 / 公開状態の不変性 | `src/domain.ts:5`, `src/command-handler.ts:31`, `src/domain.ts:42` |
+
+## REJECT判定条件
+- `new` が3件あるため REJECT。

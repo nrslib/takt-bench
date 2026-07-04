@@ -1,0 +1,24 @@
+# アーキテクチャレビュー
+
+## 結果: APPROVE
+
+## サマリー
+前回指摘 `ARCH-NEW-src-event-store-L13` は解消済みです。`InMemoryEventStore` は保存時・返却時ともにイベント要素を shallow clone しており、内部状態の参照漏れは確認されませんでした。
+
+## 検証証跡
+- ビルド: `npm run typecheck` 成功。
+- テスト: `npm test` 成功。4ファイル、51件すべて成功。
+- 動作確認: README、`src/types.ts`、`src/index.ts`、`src/domain.ts`、`src/command-handler.ts`、`src/event-store.ts`、`src/projection.ts` を確認。`src/types.ts` と `tests/` に差分なし。
+- 解消確認: `src/event-store.ts:13` で `load()` 返却時、`src/event-store.ts:26` で `append()` 保存時にイベント要素が clone されています。
+- 既存指摘: `ARCH-NEW-src-command-handler-L31`, `ARCH-NEW-src-domain-L5`, `ARCH-NEW-src-command-handler-L3`, `ARCH-NEW-src-event-store-L13` はすべて resolved。
+
+## 再走査証跡（2回目以降のレビューで必須）
+| 照合した Policy/Knowledge の章 | 差分側の根拠（`file:line` または「該当なし」） |
+|-------------------------------|---------------------------------------------|
+| Policy: 原則 / スコープ判定 / 判定基準 / ファクトチェック / ボーイスカウトルール / 判定ルール / レビューの基本手順 | `src/event-store.ts:13`, `src/event-store.ts:26` で前回指摘解消。追加 finding なし |
+| Policy: 振る舞い証跡の判定 / テストファイルの扱い | `npm test` 51件成功、`src/types.ts` と `tests/` 差分なし |
+| Policy: 具体的な指摘の書き方 / 指摘ID管理 / 再オープン条件 / finding_id の意味固定 / 変更履歴ファイルの扱い / 堂々巡りの検出 | 新規・継続・再開 finding なし |
+| Knowledge: 構造・設計 / DRY違反の検出 / アンチパターン検出 / 呼び出しチェーン検証 | `src/command-handler.ts:16`, `src/domain.ts:47`。責務重複なし |
+| Knowledge: 公開状態の不変性 | `src/domain.ts:12`, `src/domain.ts:14`, `src/event-store.ts:13`, `src/event-store.ts:26` |
+| Knowledge: 仕様準拠の検証 | `README.md:39`, `src/types.ts:115`, `src/index.ts:6` |
+| Knowledge: 境界での解決 / セキュリティ / テスタビリティ / 抽象化レベルの評価 / その場しのぎの検出 / 未完成コードの検出 / 品質特性 / 大局観 / 変更スコープの評価 | 追加 finding なし |

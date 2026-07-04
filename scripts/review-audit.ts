@@ -76,19 +76,29 @@ function collectReportRounds(dir: string): ReportRound[] {
   const runsRoot = join(dir, '.takt', 'runs');
   if (!existsSync(runsRoot)) return [];
   const rounds: ReportRound[] = [];
+  // final-gate 以降、merge-readiness-review.md などは reports/subworkflows/ 配下に
+  // 出力されるため、レポートディレクトリは再帰的に走査する。
+  const collectFrom = (reportsDir: string): void => {
+    for (const entry of readdirSync(reportsDir, { withFileTypes: true })) {
+      const fullPath = join(reportsDir, entry.name);
+      if (entry.isDirectory()) {
+        collectFrom(fullPath);
+        continue;
+      }
+      if (!entry.name.includes('review') && !entry.name.includes('validation')) continue;
+      const match = entry.name.match(/^(.+\.md)(?:\.(\d{8}T\d{6}Z))?$/);
+      if (!match) continue;
+      rounds.push({
+        name: match[1] ?? entry.name,
+        round: match[2] ?? 'final',
+        content: readFileSync(fullPath, 'utf-8'),
+      });
+    }
+  };
   for (const run of readdirSync(runsRoot)) {
     const reportsDir = join(runsRoot, run, 'reports');
     if (!existsSync(reportsDir)) continue;
-    for (const file of readdirSync(reportsDir)) {
-      if (!file.includes('review') && !file.includes('validation')) continue;
-      const match = file.match(/^(.+\.md)(?:\.(\d{8}T\d{6}Z))?$/);
-      if (!match) continue;
-      rounds.push({
-        name: match[1] ?? file,
-        round: match[2] ?? 'final',
-        content: readFileSync(join(reportsDir, file), 'utf-8'),
-      });
-    }
+    collectFrom(reportsDir);
   }
   return rounds;
 }

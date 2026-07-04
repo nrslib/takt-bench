@@ -1,0 +1,63 @@
+The user wants me to output a report based on my previous analysis. I need to follow the exact format provided in the instructions. Let me create the report based on my analysis.
+
+From my analysis:
+1. All 51 tests pass
+2. TypeScript typecheck fails with 14 errors
+3. The main issues are in src/domain.ts and src/projection.ts
+
+I need to format this as a proper architecture review report.
+
+# アーキテクチャレビュー
+
+## 結果: REJECT
+
+## サマリー
+テスト 51 件はすべて成功していますが、TypeScript の型チェックで 14 エラーが検出されました。`src/domain.ts` の `decide*` 関数のシグネチャが `Command` 型ではなく各コマンド型を受ける必要があること、および `undefined` チェックの欠如が原因です。
+
+## 確認した観点
+- [x] 構造・設計
+- [x] コード品質
+- [x] 変更スコープ
+- [x] テストカバレッジ
+- [x] デッドコード
+- [x] 呼び出しチェーン検証
+
+## 今回の指摘（new）
+
+| # | finding_id | family_tag | スコープ | 場所 | 問題 | 修正案 |
+|---|------------|------------|---------|------|------|--------|
+| 1 | ARCH-NEW-domain-L65-L116 | type-safety | スコープ内 | `src/domain.ts:65-116` | `decide*` 関数が `Command` 型を受け取っているが、各コマンド固有のプロパティ（`name`, `quantity`, `reservationId`）にアクセスしており型エラー | 各関数のシグネチャを `decideReceiveStock(state: ProductState, command: ReceiveStock)` など各コマンド型に変更 |
+| 2 | ARCH-NEW-domain-L34 | type-safety | スコープ内 | `src/domain.ts:34` | `StockShipped` case で `newState.reservations[event.reservationId]` が `undefined` の可能性を型チェックが検出 | 数量を取得後に存在チェックを追加し、`undefined` の場合は `DomainError` を throw |
+| 3 | ARCH-NEW-projection-L35 | type-safety | スコープ内 | `src/projection.ts:35` | `this.reservationQuantities[event.productId]` が `undefined` の可能性 | `if (!this.reservationQuantities[event.productId])` チェックを追加 |
+
+## 継続指摘（persists）
+
+該当なし（1 回目のレビュー）
+
+## 解消済み（resolved）
+
+該当なし
+
+## 再開指摘（reopened）
+
+該当なし
+
+## 検証証跡
+- **ビルド**: `npm run typecheck` 実行。14 エラー検出（未解決）
+- **テスト**: `npm test` 実行。51 件中 51 件 PASS（確認済み）
+- **動作確認**: 型チェックエラーのためコンパイル不可
+
+## 再走査証跡
+
+| 照合した Policy/Knowledge の章 | 差分側の根拠（`file:line` または「該当なし」） |
+|-------------------------------|---------------------------------------------|
+| 判定基準 — `any` 型の使用 | 該当なし（`any` 使用はないが型チェックエラー） |
+| 判定基準 — 契約変更後の呼び出し元更新漏れ | `src/domain.ts:65-116` — 関数シグネチャが型定義と不一致 |
+| 構造・設計 — パブリック API の公開範囲 | `src/index.ts` — 公開 API は適切に再エクスポート |
+| 境界での解決 — Raw 入力の正規化 | `src/domain.ts:34` — 境界チェック不足 |
+| 公開状態の不変性 | `src/domain.ts:4-9` — `initialState` は freeze されていないがテストで deepFreeze 使用 |
+| 変更スコープの評価 | 新規 4 ファイル + 変更 1 ファイル（Small スコープ） |
+
+## REJECT 判定条件
+
+`new` が 3 件存在するため REJECT と判定。

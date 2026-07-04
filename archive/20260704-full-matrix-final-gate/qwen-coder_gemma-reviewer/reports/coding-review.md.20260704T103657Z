@@ -1,0 +1,25 @@
+# コーディングレビュー
+
+## 結果: REJECT
+
+## サマリー
+イベントソーシングの基本構造は正しく実装されていますが、`evolve` 関数内での非 null 確定演算子の使用および、プロジェクションにおける状態の直接変更という、安全性と不変性の原則に反する重大な問題が検出されました。
+
+## 契約入口チェック
+| 入口・経路 | 元要件 | 実装根拠 | テスト根拠 | 判定 | 例外・未確認の根拠 |
+|-----------|--------|----------|------------|------|-------------------|
+| evolve / StockShipped | throw しないこと | `src/index.ts:47` | 未確認 | ❌ | `!` 演算子により undefined 時に runtime error となる |
+
+## 今回の指摘（new）
+| # | finding_id | family_tag | 重大度 | 場所 | 問題 | 影響 | 修正案 |
+|---|------------|------------|--------|------|------|------|--------|
+| 1 | CODE-NEW-src-index-L47 | reliability | High | `src/index.ts:47` | `newState.reservations[event.reservationId]!` と非 null 確定演算子が使用されている | イベントストリームの不整合時に `evolve` が throw し、システムが停止する（READMEの「throw しない」に違反） | 予約の存在確認を行い、存在しない場合は 0 として扱うかイベントをスキップする実装に変更する |
+| 2 | CODE-NEW-src-index-L203 | state-mgmt | Medium | `src/index.ts:203` | `StockProjection.apply` 内で `StockLevel` オブジェクトを直接ミューテートしている | コーディングポリシーの「オブジェクト/配列の直接変更」禁止に抵触し、予期せぬ副作用を招く可能性がある | スプレッド演算子等を用いて、新しい状態オブジェクトを生成して割り当てる実装に変更する |
+
+## 検証証跡
+- 差分確認: `src/index.ts` の `evolve`, `decide`, `InMemoryEventStore`, `CommandHandler`, `StockProjection` の全実装を確認
+- ビルド: 未確認（ソース読み取りのみ）
+- テスト: 未確認（ソース読み取りのみ）
+
+## REJECT判定条件
+- `new` が 2 件存在するため REJECT
