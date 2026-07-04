@@ -37,6 +37,33 @@ combos:
         review: { provider: opencode, model: ollama-cloud/gemma4:31b }
         final-gate: { provider: codex, model: gpt-5.5 }
 
+  - id: codex-all-fc
+    description: FC 機構検証用のフル codex 版。台帳ライフサイクル・findings 条件・ゲート連動をクラウド局所障害と切り離して検証する
+    workflow: bench-fc
+    routing:
+      tags:
+        coding: { provider: codex, model: gpt-5.5 }
+        review: { provider: codex, model: gpt-5.5 }
+        final-gate: { provider: codex, model: gpt-5.5 }
+
+  - id: codex-coder_gemma-reviewer-fc
+    description: FC 実戦検証用。coder のみ codex（ollama-cloud の coder-next が不安定な時間帯の代替）、レビュアーは Gemma 4 31B、台帳・ゲートは codex。bench-fc を使う
+    workflow: bench-fc
+    routing:
+      tags:
+        coding: { provider: codex, model: gpt-5.5 }
+        review: { provider: opencode, model: ollama-cloud/gemma4:31b }
+        final-gate: { provider: codex, model: gpt-5.5 }
+
+  - id: qwen-coder_gemma-reviewer-fc
+    description: deep 編成 + Finding Contract。coder は Qwen3-Coder-next、レビュアーは Gemma 4 31B、台帳管理と最終ゲートは codex。bench-fc ワークフローを使う
+    workflow: bench-fc
+    routing:
+      tags:
+        coding: { provider: opencode, model: ollama-cloud/qwen3-coder-next }
+        review: { provider: opencode, model: ollama-cloud/gemma4:31b }
+        final-gate: { provider: codex, model: gpt-5.5 }
+
   - id: qwen-coder_qwen-coder-reviewer
     description: coder もレビュアーも Qwen3-Coder-next。コーダー特化モデルをレビューに転用するミスマッチ検証（当初の「coder 系はレビューで幻覚する」仮説の有効測定）
     routing:

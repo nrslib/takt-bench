@@ -27,7 +27,7 @@ interface RunResult {
   durationMs: number;
 }
 
-function runOne(dir: string): Promise<RunResult> {
+function runOne(dir: string, workflow: string): Promise<RunResult> {
   return new Promise((resolvePromise) => {
     const log = createWriteStream(join(dir, 'bench-run.log'));
     const startedAt = new Date();
@@ -41,7 +41,7 @@ function runOne(dir: string): Promise<RunResult> {
 
     const child = spawn(
       'takt',
-      ['-t', task, '-w', matrix.workflow, '--pipeline', '--skip-git', '-q'],
+      ['-t', task, '-w', workflow, '--pipeline', '--skip-git', '-q'],
       { cwd: dir, env, stdio: ['ignore', 'pipe', 'pipe'] },
     );
     child.stdout.pipe(log);
@@ -89,7 +89,7 @@ async function main(): Promise<void> {
       const next = queue.shift();
       if (!next) break;
       console.log(`start: ${next.dir}`);
-      results.push(await runOne(next.dir));
+      results.push(await runOne(next.dir, next.combo.workflow ?? matrix.workflow));
     }
   });
   await Promise.all(workers);

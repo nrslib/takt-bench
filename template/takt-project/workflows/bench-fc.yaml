@@ -1,0 +1,194 @@
+# ベンチマーク用ワークフロー。
+# provider / model は書かない — .takt/config.yaml の provider_routing で
+# 差し替える（ここに直書きすると routing より優先され上書き不能になる）。
+# レビュー構成は takt-default-deep-review（#958）の考え方に合わせた 4 並列（arch +
+# ai-antipattern + coding + implementation-semantics）。builtin
+# ファセットの 3 層解決でそのまま使う。coder（implement / fix）にも同じ
+# implementation-semantics knowledge を配布し、書く時点での発生を抑える。
+# レビュー ⇄ fix ループの後、merge-readiness-final-gate（merge-readiness-review
+# + supervise 並列）を workflow_call で実行する。
+# final-gate のサブステップにも review タグが付いているため、combo の
+# レビュアーモデルがそのまま最終ゲートも担当する（= ベンチ対象に含まれる）。
+name: bench-fc
+description: ベンチマーク用 deep 編成 + Finding Contract。指摘の生死管理を findings-manager と台帳に委譲する
+finding_contract:
+  ledger_path: .takt/findings/bench-fc.json
+  raw_findings_path: .takt/findings/bench-fc/raw
+  manager:
+    persona: findings-manager
+    instruction: findings-manager
+    output_contract: findings-manager
+max_steps: 20
+initial_step: implement
+workflow_config:
+  provider_options:
+    codex:
+      network_access: true
+    opencode:
+      network_access: true
+
+loop_monitors:
+  - cycle:
+      - reviewers
+      - final-gate
+      - fix
+    threshold: 3
+    judge:
+      persona: supervisor
+      # judge は provider_routing の対象外（発火元ステップのプロバイダを継承する）
+      # ため、combo の coder モデルに judge が揺れないようここで固定する。
+      # 審査インフラでありベンチ変数ではないので直書きが正しい。
+      provider: codex
+      model: gpt-5.5
+      instruction: loop-monitor-reviewers-fix
+      rules:
+        - condition: 健全（指摘数が減少、修正が反映されている）
+          next: reviewers
+        - condition: 非生産的（同じ指摘が繰り返される）
+          next: ABORT
+
+steps:
+  - name: implement
+    tags:
+      - coding
+    persona: bench-coder
+    knowledge: implementation-semantics
+    instruction: bench-implement
+    edit: true
+    quality_gates:
+      - "`npm test` を実行し、全テストが成功すること"
+      - "`npm run typecheck` を実行し、型エラーがないこと"
+    rules:
+      - condition: 実装完了
+        next: reviewers
+      - condition: 実装を進められない（環境問題・情報不足）
+        next: ABORT
+
+  - name: reviewers
+    tags:
+      - review
+    parallel:
+      - name: arch-review
+        tags:
+          - review
+        edit: false
+        persona: architecture-reviewer
+        policy: review
+        knowledge: architecture
+        instruction: review-arch
+        rules:
+          - condition: approved
+          - condition: needs_fix
+        output_contracts:
+          report:
+            - name: architect-review.md
+              format: architecture-review-finding-contract
+
+      - name: ai-antipattern-review
+        tags:
+          - review
+        edit: false
+        persona: ai-antipattern-reviewer
+        policy:
+          - review
+          - ai-antipattern
+        instruction: ai-antipattern-review
+        rules:
+          - condition: AI特有の問題なし
+          - condition: AI特有の問題あり
+        output_contracts:
+          report:
+            - name: ai-antipattern-review.md
+              format: ai-antipattern-review-finding-contract
+
+      - name: coding-review
+        tags:
+          - review
+        edit: false
+        persona: coding-reviewer
+        policy:
+          - review
+          - coding
+        pass_previous_response: false
+        instruction: review-coding
+        rules:
+          - condition: approved
+          - condition: needs_fix
+        output_contracts:
+          report:
+            - name: coding-review.md
+              format: coding-review-finding-contract
+
+      - name: implementation-semantics-review
+        tags:
+          - review
+        edit: false
+        persona: implementation-semantics-reviewer
+        policy: review
+        knowledge: implementation-semantics
+        pass_previous_response: false
+        instruction: review-implementation-semantics
+        rules:
+          - condition: approved
+          - condition: needs_fix
+        output_contracts:
+          report:
+            - name: implementation-semantics-review.md
+              format: implementation-semantics-review-finding-contract
+    rules:
+      - condition: all("approved", "AI特有の問題なし", "approved", "approved") && findings.open.count == 0 && findings.conflicts.count == 0
+        next: final-gate
+      - condition: any("needs_fix", "AI特有の問題あり", "needs_fix", "needs_fix") && findings.conflicts.count == 0
+        next: fix
+      - condition: findings.conflicts.count == 0 && findings.open.count > 0
+        next: fix
+      - condition: ai("未調停の findings.conflicts がある。coder の修正で解決可能な具体的コード変更が必要な場合のみ fix を選ぶ。レビュワー間の判断矛盾や人間判断が必要な場合は選ばない。")
+        next: fix
+      - condition: findings.conflicts.count > 0
+        next: ABORT
+
+  # merge 可能品質の最終ゲート。FC 版は builtin peer-review-with-fc に倣い、
+  # フラットな merge-readiness-review ステップ + findings 条件で構成する
+  # （workflow_call への finding_contract 伝播は未検証のため使わない）。
+  # final-gate タグにより codex にルーティングされる。
+  - name: final-gate
+    tags:
+      - review
+      - final-gate
+    edit: false
+    persona: merge-readiness-reviewer
+    policy: review
+    pass_previous_response: false
+    instruction: review-merge-readiness
+    output_contracts:
+      report:
+        - name: merge-readiness-review.md
+          format: merge-readiness-review-finding-contract
+    # 注意: 通常ステップでは「タグ条件 && findings.…」の複合が評価器未対応
+    # （takt の潜在バグ、builtin peer-review-with-fc も同型）。決定的条件は
+    # タグ条件より先に評価される仕様を使い、分解して並べる。
+    rules:
+      - condition: findings.conflicts.count > 0
+        next: ABORT
+      - condition: findings.open.count > 0
+        next: fix
+      - condition: approved
+        next: COMPLETE
+      - condition: needs_fix
+        next: fix
+
+  - name: fix
+    tags:
+      - coding
+    persona: bench-coder
+    knowledge: implementation-semantics
+    instruction: bench-fix
+    edit: true
+    quality_gates:
+      - "`npm test` を実行し、全テストが成功すること"
+      - "`npm run typecheck` を実行し、型エラーがないこと"
+    rules:
+      - condition: 修正完了
+        next: reviewers
+      - condition: 修正を進められない
+        next: ABORT

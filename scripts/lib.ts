@@ -11,6 +11,8 @@ export interface PersonaRouting {
 export interface Combo {
   id: string;
   description?: string;
+  /** 省略時は matrix.workflow を使う */
+  workflow?: string;
   /** provider_routing にそのまま書き込む（tags / personas / steps） */
   routing: {
     tags?: Record<string, PersonaRouting>;
