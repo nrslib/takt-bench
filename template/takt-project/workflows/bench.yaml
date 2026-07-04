@@ -1,14 +1,16 @@
 # ベンチマーク用ワークフロー。
 # provider / model は書かない — .takt/config.yaml の provider_routing で
 # 差し替える（ここに直書きすると routing より優先され上書き不能になる）。
-# レビュー構成は takt-default（default-peer-review、#949 以降の形）を builtin
-# ファセットの 3 層解決でそのまま使う: 3 並列レビュー（arch + ai-antipattern +
-# coding） ⇄ fix ループの後、merge-readiness-final-gate（merge-readiness-review
+# レビュー構成は takt-default-deep-review（#958）の考え方に合わせた 4 並列（arch +
+# ai-antipattern + coding + implementation-semantics）。builtin
+# ファセットの 3 層解決でそのまま使う。coder（implement / fix）にも同じ
+# implementation-semantics knowledge を配布し、書く時点での発生を抑える。
+# レビュー ⇄ fix ループの後、merge-readiness-final-gate（merge-readiness-review
 # + supervise 並列）を workflow_call で実行する。
 # final-gate のサブステップにも review タグが付いているため、combo の
 # レビュアーモデルがそのまま最終ゲートも担当する（= ベンチ対象に含まれる）。
 name: bench
-description: ベンチマーク用 implement → 3並列レビュー ⇄ fix ループ → merge-readiness 最終ゲート
+description: ベンチマーク用 implement → 4並列レビュー（deep編成） ⇄ fix ループ → merge-readiness 最終ゲート
 max_steps: 20
 initial_step: implement
 workflow_config:
@@ -43,6 +45,7 @@ steps:
     tags:
       - coding
     persona: bench-coder
+    knowledge: implementation-semantics
     instruction: bench-implement
     edit: true
     quality_gates:
@@ -108,10 +111,27 @@ steps:
           report:
             - name: coding-review.md
               format: coding-review
+
+      - name: implementation-semantics-review
+        tags:
+          - review
+        edit: false
+        persona: implementation-semantics-reviewer
+        policy: review
+        knowledge: implementation-semantics
+        pass_previous_response: false
+        instruction: review-implementation-semantics
+        rules:
+          - condition: approved
+          - condition: needs_fix
+        output_contracts:
+          report:
+            - name: implementation-semantics-review.md
+              format: implementation-semantics-review
     rules:
-      - condition: all("approved", "AI特有の問題なし", "approved")
+      - condition: all("approved", "AI特有の問題なし", "approved", "approved")
         next: final-gate
-      - condition: any("needs_fix", "AI特有の問題あり", "needs_fix")
+      - condition: any("needs_fix", "AI特有の問題あり", "needs_fix", "needs_fix")
         next: fix
 
   # merge 可能品質の最終ゲート（builtin サブワークフロー）。
@@ -134,6 +154,7 @@ steps:
     tags:
       - coding
     persona: bench-coder
+    knowledge: implementation-semantics
     instruction: bench-fix
     edit: true
     quality_gates:
