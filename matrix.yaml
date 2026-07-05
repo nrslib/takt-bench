@@ -81,14 +81,7 @@ combos:
         final-gate: { provider: codex, model: gpt-5.5 }
 
 # ハーネス疎通確認用（--smoke 指定時のみ生成・実行、API 消費なし）
-smoke:
-  id: mock-smoke
-  description: mock プロバイダによるハーネス疎通確認
-  routing:
-    tags:
-      coding: { provider: mock }
-      review: { provider: mock }
-      final-gate: { provider: mock }
+
   - id: tl-codex-leader
     description: team-leader 版 deep+FC。リーダー（分割・統括）だけ codex、worker は coder-next、レビュアーは gemma。planner-limited 仮説の強リーダー側
     workflow: bench-fc-tl
@@ -109,3 +102,11 @@ smoke:
         review: { provider: opencode, model: ollama-cloud/gemma4:31b }
         final-gate: { provider: codex, model: gpt-5.5 }
 
+smoke:
+  id: mock-smoke
+  description: mock プロバイダによるハーネス疎通確認
+  routing:
+    tags:
+      coding: { provider: mock }
+      review: { provider: mock }
+      final-gate: { provider: mock }
