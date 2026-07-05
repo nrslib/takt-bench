@@ -1,0 +1,24 @@
+# AI生成コードレビュー
+
+## 結果: REJECT
+
+## サマリー
+`src/index.ts` における大規模なコード重複および、EventStore のエラー型不整合という致命的な契約違反が検出されました。
+
+## 検証した項目
+| 観点 | 結果 | 備考 |
+|------|------|------|
+| 仮定の妥当性 | ✅ | - |
+| API/ライブラリの実在 | ✅ | - |
+| コンテキスト適合 | ⚠️ | 重複実装により構造的に不適合 |
+| スコープ | ✅ | - |
+
+## 観測した指摘
+| # | family_tag | カテゴリ | 重大度 | 場所 | 問題 | 修正案 |
+|---|------------|---------|--------|------|------|--------|
+| 1 | dry-violation | 重複コード | critical | `src/index.ts:18-188` | 具象実装が `src/index.ts` と個別ファイルに重複して存在 | index.ts を re-export のみに変更 |
+| 2 | most-plausible-but-wrong | 契約不整合 | high | `src/event-store.ts:19` | `ConcurrencyError` ではなく `Error` を throw | `ConcurrencyError` へ置換 |
+| 3 | error-swallowing | エラー隠蔽 | medium | `src/command-handler.ts:21-23` | `decideFn` のエラーを不適切にラップして詳細を喪失 | 不要な try-catch を削除 |
+
+## REJECT判定条件
+- ブロッキング指摘が1件以上あるため REJECT。

@@ -1,0 +1,68 @@
+{
+  "version": 1,
+  "runId": "20260705-114812-readme-md-src-types-ts-tests",
+  "stepName": "reviewers",
+  "retryCount": 1,
+  "ledgerUpdated": true,
+  "finalErrors": [],
+  "attempts": [
+    {
+      "attempt": 1,
+      "managerOutput": {
+        "matches": [],
+        "newFindings": [
+          {
+            "rawFindingIds": [
+              "20260705-114812-readme-md-src-types-ts-tests:reviewers:3:arch-review:arch-003"
+            ],
+            "title": "reservationId 辞書の存在判定が継承プロパティを遮断しない (evolve.ts)",
+            "severity": "high"
+          },
+          {
+            "rawFindingIds": [
+              "20260705-114812-readme-md-src-types-ts-tests:reviewers:3:coding-review:ISS-0001"
+            ],
+            "title": "reservationId 辞書の存在判定が継承プロパティを遮断しない",
+            "severity": "high"
+          }
+        ],
+        "resolvedFindings": [
+          {
+            "findingId": "F-0006",
+            "rawFindingIds": [
+              "20260705-114812-readme-md-src-types-ts-tests:reviewers:3:ai-antipattern-review:res-005",
+              "20260705-114812-readme-md-src-types-ts-tests:reviewers:3:ai-antipattern-review:res-006",
+              "20260705-114812-readme-md-src-types-ts-tests:reviewers:3:implementation-semantics-review:res-004"
+            ],
+            "evidence": "current raw findings に kind=resolution_confirmation かつ targetFindingId=F-0006 の確認が3件あるため。"
+          }
+        ],
+        "reopenedFindings": [],
+        "conflicts": [
+          {
+            "findingIds": [
+              "F-0006"
+            ],
+            "rawFindingIds": [
+              "20260705-114812-readme-md-src-types-ts-tests:reviewers:3:arch-review:arch-003",
+              "20260705-114812-readme-md-src-types-ts-tests:reviewers:3:ai-antipattern-review:res-006",
+              "20260705-114812-readme-md-src-types-ts-tests:reviewers:3:coding-review:ISS-0001",
+              "20260705-114812-readme-md-src-types-ts-tests:reviewers:3:implementation-semantics-review:res-004"
+            ],
+            "description": "F-0006 について src/evolve.ts:19 の継承プロパティ遮断が解消済みとする resolution_confirmation がある一方、同じ location と issue meaning について current issue が未解消と報告しており、完全解消か継続かが矛盾している。issue raw findings は familyTag が F-0006 と異なるため matches には含めない。"
+          }
+        ],
+        "resolvedConflicts": [],
+        "waivedFindings": [],
+        "disputeNotes": []
+      },
+      "validationErrors": [
+        "Raw finding id \"20260705-114812-readme-md-src-types-ts-tests:reviewers:3:arch-review:arch-003\" appears in multiple manager decisions: newFindings[0] and conflicts[0]",
+        "Raw finding id \"20260705-114812-readme-md-src-types-ts-tests:reviewers:3:ai-antipattern-review:res-006\" appears in multiple manager decisions: resolvedFindings[0] and conflicts[0]",
+        "Raw finding id \"20260705-114812-readme-md-src-types-ts-tests:reviewers:3:coding-review:ISS-0001\" appears in multiple manager decisions: newFindings[1] and conflicts[0]",
+        "Raw finding id \"20260705-114812-readme-md-src-types-ts-tests:reviewers:3:implementation-semantics-review:res-004\" appears in multiple manager decisions: resolvedFindings[0] and conflicts[0]",
+        "Finding id \"F-0006\" appears in multiple manager decisions: resolvedFindings[0] and conflicts[0]"
+      ]
+    }
+  ]
+}

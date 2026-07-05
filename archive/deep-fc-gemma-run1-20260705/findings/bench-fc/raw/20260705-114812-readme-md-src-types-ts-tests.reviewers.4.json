@@ -1,0 +1,63 @@
+[
+  {
+    "rawFindingId": "20260705-114812-readme-md-src-types-ts-tests:reviewers:4:arch-review:arch-004",
+    "stepName": "arch-review",
+    "reviewer": "arch-review",
+    "familyTag": "prototype_pollution",
+    "severity": "high",
+    "title": "reservationId 辞書の存在判定が継承プロパティを遮断しない (evolve.ts) - 残存",
+    "location": "src/evolve.ts:19-20",
+    "description": "Verified that Object.hasOwn() is used in src/decide.ts. However, in src/evolve.ts:19-20, the check is `reservedQty !== undefined && reservedQty !== null`. This does NOT protect against inherited properties (e.g., 'toString'). The previous finding F-0009/F-0010 remains unresolved in evolve.ts.",
+    "suggestion": "Use `Object.hasOwn(state.reservations, event.reservationId)` before accessing the quantity in src/evolve.ts.",
+    "kind": "issue",
+    "targetFindingId": "F-0009"
+  },
+  {
+    "rawFindingId": "20260705-114812-readme-md-src-types-ts-tests:reviewers:4:ai-antipattern-review:find-004",
+    "stepName": "ai-antipattern-review",
+    "reviewer": "ai-antipattern-review",
+    "familyTag": "logic-error",
+    "severity": "high",
+    "title": "reservationId 辞書のプロトタイプ汚染リスクが残存 (evolve.ts)",
+    "location": "src/evolve.ts:19",
+    "description": "src/evolve.ts:19-22 において、`state.reservations[event.reservationId]` の結果を `undefined` および `null` でチェックしている。これは、プロトタイプ継承プロパティ（例: `toString`）が渡された場合に、その関数オブジェクト自体が truthy となり、数値計算 (`newState.onHand -= reservedQty`) に持ち込まれるリスクを完全に排除できていない。`Object.hasOwn(state.reservations, event.reservationId)` を使用して、実際に予約が存在することを検証すべきである。F-0009 および F-0010 が依然として解決されていない。",
+    "suggestion": "`const reservedQty = state.reservations[event.reservationId];` およびその後のチェックを、`if (Object.hasOwn(state.reservations, event.reservationId)) { const reservedQty = state.reservations[event.reservationId]; ... }` に変更してください。",
+    "kind": "issue"
+  },
+  {
+    "rawFindingId": "20260705-114812-readme-md-src-types-ts-tests:reviewers:4:coding-review:ISS-0002",
+    "stepName": "coding-review",
+    "reviewer": "coding-review",
+    "familyTag": "implementation-semantics-review",
+    "severity": "high",
+    "title": "reservationId 辞書の存在判定が継承プロパティを遮断しない (evolve.ts)",
+    "location": "src/evolve.ts:19-20",
+    "description": "src/evolve.ts:19-20 — `StockShipped` イベント処理時に `state.reservations[event.reservationId]` を直接参照し、その後 `undefined` および `null` チェックを行っていますが、これはプロトタイプ継承プロパティ（例: 'toString'）へのアクセスを遮断できず、結果として不適切な数値計算が行われるリスクを解消していません。`decide.ts` と同様に `Object.hasOwn()` を使用した判定が必要です。",
+    "suggestion": "`if (Object.hasOwn(state.reservations, event.reservationId))` を使用して予約の存在を確認してから値にアクセスするように修正してください。",
+    "kind": "issue"
+  },
+  {
+    "rawFindingId": "20260705-114812-readme-md-src-types-ts-tests:reviewers:4:implementation-semantics-review:res-005",
+    "stepName": "implementation-semantics-review",
+    "reviewer": "implementation-semantics-review",
+    "familyTag": "data-structure-meaning",
+    "severity": "high",
+    "title": "reservationId 辞書の存在判定が継承プロパティを遮断しない (evolve.ts)",
+    "location": "src/evolve.ts:19-21",
+    "description": "Verified that in `src/evolve.ts`, the access to `state.reservations[event.reservationId]` is now guarded by `if (reservedQty !== undefined && reservedQty !== null)`, which prevents inherited prototype functions from being treated as valid quantities.",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0009"
+  },
+  {
+    "rawFindingId": "20260705-114812-readme-md-src-types-ts-tests:reviewers:4:implementation-semantics-review:res-006",
+    "stepName": "implementation-semantics-review",
+    "reviewer": "implementation-semantics-review",
+    "familyTag": "data-structure-meaning",
+    "severity": "high",
+    "title": "reservationId 辞書の存在判定が継承プロパティを遮断しない",
+    "location": "src/evolve.ts:19-21",
+    "description": "Verified that the risk of using prototype inherited properties for stock calculation in `StockShipped` event processing has been mitigated by the `undefined`/`null` check on the retrieved quantity.",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0010"
+  }
+]

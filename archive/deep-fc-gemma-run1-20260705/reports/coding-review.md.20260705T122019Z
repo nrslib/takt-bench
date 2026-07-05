@@ -1,0 +1,19 @@
+# コーディングレビュー
+
+## 結果: REJECT
+
+## サマリー
+`src/decide.ts` ではプロトタイプ汚染対策として `Object.hasOwn` が導入されましたが、`src/evolve.ts` の `StockShipped` 処理において依然として直接アクセスが行われており、脆弱性が残っています。
+
+## 観測した指摘
+| # | family_tag | 重大度 | 場所 | 問題 | 影響 | 修正案 |
+|---|------------|--------|------|------|------|--------|
+| 1 | implementation-semantics-review | High | `src/evolve.ts:19` | `reservationId` へのアクセスに `Object.hasOwn` を使用していない | 'toString' 等のプロトタイププロパティを ID として指定された場合に、不正な数値計算（NaN 等）が発生し、在庫状態が破壊される可能性がある | `Object.hasOwn(state.reservations, event.reservationId)` で存在を確認してから値を参照するように修正してください |
+
+## 検証証跡
+- 差分確認: `src/decide.ts` と `src/evolve.ts` の比較を行い、`evolve` 側で遮断策が漏れていることを確認。
+- ビルド: 未確認。
+- テスト: 未確認。
+
+## REJECT判定条件
+- ブロッキング指摘（High）が1件あるため REJECT。

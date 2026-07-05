@@ -10,3 +10,11 @@ provider: codex
 model: gpt-5.5
 logging:
   usage_events: true
+
+# findings-manager（台帳の裁定者）は combo に依らず codex に固定する。
+# dispute/waiver の裁定は動機を持った主張への意味判断であり、
+# 弱いモデルに免除の裁量を渡さない（persona_providers は CLI/デフォルトより優先）。
+persona_providers:
+  findings-manager:
+    provider: codex
+    model: gpt-5.5

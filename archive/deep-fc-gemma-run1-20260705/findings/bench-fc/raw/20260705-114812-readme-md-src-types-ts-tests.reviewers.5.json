@@ -1,0 +1,98 @@
+[
+  {
+    "rawFindingId": "20260705-114812-readme-md-src-types-ts-tests:reviewers:5:arch-review:res-009",
+    "stepName": "arch-review",
+    "reviewer": "arch-review",
+    "familyTag": "prototype_pollution",
+    "severity": "high",
+    "title": "reservationId 辞書の存在判定が継承プロパティを遮断しない (evolve.ts) - 解消確認",
+    "location": "src/evolve.ts:19-23",
+    "description": "Verified that src/evolve.ts now correctly uses Object.hasOwn(state.reservations, event.reservationId) at line 19 and verifies that the value is a number at line 21 before updating the stock. This completely eliminates the risk of prototype pollution influencing the stock calculation.",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0009"
+  },
+  {
+    "rawFindingId": "20260705-114812-readme-md-src-types-ts-tests:reviewers:5:arch-review:res-010",
+    "stepName": "arch-review",
+    "reviewer": "arch-review",
+    "familyTag": "prototype_pollution",
+    "severity": "high",
+    "title": "reservationId 辞書の存在判定が継承プロパティを遮断しない - 解消確認",
+    "location": "src/evolve.ts:19-23",
+    "description": "Verified that src/evolve.ts now correctly uses Object.hasOwn(state.reservations, event.reservationId) at line 19. This resolves the issue where inherited properties could be mistaken for valid reservations.",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0010"
+  },
+  {
+    "rawFindingId": "20260705-114812-readme-md-src-types-ts-tests:reviewers:5:arch-review:res-011",
+    "stepName": "arch-review",
+    "reviewer": "arch-review",
+    "familyTag": "prototype_pollution",
+    "severity": "high",
+    "title": "reservationId 辞書のプロトタイプ継承プロパティが数値計算に混入する - 解消確認",
+    "location": "src/evolve.ts:19-23",
+    "description": "Verified that src/evolve.ts now correctly uses Object.hasOwn(state.reservations, event.reservationId) and verifies the value type, ensuring that prototype properties (like 'toString') are not used in numerical calculations.",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0011"
+  },
+  {
+    "rawFindingId": "20260705-114812-readme-md-src-types-ts-tests:reviewers:5:ai-antipattern-review:res-007",
+    "stepName": "ai-antipattern-review",
+    "reviewer": "ai-antipattern-review",
+    "familyTag": "logic-error",
+    "severity": "high",
+    "title": "evolve.ts におけるプロトタイプ汚染対策の完全完了確認",
+    "location": "src/evolve.ts:19",
+    "description": "src/evolve.ts:19-24 において、`Object.hasOwn()` による存在確認と `typeof reservedQty === 'number'` による型チェックが導入されており、プロトタイプ継承プロパティの混入リスクおよび不正な数値計算のリスクが完全に解消されていることを確認した。これにより F-0009, F-0010, F-0011 の懸念がすべて解消された。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0009"
+  },
+  {
+    "rawFindingId": "20260705-114812-readme-md-src-types-ts-tests:reviewers:5:coding-review:CONF-0009",
+    "stepName": "coding-review",
+    "reviewer": "coding-review",
+    "familyTag": "implementation-semantics-review",
+    "severity": "high",
+    "title": "reservationId 辞書の存在判定が継承プロパティを遮断しない (evolve.ts)",
+    "location": "src/evolve.ts:19-24",
+    "description": "src/evolve.ts:19-24 — `StockShipped` イベント処理において `Object.hasOwn(state.reservations, event.reservationId)` を使用して予約の存在を確認し、さらに `typeof reservedQty === 'number'` による型チェックを行った上で在庫を減算していることを確認しました。これによりプロトタイプ継承プロパティによる不正計算リスクが完全に解消されています。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0009"
+  },
+  {
+    "rawFindingId": "20260705-114812-readme-md-src-types-ts-tests:reviewers:5:coding-review:CONF-0010",
+    "stepName": "coding-review",
+    "reviewer": "coding-review",
+    "familyTag": "coding-review",
+    "severity": "high",
+    "title": "reservationId 辞書の存在判定が継承プロパティを遮断しない",
+    "location": "src/evolve.ts:19-24",
+    "description": "src/evolve.ts:19-24 — 同上の修正により、プロトタイプ汚染に対する耐性が確保されたことを確認しました。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0010"
+  },
+  {
+    "rawFindingId": "20260705-114812-readme-md-src-types-ts-tests:reviewers:5:coding-review:CONF-0011",
+    "stepName": "coding-review",
+    "reviewer": "coding-review",
+    "familyTag": "ai-antipattern-review",
+    "severity": "high",
+    "title": "reservationId 辞書のプロトタイプ継承プロパティが数値計算に混入する",
+    "location": "src/evolve.ts:19-24",
+    "description": "src/evolve.ts:19-24 — `Object.hasOwn` と型チェックの組み合わせにより、継承プロパティが数値計算に混入するリスクが解消されたことを確認しました。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0011"
+  },
+  {
+    "rawFindingId": "20260705-114812-readme-md-src-types-ts-tests:reviewers:5:implementation-semantics-review:issue-002",
+    "stepName": "implementation-semantics-review",
+    "reviewer": "implementation-semantics-review",
+    "familyTag": "data-structure-meaning",
+    "severity": "high",
+    "title": "undefined/null チェックのみではプロトタイプ継承プロパティの混入を排除できない",
+    "location": "src/evolve.ts:19-21",
+    "description": "src/evolve.ts:19-21 において、`state.reservations[event.reservationId]` の結果を `undefined` および `null` でチェックしていますが、これは不十分です。`reservationId` に `'toString'` などのプロトタイプ継承プロパティ名が指定された場合、その関数オブジェクトが返り、`undefined` や `null` ではないためチェックを通過します。その結果、数値計算 (`newState.onHand -= reservedQty`) に関数が持ち込まれ、NaN 等の不正な状態になります。これは F-0009, F-0010, F-0011 で指摘されている問題が依然として解決されていないことを意味します。",
+    "suggestion": "`Object.hasOwn(state.reservations, event.reservationId)` を使用して、実際にそのキーがオブジェクト自身のプロパティとして存在することを検証してください。",
+    "kind": "issue"
+  }
+]

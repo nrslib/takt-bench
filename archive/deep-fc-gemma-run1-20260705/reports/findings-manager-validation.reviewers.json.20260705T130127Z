@@ -1,0 +1,100 @@
+{
+  "version": 1,
+  "runId": "20260705-114812-readme-md-src-types-ts-tests",
+  "stepName": "reviewers",
+  "retryCount": 1,
+  "ledgerUpdated": true,
+  "finalErrors": [],
+  "attempts": [
+    {
+      "attempt": 1,
+      "managerOutput": {
+        "matches": [],
+        "newFindings": [],
+        "resolvedFindings": [
+          {
+            "findingId": "F-0009",
+            "rawFindingIds": [
+              "20260705-114812-readme-md-src-types-ts-tests:reviewers:5:arch-review:res-009",
+              "20260705-114812-readme-md-src-types-ts-tests:reviewers:5:ai-antipattern-review:res-007",
+              "20260705-114812-readme-md-src-types-ts-tests:reviewers:5:coding-review:CONF-0009"
+            ],
+            "evidence": "current raw findings include resolution_confirmation entries targeting F-0009 for the same src/evolve.ts StockShipped reservationId access issue."
+          },
+          {
+            "findingId": "F-0010",
+            "rawFindingIds": [
+              "20260705-114812-readme-md-src-types-ts-tests:reviewers:5:arch-review:res-010",
+              "20260705-114812-readme-md-src-types-ts-tests:reviewers:5:coding-review:CONF-0010"
+            ],
+            "evidence": "current raw findings include resolution_confirmation entries targeting F-0010 for the same src/evolve.ts reservationId inherited-property access issue."
+          },
+          {
+            "findingId": "F-0011",
+            "rawFindingIds": [
+              "20260705-114812-readme-md-src-types-ts-tests:reviewers:5:arch-review:res-011",
+              "20260705-114812-readme-md-src-types-ts-tests:reviewers:5:coding-review:CONF-0011"
+            ],
+            "evidence": "current raw findings include resolution_confirmation entries targeting F-0011 for the same src/evolve.ts inherited property entering numeric calculation issue."
+          }
+        ],
+        "reopenedFindings": [
+          {
+            "findingId": "F-0006",
+            "rawFindingIds": [
+              "20260705-114812-readme-md-src-types-ts-tests:reviewers:5:implementation-semantics-review:issue-002"
+            ],
+            "evidence": "raw issue-002 has familyTag=data-structure-meaning, location src/evolve.ts:19-21 within the prior F-0006 location set, and the same issue meaning: reservationId dictionary access can admit prototype-inherited properties without Object.hasOwn."
+          }
+        ],
+        "conflicts": [
+          {
+            "findingIds": [
+              "F-0006",
+              "F-0009",
+              "F-0010",
+              "F-0011"
+            ],
+            "rawFindingIds": [
+              "20260705-114812-readme-md-src-types-ts-tests:reviewers:5:arch-review:res-009",
+              "20260705-114812-readme-md-src-types-ts-tests:reviewers:5:arch-review:res-010",
+              "20260705-114812-readme-md-src-types-ts-tests:reviewers:5:arch-review:res-011",
+              "20260705-114812-readme-md-src-types-ts-tests:reviewers:5:ai-antipattern-review:res-007",
+              "20260705-114812-readme-md-src-types-ts-tests:reviewers:5:coding-review:CONF-0009",
+              "20260705-114812-readme-md-src-types-ts-tests:reviewers:5:coding-review:CONF-0010",
+              "20260705-114812-readme-md-src-types-ts-tests:reviewers:5:coding-review:CONF-0011",
+              "20260705-114812-readme-md-src-types-ts-tests:reviewers:5:implementation-semantics-review:issue-002"
+            ],
+            "description": "同一箇所 src/evolve.ts:19-24 の StockShipped reservationId 辞書アクセスについて、複数の resolution_confirmation は Object.hasOwn と number 型チェックで F-0009/F-0010/F-0011 が解消したと確認している一方、implementation-semantics-review:issue-002 は同じアクセスが未解消であるとして F-0006 と同じ familyTag=data-structure-meaning の問題を再報告している。"
+          }
+        ],
+        "resolvedConflicts": [
+          {
+            "conflictId": "C-053A19363A51",
+            "evidence": "current raw findings include resolution_confirmation entries targeting F-0009 from arch-review, ai-antipattern-review, and coding-review, and no current issue with familyTag=prototype_pollution for F-0009 remains."
+          },
+          {
+            "conflictId": "C-A13FBEED39EF",
+            "evidence": "current raw findings include resolution_confirmation entries targeting F-0010 from arch-review and coding-review, and no current issue with familyTag=implementation-semantics-review for F-0010 remains."
+          }
+        ],
+        "waivedFindings": [],
+        "disputeNotes": []
+      },
+      "validationErrors": [
+        "Raw finding id \"20260705-114812-readme-md-src-types-ts-tests:reviewers:5:arch-review:res-009\" appears in multiple manager decisions: resolvedFindings[0] and conflicts[0]",
+        "Raw finding id \"20260705-114812-readme-md-src-types-ts-tests:reviewers:5:arch-review:res-010\" appears in multiple manager decisions: resolvedFindings[1] and conflicts[0]",
+        "Raw finding id \"20260705-114812-readme-md-src-types-ts-tests:reviewers:5:arch-review:res-011\" appears in multiple manager decisions: resolvedFindings[2] and conflicts[0]",
+        "Raw finding id \"20260705-114812-readme-md-src-types-ts-tests:reviewers:5:ai-antipattern-review:res-007\" appears in multiple manager decisions: resolvedFindings[0] and conflicts[0]",
+        "Raw finding id \"20260705-114812-readme-md-src-types-ts-tests:reviewers:5:coding-review:CONF-0009\" appears in multiple manager decisions: resolvedFindings[0] and conflicts[0]",
+        "Raw finding id \"20260705-114812-readme-md-src-types-ts-tests:reviewers:5:coding-review:CONF-0010\" appears in multiple manager decisions: resolvedFindings[1] and conflicts[0]",
+        "Raw finding id \"20260705-114812-readme-md-src-types-ts-tests:reviewers:5:coding-review:CONF-0011\" appears in multiple manager decisions: resolvedFindings[2] and conflicts[0]",
+        "Raw finding id \"20260705-114812-readme-md-src-types-ts-tests:reviewers:5:implementation-semantics-review:issue-002\" appears in multiple manager decisions: reopenedFindings[0] and conflicts[0]",
+        "Finding id \"F-0006\" appears in multiple manager decisions: reopenedFindings[0] and conflicts[0]",
+        "Finding id \"F-0009\" appears in multiple manager decisions: resolvedFindings[0] and conflicts[0]",
+        "Finding id \"F-0010\" appears in multiple manager decisions: resolvedFindings[1] and conflicts[0]",
+        "Finding id \"F-0011\" appears in multiple manager decisions: resolvedFindings[2] and conflicts[0]"
+      ]
+    }
+  ]
+}

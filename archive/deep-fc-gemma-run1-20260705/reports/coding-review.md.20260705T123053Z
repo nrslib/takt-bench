@@ -1,0 +1,19 @@
+# コーディングレビュー
+
+## 結果: REJECT
+
+## サマリー
+`src/evolve.ts` におけるプロトタイプ汚染対策として `undefined/null` チェックが導入されましたが、これは継承プロパティ（`toString` 等）へのアクセスを遮断できず、不適切な数値計算が行われるリスクが依然として残っています。
+
+## 観測した指摘
+| # | family_tag | 重大度 | 場所 | 問題 | 影響 | 修正案 |
+|---|------------|--------|------|------|------|--------|
+| 1 | implementation-semantics-review | High | `src/evolve.ts:19-20` | `reservationId` へのアクセスに `Object.hasOwn` を使用していない | `toString` 等のプロトタイププロパティが ID として指定された場合に、不適切な数値計算が発生し在庫状態が破壊される可能性がある | `Object.hasOwn(state.reservations, event.reservationId)` を使用して存在を確認してから値にアクセスするように修正してください |
+
+## 検証証跡
+- 差分確認: `src/evolve.ts` の `StockShipped` 処理におけるプロパティアクセスおよびチェックロジックを確認。
+- ビルド: 未確認。
+- テスト: 未確認。
+
+## REJECT判定条件
+- ブロッキング指摘（High）が1件あるため REJECT。
