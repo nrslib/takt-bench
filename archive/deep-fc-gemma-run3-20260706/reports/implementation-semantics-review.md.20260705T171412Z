@@ -1,0 +1,16 @@
+# 実装意味論レビュー
+
+## 結果: APPROVE
+
+## サマリー
+前回指摘した `reservationId` をキーとする `Record` の汚染リスクについて、`Object.hasOwn()` による遮断が実装されたことを確認しました。その他の実装意味論上の問題は見当たりません。
+
+## 検証証跡
+- 差分確認: `src/domain.ts` の `decideReserveStock`, `decideReleaseReservation`, `decideShipStock` における存在判定ロジックを確認。
+- 判定根拠の実在確認: `src/domain.ts:116, 129, 142` にて `Object.hasOwn(state.reservations, command.reservationId)` が使用されており、プロトタイプ継承の影響が正しく遮断されていることを実コードで確認済み。
+- 再走査証跡:
+    - データ構造の意味選択: 完了（`Object.hasOwn` による遮断を確認）
+    - 導出値の単一情報源: 完了（`onHand` と `reservations` の更新経路に不整合なし）
+    - 命名と意味の整合: 完了（変数名と中身の乖離なし）
+    - 境界での fail-fast: 完了（`DomainError` による即時失敗を確認）
+    - 内部状態の参照漏れ: 完了（`evolve` でのシャローコピーおよび `SrockProjection` での Map 管理を確認）

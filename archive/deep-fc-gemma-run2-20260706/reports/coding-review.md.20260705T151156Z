@@ -1,0 +1,11 @@
+# コーディングレビュー
+
+## 結果: APPROVE
+
+## サマリー
+README.md の仕様および `src/types.ts` の公開契約に従い、イベントソーシングによる在庫管理ライブラリが正しく実装されています。全51件のテストが成功し、アーキテクチャ要件（ドメインの純粋性、ポートへの依存、プロジェクションの独立性）も満たされています。
+
+## 検証証跡
+- 差分確認: `src/index.ts` の実装を確認。`evolve`, `decide`, `InMemoryEventStore`, `CommandHandler`, `StockProjection` が要件通りに実装されていることを確認しました。
+- ビルド: `npm run typecheck` (tsc --noEmit) を実行し、型エラーがないことを確認しました。
+- テスト: `npm test` (vitest) を実行し、51件すべてのテストケースがパスすることを確認しました。

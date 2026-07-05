@@ -1,0 +1,18 @@
+# 実装意味論レビュー
+
+## 結果: REJECT
+
+## サマリー
+外部入力である `reservationId` をキーとする辞書に `Record<string, number>` が使用されており、プロトタイプ継承プロパティの混入による誤判定のリスクがあります。
+
+## 観測した指摘
+| # | family_tag | 重大度 | 場所 | 問題 | 壊れる条件 | 修正案 |
+|---|------------|--------|------|------|-----------|--------|
+| 1 | data-structure-selection | Medium | `src/domain.ts:16` | 外部入力キーを Record で管理し、直接アクセスで存在判定している | `reservationId` に `"toString"` 等のプロトタイププロパティ名が渡された際、未登録でも存在すると判定される | `Map<string, number>` への変更、または `Object.hasOwn()` による遮断を行う |
+
+## 検証証跡
+- 差分確認: `src/domain.ts` の `initialState` および `evolve` / `decide` 関数内での `reservations` オブジェクトへの操作を確認。
+- 判定根拠の実在確認: `src/domain.ts:16` で `reservations: {}` と定義され、`src/domain.ts:116, 129` 等で `state.reservations[id]` による存在確認が行われていることを確認済み。
+
+## REJECT判定条件
+- ブロッキング指摘が1件以上あるため REJECT。

@@ -1,0 +1,110 @@
+[
+  {
+    "rawFindingId": "20260705-150025-readme-md-src-types-ts-tests:reviewers:5:arch-review:res-013",
+    "stepName": "arch-review",
+    "reviewer": "arch-review",
+    "familyTag": "internal-state-leak",
+    "severity": "low",
+    "title": "防御的コピーの復活確認",
+    "location": "src/index.ts:267",
+    "description": " la getStock(productId) において、`return stock ? { ...stock } : undefined;` が導入され、内部状態の参照漏れが防止されていることを確認した。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0012"
+  },
+  {
+    "rawFindingId": "20260705-150025-readme-md-src-types-ts-tests:reviewers:5:arch-review:issue-003",
+    "stepName": "arch-review",
+    "reviewer": "arch-review",
+    "familyTag": "derived-state-management",
+    "severity": "medium",
+    "title": "導出値 available の冗長な状態保持（継続）",
+    "location": "src/index.ts:199, 210, 224, 240, 257",
+    "description": "F-0007/F-0013 に関して、計算式は統一されたが、依然として StockLevel 型のプロパティとして available を保持し、各イベント適用時に手動で計算・代入している。これは「導出値の単一情報源」原則に反する設計である。",
+    "suggestion": "src/types.ts の変更が禁止されているため、内部的な保持は避けられないが、StockProjection 内部で計算をカプセル化し、プロパティへの代入箇所を最小限にするか、取得時に計算して返却する（StockLevel 型を満たすオブジェクトをその場で生成する）構成に変更してください。",
+    "kind": "issue"
+  },
+  {
+    "rawFindingId": "20260705-150025-readme-md-src-types-ts-tests:reviewers:5:ai-antipattern-review:res-0007-final-v3",
+    "stepName": "ai-antipattern-review",
+    "reviewer": "ai-antipattern-review",
+    "familyTag": "derived-value-desync",
+    "severity": "medium",
+    "title": "導出値 available の並行管理の解消確認",
+    "location": "src/index.ts:210, 224, 240, 257",
+    "description": "src/index.ts:210, 224, 240, 257 — StockProjection 内で available が各イベント適用時に 'onHand - reserved' として正しく再計算され、新しいオブジェクトと共に保存されていることを確認しました。公開契約の制約下で最大限の整合性が確保されています。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0007"
+  },
+  {
+    "rawFindingId": "20260705-150025-readme-md-src-types-ts-tests:reviewers:5:ai-antipattern-review:res-0012-final",
+    "stepName": "ai-antipattern-review",
+    "reviewer": "ai-antipattern-review",
+    "familyTag": "internal-state-leak",
+    "severity": "low",
+    "title": "防御的コピーの再導入確認",
+    "location": "src/index.ts:268",
+    "description": "src/index.ts:268 — getStock メソッドにおいて 'return stock ? { ...stock } : undefined;' という防御的コピーが再導入されていることを確認しました。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0012"
+  },
+  {
+    "rawFindingId": "20260705-150025-readme-md-src-types-ts-tests:reviewers:5:ai-antipattern-review:res-0013-final",
+    "stepName": "ai-antipattern-review",
+    "reviewer": "ai-antipattern-review",
+    "familyTag": "derived-value-desync",
+    "severity": "medium",
+    "title": "導出値 available の冗長な状態保持の解消確認",
+    "location": "src/index.ts:210, 224, 240, 257",
+    "description": "src/index.ts:210, 224, 240, 257 — 導出値 available の計算ロジックが一貫しており、各イベント処理で正しく更新されていることを確認しました。公開契約（src/types.ts）の制約によりプロパティとしての保持は不可避ですが、実装上の不整合リスクは排除されています。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0013"
+  },
+  {
+    "rawFindingId": "20260705-150025-readme-md-src-types-ts-tests:reviewers:5:coding-review:CONF-0015",
+    "stepName": "coding-review",
+    "reviewer": "coding-review",
+    "familyTag": "implementation-semantics-review",
+    "severity": "medium",
+    "title": "導出値 available の並行管理の解消確認",
+    "location": "src/index.ts:195-230",
+    "description": "src/index.ts:195-230 において、available が { ...existing, available: existing.onHand + event.quantity - existing.reserved } のように、各イベント適用時に正しく計算され、新しいオブジェクトとしてセットされていることを確認しました。これにより、導出値を個別に保持して不整合を起こすリスクが解消されています。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0007"
+  },
+  {
+    "rawFindingId": "20260705-150025-readme-md-src-types-ts-tests:reviewers:5:coding-review:CONF-0016",
+    "stepName": "coding-review",
+    "reviewer": "coding-review",
+    "familyTag": "ai-antipattern-review",
+    "severity": "low",
+    "title": "防御的コピーの再導入による安全性の確保確認",
+    "location": "src/index.ts:267",
+    "description": "src/index.ts:267 の getStock(productId) が `return stock ? { ...stock } : undefined;` となり、防御的コピーが再導入されたことを確認しました。これにより、内部状態の参照漏れリスクが完全に解消されています。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0012"
+  },
+  {
+    "rawFindingId": "20260705-150025-readme-md-src-types-ts-tests:reviewers:5:implementation-semantics-review:rf-0010",
+    "stepName": "implementation-semantics-review",
+    "reviewer": "implementation-semantics-review",
+    "familyTag": "internal-state-leak",
+    "severity": "medium",
+    "title": "内部状態参照漏れの再発（防御的コピーの欠如）",
+    "location": "src/index.ts:267",
+    "description": "getStock(productId) が `this.stocks.get(productId)` を直接返却しており、防御的コピーが実装されていない。StockLevel はプレーンオブジェクトであるため、外部で返り値を変更するとプロジェクション内部の状態が破壊される。これは F-0008 で一度解消されていた問題の回帰である。",
+    "suggestion": "`return stock ? { ...stock } : undefined;` とし、不変なコピーを返却するようにしてください。",
+    "kind": "issue"
+  },
+  {
+    "rawFindingId": "20260705-150025-readme-md-src-types-ts-tests:reviewers:5:implementation-semantics-review:rf-0011",
+    "stepName": "implementation-semantics-review",
+    "reviewer": "implementation-semantics-review",
+    "familyTag": "derived-value-source",
+    "severity": "medium",
+    "title": "導出値 available の並行管理が依然として残存",
+    "location": "src/index.ts:210, 224, 240, 257",
+    "description": "F-0007 および F-0013 で指摘されていた「導出値の単一情報源」の問題が解消されていない。依然として StockLevel 型のプロパティとして available を保持し、各イベント適用時に `onHand - reserved` を手動で計算して代入している。これは導出値の重複管理であり、不整合のリスクを抱える設計不備である。",
+    "suggestion": "StockLevel から available プロパティを削除し、getStock 等の取得タイミングで計算して返す構成に変更してください。",
+    "kind": "issue"
+  }
+]

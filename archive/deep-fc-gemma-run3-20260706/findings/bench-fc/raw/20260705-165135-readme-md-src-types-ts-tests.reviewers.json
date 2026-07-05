@@ -1,0 +1,86 @@
+[
+  {
+    "rawFindingId": "20260705-165135-readme-md-src-types-ts-tests:reviewers:1:arch-review:arch-review-001",
+    "stepName": "arch-review",
+    "reviewer": "arch-review",
+    "familyTag": "incorrect-logic",
+    "severity": "critical",
+    "title": "StockShipped処理における予約数量の不適切なリセット",
+    "location": "src/projection.ts:48",
+    "description": "src/projection.ts の StockShipped イベント処理において、reserved を 0 にリセットしており、他の予約がある場合にそれらをすべて消去してしまう。正しくは、対象の予約数量分だけ減算すべきである。",
+    "suggestion": "`reserved: s.reserved - shippedQty` のように、出荷された数量分のみを減算するように修正してください。",
+    "kind": "issue"
+  },
+  {
+    "rawFindingId": "20260705-165135-readme-md-src-types-ts-tests:reviewers:1:arch-review:arch-review-002",
+    "stepName": "arch-review",
+    "reviewer": "arch-review",
+    "familyTag": "mutable-shared-state",
+    "severity": "medium",
+    "title": "公開初期状態の不変性欠如",
+    "location": "src/domain.ts:12",
+    "description": "src/domain.ts の initialState が Object.freeze されておらず、外部から変更可能である。これは公開状態の不変性ルールに違反する。",
+    "suggestion": "`Object.freeze` を使用して initialState およびその内部の reservations オブジェクトを保護してください。",
+    "kind": "issue"
+  },
+  {
+    "rawFindingId": "20260705-165135-readme-md-src-types-ts-tests:reviewers:1:arch-review:arch-review-003",
+    "stepName": "arch-review",
+    "reviewer": "arch-review",
+    "familyTag": "incorrect-logic",
+    "severity": "critical",
+    "title": "StockShipped処理における available 計算の誤り",
+    "location": "src/projection.ts:49",
+    "description": "src/projection.ts の StockShipped 処理において、available の計算に `s.onHand - shippedQty` を使用しているが、これは他の予約がある場合に正しくない。正しくは `(s.onHand - shippedQty) - (s.reserved - shippedQty)` となるはずである。",
+    "suggestion": "出荷後の available を `onHand - reserved` で再計算するように修正してください。",
+    "kind": "issue"
+  },
+  {
+    "rawFindingId": "20260705-165135-readme-md-src-types-ts-tests:reviewers:1:ai-antipattern-review:raw-001",
+    "stepName": "ai-antipattern-review",
+    "reviewer": "ai-antipattern-review",
+    "familyTag": "incorrect-logic",
+    "severity": "high",
+    "title": "StockShipped 処理時の予約数リセット不備",
+    "location": "src/projection.ts:48",
+    "description": "src/projection.ts:46-50 で `StockShipped` イベントを処理する際、`reserved` を 0 にリセットしている。これは単一の予約を配送しただけであり、他の予約が残っている可能性があるため、不適切である。正しくは、配送された数量分だけ `reserved` を減算すべきである。",
+    "suggestion": "`reserved: 0` ではなく `reserved: s.reserved - shippedQty` とし、他の予約を維持するように修正してください。",
+    "kind": "issue"
+  },
+  {
+    "rawFindingId": "20260705-165135-readme-md-src-types-ts-tests:reviewers:1:ai-antipattern-review:raw-002",
+    "stepName": "ai-antipattern-review",
+    "reviewer": "ai-antipattern-review",
+    "familyTag": "incorrect-logic",
+    "severity": "medium",
+    "title": "StockShipped 処理時の available 計算不備",
+    "location": "src/projection.ts:49",
+    "description": "src/projection.ts:49 で `available` を `s.onHand - shippedQty` と計算しているが、これは「現在の予約合計」を考慮していない。`available` は `onHand - reserved` で定義されるべきであり、配送後は `onHand` も `reserved` も減少するため、結果的に整合性は取れる可能性があるが、計算式として不透明。また、`S.onHand` (更新前) を使っているため、`onHand` の更新タイミングによっては不整合が起きる可能性がある。",
+    "suggestion": "`available` の計算を `(s.onHand - shippedQty) - (s.reserved - shippedQty)` または、更新後の `onHand` と `reserved` から再計算するようにしてください。",
+    "kind": "issue"
+  },
+  {
+    "rawFindingId": "20260705-165135-readme-md-src-types-ts-tests:reviewers:1:ai-antipattern-review:raw-003",
+    "stepName": "ai-antipattern-review",
+    "reviewer": "ai-antipattern-review",
+    "familyTag": "dry-violation",
+    "severity": "low",
+    "title": "初期状態の重複定義（DRY違反）",
+    "location": "src/command-handler.ts:18",
+    "description": "src/command-handler.ts:18 で `events.reduce(evolve, { exists: false, name: '', onHand: 0, reservations: {} })` と状態を初期化しているが、これは `src/domain.ts` で定義されている `initialState` を利用すべきである。現状ではドメインの初期状態定義が二重管理になっており、不整合の原因となる。",
+    "suggestion": "`initialState` を `src/domain.ts` からインポートして使用してください。",
+    "kind": "issue"
+  },
+  {
+    "rawFindingId": "20260705-165135-readme-md-src-types-ts-tests:reviewers:1:implementation-semantics-review:sem-001",
+    "stepName": "implementation-semantics-review",
+    "reviewer": "implementation-semantics-review",
+    "familyTag": "data-structure-selection",
+    "severity": "medium",
+    "title": "外部入力キーの Record 使用によるプロトタイプ汚染リスク",
+    "location": "src/domain.ts:16",
+    "description": "src/domain.ts:16, 22, 35, 39, 43, 45 において、外部入力である reservationId をキーとする辞書に Record<string, number> を使用しており、`in` 演算子や直接アクセスによる存在判定を行っている。これにより、`toString` 等のプロトタイプ継承プロパティが混入し、不正な予約 ID が存在すると判定されるリスクがある。",
+    "suggestion": "ProductState.reservations を Map<string, number> に変更するか、存在判定に Object.hasOwn() を使用してプロトタイプ継承の影響を遮断してください。",
+    "kind": "issue"
+  }
+]

@@ -1,0 +1,110 @@
+{
+  "version": 1,
+  "runId": "20260705-150025-readme-md-src-types-ts-tests",
+  "stepName": "reviewers",
+  "retryCount": 1,
+  "ledgerUpdated": true,
+  "finalErrors": [],
+  "attempts": [
+    {
+      "attempt": 1,
+      "managerOutput": {
+        "matches": [
+          {
+            "findingId": "F-0012",
+            "rawFindingIds": [
+              "20260705-150025-readme-md-src-types-ts-tests:reviewers:10:implementation-semantics-review:rf-0020"
+            ],
+            "evidence": "familyTag=internal-state-leak、location=src/index.ts:267、getStock が内部 stock を直接返して防御的コピーがないという issue meaning が既存 F-0012 と一致する。"
+          },
+          {
+            "findingId": "F-0007",
+            "rawFindingIds": [
+              "20260705-150025-readme-md-src-types-ts-tests:reviewers:10:implementation-semantics-review:rf-0021"
+            ],
+            "evidence": "familyTag=derived-value-source、StockProjection の available を導出値として重複保持・手動計算しているという issue meaning が既存 F-0007 と一致する。"
+          }
+        ],
+        "newFindings": [],
+        "resolvedFindings": [
+          {
+            "findingId": "F-0007",
+            "rawFindingIds": [
+              "20260705-150025-readme-md-src-types-ts-tests:reviewers:10:arch-review:res-0001",
+              "20260705-150025-readme-md-src-types-ts-tests:reviewers:10:ai-antipattern-review:res-0007-final-v6",
+              "20260705-150025-readme-md-src-types-ts-tests:reviewers:10:coding-review:CONF-0025"
+            ],
+            "evidence": "kind=resolution_confirmation かつ targetFindingId=F-0007 の raw finding が複数あり、StockProjection 内部状態から available を排除し取得時に計算すると確認している。"
+          },
+          {
+            "findingId": "F-0013",
+            "rawFindingIds": [
+              "20260705-150025-readme-md-src-types-ts-tests:reviewers:10:arch-review:res-0002",
+              "20260705-150025-readme-md-src-types-ts-tests:reviewers:10:ai-antipattern-review:res-0013-final-v4"
+            ],
+            "evidence": "kind=resolution_confirmation かつ targetFindingId=F-0013 の raw finding があり、内部状態として available を保持せず取得時に計算すると確認している。"
+          },
+          {
+            "findingId": "F-0012",
+            "rawFindingIds": [
+              "20260705-150025-readme-md-src-types-ts-tests:reviewers:10:arch-review:res-0003",
+              "20260705-150025-readme-md-src-types-ts-tests:reviewers:10:ai-antipattern-review:res-0012-final-v4",
+              "20260705-150025-readme-md-src-types-ts-tests:reviewers:10:coding-review:CONF-0026"
+            ],
+            "evidence": "kind=resolution_confirmation かつ targetFindingId=F-0012 の raw finding が複数あり、getStock が新しい StockLevel オブジェクトを返して内部状態参照漏れを防いでいると確認している。"
+          }
+        ],
+        "reopenedFindings": [],
+        "conflicts": [
+          {
+            "findingIds": [
+              "F-0007",
+              "F-0013"
+            ],
+            "rawFindingIds": [
+              "20260705-150025-readme-md-src-types-ts-tests:reviewers:10:arch-review:res-0001",
+              "20260705-150025-readme-md-src-types-ts-tests:reviewers:10:arch-review:res-0002",
+              "20260705-150025-readme-md-src-types-ts-tests:reviewers:10:ai-antipattern-review:res-0007-final-v6",
+              "20260705-150025-readme-md-src-types-ts-tests:reviewers:10:ai-antipattern-review:res-0013-final-v4",
+              "20260705-150025-readme-md-src-types-ts-tests:reviewers:10:coding-review:CONF-0025",
+              "20260705-150025-readme-md-src-types-ts-tests:reviewers:10:implementation-semantics-review:rf-0021"
+            ],
+            "description": "F-0007/F-0013 の available 導出値管理について、targetFindingId=F-0007/F-0013 の resolution_confirmation が内部状態から available を排除して取得時に計算すると確認している一方、rf-0021 は同じ familyTag=derived-value-source で available 保持・手動計算が残存すると報告しており、解消可否が矛盾している。"
+          },
+          {
+            "findingIds": [
+              "F-0012"
+            ],
+            "rawFindingIds": [
+              "20260705-150025-readme-md-src-types-ts-tests:reviewers:10:arch-review:res-0003",
+              "20260705-150025-readme-md-src-types-ts-tests:reviewers:10:ai-antipattern-review:res-0012-final-v4",
+              "20260705-150025-readme-md-src-types-ts-tests:reviewers:10:coding-review:CONF-0026",
+              "20260705-150025-readme-md-src-types-ts-tests:reviewers:10:implementation-semantics-review:rf-0020"
+            ],
+            "description": "F-0012 の getStock 防御的コピーについて、targetFindingId=F-0012 の resolution_confirmation が新規 StockLevel オブジェクト返却による解消を確認している一方、rf-0020 は同じ familyTag=internal-state-leak、location=src/index.ts:267、getStock の防御的コピー欠如という同一 issue meaning を報告しており、解消可否が矛盾している。"
+          }
+        ],
+        "resolvedConflicts": [],
+        "waivedFindings": [],
+        "disputeNotes": []
+      },
+      "validationErrors": [
+        "Raw finding id \"20260705-150025-readme-md-src-types-ts-tests:reviewers:10:arch-review:res-0001\" appears in multiple manager decisions: resolvedFindings[0] and conflicts[0]",
+        "Raw finding id \"20260705-150025-readme-md-src-types-ts-tests:reviewers:10:arch-review:res-0002\" appears in multiple manager decisions: resolvedFindings[1] and conflicts[0]",
+        "Raw finding id \"20260705-150025-readme-md-src-types-ts-tests:reviewers:10:ai-antipattern-review:res-0007-final-v6\" appears in multiple manager decisions: resolvedFindings[0] and conflicts[0]",
+        "Raw finding id \"20260705-150025-readme-md-src-types-ts-tests:reviewers:10:ai-antipattern-review:res-0013-final-v4\" appears in multiple manager decisions: resolvedFindings[1] and conflicts[0]",
+        "Raw finding id \"20260705-150025-readme-md-src-types-ts-tests:reviewers:10:coding-review:CONF-0025\" appears in multiple manager decisions: resolvedFindings[0] and conflicts[0]",
+        "Raw finding id \"20260705-150025-readme-md-src-types-ts-tests:reviewers:10:implementation-semantics-review:rf-0021\" appears in multiple manager decisions: matches[1] and conflicts[0]",
+        "Raw finding id \"20260705-150025-readme-md-src-types-ts-tests:reviewers:10:arch-review:res-0003\" appears in multiple manager decisions: resolvedFindings[2] and conflicts[1]",
+        "Raw finding id \"20260705-150025-readme-md-src-types-ts-tests:reviewers:10:ai-antipattern-review:res-0012-final-v4\" appears in multiple manager decisions: resolvedFindings[2] and conflicts[1]",
+        "Raw finding id \"20260705-150025-readme-md-src-types-ts-tests:reviewers:10:coding-review:CONF-0026\" appears in multiple manager decisions: resolvedFindings[2] and conflicts[1]",
+        "Raw finding id \"20260705-150025-readme-md-src-types-ts-tests:reviewers:10:implementation-semantics-review:rf-0020\" appears in multiple manager decisions: matches[0] and conflicts[1]",
+        "Finding id \"F-0007\" appears in multiple manager decisions: matches[1] and resolvedFindings[0]",
+        "Finding id \"F-0012\" appears in multiple manager decisions: matches[0] and resolvedFindings[2]",
+        "Finding id \"F-0007\" appears in multiple manager decisions: matches[1] and conflicts[0]",
+        "Finding id \"F-0013\" appears in multiple manager decisions: resolvedFindings[1] and conflicts[0]",
+        "Finding id \"F-0012\" appears in multiple manager decisions: matches[0] and conflicts[1]"
+      ]
+    }
+  ]
+}

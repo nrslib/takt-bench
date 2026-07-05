@@ -1,0 +1,22 @@
+# 実装意味論レビュー
+
+## 結果: REJECT
+
+## サマリー
+外部IDをキーとする辞書へのプレーンオブジェクト利用によるプロトタイプ汚染リスク、および導出値の重複管理と内部状態の参照漏れが検出されました。
+
+## 観測した指摘
+| # | family_tag | 重大度 | 場所 | 問題 | 壊れる条件 | 修正案 |
+|---|------------|--------|------|------|-----------|--------|
+| 1 | data-structure-meaning | high | `src/index.ts:132` | 外部IDをキーとする辞書に `Record` を使用 | `streamId` に `toString` 等の組み込み名が渡った際に誤判定が発生 | `Map` または `Object.create(null)` を使用 |
+| 2 | data-structure-meaning | high | `src/index.ts:170` | 外部IDをキーとする辞書に `Record` を使用 | `productId` や `reservationId` に組み込み名が渡った際に挙動が変わる | `Map` への移行 |
+| 3 | derived-value-source | medium | `src/index.ts:186` | 導出値 `available` の並行管理 | 計算ロジックの更新漏れにより `available` が不整合な値を保持する | 取得時に計算するメソッドまたは getter に変更 |
+| 4 | internal-state-leak | medium | `src/index.ts:220` | 内部状態 `StockLevel` の参照漏れ | `getStock` の返り値を外部で変更するとプロジェクション内部状態が破壊される | 防衛的コピーを返却する |
+| 5 | fail-fast | medium | `src/index.ts:184` | 不正状態（商品不在）のサイレント無視 | イベントログの不整合がある状態で、本来エラーとなるべき処理が無視され不整合が伝播する | 存在しない場合に `Error` をスロー |
+
+## 検証証跡
+- 差分確認: `src/index.ts` の全実装を走査し、Knowledge の判定基準と照合。
+- 判定根拠の実在確認: `InMemoryEventStore` (132-149行), `StockProjection` (170-221行) の実装を実コードで確認。
+
+## REJECT判定条件
+- ブロッキング指摘（High/Medium）が複数件あるため REJECT。

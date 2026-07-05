@@ -1,0 +1,178 @@
+{
+  "version": 1,
+  "runId": "20260705-150025-readme-md-src-types-ts-tests",
+  "stepName": "reviewers",
+  "retryCount": 1,
+  "ledgerUpdated": true,
+  "finalErrors": [],
+  "attempts": [
+    {
+      "attempt": 1,
+      "managerOutput": {
+        "matches": [
+          {
+            "findingId": "F-0007",
+            "rawFindingIds": [
+              "20260705-150025-readme-md-src-types-ts-tests:reviewers:2:implementation-semantics-review:rf-0005"
+            ],
+            "evidence": "既存 F-0007 と同じ familyTag=derived-value-source で、StockProjection の available を導出値として保持・手動更新している同一問題。"
+          }
+        ],
+        "newFindings": [
+          {
+            "rawFindingIds": [
+              "20260705-150025-readme-md-src-types-ts-tests:reviewers:2:arch-review:arch-004"
+            ],
+            "title": "導出値 available の冗長な状態保持",
+            "severity": "medium"
+          },
+          {
+            "rawFindingIds": [
+              "20260705-150025-readme-md-src-types-ts-tests:reviewers:2:arch-review:arch-005"
+            ],
+            "title": "StockProjection 内での状態直接変更",
+            "severity": "medium"
+          },
+          {
+            "rawFindingIds": [
+              "20260705-150025-readme-md-src-types-ts-tests:reviewers:2:ai-antipattern-review:new-001"
+            ],
+            "title": "部分的な状態ミューテーションの残存",
+            "severity": "medium"
+          },
+          {
+            "rawFindingIds": [
+              "20260705-150025-readme-md-src-types-ts-tests:reviewers:2:coding-review:ISSUE-0001"
+            ],
+            "title": "導出値 available の並行管理",
+            "severity": "medium"
+          }
+        ],
+        "resolvedFindings": [
+          {
+            "findingId": "F-0001",
+            "rawFindingIds": [
+              "20260705-150025-readme-md-src-types-ts-tests:reviewers:2:arch-review:res-001",
+              "20260705-150025-readme-md-src-types-ts-tests:reviewers:2:ai-antipattern-review:res-0001",
+              "20260705-150025-readme-md-src-types-ts-tests:reviewers:2:coding-review:CONF-0001"
+            ],
+            "evidence": "targetFindingId=F-0001 の resolution_confirmation があり、initialState の Object.freeze 適用確認を示している。"
+          },
+          {
+            "findingId": "F-0002",
+            "rawFindingIds": [
+              "20260705-150025-readme-md-src-types-ts-tests:reviewers:2:arch-review:res-002",
+              "20260705-150025-readme-md-src-types-ts-tests:reviewers:2:ai-antipattern-review:res-0002",
+              "20260705-150025-readme-md-src-types-ts-tests:reviewers:2:coding-review:CONF-0002"
+            ],
+            "evidence": "targetFindingId=F-0002 の resolution_confirmation があり、evolve 関数のイミュータブル更新確認を示している。"
+          },
+          {
+            "findingId": "F-0003",
+            "rawFindingIds": [
+              "20260705-150025-readme-md-src-types-ts-tests:reviewers:2:arch-review:res-003",
+              "20260705-150025-readme-md-src-types-ts-tests:reviewers:2:ai-antipattern-review:res-0003",
+              "20260705-150025-readme-md-src-types-ts-tests:reviewers:2:coding-review:CONF-0003"
+            ],
+            "evidence": "targetFindingId=F-0003 の resolution_confirmation があり、any キャスト排除の確認を示している。"
+          },
+          {
+            "findingId": "F-0004",
+            "rawFindingIds": [
+              "20260705-150025-readme-md-src-types-ts-tests:reviewers:2:arch-review:res-004",
+              "20260705-150025-readme-md-src-types-ts-tests:reviewers:2:ai-antipattern-review:res-0004",
+              "20260705-150025-readme-md-src-types-ts-tests:reviewers:2:coding-review:CONF-0004"
+            ],
+            "evidence": "targetFindingId=F-0004 の resolution_confirmation があり、any 型による強制キャスト排除の確認を示している。"
+          },
+          {
+            "findingId": "F-0005",
+            "rawFindingIds": [
+              "20260705-150025-readme-md-src-types-ts-tests:reviewers:2:arch-review:res-005",
+              "20260705-150025-readme-md-src-types-ts-tests:reviewers:2:ai-antipattern-review:res-0005",
+              "20260705-150025-readme-md-src-types-ts-tests:reviewers:2:coding-review:CONF-0005",
+              "20260705-150025-readme-md-src-types-ts-tests:reviewers:2:implementation-semantics-review:rf-0001"
+            ],
+            "evidence": "targetFindingId=F-0005 の resolution_confirmation があり、InMemoryEventStore の Map 移行確認を示している。"
+          },
+          {
+            "findingId": "F-0006",
+            "rawFindingIds": [
+              "20260705-150025-readme-md-src-types-ts-tests:reviewers:2:arch-review:res-006",
+              "20260705-150025-readme-md-src-types-ts-tests:reviewers:2:ai-antipattern-review:res-0006",
+              "20260705-150025-readme-md-src-types-ts-tests:reviewers:2:coding-review:CONF-0006",
+              "20260705-150025-readme-md-src-types-ts-tests:reviewers:2:implementation-semantics-review:rf-0002"
+            ],
+            "evidence": "targetFindingId=F-0006 の resolution_confirmation があり、StockProjection の Map 移行確認を示している。"
+          },
+          {
+            "findingId": "F-0007",
+            "rawFindingIds": [
+              "20260705-150025-readme-md-src-types-ts-tests:reviewers:2:ai-antipattern-review:res-0007"
+            ],
+            "evidence": "targetFindingId=F-0007 の resolution_confirmation があるため解消確認として扱う。ただし同時に同一 finding へ一致する issue-kind finding も存在する。"
+          },
+          {
+            "findingId": "F-0008",
+            "rawFindingIds": [
+              "20260705-150025-readme-md-src-types-ts-tests:reviewers:2:arch-review:res-008",
+              "20260705-150025-readme-md-src-types-ts-tests:reviewers:2:ai-antipattern-review:res-0008",
+              "20260705-150025-readme-md-src-types-ts-tests:reviewers:2:coding-review:CONF-0008",
+              "20260705-150025-readme-md-src-types-ts-tests:reviewers:2:implementation-semantics-review:rf-0003"
+            ],
+            "evidence": "targetFindingId=F-0008 の resolution_confirmation があり、getStock の防御的コピー確認を示している。"
+          },
+          {
+            "findingId": "F-0009",
+            "rawFindingIds": [
+              "20260705-150025-readme-md-src-types-ts-tests:reviewers:2:arch-review:res-009",
+              "20260705-150025-readme-md-src-types-ts-tests:reviewers:2:ai-antipattern-review:res-0009",
+              "20260705-150025-readme-md-src-types-ts-tests:reviewers:2:coding-review:CONF-0009",
+              "20260705-150025-readme-md-src-types-ts-tests:reviewers:2:implementation-semantics-review:rf-0004"
+            ],
+            "evidence": "targetFindingId=F-0009 の resolution_confirmation があり、存在しない商品に対する fail-fast 実装確認を示している。"
+          }
+        ],
+        "reopenedFindings": [],
+        "conflicts": [
+          {
+            "findingIds": [
+              "F-0007"
+            ],
+            "rawFindingIds": [
+              "20260705-150025-readme-md-src-types-ts-tests:reviewers:2:ai-antipattern-review:res-0007",
+              "20260705-150025-readme-md-src-types-ts-tests:reviewers:2:implementation-semantics-review:rf-0005"
+            ],
+            "description": "F-0007 について resolution_confirmation がある一方、同じ familyTag=derived-value-source の issue が同一問題の残存を報告している。"
+          },
+          {
+            "findingIds": [
+              "F-0002"
+            ],
+            "rawFindingIds": [
+              "20260705-150025-readme-md-src-types-ts-tests:reviewers:2:arch-review:res-002",
+              "20260705-150025-readme-md-src-types-ts-tests:reviewers:2:ai-antipattern-review:res-0002",
+              "20260705-150025-readme-md-src-types-ts-tests:reviewers:2:coding-review:CONF-0002",
+              "20260705-150025-readme-md-src-types-ts-tests:reviewers:2:arch-review:arch-005"
+            ],
+            "description": "F-0002 について evolve の解消確認がある一方、targetFindingId=F-0002 の issue が StockProjection 側の状態直接変更を報告している。ただし familyTag は同じ state-mutation でも場所と問題範囲が異なるため、新規 finding として扱う。"
+          }
+        ],
+        "resolvedConflicts": [],
+        "waivedFindings": [],
+        "disputeNotes": []
+      },
+      "validationErrors": [
+        "Raw finding id \"20260705-150025-readme-md-src-types-ts-tests:reviewers:2:ai-antipattern-review:res-0007\" appears in multiple manager decisions: resolvedFindings[6] and conflicts[0]",
+        "Raw finding id \"20260705-150025-readme-md-src-types-ts-tests:reviewers:2:implementation-semantics-review:rf-0005\" appears in multiple manager decisions: matches[0] and conflicts[0]",
+        "Raw finding id \"20260705-150025-readme-md-src-types-ts-tests:reviewers:2:arch-review:res-002\" appears in multiple manager decisions: resolvedFindings[1] and conflicts[1]",
+        "Raw finding id \"20260705-150025-readme-md-src-types-ts-tests:reviewers:2:ai-antipattern-review:res-0002\" appears in multiple manager decisions: resolvedFindings[1] and conflicts[1]",
+        "Raw finding id \"20260705-150025-readme-md-src-types-ts-tests:reviewers:2:coding-review:CONF-0002\" appears in multiple manager decisions: resolvedFindings[1] and conflicts[1]",
+        "Raw finding id \"20260705-150025-readme-md-src-types-ts-tests:reviewers:2:arch-review:arch-005\" appears in multiple manager decisions: newFindings[1] and conflicts[1]",
+        "Finding id \"F-0007\" appears in multiple manager decisions: matches[0] and resolvedFindings[6]",
+        "Finding id \"F-0007\" appears in multiple manager decisions: matches[0] and conflicts[0]",
+        "Finding id \"F-0002\" appears in multiple manager decisions: resolvedFindings[1] and conflicts[1]"
+      ]
+    }
+  ]
+}

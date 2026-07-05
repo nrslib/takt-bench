@@ -1,0 +1,22 @@
+# 実装意味論レビュー
+
+## 結果: REJECT
+
+## サマリー
+外部ID辞書への Map 導入、内部状態の参照漏れ防止、fail-fast の実装が確認されましたが、導出値 `available` の重複管理が依然として残存しています。
+
+## 観測した指摘
+| # | family_tag | 重大度 | 場所 | 問題 | 壊れる条件 | 修正案 |
+|---|------------|--------|------|------|-----------|--------|
+| 1 | derived-value-source | medium | `src/index.ts:213` | 導出値 `available` の並行管理が残存 | 更新ロジックの変更漏れにより `onHand - reserved` と `available` の値が乖離する | `available` をプロパティとして保持せず、取得時に計算する |
+
+## 検証証跡
+- 差分確認: `src/index.ts` の累積差分を再走査し、前回指摘（F-0005〜F-0009）の解消状況を確認。
+- 判定根拠の実在確認: 
+    - `InMemoryEventStore` (157-158行) および `StockProjection` (195-196行) での `Map` 導入を確認 (F-0005, F-0006 解消)。
+    - `StockProjection.getStock` (250行) でのコピー返却を確認 (F-0008 解消)。
+    - `StockProjection.apply` (209, 217, 226, 236行) での `Error` スローを確認 (F-0009 解消)。
+    - `StockProjection` (213, 221, 231, 242行) で依然として `available` への手動代入が行われていることを確認 (F-0007 残存)。
+
+## REJECT判定条件
+- ブロッキング指摘（Medium）が1件残存しているため REJECT。

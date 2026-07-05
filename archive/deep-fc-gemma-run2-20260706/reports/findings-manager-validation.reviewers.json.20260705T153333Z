@@ -1,0 +1,82 @@
+{
+  "version": 1,
+  "runId": "20260705-150025-readme-md-src-types-ts-tests",
+  "stepName": "reviewers",
+  "retryCount": 1,
+  "ledgerUpdated": true,
+  "finalErrors": [],
+  "attempts": [
+    {
+      "attempt": 1,
+      "managerOutput": {
+        "matches": [
+          {
+            "findingId": "F-0007",
+            "rawFindingIds": [
+              "20260705-150025-readme-md-src-types-ts-tests:reviewers:3:implementation-semantics-review:rf-0007"
+            ],
+            "evidence": "familyTag=derived-value-source、StockProjection の available を StockLevel 内に保持し各イベントで手動計算しているという location/issue meaning が既存 F-0007 と同一。"
+          }
+        ],
+        "newFindings": [
+          {
+            "rawFindingIds": [
+              "20260705-150025-readme-md-src-types-ts-tests:reviewers:3:arch-review:issue-001"
+            ],
+            "title": "導出値 available の冗長な状態保持",
+            "severity": "medium"
+          },
+          {
+            "rawFindingIds": [
+              "20260705-150025-readme-md-src-types-ts-tests:reviewers:3:ai-antipattern-review:new-002"
+            ],
+            "title": "防御的コピーの削除（実質的な不変性による代替）",
+            "severity": "low"
+          }
+        ],
+        "resolvedFindings": [
+          {
+            "findingId": "F-0010",
+            "rawFindingIds": [
+              "20260705-150025-readme-md-src-types-ts-tests:reviewers:3:arch-review:res-010",
+              "20260705-150025-readme-md-src-types-ts-tests:reviewers:3:ai-antipattern-review:res-0010",
+              "20260705-150025-readme-md-src-types-ts-tests:reviewers:3:coding-review:CONF-0011",
+              "20260705-150025-readme-md-src-types-ts-tests:reviewers:3:implementation-semantics-review:rf-0006"
+            ],
+            "evidence": "複数の resolution_confirmation が targetFindingId=F-0010 を指し、StockProjection.apply の直接ミューテーション解消を確認している。"
+          },
+          {
+            "findingId": "F-0011",
+            "rawFindingIds": [
+              "20260705-150025-readme-md-src-types-ts-tests:reviewers:3:arch-review:res-011",
+              "20260705-150025-readme-md-src-types-ts-tests:reviewers:3:ai-antipattern-review:res-0011",
+              "20260705-150025-readme-md-src-types-ts-tests:reviewers:3:coding-review:CONF-0012"
+            ],
+            "evidence": "複数の resolution_confirmation が targetFindingId=F-0011 を指し、evolve の StockReceived で直接加算ミューテーションが廃止されたことを確認している。"
+          }
+        ],
+        "reopenedFindings": [],
+        "conflicts": [
+          {
+            "findingIds": [
+              "F-0007"
+            ],
+            "rawFindingIds": [
+              "20260705-150025-readme-md-src-types-ts-tests:reviewers:3:ai-antipattern-review:res-0007-final",
+              "20260705-150025-readme-md-src-types-ts-tests:reviewers:3:coding-review:CONF-0010",
+              "20260705-150025-readme-md-src-types-ts-tests:reviewers:3:implementation-semantics-review:rf-0007"
+            ],
+            "description": "F-0007 について targetFindingId=F-0007 の resolution_confirmation がある一方、同一 familyTag=derived-value-source の issue-kind raw finding が available 並行管理の残存を報告しており、解消可否が矛盾している。"
+          }
+        ],
+        "resolvedConflicts": [],
+        "waivedFindings": [],
+        "disputeNotes": []
+      },
+      "validationErrors": [
+        "Raw finding id \"20260705-150025-readme-md-src-types-ts-tests:reviewers:3:implementation-semantics-review:rf-0007\" appears in multiple manager decisions: matches[0] and conflicts[0]",
+        "Finding id \"F-0007\" appears in multiple manager decisions: matches[0] and conflicts[0]"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,24 @@
+# AI生成コードレビュー
+
+## 結果: REJECT
+
+## サマリー
+StockProjection における配送処理時の在庫および予約数の計算ロジックに重大な欠陥があるため。
+
+## 検証した項目
+| 観点 | 結果 | 備考 |
+|------|------|------|
+| 仮定の妥当性 | ⚠️ | 配送処理時に全予約が消滅すると仮定している |
+| API/ライブラリの実在 | ✅ | - |
+| コンテキスト適合 | ✅ | - |
+| スコープ | ✅ | - |
+
+## 観測した指摘
+| # | family_tag | カテゴリ | 重大度 | 場所 | 問題 | 修正案 |
+|---|------------|---------|--------|------|------|--------|
+| 1 | incorrect-logic | ロジック不備 | high | `src/projection.ts:48` | `StockShipped` 時に `reserved` を 0 にリセットしており、他予約が消失する | `reserved: s.reserved - shippedQty` への修正 |
+| 2 | incorrect-logic | ロジック不備 | medium | `src/projection.ts:49` | `available` の計算式が不透明で、予約合計を正しく反映していない | 更新後の `onHand` と `reserved` から再計算 |
+| 3 | dry-violation | 重複定義 | low | `src/command-handler.ts:18` | `initialState` を直接記述しており、`domain.ts` の定義と重複している | `domain.ts` から `initialState` をインポートして使用 |
+
+## REJECT判定条件
+- ブロッキング指摘が1件以上あるため REJECT
