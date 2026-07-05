@@ -1,89 +1,40 @@
 # takt-bench
 
-TAKT のプロバイダ/モデルの組み合わせをベンチマークするハーネス。
+A benchmark harness for measuring how far **local / open LLMs** can go as practical coding agents when orchestrated as a team — coder, parallel specialist reviewers, a findings ledger, and a commercial-grade final gate.
 
-同一の題材タスク（`subject/` のイベントソーシング在庫管理ライブラリ実装）を、`matrix.yaml` に定義した
-プロバイダ/モデルの組み合わせ（combo）ごとに独立したディレクトリで TAKT に解かせ、
-客観メトリクス（テスト合否・型チェック・所要時間・トークン消費・差分規模）で比較する。
+Built on [TAKT](https://github.com/nrslib/takt), a multi-agent orchestration CLI.
 
-## 仕組み
+## The headline experiment
 
-- 変動点は各 combo ディレクトリの `.takt/config.yaml` にある `provider_routing.tags` のみ。
-  ステップに coding（implement / fix）と review（レビュー並列 + 最終ゲート）のタグを付けてあり、
-  combo は coding タグ = コーダーだけを差し替える。loop monitor の judge は
-  provider_routing の対象外（発火元ステップのプロバイダを継承）のため、workflow 側で codex に固定。
-  ワークフロー（`template/takt-project/workflows/bench.yaml`）には provider / model を書かない
-  （ステップ直書きは provider_routing より優先されて差し替え不能になるため）。
-- ワークフローは implement → reviewers（arch + ai-antipattern + coding の 3 並列、takt-default の default-peer-review と同構成） ⇄ fix → final-gate（builtin の merge-readiness-final-gate を workflow_call: merge-readiness-review + supervise 並列） → COMPLETE。final-gate のサブステップにも review タグが付くため、combo のレビュアーモデルが最終ゲートも担当する。
-  レビュアーは TAKT builtin のファセット（architecture-reviewer / ai-antipattern-reviewer /
-  coding-reviewer / supervisor、各ポリシー・ナレッジ・出力契約込み）を 3 層解決でそのまま使う。
-  reviewers ⇄ fix が 3 サイクル続くと loop monitor（supervisor）が介入し、
-  非生産的なら ABORT する。
-- coding タグだけを combo ごとに差し替え、review タグ（レビュアー 4 本）と loop monitor judge は
-  全 combo で codex に固定する（審査条件を一定にしてコーダーだけを比較するため）。
-- usage-events の制約: 並列レビューのトークンは親ステップ `reviewers` 名義で
-  まとめて記録される（サブステップ個別には分かれない）。ラベルのプロバイダは
-  engine フォールバック値になるため、taktrc の provider をレビュアーと同じ
-  codex に固定してラベルと実態を一致させている。
-- `TAKT_CONFIG_DIR` を `runs/taktrc/` に向けて実行するため、`~/.takt` の個人設定は
-  実験に影響しない。usage-events（トークン記録）はここで有効化している。
+The `qwen-coder_gemma-reviewer-fc` combo runs an event-sourcing inventory task with:
 
-## 使い方
+- coder: Qwen3-Coder-next (ollama-cloud)
+- reviewers: Gemma 4 31B × 4 in parallel (architecture / AI anti-patterns / coding / implementation semantics)
+- findings ledger (TAKT Finding Contract): every finding is tracked; resolution requires reviewer confirmation evidence; disputes are adjudicated
+- final gate + ledger adjudicator: codex (the only commercial seats — they judge, they never write code)
+
+In the archived run (`archive/deep-fc-gemma-run1-20260705/`), the team worked autonomously for 73 minutes: it found 12 issues, fixed and confirmed 11, caught one reviewer's false "this is fixed" claim through cross-review, and escalated the final unresolved issue to a human with evidence — which turned out to be a real bug worth human eyes.
+
+## How it works
+
+- The subject task (`subject/`) is an event-sourcing inventory library with 51 tests and a verified reference implementation, seeded with architecture-level traps.
+- `matrix.yaml` defines combos. Each combo gets an isolated run directory; the only variable is `provider_routing.tags` in that directory's `.takt/config.yaml` (coding seats vs review seats). Workflows never hardcode providers.
+- Objective metrics: test pass/fail, type check, duration, token usage, diff size. Subjective quality is scored post-hoc by `judge.ts` (codex + JSON Schema, adversarial rubric).
+- Reviewer honesty is audited separately (`audit/`): citation existence checks and template-fabrication detection.
+
+## Usage
 
 ```bash
 npm install
-
-# 1. テストスイート自体の妥当性検証（参照実装で全テストが通るか）
-npm run verify-tests
-
-# 2. ハーネス疎通確認（mock プロバイダ、API 消費なし）
-node scripts/generate.ts --smoke --force
-node scripts/run.ts --smoke
-node scripts/collect.ts --smoke
-
-# 3. 本番ベンチマーク
-node scripts/generate.ts            # runs/<combo>-r<N>/ を生成
-node scripts/run.ts                 # 逐次実行（--parallel N で並列）
-node scripts/collect.ts             # results/summary.{md,json} を出力
+npm run generate            # materialize run dirs from matrix.yaml
+npm run bench               # run all combos (or -- --filter <combo-id>)
+npm run judge               # post-hoc quality scoring
 ```
 
-`--filter <substr>` で combo を絞り込める。再生成は `--force`。
+Requirements: `takt` on PATH, provider credentials via environment (`codex` CLI authenticated, ollama-cloud reachable through opencode). `TAKT_CONFIG_DIR` points into `runs/taktrc/`, so your personal `~/.takt` is never touched.
 
-## メトリクスの見方
+## Archive
 
-| 指標 | 出所 | 意味 |
-|------|------|------|
-| テスト | combo ディレクトリで `vitest run` | 51 件中何件成功したか（成果の客観判定） |
-| 型 | `tsc --noEmit` | 型チェック合否 |
-| 所要時間 | `meta.run.json` | takt 実行のウォールクロック |
-| トークン | `.takt/runs/*/logs/*-usage-events.jsonl` | ステップ×プロバイダ×モデル別の消費量 |
-| 差分 | `git diff HEAD --shortstat` | 初期コミットからの変更規模 |
+`archive/` keeps the evidence behind published numbers: full-matrix baselines (5 combos, same-day conditions), the deep-lineup adoption run, and the Finding Contract lifecycle run described above — ledgers, reports, and final artifacts included.
 
-レビュー品質の定性比較は `runs/<combo>/.takt/runs/*/reports/review.md` を直接読む。
-
-## 注意
-
-- LLM は非決定なので 1 回の結果で結論を出さない。`matrix.yaml` の `repetitions` を
-  3 以上にして分散を見る。
-- 同一プロバイダを使う combo を並列実行すると rate limit で時間計測が歪む。
-  時間を比較したいときは逐次（デフォルト）で流す。
-- トークン→金額の換算は TAKT は行わない。必要なら集計側で単価表を持つ。
-- テスト（`subject/tests/`）を変更したら `npm run verify-tests` で
-  参照実装（`reference/src/`）に対して全テストが通ることを必ず確認する。
-
-## レビュアー監査（review-audit）
-
-レビュアーモデルの品質を、レビュー本人の自己申告ではなく外部監査で採点する。
-
-```bash
-npm run audit                    # 全 combo を監査（codex + 機械検証）
-npm run audit -- --filter gemma  # combo 絞り込み
-npm run audit -- --no-llm        # 機械検証のみ（API 消費なし）
-```
-
-2 層で検証し、`results/review-audit.{md,json}` にレポートする。
-
-- 機械検証（決定的・無料）: レビュー指摘が引用する `file:line` の実在チェック（存在しないファイルへの言及 = 捏造）、出力契約テンプレート例示行の丸写し検出。全ラウンドのレポート（`.md.<timestamp>` 含む）が対象
-- codex 監査: `audit/known-traps.md`（既知の罠カタログ）と最終コードに照らして、罠の検出/見逃し、捏造指摘、スコープ外指摘（変更禁止ファイルへの修正要求）、思考漏れ、判定と実態の整合性を採点
-
-`audit/known-traps.md` は combo ディレクトリにコピーされない（レビュアーに見えるとカンニングになるため subject/ に置かない）。テストや仕様を変えて罠が変わったら、このカタログも更新すること。
+日本語の詳細ドキュメントは [README.ja.md](README.ja.md) を参照してください。
