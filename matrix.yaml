@@ -102,6 +102,37 @@ combos:
         review: { provider: opencode, model: ollama-cloud/gemma4:31b }
         final-gate: { provider: codex, model: gpt-5.5 }
 
+  # ===== v2 世代: builtin for-local-llm ファミリー（max_steps 50）に乗り換え =====
+  # ワークフローは takt 本体の builtin を名前解決で使う（.takt/workflows に
+  # コピーしない）。台帳 manager は persona_providers で codex に固定する。
+
+  - id: v2-cqrs-baseline
+    description: v2 基準系（難所軸）。題材は在庫ES、workflow は builtin backend-cqrs-for-local-llm。coder は Qwen3-Coder-next、レビュアーは Gemma 4 31B、最終ゲートと台帳 manager は codex
+    workflow: backend-cqrs-for-local-llm
+    persona_providers:
+      findings-manager: { provider: codex, model: gpt-5.5 }
+    routing:
+      tags:
+        plan: { provider: opencode, model: ollama-cloud/qwen3-coder-next }
+        coding: { provider: opencode, model: ollama-cloud/qwen3-coder-next }
+        review: { provider: opencode, model: ollama-cloud/gemma4:31b }
+        final-gate: { provider: codex, model: gpt-5.5 }
+
+  - id: v2-ordinary-baseline
+    description: v2 基準系（主戦場軸）。題材はタスク管理サービス層（通常コード）、workflow は builtin backend-for-local-llm。配役は v2-cqrs-baseline と同一
+    workflow: backend-for-local-llm
+    subject: subject-ordinary
+    task_file: task-ordinary.md
+    persona_providers:
+      findings-manager: { provider: codex, model: gpt-5.5 }
+    routing:
+      tags:
+        plan: { provider: opencode, model: ollama-cloud/qwen3-coder-next }
+        coding: { provider: opencode, model: ollama-cloud/qwen3-coder-next }
+        review: { provider: opencode, model: ollama-cloud/gemma4:31b }
+        final-gate: { provider: codex, model: gpt-5.5 }
+
+
 smoke:
   id: mock-smoke
   description: mock プロバイダによるハーネス疎通確認

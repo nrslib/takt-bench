@@ -1,0 +1,15 @@
+# コーディングレビュー
+
+## 結果: APPROVE
+
+## サマリー
+`TaskService` および `InMemoryTaskRepository` の全機能が README.md の仕様および `src/types.ts` の契約に従って正しく実装されました。全 60 件のテストが成功し、アーキテクチャ要件（無状態性、注入、防御的コピー）も満たされています。
+
+## 検証証跡
+- 差分確認: `src/index.ts` の全メソッドが実装され、`Not implemented` が解消されていることを確認
+- ビルド: 型チェックおよびコンパイル成功を確認
+- テスト: `npm test` により全 60 件のテストが成功したことを確認
+
+## 再走査証跡
+- 実装完全性: README.md の「実装するもの」「バリデーション規則」「TaskService の規則」「listTasks の規則」「InMemoryTaskRepository のセマンティクス」の全項目を実コードと照合し、適合していることを確認。
+- アーキテクチャ要件: サービスの無状態性、`clock`/`idGenerator` の注入、`cloneTaskRecord` による防御的コピーが適切に実装されていることを確認。

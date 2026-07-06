@@ -19,7 +19,6 @@ const parallelIdx = args.indexOf('--parallel');
 const parallel = parallelIdx !== -1 ? Math.max(1, parseInt(args[parallelIdx + 1] ?? '1', 10)) : 1;
 
 const matrix = loadMatrix();
-const task = loadTask(matrix);
 
 interface RunResult {
   dir: string;
@@ -27,7 +26,7 @@ interface RunResult {
   durationMs: number;
 }
 
-function runOne(dir: string, workflow: string): Promise<RunResult> {
+function runOne(dir: string, workflow: string, task: string): Promise<RunResult> {
   return new Promise((resolvePromise) => {
     const log = createWriteStream(join(dir, 'bench-run.log'));
     const startedAt = new Date();
@@ -89,7 +88,7 @@ async function main(): Promise<void> {
       const next = queue.shift();
       if (!next) break;
       console.log(`start: ${next.dir}`);
-      results.push(await runOne(next.dir, next.combo.workflow ?? matrix.workflow));
+      results.push(await runOne(next.dir, next.combo.workflow ?? matrix.workflow, loadTask(matrix, next.combo)));
     }
   });
   await Promise.all(workers);

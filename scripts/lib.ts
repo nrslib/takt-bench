@@ -13,6 +13,12 @@ export interface Combo {
   description?: string;
   /** 省略時は matrix.workflow を使う */
   workflow?: string;
+  /** 省略時は subject/。題材ディレクトリを combo 単位で切り替える */
+  subject?: string;
+  /** 省略時は matrix.task_file */
+  task_file?: string;
+  /** config.yaml の persona_providers にそのまま書き込む */
+  persona_providers?: Record<string, PersonaRouting>;
   /** provider_routing にそのまま書き込む（tags / personas / steps） */
   routing: {
     tags?: Record<string, PersonaRouting>;
@@ -46,8 +52,8 @@ export function loadMatrix(): Matrix {
   return raw;
 }
 
-export function loadTask(matrix: Matrix): string {
-  return readFileSync(join(rootDir, matrix.task_file), 'utf-8').trim();
+export function loadTask(matrix: Matrix, combo?: Combo): string {
+  return readFileSync(join(rootDir, combo?.task_file ?? matrix.task_file), 'utf-8').trim();
 }
 
 /** combo × repetition → runs/ 配下のディレクトリ名 */

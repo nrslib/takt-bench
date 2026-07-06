@@ -1,0 +1,14 @@
+[
+  {
+    "rawFindingId": "20260706-043934-readme-md-src-types-ts-tests:reviewers:1:arch-review:arch-review-001",
+    "stepName": "arch-review",
+    "reviewer": "arch-review",
+    "familyTag": "immutable-public-state",
+    "severity": "high",
+    "title": "公開初期状態の不変性欠如",
+    "location": "src/domain.ts:4",
+    "description": "src/domain.ts:4 で定義されている `initialState` が `Object.freeze` されておらず、外部から変更可能である。これは「公開状態の不変性」の基準に違反し、全リプレイの起点を汚染させるリスクがある。",
+    "suggestion": "`initialState` を `Object.freeze` で保護するか、`createInitialState()` ファクトリ関数を提供して毎回新しいインスタンスを返すように変更してください。特に `reservations` オブジェクトも再帰的に freeze する必要があります。",
+    "kind": "issue"
+  }
+]

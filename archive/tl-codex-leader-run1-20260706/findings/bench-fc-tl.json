@@ -1,0 +1,176 @@
+{
+  "version": 1,
+  "workflowName": "bench-fc-tl",
+  "nextId": 3,
+  "updatedAt": "2026-07-06T04:57:04.158Z",
+  "findings": [
+    {
+      "id": "F-0001",
+      "status": "resolved",
+      "lifecycle": "resolved",
+      "severity": "high",
+      "title": "公開初期状態の不変性欠如",
+      "location": "src/domain.ts:4",
+      "description": "src/domain.ts:4 で定義されている `initialState` が `Object.freeze` されておらず、外部から変更可能である。これは「公開状態の不変性」の基準に違反し、全リプレイの起点を汚染させるリスクがある。",
+      "suggestion": "`initialState` を `Object.freeze` で保護するか、`createInitialState()` ファクトリ関数を提供して毎回新しいインスタンスを返すように変更してください。特に `reservations` オブジェクトも再帰的に freeze する必要があります。",
+      "reviewers": [
+        "arch-review"
+      ],
+      "rawFindingIds": [
+        "20260706-043934-readme-md-src-types-ts-tests:reviewers:1:arch-review:arch-review-001"
+      ],
+      "firstSeen": {
+        "runId": "20260706-043934-readme-md-src-types-ts-tests",
+        "stepName": "arch-review",
+        "timestamp": "2026-07-06T04:49:50.933Z"
+      },
+      "lastSeen": {
+        "runId": "20260706-043934-readme-md-src-types-ts-tests",
+        "stepName": "reviewers",
+        "timestamp": "2026-07-06T04:49:50.933Z"
+      },
+      "resolvedAt": "2026-07-06T04:52:54.942Z",
+      "resolvedEvidence": "3件の current raw findings が kind=resolution_confirmation かつ targetFindingId=F-0001 として、既存指摘の location である src/domain.ts:4 の initialState への Object.freeze 適用を確認している。"
+    },
+    {
+      "id": "F-0002",
+      "status": "resolved",
+      "lifecycle": "resolved",
+      "severity": "high",
+      "title": "内部 reservations の不変性欠如",
+      "location": "src/domain.ts:8",
+      "description": "src/domain.ts:4 で `initialState` が `Object.freeze` されたが、内部の `reservations: {}` は凍結されていない（浅いコピー）。外部から `initialState.reservations` を直接変更することが可能であり、不変性の保証が不完全である。",
+      "suggestion": "`reservations` に `Object.freeze({})` を使用するか、深層的な凍結を行ってください。",
+      "reviewers": [
+        "implementation-semantics-review"
+      ],
+      "rawFindingIds": [
+        "20260706-043934-readme-md-src-types-ts-tests:reviewers:2:implementation-semantics-review:raw-001"
+      ],
+      "firstSeen": {
+        "runId": "20260706-043934-readme-md-src-types-ts-tests",
+        "stepName": "implementation-semantics-review",
+        "timestamp": "2026-07-06T04:52:54.942Z"
+      },
+      "lastSeen": {
+        "runId": "20260706-043934-readme-md-src-types-ts-tests",
+        "stepName": "reviewers",
+        "timestamp": "2026-07-06T04:52:54.942Z"
+      },
+      "resolvedAt": "2026-07-06T04:57:04.158Z",
+      "resolvedEvidence": "現在の raw findings に F-0002 を targetFindingId とする resolution_confirmation が複数あり、いずれも src/domain.ts:8 の reservations が Object.freeze({}) になったことを確認しているため。"
+    }
+  ],
+  "rawFindings": [
+    {
+      "rawFindingId": "20260706-043934-readme-md-src-types-ts-tests:reviewers:1:arch-review:arch-review-001",
+      "stepName": "arch-review",
+      "reviewer": "arch-review",
+      "familyTag": "immutable-public-state",
+      "severity": "high",
+      "title": "公開初期状態の不変性欠如",
+      "location": "src/domain.ts:4",
+      "description": "src/domain.ts:4 で定義されている `initialState` が `Object.freeze` されておらず、外部から変更可能である。これは「公開状態の不変性」の基準に違反し、全リプレイの起点を汚染させるリスクがある。",
+      "suggestion": "`initialState` を `Object.freeze` で保護するか、`createInitialState()` ファクトリ関数を提供して毎回新しいインスタンスを返すように変更してください。特に `reservations` オブジェクトも再帰的に freeze する必要があります。",
+      "kind": "issue"
+    },
+    {
+      "rawFindingId": "20260706-043934-readme-md-src-types-ts-tests:reviewers:2:arch-review:arch-review-002",
+      "stepName": "arch-review",
+      "reviewer": "arch-review",
+      "familyTag": "immutable-public-state",
+      "severity": "low",
+      "title": "公開初期状態の不変性確保を確認",
+      "location": "src/domain.ts:4",
+      "description": "src/domain.ts:4 において `initialState` が `Object.freeze` されたことが確認されました。これにより、公開初期状態の不変性が担保されています。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0001"
+    },
+    {
+      "rawFindingId": "20260706-043934-readme-md-src-types-ts-tests:reviewers:2:ai-antipattern-review:rev-2-1",
+      "stepName": "ai-antipattern-review",
+      "reviewer": "ai-antipattern-review",
+      "familyTag": "logic-error",
+      "severity": "high",
+      "title": "公開初期状態の不変性確認",
+      "location": "src/domain.ts:4",
+      "description": "src/domain.ts:4 の initialState に Object.freeze が適用されており、不変性が担保されていることを確認しました。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0001"
+    },
+    {
+      "rawFindingId": "20260706-043934-readme-md-src-types-ts-tests:reviewers:2:coding-review:res-f-0001",
+      "stepName": "coding-review",
+      "reviewer": "coding-review",
+      "familyTag": "bug",
+      "severity": "high",
+      "title": "公開初期状態の不変性確保を確認",
+      "location": "src/domain.ts:4",
+      "description": "src/domain.ts:4 において initialState が Object.freeze され、不変性が確保されたことを確認しました。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0001"
+    },
+    {
+      "rawFindingId": "20260706-043934-readme-md-src-types-ts-tests:reviewers:2:implementation-semantics-review:raw-001",
+      "stepName": "implementation-semantics-review",
+      "reviewer": "implementation-semantics-review",
+      "familyTag": "data-structure",
+      "severity": "high",
+      "title": "公開初期状態の不変性欠如（再発/不十分な修正）",
+      "location": "src/domain.ts:8",
+      "description": "src/domain.ts:4 で `initialState` が `Object.freeze` されたが、内部の `reservations: {}` は凍結されていない（浅いコピー）。外部から `initialState.reservations` を直接変更することが可能であり、不変性の保証が不完全である。",
+      "suggestion": "`reservations` に `Object.freeze({})` を使用するか、深層的な凍結を行ってください。",
+      "kind": "issue",
+      "targetFindingId": "F-0001"
+    },
+    {
+      "rawFindingId": "20260706-043934-readme-md-src-types-ts-tests:reviewers:3:arch-review:arch-review-003",
+      "familyTag": "immutable-public-state",
+      "severity": "low",
+      "title": "内部 reservations の不変性確保を確認",
+      "location": "src/domain.ts:8",
+      "description": "src/domain.ts:8 において `reservations: Object.freeze({})` となり、内部辞書まで凍結されていることが確認されました。これにより、浅いコピーによる不変性の欠如が解消されています。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0002",
+      "reviewer": "arch-review",
+      "stepName": "arch-review"
+    },
+    {
+      "rawFindingId": "20260706-043934-readme-md-src-types-ts-tests:reviewers:3:ai-antipattern-review:rev-3-1",
+      "familyTag": "logic-error",
+      "severity": "high",
+      "title": "内部 reservations の不変性確認",
+      "location": "src/domain.ts:8",
+      "description": "src/domain.ts:8 の reservations に Object.freeze({}) が適用されており、内部辞書の不変性が担保されていることを確認しました。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0002",
+      "reviewer": "ai-antipattern-review",
+      "stepName": "ai-antipattern-review"
+    },
+    {
+      "rawFindingId": "20260706-043934-readme-md-src-types-ts-tests:reviewers:3:coding-review:res-f-0002",
+      "familyTag": "bug",
+      "severity": "high",
+      "title": "内部 reservations の不変性確保を確認",
+      "location": "src/domain.ts:8",
+      "description": "src/domain.ts:8 において reservations 内部オブジェクトが Object.freeze({}) とされ、深層的な不変性が確保されたことを確認しました。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0002",
+      "reviewer": "coding-review",
+      "stepName": "coding-review"
+    },
+    {
+      "rawFindingId": "20260706-043934-readme-md-src-types-ts-tests:reviewers:3:implementation-semantics-review:res-001",
+      "familyTag": "data-structure",
+      "severity": "high",
+      "title": "内部 reservations の不変性確保を確認",
+      "location": "src/domain.ts:8",
+      "description": "src/domain.ts:8 で `reservations: Object.freeze({})` となり、内部オブジェクトまで凍結されたことを確認。不変性が確保された。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0002",
+      "reviewer": "implementation-semantics-review",
+      "stepName": "implementation-semantics-review"
+    }
+  ],
+  "conflicts": []
+}

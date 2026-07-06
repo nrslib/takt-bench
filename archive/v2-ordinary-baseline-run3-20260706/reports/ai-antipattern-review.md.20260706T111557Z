@@ -1,0 +1,26 @@
+# AI生成コードレビュー
+
+## 結果: REJECT
+
+## サマリー
+`updateTask` の期限更新ロジックの不整合および、型安全性を無視した不適切なキャストと非nullアサーションが複数検出されました。
+
+## 検証した項目
+| 観点 | 結果 | 備考 |
+|------|------|------|
+| 仮定の妥当性 | ⚠️ | `updateTask` の `dueDate` 処理が仕様と乖離 |
+| API/ライブラリの実在 | ✅ | - |
+| コンテキスト適合 | ⚠️ | 型キャストや `@ts-ignore` の濫用 |
+| スコープ | ✅ | - |
+
+## 観測した指摘
+| # | family_tag | カテゴリ | 重大度 | 場所 | 問題 | 修正案 |
+|---|------------|---------|--------|------|------|--------|
+| 1 | logic-error | ロジック誤り | high | `src/index.ts:140-147` | `dueDate` 更新時に `null` が `undefined` に変換され、期限解除が機能しない | 140行目の変換を削除し `Date \| null` を直接扱う |
+| 2 | logic-error | 型安全 | medium | `src/index.ts:287` | `normalizeTags` 内の `as string[]` キャストにより `undefined` 時にランタイムエラー | キャストを削除し `undefined` チェックを追加 |
+| 3 | logic-error | 型安全 | medium | `src/index.ts:144` | `input.description!.trim()` の非nullアサーションにより `undefined` 時にクラッシュ | `?.trim() ?? existing.description` へ変更 |
+| 4 | logic-error | 型安全 | medium | `src/index.ts:223-225` | `@ts-ignore` による型無視と不自然な `normalizeTags` の利用 | 文字列正規化専用のヘルパーを導入 |
+| 5 | logic-error | 冗長実装 | low | `src/index.ts:270-274` | `validateTask` 内での `title.trim()` 重複呼び出し | trim 済み変数の再利用または直接 `length` 検証 |
+
+## REJECT判定条件
+- ブロッキング指摘が1件以上あるため REJECT

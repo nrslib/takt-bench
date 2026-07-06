@@ -1,0 +1,50 @@
+[
+  {
+    "rawFindingId": "20260706-050141-readme-md-src-types-ts-tests:reviewers:3:arch-review:arch-review-res-005",
+    "stepName": "arch-review",
+    "reviewer": "arch-review",
+    "familyTag": "shared-state-mutability",
+    "severity": "high",
+    "title": "公開初期状態の不変性欠如の解消確認",
+    "location": "src/domain/inventory-aggregate.ts:3",
+    "description": "src/domain/inventory-aggregate.ts:3 — initialState が Object.freeze({...}) で定義されており、トップレベルのプロパティ変更が防止されている。F-0002 が解消されている。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0002"
+  },
+  {
+    "rawFindingId": "20260706-050141-readme-md-src-types-ts-tests:reviewers:3:ai-antipattern-review:res-08",
+    "stepName": "ai-antipattern-review",
+    "reviewer": "ai-antipattern-review",
+    "familyTag": "architecture",
+    "severity": "high",
+    "title": "公開初期状態の不変性欠如",
+    "location": "src/domain/inventory-aggregate.ts:3",
+    "description": "src/domain/inventory-aggregate.ts:3 において `export const initialState: ProductState = Object.freeze({ ... });` となり、初期状態が凍結され、外部からの直接的な変更が不可能になったことを確認した。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0002"
+  },
+  {
+    "rawFindingId": "20260706-050141-readme-md-src-types-ts-tests:reviewers:3:coding-review:RES-0007",
+    "stepName": "coding-review",
+    "reviewer": "coding-review",
+    "familyTag": "arch-review",
+    "severity": "high",
+    "title": "公開初期状態の不変性欠如の解消確認",
+    "location": "src/domain/inventory-aggregate.ts:3",
+    "description": "src/domain/inventory-aggregate.ts:3 — initialState が Object.freeze() されており、外部からの直接変更が防止されていることを確認。これにより公開初期状態の不変性が確保された。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0002"
+  },
+  {
+    "rawFindingId": "20260706-050141-readme-md-src-types-ts-tests:reviewers:3:implementation-semantics-review:RES-004",
+    "stepName": "implementation-semantics-review",
+    "reviewer": "implementation-semantics-review",
+    "familyTag": "public-state-immutability",
+    "severity": "high",
+    "title": "公開初期状態の不変性欠如の解消確認",
+    "location": "src/domain/inventory-aggregate.ts:3",
+    "description": "src/domain/inventory-aggregate.ts:3 において initialState が Object.freeze() でラップされ、不変性が確保されていることを確認した。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0002"
+  }
+]

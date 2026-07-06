@@ -1,0 +1,22 @@
+# 実装意味論レビュー
+
+## 結果: REJECT
+
+## サマリー
+`initialState` への `Object.freeze` は適用されましたが、内部オブジェクトである `reservations` が凍結されていないため、不変性が不十分な状態です。
+
+## 観測した指摘
+| # | family_tag | 重大度 | 場所 | 問題 | 壊れる条件 | 修正案 |
+|---|------------|--------|------|------|-----------|--------|
+| 1 | data-structure | High | `src/domain.ts:8` | `initialState` が浅い凍結となっており、内部の `reservations` オブジェクトが変更可能である。 | 外部から `initialState.reservations` に値を注入した場合、以降の全リプレイの起点が汚染される。 | `reservations: Object.freeze({})` とする等、再帰的に凍結してください。 |
+
+## 検証証跡
+- 差分確認: `src/domain.ts` の `initialState` 定義を確認。
+- 判定根拠の実在確認: `src/domain.ts:4` で `Object.freeze` されているが、`src/domain.ts:8` の `reservations` はプレーンなオブジェクト `{}` であり、凍結されていないことを確認。
+
+## 再走査証跡
+- データ構造の意味選択: `src/domain.ts` における `Object.hasOwn` の利用を確認。OK。
+- 導出値の単一情報源: `src/domain.ts` の `totalReserved` 計算および `src/projection.ts` の `available` 計算を確認。OK。
+- 命名と意味の整合: 変数名と型の整合性を走査。OK。
+- 境界での fail-fast: `decide` 関数内での `DomainError` 投入を確認。OK。
+- 内部状態の参照漏れ: `InMemoryEventStore.load` での配列コピーを確認。OK。

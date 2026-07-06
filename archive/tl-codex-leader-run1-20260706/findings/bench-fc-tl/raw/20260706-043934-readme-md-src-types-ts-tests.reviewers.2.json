@@ -1,0 +1,51 @@
+[
+  {
+    "rawFindingId": "20260706-043934-readme-md-src-types-ts-tests:reviewers:2:arch-review:arch-review-002",
+    "stepName": "arch-review",
+    "reviewer": "arch-review",
+    "familyTag": "immutable-public-state",
+    "severity": "low",
+    "title": "公開初期状態の不変性確保を確認",
+    "location": "src/domain.ts:4",
+    "description": "src/domain.ts:4 において `initialState` が `Object.freeze` されたことが確認されました。これにより、公開初期状態の不変性が担保されています。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0001"
+  },
+  {
+    "rawFindingId": "20260706-043934-readme-md-src-types-ts-tests:reviewers:2:ai-antipattern-review:rev-2-1",
+    "stepName": "ai-antipattern-review",
+    "reviewer": "ai-antipattern-review",
+    "familyTag": "logic-error",
+    "severity": "high",
+    "title": "公開初期状態の不変性確認",
+    "location": "src/domain.ts:4",
+    "description": "src/domain.ts:4 の initialState に Object.freeze が適用されており、不変性が担保されていることを確認しました。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0001"
+  },
+  {
+    "rawFindingId": "20260706-043934-readme-md-src-types-ts-tests:reviewers:2:coding-review:res-f-0001",
+    "stepName": "coding-review",
+    "reviewer": "coding-review",
+    "familyTag": "bug",
+    "severity": "high",
+    "title": "公開初期状態の不変性確保を確認",
+    "location": "src/domain.ts:4",
+    "description": "src/domain.ts:4 において initialState が Object.freeze され、不変性が確保されたことを確認しました。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0001"
+  },
+  {
+    "rawFindingId": "20260706-043934-readme-md-src-types-ts-tests:reviewers:2:implementation-semantics-review:raw-001",
+    "stepName": "implementation-semantics-review",
+    "reviewer": "implementation-semantics-review",
+    "familyTag": "data-structure",
+    "severity": "high",
+    "title": "公開初期状態の不変性欠如（再発/不十分な修正）",
+    "location": "src/domain.ts:8",
+    "description": "src/domain.ts:4 で `initialState` が `Object.freeze` されたが、内部の `reservations: {}` は凍結されていない（浅いコピー）。外部から `initialState.reservations` を直接変更することが可能であり、不変性の保証が不完全である。",
+    "suggestion": "`reservations` に `Object.freeze({})` を使用するか、深層的な凍結を行ってください。",
+    "kind": "issue",
+    "targetFindingId": "F-0001"
+  }
+]

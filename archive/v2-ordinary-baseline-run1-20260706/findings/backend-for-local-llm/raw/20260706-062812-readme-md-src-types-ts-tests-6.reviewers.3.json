@@ -1,0 +1,98 @@
+[
+  {
+    "rawFindingId": "20260706-062812-readme-md-src-types-ts-tests-6:reviewers:3:arch-review:arch-003-conf",
+    "stepName": "arch-review",
+    "reviewer": "arch-review",
+    "familyTag": "specification-violation",
+    "severity": "low",
+    "title": "updateTaskにおけるdescriptionのtrim修正確認",
+    "location": "src/index.ts:104",
+    "description": "`src/index.ts:104`において、`input.description`を`input.description.trim()`として保存するように修正されており、READMEの「description: trim して保存」という仕様に準拠している。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0003"
+  },
+  {
+    "rawFindingId": "20260706-062812-readme-md-src-types-ts-tests-6:reviewers:3:arch-review:arch-004-conf",
+    "stepName": "arch-review",
+    "reviewer": "arch-review",
+    "familyTag": "design-violation",
+    "severity": "low",
+    "title": "検証ロジックの共通化確認",
+    "location": "src/index.ts:237-270",
+    "description": "`src/index.ts:237-270`において、`validateCommonTitle`および`validateCommonAssignee`という共通検証関数が抽出され、`validateCreateInput`と`validateUpdateInput`の両方から呼び出される構成に変更されている。これにより、READMEの「検証ロジックは一箇所に集約し、create / update で重複実装しない」というアーキテクチャ要件に準拠している。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0004"
+  },
+  {
+    "rawFindingId": "20260706-062812-readme-md-src-types-ts-tests-6:reviewers:3:ai-antipattern-review:res-0003",
+    "stepName": "ai-antipattern-review",
+    "reviewer": "ai-antipattern-review",
+    "familyTag": "resolved-implementation",
+    "severity": "medium",
+    "title": "updateTask の description trim 実装確認",
+    "location": "src/index.ts:103-104",
+    "description": "src/index.ts:103-104 — updateTask において input.description.trim() が行われており、README.md の「description: trim して保存」というバリデーション規則が正しく実装されていることを確認した。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0003"
+  },
+  {
+    "rawFindingId": "20260706-062812-readme-md-src-types-ts-tests-6:reviewers:3:ai-antipattern-review:res-0004",
+    "stepName": "ai-antipattern-review",
+    "reviewer": "ai-antipattern-review",
+    "familyTag": "resolved-implementation",
+    "severity": "medium",
+    "title": "検証ロジックの一元化確認",
+    "location": "src/index.ts:237-269",
+    "description": "src/index.ts:237-269 — validateCommonTitle および validateCommonAssignee が導入され、create と update で重複していた検証ロジックが一元化されたことを確認した。これにより README.md のアーキテクチャ要件（検証ロジックの一元化）が満たされている。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0004"
+  },
+  {
+    "rawFindingId": "20260706-062812-readme-md-src-types-ts-tests-6:reviewers:3:coding-review:res-002",
+    "stepName": "coding-review",
+    "reviewer": "coding-review",
+    "familyTag": "bug",
+    "severity": "medium",
+    "title": "updateTaskにおけるdescriptionのtrim漏れが解消された",
+    "location": "src/index.ts:104",
+    "description": "src/index.ts:104 において、updateTask の description 更新時に `.trim()` が追加され、README.md のバリデーション規則「description: trim して保存」に準拠したことを確認した。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0003"
+  },
+  {
+    "rawFindingId": "20260706-062812-readme-md-src-types-ts-tests-6:reviewers:3:coding-review:res-003",
+    "stepName": "coding-review",
+    "reviewer": "coding-review",
+    "familyTag": "architecture",
+    "severity": "medium",
+    "title": "検証ロジックの重複実装が解消された",
+    "location": "src/index.ts:256-269",
+    "description": "validateCommonTitle および validateCommonAssignee が導入され、validateCreateInput と validateUpdateInput からこれらの共通関数を呼び出す構成に変更された。これにより README.md の「検証ロジックは一箇所に集約し、create / update で重複実装しない」という要件を満たしていることを確認した。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0004"
+  },
+  {
+    "rawFindingId": "20260706-062812-readme-md-src-types-ts-tests-6:reviewers:3:implementation-semantics-review:r-003",
+    "stepName": "implementation-semantics-review",
+    "reviewer": "implementation-semantics-review",
+    "familyTag": "normalization",
+    "severity": "medium",
+    "title": "updateTaskにおけるdescriptionのtrim漏れが解消されたことを確認",
+    "location": "src/index.ts:104",
+    "description": "`updateTask` 内で `input.description.trim()` が呼び出されており、description が正しくトリミングされて保存されるようになっていることを確認しました。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0003"
+  },
+  {
+    "rawFindingId": "20260706-062812-readme-md-src-types-ts-tests-6:reviewers:3:implementation-semantics-review:r-004",
+    "stepName": "implementation-semantics-review",
+    "reviewer": "implementation-semantics-review",
+    "familyTag": "logic-duplication",
+    "severity": "medium",
+    "title": "検証ロジックの重複実装が解消されたことを確認",
+    "location": "src/index.ts:256-269",
+    "description": "`validateCommonTitle` (256-263行) および `validateCommonAssignee` (265-269行) という共通検証関数が抽出され、`validateCreateInput` および `validateUpdateInput` からこれらの関数が呼び出されていることを確認しました。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0004"
+  }
+]

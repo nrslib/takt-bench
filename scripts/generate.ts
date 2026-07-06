@@ -28,6 +28,7 @@ function sh(cmd: string, cwd: string): void {
 function buildProjectConfig(combo: Combo): string {
   return stringify({
     provider_routing: combo.routing,
+    ...(combo.persona_providers !== undefined ? { persona_providers: combo.persona_providers } : {}),
     observability: {
       enabled: true,
       monitor: true,
@@ -44,7 +45,7 @@ function generateOne(combo: Combo, dir: string): void {
     rmSync(dir, { recursive: true, force: true });
   }
 
-  cpSync(subjectDir, dir, { recursive: true });
+  cpSync(combo.subject !== undefined ? join(rootDir, combo.subject) : subjectDir, dir, { recursive: true });
   cpSync(join(rootDir, 'template', 'takt-project'), join(dir, '.takt'), { recursive: true });
   writeFileSync(join(dir, '.takt', 'config.yaml'), buildProjectConfig(combo));
   writeFileSync(

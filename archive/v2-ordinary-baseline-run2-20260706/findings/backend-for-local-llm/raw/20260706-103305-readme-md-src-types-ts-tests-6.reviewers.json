@@ -1,0 +1,62 @@
+[
+  {
+    "rawFindingId": "20260706-103305-readme-md-src-types-ts-tests-6:reviewers:1:arch-review:arch-rev-001",
+    "stepName": "arch-review",
+    "reviewer": "arch-review",
+    "familyTag": "mutation",
+    "severity": "high",
+    "title": "入力オブジェクトの直接変更（ミューテーション）",
+    "location": "src/validation.ts:14, 38",
+    "description": "src/validation.ts において、引数として渡された input オブジェクトのプロパティを直接書き換えている。これは不変性の原則に反し、呼び出し元の状態を予期せず変更する可能性がある。",
+    "suggestion": "バリデーション関数内での直接的なプロパティ書き換え（trim）を禁止し、正規化後の値を戻り値として返すか、Service層での代入時にのみ行うように修正してください。",
+    "kind": "issue"
+  },
+  {
+    "rawFindingId": "20260706-103305-readme-md-src-types-ts-tests-6:reviewers:1:ai-antipattern-review:dry-validation-logic",
+    "stepName": "ai-antipattern-review",
+    "reviewer": "ai-antipattern-review",
+    "familyTag": "DRY違反",
+    "severity": "medium",
+    "title": "バリデーションロジックの重複",
+    "location": "src/validation.ts:4-24, 26-46",
+    "description": "`validateCreateTask` と `validateUpdateTask` で title のバリデーションロジックが重複している。また、description の trim 処理も重複している。README の「アーキテクチャ要件」にある「検証ロジックは一箇所に集約し、create / update で重複実装しない」という要件に違反している。",
+    "suggestion": "title や description の共通バリデーション/正規化関数を抽出し、両方の関数から呼び出すように変更してください。",
+    "kind": "issue"
+  },
+  {
+    "rawFindingId": "20260706-103305-readme-md-src-types-ts-tests-6:reviewers:1:ai-antipattern-review:mutation-of-input-object",
+    "stepName": "ai-antipattern-review",
+    "reviewer": "ai-antipattern-review",
+    "familyTag": "オブジェクトの直接変更",
+    "severity": "high",
+    "title": "入力オブジェクトの直接変更による副作用",
+    "location": "src/validation.ts:14, 38",
+    "description": "`validateCreateTask` および `validateUpdateTask` 内で、引数として渡された `input` オブジェクトの `description` フィールドを直接書き換えている（`input.description = input.description.trim()`）。これは関数が副作用を持ち、呼び出し元のオブジェクトを予期せず変更するため、不適切な実装である。",
+    "suggestion": "バリデーション関数は値を変更せず、正規化が必要な場合は正規化した値を返すか、サービス層で新しいオブジェクトを作成して保存するようにしてください。",
+    "kind": "issue"
+  },
+  {
+    "rawFindingId": "20260706-103305-readme-md-src-types-ts-tests-6:reviewers:1:ai-antipattern-review:redundant-trimming-in-service",
+    "stepName": "ai-antipattern-review",
+    "reviewer": "ai-antipattern-review",
+    "familyTag": "冗長なロジック",
+    "severity": "low",
+    "title": "サービス層での冗長なトリミング処理",
+    "location": "src/index.ts:95-99",
+    "description": "`TaskService.createTask` において、`input.title.trim()` を保存しているが、`validateCreateTask` でも同様に `trim()` してチェックしている。同様に `description` も重複して `trim()` されている。また、`assignee` の trim も `createTask` 内で行われているが、`validateCreateTask` ではチェックのみ行っている。正規化とバリデーションの責務が混在し、重複して処理が行われている。",
+    "suggestion": "正規化（trim 等）はバリデーション関数または専用の正規化関数に集約し、サービス層ではその結果を利用するようにしてください。",
+    "kind": "issue"
+  },
+  {
+    "rawFindingId": "20260706-103305-readme-md-src-types-ts-tests-6:reviewers:1:coding-review:finding-001",
+    "stepName": "coding-review",
+    "reviewer": "coding-review",
+    "familyTag": "mutation-of-input",
+    "severity": "medium",
+    "title": "Input mutation in validation functions",
+    "location": "src/validation.ts:14,38",
+    "description": "The `validateCreateTask` and `validateUpdateTask` functions in `src/validation.ts` directly mutate the `input` object (e.g., `input.description = input.description.trim()`). This is a side-effect in a validation function, which is unexpected and can lead to bugs if the caller expects the original input object to remain unchanged. The README also emphasizes defensive copying and state protection, which this mutation violates.",
+    "suggestion": "Validation functions should be read-only. Perform trimming and normalization inside the service layer when creating the final `TaskRecord` or use a returned normalized object instead of mutating the input.",
+    "kind": "issue"
+  }
+]

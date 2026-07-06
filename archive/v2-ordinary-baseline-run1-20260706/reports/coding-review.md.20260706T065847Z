@@ -1,0 +1,15 @@
+# コーディングレビュー
+
+## 結果: APPROVE
+
+## サマリー
+前回指摘した `updateTask` における `description` の trim 漏れ、および検証ロジックの重複実装が適切に修正されました。全 60 件のテストが成功し、README.md の仕様およびアーキテクチャ要件を完全に満たしています。
+
+## 検証証跡
+- 差分確認: `src/index.ts` にて `description.trim()` の適用と、共通検証関数 (`validateCommonTitle`, `validateCommonAssignee`) への抽出を確認
+- ビルド: 型チェックおよびコンパイル成功を確認
+- テスト: `npm test` により全 60 件のテストが成功したことを確認
+
+## 再走査証跡
+- バリデーション規則: `createTask` / `updateTask` の両方で title, description, assignee の trim および制約チェックが共通ロジックを通じて適用されていることを確認。
+- アーキテクチャ要件: 「検証ロジックの一元化」が実現され、重複実装が排除されていることを確認。

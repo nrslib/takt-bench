@@ -1,0 +1,13 @@
+# 実装意味論レビュー
+
+## 結果: APPROVE
+
+## サマリー
+実装意味論の観点からレビューを行い、データ構造の選択、導出値の管理、命名、境界でのfail-fast、内部状態の参照漏れのいずれにおいても問題がないことを確認しました。リポジトリでの防御的コピーも適切に実装されています。
+
+## 検証証跡
+- 差分確認: `src/index.ts` の `InMemoryTaskRepository` および `TaskService` の実装全体を走査。
+- 判定根拠の実在確認: 
+    - `InMemoryTaskRepository` (L35-74): `Map` の使用および `deepCopyTask` による保存時・取得時の防御的コピーを確認。
+    - `TaskService` (L97-300): バリデーションの一元化 (`validateTask`)、状態遷移の制限 (`validateStatusTransition`)、および不変条件の維持を確認。
+    - `listTasks` (L211-267): フィルタリングおよびソートロジックが仕様通りであることを確認。

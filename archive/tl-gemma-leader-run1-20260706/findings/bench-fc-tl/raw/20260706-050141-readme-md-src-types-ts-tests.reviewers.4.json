@@ -1,0 +1,62 @@
+[
+  {
+    "rawFindingId": "20260706-050141-readme-md-src-types-ts-tests:reviewers:4:arch-review:arch-review-003",
+    "stepName": "arch-review",
+    "reviewer": "arch-review",
+    "familyTag": "arch-dependency",
+    "severity": "medium",
+    "title": "プロジェクションの独立性確保（ドメイン依存の排除）",
+    "location": "src/domain/stock-projection.ts:10, 17",
+    "description": "src/domain/stock-projection.ts:10, 17 — ドメインモデル（inventory-aggregate.ts）からの import を排除し、Projection 内部で専用の initialState と evolve ロジックを完結させている。これにより、プロジェクションの独立性が確保された。",
+    "suggestion": "（これは改善として報告）ドメインの evolve ロジックとプロジェクションの evolve ロジックが重複しているが、独立性を優先した設計であるため許容する。ただし、不整合が発生しやすいため、ドメインイベントの定義に基づく整合性チェックをテストで担保することを推奨する。",
+    "kind": "issue"
+  },
+  {
+    "rawFindingId": "20260706-050141-readme-md-src-types-ts-tests:reviewers:4:arch-review:arch-review-004",
+    "stepName": "arch-review",
+    "reviewer": "arch-review",
+    "familyTag": "state-consistency",
+    "severity": "medium",
+    "title": "コマンドハンドラの状態整合性向上（キャッシュ排除）",
+    "location": "src/domain/command-handler.ts:13-17",
+    "description": "src/domain/command-handler.ts:13-17 — キャッシュを削除し、handle 呼び出しごとに最新のイベント列をロードして状態をリプレイ（reduce）する構成に変更された。これにより、キャッシュ不整合のリスクが完全に排除された。",
+    "suggestion": "（これは改善として報告）パフォーマンス上の懸念はあるが、正当性を優先した設計であり、要件に準拠している。",
+    "kind": "issue"
+  },
+  {
+    "rawFindingId": "20260706-050141-readme-md-src-types-ts-tests:reviewers:4:ai-antipattern-review:finding-04-1",
+    "stepName": "ai-antipattern-review",
+    "reviewer": "ai-antipattern-review",
+    "familyTag": "logic-error",
+    "severity": "high",
+    "title": "StockProjection におけるプロトタイプ汚染リスクの再導入",
+    "location": "src/domain/stock-projection.ts:14",
+    "description": "src/domain/stock-projection.ts:14 において `reservations: {},` とプレーンオブジェクトで初期化している。これは以前の修正 (F-0007) で解消され、`Object.create(null)` が導入された箇所であるが、StockProjection をドメインモデルから分離して再実装した際に、この不備が再導入されている。これにより、予約IDに \"toString\" 等が指定された場合に誤判定が発生するリスクがある。",
+    "suggestion": "`reservations: Object.create(null)` を使用して初期化してください。",
+    "kind": "issue"
+  },
+  {
+    "rawFindingId": "20260706-050141-readme-md-src-types-ts-tests:reviewers:4:ai-antipattern-review:finding-04-2",
+    "stepName": "ai-antipattern-review",
+    "reviewer": "ai-antipattern-review",
+    "familyTag": "logic-error",
+    "severity": "medium",
+    "title": "StockProjection における存在判定の不備",
+    "location": "src/domain/stock-projection.ts:49",
+    "description": "src/domain/stock-projection.ts:49 において `shippedReservations[event.reservationId] || 0` と記述されており、プロトタイプ継承プロパティへのアクセスを許容している。また、以前の修正 (F-0006) で導入された `Object.hasOwn` による厳格な存在判定が行われていない。",
+    "suggestion": "`Object.hasOwn` を使用して予約の存在を確認し、安全に数量を取得するように修正してください。",
+    "kind": "issue"
+  },
+  {
+    "rawFindingId": "20260706-050141-readme-md-src-types-ts-tests:reviewers:4:implementation-semantics-review:S-001",
+    "stepName": "implementation-semantics-review",
+    "reviewer": "implementation-semantics-review",
+    "familyTag": "all-criteria-rescan",
+    "severity": "low",
+    "title": "累積差分の再走査結果: 問題なし",
+    "location": "-",
+    "description": "累積差分全体を再走査した結果、以前指摘し解消された以下の項目が維持されていることを確認した。\n- 動的キーの Record 存在判定の遮断 (src/domain/command-decider.ts:36, 41, 46)\n- 辞書のプロトタイプ汚染防止初期化 (src/domain/inventory-aggregate.ts:7, 18)\n- 公開初期状態の不変性確保 (src/domain/inventory-aggregate.ts:3)\nまた、src/domain/command-handler.ts においてキャッシュ機構が削除され、常にストアから最新状態を再構築する単純な実装に変更されたが、これにより不変状態の更新漏れという意味論的リスクは完全に排除されている。現状、実装意味論の観点から新たなブロッキング問題は検出されなかった。",
+    "suggestion": "なし。現状を維持。",
+    "kind": "issue"
+  }
+]

@@ -1,0 +1,1037 @@
+{
+  "version": 1,
+  "workflowName": "bench-fc-tl",
+  "nextId": 15,
+  "updatedAt": "2026-07-06T06:10:31.892Z",
+  "findings": [
+    {
+      "id": "F-0001",
+      "status": "resolved",
+      "lifecycle": "resolved",
+      "severity": "critical",
+      "title": "状態更新の欠落（純粋関数の戻り値無視）",
+      "location": "src/domain/command-handler.ts:19",
+      "description": "src/domain/command-handler.ts:19 — evolve(state, event) を呼び出しているが、evolve 関数は新しい状態を返す純粋関数であり、state 自体を変更しない。そのため、この呼び出しは副作用がなく、状態が更新されない。また、SOT（Single Source of Truth）としてのイベントストアへの append 後に、メモリ上の state を更新しようとしているが、結果として state は不変のままであり、このループは無意味である。さらに、この操作は「オブジェクトの直接変更」を意図している（が失敗している）ため、設計上の不整合がある。",
+      "suggestion": "evolve 関数が返す新しい状態を state に代入するか、あるいはこのループ自体を削除し、状態更新はリプレイまたはプロジェクションに任せる設計にする。現状のコードは状態遷移を無視している。",
+      "reviewers": [
+        "arch-review"
+      ],
+      "rawFindingIds": [
+        "20260706-050141-readme-md-src-types-ts-tests:reviewers:1:arch-review:arch-review-001"
+      ],
+      "firstSeen": {
+        "runId": "20260706-050141-readme-md-src-types-ts-tests",
+        "stepName": "arch-review",
+        "timestamp": "2026-07-06T05:09:57.462Z"
+      },
+      "lastSeen": {
+        "runId": "20260706-050141-readme-md-src-types-ts-tests",
+        "stepName": "reviewers",
+        "timestamp": "2026-07-06T05:09:57.462Z"
+      },
+      "resolvedAt": "2026-07-06T05:14:25.154Z",
+      "resolvedEvidence": "current raw findings に targetFindingId=F-0001 の resolution_confirmation があり、src/domain/command-handler.ts の evolve戻り値反映を確認している。"
+    },
+    {
+      "id": "F-0002",
+      "status": "resolved",
+      "lifecycle": "resolved",
+      "severity": "high",
+      "title": "公開初期状態の不変性欠如",
+      "location": "src/domain/inventory-aggregate.ts:3",
+      "description": "src/domain/inventory-aggregate.ts:3 — initialState が依然として単純なオブジェクトとして export されており、Object.freeze などの保護措置が講じられていない。利用側が `initialState.onHand = 100` のように直接書き換えると、すべての Aggregate の初期状態が汚染される。Knowledge の「公開状態の不変性」に依然として違反している。",
+      "suggestion": "Object.freeze を使用して deep freeze するか、createInitialState() のようなファクトリ関数を提供して、常に新しいインスタンスを返すように変更してください。",
+      "reviewers": [
+        "arch-review"
+      ],
+      "rawFindingIds": [
+        "20260706-050141-readme-md-src-types-ts-tests:reviewers:1:arch-review:arch-review-002",
+        "20260706-050141-readme-md-src-types-ts-tests:reviewers:2:arch-review:arch-review-issue-001"
+      ],
+      "firstSeen": {
+        "runId": "20260706-050141-readme-md-src-types-ts-tests",
+        "stepName": "arch-review",
+        "timestamp": "2026-07-06T05:09:57.462Z"
+      },
+      "lastSeen": {
+        "runId": "20260706-050141-readme-md-src-types-ts-tests",
+        "stepName": "reviewers",
+        "timestamp": "2026-07-06T05:14:25.154Z"
+      },
+      "resolvedAt": "2026-07-06T05:18:44.526Z",
+      "resolvedEvidence": "現在の raw findings に F-0002 を targetFindingId とする resolution_confirmation が複数あり、いずれも src/domain/inventory-aggregate.ts:3 の initialState が Object.freeze() で保護されたことを確認しているため。"
+    },
+    {
+      "id": "F-0003",
+      "status": "resolved",
+      "lifecycle": "resolved",
+      "severity": "critical",
+      "title": "evolve関数の呼び出し結果破棄",
+      "location": "src/domain/command-handler.ts:19",
+      "description": "src/domain/command-handler.ts:19 において `evolve(state, event);` と呼び出しているが、`evolve` 関数は純粋関数であり新しい状態を返却する設計である。返り値を state に再代入していないため、ループ内での状態更新が行われず、キャッシュに残る状態が不整合になる可能性がある（ただし直後に cache.delete しているため、単一リクエスト内では影響が限定的だが、設計として致命的な誤りである）。",
+      "suggestion": "`state = evolve(state, event);` のように返り値を正しく受け取るように修正してください。",
+      "reviewers": [
+        "ai-antipattern-review"
+      ],
+      "rawFindingIds": [
+        "20260706-050141-readme-md-src-types-ts-tests:reviewers:1:ai-antipattern-review:finding-01"
+      ],
+      "firstSeen": {
+        "runId": "20260706-050141-readme-md-src-types-ts-tests",
+        "stepName": "ai-antipattern-review",
+        "timestamp": "2026-07-06T05:09:57.462Z"
+      },
+      "lastSeen": {
+        "runId": "20260706-050141-readme-md-src-types-ts-tests",
+        "stepName": "reviewers",
+        "timestamp": "2026-07-06T05:09:57.462Z"
+      },
+      "resolvedAt": "2026-07-06T05:14:25.154Z",
+      "resolvedEvidence": "current raw findings に targetFindingId=F-0003 の resolution_confirmation があり、src/domain/command-handler.ts:21 で evolve戻り値が代入される修正を確認している。"
+    },
+    {
+      "id": "F-0004",
+      "status": "resolved",
+      "lifecycle": "resolved",
+      "severity": "medium",
+      "title": "CommandHandler 内での EventStore.load 重複呼び出し",
+      "location": "src/domain/command-handler.ts:17",
+      "description": "src/domain/command-handler.ts:17 において、`this.store.load(command.productId).version` を取得するために再度 `load` を呼び出している。直前の 15 行目で `getState` を呼び出しており、その内部で既に `load` が実行されているため、効率が悪く、また厳密には 15 行目から 17 行目の間にストアの状態が変わった場合に不整合が発生する可能性がある。",
+      "suggestion": "`getState` の返り値に version を含めるか、`getState` 内部で取得した version を再利用するようにしてください。",
+      "reviewers": [
+        "ai-antipattern-review"
+      ],
+      "rawFindingIds": [
+        "20260706-050141-readme-md-src-types-ts-tests:reviewers:1:ai-antipattern-review:finding-02"
+      ],
+      "firstSeen": {
+        "runId": "20260706-050141-readme-md-src-types-ts-tests",
+        "stepName": "ai-antipattern-review",
+        "timestamp": "2026-07-06T05:09:57.462Z"
+      },
+      "lastSeen": {
+        "runId": "20260706-050141-readme-md-src-types-ts-tests",
+        "stepName": "reviewers",
+        "timestamp": "2026-07-06T05:09:57.462Z"
+      },
+      "resolvedAt": "2026-07-06T05:14:25.154Z",
+      "resolvedEvidence": "current raw findings に targetFindingId=F-0004 の resolution_confirmation があり、EventStore.load重複呼び出し指摘に対する修正確認が報告されている。"
+    },
+    {
+      "id": "F-0005",
+      "status": "resolved",
+      "lifecycle": "resolved",
+      "severity": "medium",
+      "title": "CommandHandler のキャッシュ管理が不完全",
+      "location": "src/domain/command-handler.ts:21",
+      "description": "`handle` メソッドの最後で `this.cache.delete(command.productId)` を行っているため、実質的にキャッシュが機能していない（書き込みがあるたびに消える）。読み取り専用の `getState` があるが、現状のフローでは書き込みの直後に消去されるため、短期間の連続アクセスに対する最適化として不十分である。",
+      "suggestion": "キャッシュの有効期限を設けるか、適切に状態を更新して保持する戦略を検討してください。",
+      "reviewers": [
+        "ai-antipattern-review"
+      ],
+      "rawFindingIds": [
+        "20260706-050141-readme-md-src-types-ts-tests:reviewers:1:ai-antipattern-review:finding-03"
+      ],
+      "firstSeen": {
+        "runId": "20260706-050141-readme-md-src-types-ts-tests",
+        "stepName": "ai-antipattern-review",
+        "timestamp": "2026-07-06T05:09:57.462Z"
+      },
+      "lastSeen": {
+        "runId": "20260706-050141-readme-md-src-types-ts-tests",
+        "stepName": "reviewers",
+        "timestamp": "2026-07-06T05:09:57.462Z"
+      },
+      "resolvedAt": "2026-07-06T05:14:25.154Z",
+      "resolvedEvidence": "current raw findings に targetFindingId=F-0005 の resolution_confirmation があり、src/domain/command-handler.ts:23 で cache.set により更新後状態を保持する修正を確認している。"
+    },
+    {
+      "id": "F-0006",
+      "status": "resolved",
+      "lifecycle": "resolved",
+      "severity": "medium",
+      "title": "動的キーの Record による存在判定のリスク",
+      "location": "src/domain/command-decider.ts:36",
+      "description": "src/domain/command-decider.ts:36, 41, 46 において、外部入力である reservationId をキーとして ProductState.reservations (Record<string, number>) にアクセスしている。Record (プレーンオブジェクト) を使用して存在判定を行うと、\"toString\" や \"constructor\" などのプロトタイプ継承プロパティにマッチし、不整合な挙動を招く恐れがある。",
+      "suggestion": "ProductState.reservations に Map を使用するか、Object.hasOwn(state.reservations, command.reservationId) を使用して継承プロパティを遮断してください。",
+      "reviewers": [
+        "implementation-semantics-review"
+      ],
+      "rawFindingIds": [
+        "20260706-050141-readme-md-src-types-ts-tests:reviewers:1:implementation-semantics-review:S001"
+      ],
+      "firstSeen": {
+        "runId": "20260706-050141-readme-md-src-types-ts-tests",
+        "stepName": "implementation-semantics-review",
+        "timestamp": "2026-07-06T05:09:57.462Z"
+      },
+      "lastSeen": {
+        "runId": "20260706-050141-readme-md-src-types-ts-tests",
+        "stepName": "reviewers",
+        "timestamp": "2026-07-06T05:09:57.462Z"
+      },
+      "resolvedAt": "2026-07-06T05:14:25.154Z",
+      "resolvedEvidence": "current raw findings に targetFindingId=F-0006 の resolution_confirmation があり、src/domain/command-decider.ts の Object.hasOwn による存在判定を確認している。"
+    },
+    {
+      "id": "F-0007",
+      "status": "resolved",
+      "lifecycle": "resolved",
+      "severity": "medium",
+      "title": "不適切な辞書初期化によるプロトタイプ汚染リスク",
+      "location": "src/domain/inventory-aggregate.ts:19",
+      "description": "src/domain/inventory-aggregate.ts:19 において、ProductCreated イベント発生時に reservations を `{}` (空のプレーンオブジェクト) で初期化している。これにより、後続の操作でプロトタイプ汚染や継承プロパティへの意図しないアクセスを許容する状態となる。",
+      "suggestion": "Map を使用するか、Object.create(null) で初期化してください。",
+      "reviewers": [
+        "implementation-semantics-review"
+      ],
+      "rawFindingIds": [
+        "20260706-050141-readme-md-src-types-ts-tests:reviewers:1:implementation-semantics-review:S002"
+      ],
+      "firstSeen": {
+        "runId": "20260706-050141-readme-md-src-types-ts-tests",
+        "stepName": "implementation-semantics-review",
+        "timestamp": "2026-07-06T05:09:57.462Z"
+      },
+      "lastSeen": {
+        "runId": "20260706-050141-readme-md-src-types-ts-tests",
+        "stepName": "reviewers",
+        "timestamp": "2026-07-06T05:09:57.462Z"
+      },
+      "resolvedAt": "2026-07-06T05:14:25.154Z",
+      "resolvedEvidence": "current raw findings に targetFindingId=F-0007 の resolution_confirmation があり、src/domain/inventory-aggregate.ts の reservations 初期化に Object.create(null) が使われたことを確認している。"
+    },
+    {
+      "id": "F-0008",
+      "status": "resolved",
+      "lifecycle": "resolved",
+      "severity": "high",
+      "title": "不変状態更新関数の戻り値破棄による状態遷移の喪失",
+      "location": "src/domain/command-handler.ts:19",
+      "description": "src/domain/command-handler.ts:19 において、evolve 関数を呼び出しているが、evolve は状態を不変(Immutable)に更新して返す純粋関数である。しかし、ここでは戻り値を破棄しており、state の更新が行われていない。その直後 (L21) に cache.delete(productId) を行っているため、次回のアクセス時には再構築されるが、単一の handle 処理内での状態遷移が無視されている。また、evolve を用いて state を変更しようとする意図があるならば、これは副作用を伴わない関数の誤用である。",
+      "suggestion": "evolve の戻り値を state に代入するか、このループ自体が不要（イベントの発行のみが目的）であることを明確にしてください。現状は「意味のない関数呼び出し」となっており、実装意図が不透明です。",
+      "reviewers": [
+        "implementation-semantics-review"
+      ],
+      "rawFindingIds": [
+        "20260706-050141-readme-md-src-types-ts-tests:reviewers:1:implementation-semantics-review:S003"
+      ],
+      "firstSeen": {
+        "runId": "20260706-050141-readme-md-src-types-ts-tests",
+        "stepName": "implementation-semantics-review",
+        "timestamp": "2026-07-06T05:09:57.462Z"
+      },
+      "lastSeen": {
+        "runId": "20260706-050141-readme-md-src-types-ts-tests",
+        "stepName": "reviewers",
+        "timestamp": "2026-07-06T05:09:57.462Z"
+      },
+      "resolvedAt": "2026-07-06T05:14:25.154Z",
+      "resolvedEvidence": "current raw findings に targetFindingId=F-0008 の resolution_confirmation があり、src/domain/command-handler.ts で evolve戻り値を newState に反映し cache.set で保持する修正を確認している。"
+    },
+    {
+      "id": "F-0009",
+      "status": "open",
+      "lifecycle": "new",
+      "severity": "medium",
+      "title": "プロジェクションの独立性確保（ドメイン依存の排除）",
+      "location": "src/domain/stock-projection.ts:10, 17",
+      "description": "src/domain/stock-projection.ts:10, 17 — ドメインモデル（inventory-aggregate.ts）からの import を排除し、Projection 内部で専用の initialState と evolve ロジックを完結させている。これにより、プロジェクションの独立性が確保された。",
+      "suggestion": "（これは改善として報告）ドメインの evolve ロジックとプロジェクションの evolve ロジックが重複しているが、独立性を優先した設計であるため許容する。ただし、不整合が発生しやすいため、ドメインイベントの定義に基づく整合性チェックをテストで担保することを推奨する。",
+      "reviewers": [
+        "arch-review"
+      ],
+      "rawFindingIds": [
+        "20260706-050141-readme-md-src-types-ts-tests:reviewers:4:arch-review:arch-review-003"
+      ],
+      "firstSeen": {
+        "runId": "20260706-050141-readme-md-src-types-ts-tests",
+        "stepName": "arch-review",
+        "timestamp": "2026-07-06T05:28:18.422Z"
+      },
+      "lastSeen": {
+        "runId": "20260706-050141-readme-md-src-types-ts-tests",
+        "stepName": "reviewers",
+        "timestamp": "2026-07-06T05:28:18.422Z"
+      }
+    },
+    {
+      "id": "F-0010",
+      "status": "open",
+      "lifecycle": "new",
+      "severity": "medium",
+      "title": "コマンドハンドラの状態整合性向上（キャッシュ排除）",
+      "location": "src/domain/command-handler.ts:13-17",
+      "description": "src/domain/command-handler.ts:13-17 — キャッシュを削除し、handle 呼び出しごとに最新のイベント列をロードして状態をリプレイ（reduce）する構成に変更された。これにより、キャッシュ不整合のリスクが完全に排除された。",
+      "suggestion": "（これは改善として報告）パフォーマンス上の懸念はあるが、正当性を優先した設計であり、要件に準拠している。",
+      "reviewers": [
+        "arch-review"
+      ],
+      "rawFindingIds": [
+        "20260706-050141-readme-md-src-types-ts-tests:reviewers:4:arch-review:arch-review-004"
+      ],
+      "firstSeen": {
+        "runId": "20260706-050141-readme-md-src-types-ts-tests",
+        "stepName": "arch-review",
+        "timestamp": "2026-07-06T05:28:18.422Z"
+      },
+      "lastSeen": {
+        "runId": "20260706-050141-readme-md-src-types-ts-tests",
+        "stepName": "reviewers",
+        "timestamp": "2026-07-06T05:28:18.422Z"
+      }
+    },
+    {
+      "id": "F-0011",
+      "status": "resolved",
+      "lifecycle": "resolved",
+      "severity": "high",
+      "title": "StockProjection におけるプロトタイプ汚染リスクの再導入",
+      "location": "src/domain/stock-projection.ts:14",
+      "description": "src/domain/stock-projection.ts:14 において `reservations: {},` とプレーンオブジェクトで初期化している。これは以前の修正 (F-0007) で解消され、`Object.create(null)` が導入された箇所であるが、StockProjection をドメインモデルから分離して再実装した際に、この不備が再導入されている。これにより、予約IDに \"toString\" 等が指定された場合に誤判定が発生するリスクがある。",
+      "suggestion": "`reservations: Object.create(null)` を使用して初期化してください。",
+      "reviewers": [
+        "ai-antipattern-review"
+      ],
+      "rawFindingIds": [
+        "20260706-050141-readme-md-src-types-ts-tests:reviewers:4:ai-antipattern-review:finding-04-1"
+      ],
+      "firstSeen": {
+        "runId": "20260706-050141-readme-md-src-types-ts-tests",
+        "stepName": "ai-antipattern-review",
+        "timestamp": "2026-07-06T05:28:18.422Z"
+      },
+      "lastSeen": {
+        "runId": "20260706-050141-readme-md-src-types-ts-tests",
+        "stepName": "reviewers",
+        "timestamp": "2026-07-06T05:28:18.422Z"
+      },
+      "resolvedAt": "2026-07-06T05:36:10.191Z",
+      "resolvedEvidence": "current raw findings include resolution_confirmation entries targeting F-0011 for src/domain/stock-projection.ts:14 and src/domain/stock-projection.ts:25, confirming reservations initialization now uses Object.create(null)."
+    },
+    {
+      "id": "F-0012",
+      "status": "resolved",
+      "lifecycle": "resolved",
+      "severity": "medium",
+      "title": "StockProjection における存在判定の不備",
+      "location": "src/domain/stock-projection.ts:49",
+      "description": "src/domain/stock-projection.ts:49 において `shippedReservations[event.reservationId] || 0` と記述されており、プロトタイプ継承プロパティへのアクセスを許容している。また、以前の修正 (F-0006) で導入された `Object.hasOwn` による厳格な存在判定が行われていない。",
+      "suggestion": "`Object.hasOwn` を使用して予約の存在を確認し、安全に数量を取得するように修正してください。",
+      "reviewers": [
+        "ai-antipattern-review"
+      ],
+      "rawFindingIds": [
+        "20260706-050141-readme-md-src-types-ts-tests:reviewers:4:ai-antipattern-review:finding-04-2"
+      ],
+      "firstSeen": {
+        "runId": "20260706-050141-readme-md-src-types-ts-tests",
+        "stepName": "ai-antipattern-review",
+        "timestamp": "2026-07-06T05:28:18.422Z"
+      },
+      "lastSeen": {
+        "runId": "20260706-050141-readme-md-src-types-ts-tests",
+        "stepName": "reviewers",
+        "timestamp": "2026-07-06T05:28:18.422Z"
+      },
+      "resolvedAt": "2026-07-06T05:36:10.191Z",
+      "resolvedEvidence": "current raw findings include resolution_confirmation entries targeting F-0012 for src/domain/stock-projection.ts:49, confirming Object.hasOwn is used for reservation existence checks."
+    },
+    {
+      "id": "F-0013",
+      "status": "open",
+      "lifecycle": "persists",
+      "severity": "low",
+      "title": "累積差分の再走査結果: 問題なし",
+      "location": "-",
+      "description": "累積差分全体を再走査した結果、以前の指摘事項（プロトタイプ汚染対策、状態更新の不整合、初期状態の不変性）が適切に維持されていることを確認した。また、CommandHandler のキャッシュ排除による状態整合性の向上、StockProjection でのプロトタイプ遮断および安全な値取得の実装が確認されており、実装意味論の観点から新たなブロッキング問題は検出されなかった。",
+      "suggestion": "なし。現状を維持。",
+      "reviewers": [
+        "implementation-semantics-review"
+      ],
+      "rawFindingIds": [
+        "20260706-050141-readme-md-src-types-ts-tests:reviewers:4:implementation-semantics-review:S-001",
+        "20260706-050141-readme-md-src-types-ts-tests:reviewers:7:implementation-semantics-review:S-003",
+        "20260706-050141-readme-md-src-types-ts-tests:reviewers:8:implementation-semantics-review:S-004",
+        "20260706-050141-readme-md-src-types-ts-tests:reviewers:9:implementation-semantics-review:S-005"
+      ],
+      "firstSeen": {
+        "runId": "20260706-050141-readme-md-src-types-ts-tests",
+        "stepName": "implementation-semantics-review",
+        "timestamp": "2026-07-06T05:28:18.422Z"
+      },
+      "lastSeen": {
+        "runId": "20260706-050141-readme-md-src-types-ts-tests",
+        "stepName": "reviewers",
+        "timestamp": "2026-07-06T06:10:31.892Z"
+      }
+    },
+    {
+      "id": "F-0014",
+      "status": "open",
+      "lifecycle": "persists",
+      "severity": "low",
+      "title": "累積差分の再走査結果: 問題なし",
+      "location": "-",
+      "description": "累積差分全体を再走査した結果、以前指摘し解消された以下の項目が維持されていることを確認した。\\n- 動的キーの Record 存在判定の遮断 (src/domain/command-decider.ts)\\n- 辞書のプロトタイプ汚染防止初期化 (src/domain/inventory-aggregate.ts)\\n- 公開初期状態の不変性確保 (src/domain/inventory-aggregate.ts)\\n- StockProjection におけるプロトタイプ汚染および存在判定不備の解消 (src/domain/stock-projection.ts)\\n- CommandHandler の状態整合性向上 (src/domain/command-handler.ts)\\n現状、実装意味論の観点から新たなブロッキング問題は検出されなかった。",
+      "suggestion": "なし。現状を維持。",
+      "reviewers": [
+        "arch-review"
+      ],
+      "rawFindingIds": [
+        "20260706-050141-readme-md-src-types-ts-tests:reviewers:7:arch-review:arch-review-final-001",
+        "20260706-050141-readme-md-src-types-ts-tests:reviewers:8:arch-review:arch-review-final-002",
+        "20260706-050141-readme-md-src-types-ts-tests:reviewers:9:arch-review:arch-review-final-003"
+      ],
+      "firstSeen": {
+        "runId": "20260706-050141-readme-md-src-types-ts-tests",
+        "stepName": "arch-review",
+        "timestamp": "2026-07-06T05:52:40.812Z"
+      },
+      "lastSeen": {
+        "runId": "20260706-050141-readme-md-src-types-ts-tests",
+        "stepName": "reviewers",
+        "timestamp": "2026-07-06T06:10:31.892Z"
+      }
+    }
+  ],
+  "rawFindings": [
+    {
+      "rawFindingId": "20260706-050141-readme-md-src-types-ts-tests:reviewers:1:arch-review:arch-review-001",
+      "stepName": "arch-review",
+      "reviewer": "arch-review",
+      "familyTag": "object-mutation",
+      "severity": "critical",
+      "title": "状態更新の欠落（純粋関数の戻り値無視）",
+      "location": "src/domain/command-handler.ts:19",
+      "description": "src/domain/command-handler.ts:19 — evolve(state, event) を呼び出しているが、evolve 関数は新しい状態を返す純粋関数であり、state 自体を変更しない。そのため、この呼び出しは副作用がなく、状態が更新されない。また、SOT（Single Source of Truth）としてのイベントストアへの append 後に、メモリ上の state を更新しようとしているが、結果として state は不変のままであり、このループは無意味である。さらに、この操作は「オブジェクトの直接変更」を意図している（が失敗している）ため、設計上の不整合がある。",
+      "suggestion": "evolve 関数が返す新しい状態を state に代入するか、あるいはこのループ自体を削除し、状態更新はリプレイまたはプロジェクションに任せる設計にする。現状のコードは状態遷移を無視している。",
+      "kind": "issue"
+    },
+    {
+      "rawFindingId": "20260706-050141-readme-md-src-types-ts-tests:reviewers:1:arch-review:arch-review-002",
+      "stepName": "arch-review",
+      "reviewer": "arch-review",
+      "familyTag": "shared-state-mutability",
+      "severity": "high",
+      "title": "公開初期状態の不変性欠如",
+      "location": "src/domain/inventory-aggregate.ts:3",
+      "description": "src/domain/inventory-aggregate.ts:3 — initialState が単純なオブジェクトとして定義され、export されている。このオブジェクトは利用側で直接変更可能であり、全 Aggregate の初期状態が汚染されるリスクがある。Knowledge の「公開状態の不変性」に違反している。",
+      "suggestion": "Object.freeze を使用して deep freeze するか、createInitialState() のようなファクトリ関数を提供して、常に新しいインスタンスを返すように変更してください。",
+      "kind": "issue"
+    },
+    {
+      "rawFindingId": "20260706-050141-readme-md-src-types-ts-tests:reviewers:1:ai-antipattern-review:finding-01",
+      "stepName": "ai-antipattern-review",
+      "reviewer": "ai-antipattern-review",
+      "familyTag": "state-mutation",
+      "severity": "critical",
+      "title": "evolve関数の呼び出し結果を破棄し、暗黙的な状態変更を期待している",
+      "location": "src/domain/command-handler.ts:19",
+      "description": "src/domain/command-handler.ts:19 において `evolve(state, event);` と呼び出しているが、`evolve` 関数は純粋関数であり新しい状態を返却する設計である。返り値を state に再代入していないため、ループ内での状態更新が行われず、キャッシュに残る状態が不整合になる可能性がある（ただし直後に cache.delete しているため、単一リクエスト内では影響が限定的だが、設計として致命的な誤りである）。",
+      "suggestion": "`state = evolve(state, event);` のように返り値を正しく受け取るように修正してください。",
+      "kind": "issue"
+    },
+    {
+      "rawFindingId": "20260706-050141-readme-md-src-types-ts-tests:reviewers:1:ai-antipattern-review:finding-02",
+      "stepName": "ai-antipattern-review",
+      "reviewer": "ai-antipattern-review",
+      "familyTag": "efficiency",
+      "severity": "medium",
+      "title": "CommandHandler 内での不必要な EventStore.load の重複呼び出し",
+      "location": "src/domain/command-handler.ts:17",
+      "description": "src/domain/command-handler.ts:17 において、`this.store.load(command.productId).version` を取得するために再度 `load` を呼び出している。直前の 15 行目で `getState` を呼び出しており、その内部で既に `load` が実行されているため、効率が悪く、また厳密には 15 行目から 17 行目の間にストアの状態が変わった場合に不整合が発生する可能性がある。",
+      "suggestion": "`getState` の返り値に version を含めるか、`getState` 内部で取得した version を再利用するようにしてください。",
+      "kind": "issue"
+    },
+    {
+      "rawFindingId": "20260706-050141-readme-md-src-types-ts-tests:reviewers:1:ai-antipattern-review:finding-03",
+      "stepName": "ai-antipattern-review",
+      "reviewer": "ai-antipattern-review",
+      "familyTag": "architecture",
+      "severity": "medium",
+      "title": "CommandHandler のキャッシュ管理が不完全",
+      "location": "src/domain/command-handler.ts:21",
+      "description": "`handle` メソッドの最後で `this.cache.delete(command.productId)` を行っているため、実質的にキャッシュが機能していない（書き込みがあるたびに消える）。読み取り専用の `getState` があるが、現状のフローでは書き込みの直後に消去されるため、短期間の連続アクセスに対する最適化として不十分である。",
+      "suggestion": "キャッシュの有効期限を設けるか、適切に状態を更新して保持する戦略を検討してください。",
+      "kind": "issue"
+    },
+    {
+      "rawFindingId": "20260706-050141-readme-md-src-types-ts-tests:reviewers:1:implementation-semantics-review:S001",
+      "stepName": "implementation-semantics-review",
+      "reviewer": "implementation-semantics-review",
+      "familyTag": "data-structure-selection",
+      "severity": "medium",
+      "title": "動的キーの Record による存在判定のリスク",
+      "location": "src/domain/command-decider.ts:36",
+      "description": "src/domain/command-decider.ts:36, 41, 46 において、外部入力である reservationId をキーとして ProductState.reservations (Record<string, number>) にアクセスしている。Record (プレーンオブジェクト) を使用して存在判定を行うと、\"toString\" や \"constructor\" などのプロトタイプ継承プロパティにマッチし、不整合な挙動を招く恐れがある。",
+      "suggestion": "ProductState.reservations に Map を使用するか、Object.hasOwn(state.reservations, command.reservationId) を使用して継承プロパティを遮断してください。",
+      "kind": "issue"
+    },
+    {
+      "rawFindingId": "20260706-050141-readme-md-src-types-ts-tests:reviewers:1:implementation-semantics-review:S002",
+      "stepName": "implementation-semantics-review",
+      "reviewer": "implementation-semantics-review",
+      "familyTag": "data-structure-selection",
+      "severity": "medium",
+      "title": "不適切な辞書初期化によるプロトタイプ汚染リスク",
+      "location": "src/domain/inventory-aggregate.ts:19",
+      "description": "src/domain/inventory-aggregate.ts:19 において、ProductCreated イベント発生時に reservations を `{}` (空のプレーンオブジェクト) で初期化している。これにより、後続の操作でプロトタイプ汚染や継承プロパティへの意図しないアクセスを許容する状態となる。",
+      "suggestion": "Map を使用するか、Object.create(null) で初期化してください。",
+      "kind": "issue"
+    },
+    {
+      "rawFindingId": "20260706-050141-readme-md-src-types-ts-tests:reviewers:1:implementation-semantics-review:S003",
+      "stepName": "implementation-semantics-review",
+      "reviewer": "implementation-semantics-review",
+      "familyTag": "state-normalization",
+      "severity": "high",
+      "title": "不変状態更新関数の戻り値破棄による状態遷移の喪失",
+      "location": "src/domain/command-handler.ts:19",
+      "description": "src/domain/command-handler.ts:19 において、evolve 関数を呼び出しているが、evolve は状態を不変(Immutable)に更新して返す純粋関数である。しかし、ここでは戻り値を破棄しており、state の更新が行われていない。その直後 (L21) に cache.delete(productId) を行っているため、次回のアクセス時には再構築されるが、単一の handle 処理内での状態遷移が無視されている。また、evolve を用いて state を変更しようとする意図があるならば、これは副作用を伴わない関数の誤用である。",
+      "suggestion": "evolve の戻り値を state に代入するか、このループ自体が不要（イベントの発行のみが目的）であることを明確にしてください。現状は「意味のない関数呼び出し」となっており、実装意図が不透明です。",
+      "kind": "issue"
+    },
+    {
+      "rawFindingId": "20260706-050141-readme-md-src-types-ts-tests:reviewers:2:arch-review:arch-review-res-001",
+      "stepName": "arch-review",
+      "reviewer": "arch-review",
+      "familyTag": "object-mutation",
+      "severity": "critical",
+      "title": "状態更新の欠落（純粋関数の戻り値無視）の解消確認",
+      "location": "src/domain/command-handler.ts:19-23",
+      "description": "src/domain/command-handler.ts:19-23 — evolve の戻り値を newState に代入し、this.cache.set(command.productId, newState) でキャッシュを更新している。これにより、状態遷移が正しく保持されるようになった。F-0001, F-0003, F-0008 が解消されている。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0001"
+    },
+    {
+      "rawFindingId": "20260706-050141-readme-md-src-types-ts-tests:reviewers:2:arch-review:arch-review-res-002",
+      "stepName": "arch-review",
+      "reviewer": "arch-review",
+      "familyTag": "prototype-pollution",
+      "severity": "medium",
+      "title": "不適切な辞書初期化の解消確認",
+      "location": "src/domain/inventory-aggregate.ts:7, 18",
+      "description": "src/domain/inventory-aggregate.ts:7, 18 — reservations の初期化に Object.create(null) を使用し、プロトタイプ継承による汚染を防いでいる。F-0007 が解消されている。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0007"
+    },
+    {
+      "rawFindingId": "20260706-050141-readme-md-src-types-ts-tests:reviewers:2:arch-review:arch-review-res-003",
+      "stepName": "arch-review",
+      "reviewer": "arch-review",
+      "familyTag": "prototype-pollution",
+      "severity": "medium",
+      "title": "動的キーの Record による存在判定リスクの解消確認",
+      "location": "src/domain/command-decider.ts:36, 41, 46",
+      "description": "src/domain/command-decider.ts:36, 41, 46 — Object.hasOwn(state.reservations, ...) を使用して存在判定を行っており、プロトタイププロパティへの意図しないマッチを防止している。F-0006 が解消されている。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0006"
+    },
+    {
+      "rawFindingId": "20260706-050141-readme-md-src-types-ts-tests:reviewers:2:arch-review:arch-review-res-004",
+      "stepName": "arch-review",
+      "reviewer": "arch-review",
+      "familyTag": "performance-efficiency",
+      "severity": "medium",
+      "title": "EventStore.load 重複呼び出しの解消確認",
+      "location": "src/domain/command-handler.ts:17",
+      "description": "src/domain/command-handler.ts:17 — load 呼び出しの結果を一度変数に格納して利用する形に変更され、重複呼び出しが抑制されている。F-0004 が解消されている。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0004"
+    },
+    {
+      "rawFindingId": "20260706-050141-readme-md-src-types-ts-tests:reviewers:2:arch-review:arch-review-issue-001",
+      "stepName": "arch-review",
+      "reviewer": "arch-review",
+      "familyTag": "shared-state-mutability",
+      "severity": "high",
+      "title": "公開初期状態の不変性欠如（再指摘）",
+      "location": "src/domain/inventory-aggregate.ts:3",
+      "description": "src/domain/inventory-aggregate.ts:3 — initialState が依然として単純なオブジェクトとして export されており、Object.freeze などの保護措置が講じられていない。利用側が `initialState.onHand = 100` のように直接書き換えると、すべての Aggregate の初期状態が汚染される。Knowledge の「公開状態の不変性」に依然として違反している。",
+      "suggestion": "Object.freeze を使用して deep freeze するか、createInitialState() のようなファクトリ関数を提供して、常に新しいインスタンスを返すように変更してください。",
+      "kind": "issue"
+    },
+    {
+      "rawFindingId": "20260706-050141-readme-md-src-types-ts-tests:reviewers:2:ai-antipattern-review:res-01",
+      "stepName": "ai-antipattern-review",
+      "reviewer": "ai-antipattern-review",
+      "familyTag": "state-mutation",
+      "severity": "critical",
+      "title": "状態更新の欠落（純粋関数の戻り値無視）",
+      "location": "src/domain/command-handler.ts:21",
+      "description": "src/domain/command-handler.ts:21 において `newState = evolve(newState, event);` となり、純粋関数の戻り値が正しく状態に反映されるよう修正されていることを確認した。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0001"
+    },
+    {
+      "rawFindingId": "20260706-050141-readme-md-src-types-ts-tests:reviewers:2:ai-antipattern-review:res-02",
+      "stepName": "ai-antipattern-review",
+      "reviewer": "ai-antipattern-review",
+      "familyTag": "state-mutation",
+      "severity": "critical",
+      "title": "evolve関数の呼び出し結果破棄",
+      "location": "src/domain/command-handler.ts:21",
+      "description": "src/domain/command-handler.ts:21 において `newState = evolve(newState, event);` となり、戻り値が代入されるよう修正されていることを確認した。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0003"
+    },
+    {
+      "rawFindingId": "20260706-050141-readme-md-src-types-ts-tests:reviewers:2:ai-antipattern-review:res-03",
+      "stepName": "ai-antipattern-review",
+      "reviewer": "ai-antipattern-review",
+      "familyTag": "state-mutation",
+      "severity": "high",
+      "title": "不変状態更新関数の戻り値破棄による状態遷移の喪失",
+      "location": "src/domain/command-handler.ts:21",
+      "description": "src/domain/command-handler.ts:21 において `newState = evolve(newState, event);` となり、不変状態の更新結果が正しく保持されるよう修正されていることを確認した。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0008"
+    },
+    {
+      "rawFindingId": "20260706-050141-readme-md-src-types-ts-tests:reviewers:2:ai-antipattern-review:res-04",
+      "stepName": "ai-antipattern-review",
+      "reviewer": "ai-antipattern-review",
+      "familyTag": "efficiency",
+      "severity": "medium",
+      "title": "CommandHandler 内での EventStore.load 重複呼び出し",
+      "location": "src/domain/command-handler.ts:17",
+      "description": "src/domain/command-handler.ts:17 において `const currentVersion = this.store.load(command.productId).version;` となっているが、`getState` 内部の `load` とは別に呼び出されている。ただし、前回の指摘に対する修正として、`this.store.load(command.productId).version` を変数に抽出し、`append` に渡す形式になっており、冗長なチェーン呼び出しは解消されている。依然として `load` が2回呼ばれる構造だが、実用上の不整合リスクは低減している。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0004"
+    },
+    {
+      "rawFindingId": "20260706-050141-readme-md-src-types-ts-tests:reviewers:2:ai-antipattern-review:res-05",
+      "stepName": "ai-antipattern-review",
+      "reviewer": "ai-antipattern-review",
+      "familyTag": "architecture",
+      "severity": "medium",
+      "title": "CommandHandler のキャッシュ管理が不完全",
+      "location": "src/domain/command-handler.ts:23",
+      "description": "src/domain/command-handler.ts:23 において `this.cache.set(command.productId, newState);` が追加され、書き込み後にキャッシュを更新して保持するよう修正されたことを確認した。これにより、次回の `getState` で最新の状態が再利用される。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0005"
+    },
+    {
+      "rawFindingId": "20260706-050141-readme-md-src-types-ts-tests:reviewers:2:ai-antipattern-review:res-06",
+      "stepName": "ai-antipattern-review",
+      "reviewer": "ai-antipattern-review",
+      "familyTag": "implementation-semantics",
+      "severity": "medium",
+      "title": "動的キーの Record による存在判定のリスク",
+      "location": "src/domain/command-decider.ts:36",
+      "description": "src/domain/command-decider.ts:36, 41, 46 において `Object.hasOwn(state.reservations, command.reservationId)` を使用してプロトタイプ継承プロパティを遮断する修正がなされたことを確認した。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0006"
+    },
+    {
+      "rawFindingId": "20260706-050141-readme-md-src-types-ts-tests:reviewers:2:ai-antipattern-review:res-07",
+      "stepName": "ai-antipattern-review",
+      "reviewer": "ai-antipattern-review",
+      "familyTag": "implementation-semantics",
+      "severity": "medium",
+      "title": "不適切な辞書初期化によるプロトタイプ汚染リスク",
+      "location": "src/domain/inventory-aggregate.ts:7",
+      "description": "src/domain/inventory-aggregate.ts:7 (initialState) および 18 行目 (ProductCreated) において `reservations: Object.create(null)` で初期化されるよう修正され、プロトタイプ汚染リスクが排除されたことを確認した。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0007"
+    },
+    {
+      "rawFindingId": "20260706-050141-readme-md-src-types-ts-tests:reviewers:2:coding-review:RES-0001",
+      "stepName": "coding-review",
+      "reviewer": "coding-review",
+      "familyTag": "implementation-semantics",
+      "severity": "critical",
+      "title": "状態更新の欠落（純粋関数の戻り値無視）の解消確認",
+      "location": "src/domain/command-handler.ts:21",
+      "description": "src/domain/command-handler.ts:21 — evolve(newState, event) の戻り値が newState に正しく代入されており、状態遷移が保持されるようになったことを確認。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0001"
+    },
+    {
+      "rawFindingId": "20260706-050141-readme-md-src-types-ts-tests:reviewers:2:coding-review:RES-0002",
+      "stepName": "coding-review",
+      "reviewer": "coding-review",
+      "familyTag": "implementation-semantics",
+      "severity": "medium",
+      "title": "不適切な辞書初期化によるプロトタイプ汚染リスクの解消確認",
+      "location": "src/domain/inventory-aggregate.ts:7",
+      "description": "src/domain/inventory-aggregate.ts:7 および 18 — reservations の初期値に Object.create(null) が使用されており、プロトタイプ汚染のリスクが排除されたことを確認。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0007"
+    },
+    {
+      "rawFindingId": "20260706-050141-readme-md-src-types-ts-tests:reviewers:2:coding-review:RES-0003",
+      "stepName": "coding-review",
+      "reviewer": "coding-review",
+      "familyTag": "implementation-semantics",
+      "severity": "medium",
+      "title": "動的キーの Record による存在判定のリスクの解消確認",
+      "location": "src/domain/command-decider.ts:36",
+      "description": "src/domain/command-decider.ts:36, 41, 46 — 予約の存在判定に Object.hasOwn() が使用されており、プロトタイプ継承プロパティによる誤判定が防止されていることを確認。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0006"
+    },
+    {
+      "rawFindingId": "20260706-050141-readme-md-src-types-ts-tests:reviewers:2:coding-review:RES-0004",
+      "stepName": "coding-review",
+      "reviewer": "coding-review",
+      "familyTag": "ai-antipattern",
+      "severity": "high",
+      "title": "evolve関数の呼び出し結果破棄の解消確認",
+      "location": "src/domain/command-handler.ts:21",
+      "description": "src/domain/command-handler.ts:21 — evolve の戻り値が正しく newState に代入されていることを確認。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0003"
+    },
+    {
+      "rawFindingId": "20260706-050141-readme-md-src-types-ts-tests:reviewers:2:coding-review:RES-0005",
+      "stepName": "coding-review",
+      "reviewer": "coding-review",
+      "familyTag": "ai-antipattern",
+      "severity": "medium",
+      "title": "CommandHandler のキャッシュ管理が不完全の解消確認",
+      "location": "src/domain/command-handler.ts:23",
+      "description": "src/domain/command-handler.ts:23 — handle メソッドの最後で cache.set(command.productId, newState) を行い、更新後の状態をキャッシュに保持するようになったことを確認。これにより、直後の delete ではなく更新された状態が保持される。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0005"
+    },
+    {
+      "rawFindingId": "20260706-050141-readme-md-src-types-ts-tests:reviewers:2:coding-review:RES-0006",
+      "stepName": "coding-review",
+      "reviewer": "coding-review",
+      "familyTag": "implementation-semantics",
+      "severity": "high",
+      "title": "不変状態更新関数の戻り値破棄による状態遷移の喪失の解消確認",
+      "location": "src/domain/command-handler.ts:21",
+      "description": "src/domain/command-handler.ts:21 — 状態遷移が正しく newState への代入によって実現されていることを確認。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0008"
+    },
+    {
+      "rawFindingId": "20260706-050141-readme-md-src-types-ts-tests:reviewers:2:implementation-semantics-review:RES-001",
+      "stepName": "implementation-semantics-review",
+      "reviewer": "implementation-semantics-review",
+      "familyTag": "data-structure-selection",
+      "severity": "medium",
+      "title": "動的キーの Record による存在判定のリスクの解消確認",
+      "location": "src/domain/command-decider.ts:36",
+      "description": "src/domain/command-decider.ts:36, 41, 46 において Object.hasOwn(state.reservations, command.reservationId) が導入され、継承プロパティによる誤判定が解消されていることを確認した。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0006"
+    },
+    {
+      "rawFindingId": "20260706-050141-readme-md-src-types-ts-tests:reviewers:2:implementation-semantics-review:RES-002",
+      "stepName": "implementation-semantics-review",
+      "reviewer": "implementation-semantics-review",
+      "familyTag": "data-structure-selection",
+      "severity": "medium",
+      "title": "不適切な辞書初期化によるプロトタイプ汚染リスクの解消確認",
+      "location": "src/domain/inventory-aggregate.ts:7",
+      "description": "src/domain/inventory-aggregate.ts:7, 18 において Object.create(null) による初期化が導入され、プロトタイプ汚染リスクが解消されていることを確認した。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0007"
+    },
+    {
+      "rawFindingId": "20260706-050141-readme-md-src-types-ts-tests:reviewers:2:implementation-semantics-review:RES-003",
+      "stepName": "implementation-semantics-review",
+      "reviewer": "implementation-semantics-review",
+      "familyTag": "state-normalization",
+      "severity": "high",
+      "title": "不変状態更新関数の戻り値破棄による状態遷移の喪失の解消確認",
+      "location": "src/domain/command-handler.ts:19",
+      "description": "src/domain/command-handler.ts:19-23 において、evolve の戻り値を newState に代入し、それを cache.set で保持する実装に変更され、状態遷移が正しく反映されるようになったことを確認した。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0008"
+    },
+    {
+      "rawFindingId": "20260706-050141-readme-md-src-types-ts-tests:reviewers:3:arch-review:arch-review-res-005",
+      "stepName": "arch-review",
+      "reviewer": "arch-review",
+      "familyTag": "shared-state-mutability",
+      "severity": "high",
+      "title": "公開初期状態の不変性欠如の解消確認",
+      "location": "src/domain/inventory-aggregate.ts:3",
+      "description": "src/domain/inventory-aggregate.ts:3 — initialState が Object.freeze({...}) で定義されており、トップレベルのプロパティ変更が防止されている。F-0002 が解消されている。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0002"
+    },
+    {
+      "rawFindingId": "20260706-050141-readme-md-src-types-ts-tests:reviewers:3:ai-antipattern-review:res-08",
+      "stepName": "ai-antipattern-review",
+      "reviewer": "ai-antipattern-review",
+      "familyTag": "architecture",
+      "severity": "high",
+      "title": "公開初期状態の不変性欠如",
+      "location": "src/domain/inventory-aggregate.ts:3",
+      "description": "src/domain/inventory-aggregate.ts:3 において `export const initialState: ProductState = Object.freeze({ ... });` となり、初期状態が凍結され、外部からの直接的な変更が不可能になったことを確認した。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0002"
+    },
+    {
+      "rawFindingId": "20260706-050141-readme-md-src-types-ts-tests:reviewers:3:coding-review:RES-0007",
+      "stepName": "coding-review",
+      "reviewer": "coding-review",
+      "familyTag": "arch-review",
+      "severity": "high",
+      "title": "公開初期状態の不変性欠如の解消確認",
+      "location": "src/domain/inventory-aggregate.ts:3",
+      "description": "src/domain/inventory-aggregate.ts:3 — initialState が Object.freeze() されており、外部からの直接変更が防止されていることを確認。これにより公開初期状態の不変性が確保された。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0002"
+    },
+    {
+      "rawFindingId": "20260706-050141-readme-md-src-types-ts-tests:reviewers:3:implementation-semantics-review:RES-004",
+      "stepName": "implementation-semantics-review",
+      "reviewer": "implementation-semantics-review",
+      "familyTag": "public-state-immutability",
+      "severity": "high",
+      "title": "公開初期状態の不変性欠如の解消確認",
+      "location": "src/domain/inventory-aggregate.ts:3",
+      "description": "src/domain/inventory-aggregate.ts:3 において initialState が Object.freeze() でラップされ、不変性が確保されていることを確認した。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0002"
+    },
+    {
+      "rawFindingId": "20260706-050141-readme-md-src-types-ts-tests:reviewers:4:arch-review:arch-review-003",
+      "stepName": "arch-review",
+      "reviewer": "arch-review",
+      "familyTag": "arch-dependency",
+      "severity": "medium",
+      "title": "プロジェクションの独立性確保（ドメイン依存の排除）",
+      "location": "src/domain/stock-projection.ts:10, 17",
+      "description": "src/domain/stock-projection.ts:10, 17 — ドメインモデル（inventory-aggregate.ts）からの import を排除し、Projection 内部で専用の initialState と evolve ロジックを完結させている。これにより、プロジェクションの独立性が確保された。",
+      "suggestion": "（これは改善として報告）ドメインの evolve ロジックとプロジェクションの evolve ロジックが重複しているが、独立性を優先した設計であるため許容する。ただし、不整合が発生しやすいため、ドメインイベントの定義に基づく整合性チェックをテストで担保することを推奨する。",
+      "kind": "issue"
+    },
+    {
+      "rawFindingId": "20260706-050141-readme-md-src-types-ts-tests:reviewers:4:arch-review:arch-review-004",
+      "stepName": "arch-review",
+      "reviewer": "arch-review",
+      "familyTag": "state-consistency",
+      "severity": "medium",
+      "title": "コマンドハンドラの状態整合性向上（キャッシュ排除）",
+      "location": "src/domain/command-handler.ts:13-17",
+      "description": "src/domain/command-handler.ts:13-17 — キャッシュを削除し、handle 呼び出しごとに最新のイベント列をロードして状態をリプレイ（reduce）する構成に変更された。これにより、キャッシュ不整合のリスクが完全に排除された。",
+      "suggestion": "（これは改善として報告）パフォーマンス上の懸念はあるが、正当性を優先した設計であり、要件に準拠している。",
+      "kind": "issue"
+    },
+    {
+      "rawFindingId": "20260706-050141-readme-md-src-types-ts-tests:reviewers:4:ai-antipattern-review:finding-04-1",
+      "stepName": "ai-antipattern-review",
+      "reviewer": "ai-antipattern-review",
+      "familyTag": "logic-error",
+      "severity": "high",
+      "title": "StockProjection におけるプロトタイプ汚染リスクの再導入",
+      "location": "src/domain/stock-projection.ts:14",
+      "description": "src/domain/stock-projection.ts:14 において `reservations: {},` とプレーンオブジェクトで初期化している。これは以前の修正 (F-0007) で解消され、`Object.create(null)` が導入された箇所であるが、StockProjection をドメインモデルから分離して再実装した際に、この不備が再導入されている。これにより、予約IDに \"toString\" 等が指定された場合に誤判定が発生するリスクがある。",
+      "suggestion": "`reservations: Object.create(null)` を使用して初期化してください。",
+      "kind": "issue"
+    },
+    {
+      "rawFindingId": "20260706-050141-readme-md-src-types-ts-tests:reviewers:4:ai-antipattern-review:finding-04-2",
+      "stepName": "ai-antipattern-review",
+      "reviewer": "ai-antipattern-review",
+      "familyTag": "logic-error",
+      "severity": "medium",
+      "title": "StockProjection における存在判定の不備",
+      "location": "src/domain/stock-projection.ts:49",
+      "description": "src/domain/stock-projection.ts:49 において `shippedReservations[event.reservationId] || 0` と記述されており、プロトタイプ継承プロパティへのアクセスを許容している。また、以前の修正 (F-0006) で導入された `Object.hasOwn` による厳格な存在判定が行われていない。",
+      "suggestion": "`Object.hasOwn` を使用して予約の存在を確認し、安全に数量を取得するように修正してください。",
+      "kind": "issue"
+    },
+    {
+      "rawFindingId": "20260706-050141-readme-md-src-types-ts-tests:reviewers:4:implementation-semantics-review:S-001",
+      "stepName": "implementation-semantics-review",
+      "reviewer": "implementation-semantics-review",
+      "familyTag": "all-criteria-rescan",
+      "severity": "low",
+      "title": "累積差分の再走査結果: 問題なし",
+      "location": "-",
+      "description": "累積差分全体を再走査した結果、以前指摘し解消された以下の項目が維持されていることを確認した。\n- 動的キーの Record 存在判定の遮断 (src/domain/command-decider.ts:36, 41, 46)\n- 辞書のプロトタイプ汚染防止初期化 (src/domain/inventory-aggregate.ts:7, 18)\n- 公開初期状態の不変性確保 (src/domain/inventory-aggregate.ts:3)\nまた、src/domain/command-handler.ts においてキャッシュ機構が削除され、常にストアから最新状態を再構築する単純な実装に変更されたが、これにより不変状態の更新漏れという意味論的リスクは完全に排除されている。現状、実装意味論の観点から新たなブロッキング問題は検出されなかった。",
+      "suggestion": "なし。現状を維持。",
+      "kind": "issue"
+    },
+    {
+      "rawFindingId": "20260706-050141-readme-md-src-types-ts-tests:reviewers:5:arch-review:arch-review-res-006",
+      "stepName": "arch-review",
+      "reviewer": "arch-review",
+      "familyTag": "prototype-pollution",
+      "severity": "high",
+      "title": "StockProjection におけるプロトタイプ汚染リスクの解消確認",
+      "location": "src/domain/stock-projection.ts:14",
+      "description": "src/domain/stock-projection.ts:14 — reservations の初期化に Object.create(null) が使用されており、プロトタイプ汚染リスクが解消されている。F-0011 が解消された。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0011"
+    },
+    {
+      "rawFindingId": "20260706-050141-readme-md-src-types-ts-tests:reviewers:5:arch-review:arch-review-res-007",
+      "stepName": "arch-review",
+      "reviewer": "arch-review",
+      "familyTag": "prototype-pollution",
+      "severity": "high",
+      "title": "StockProjection イベント適用時の初期化解消確認",
+      "location": "src/domain/stock-projection.ts:25",
+      "description": "src/domain/stock-projection.ts:25 — ProductCreated イベント時にも reservations を Object.create(null) で初期化しており、整合性が保たれている。F-0011 の完全な解消を確認。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0011"
+    },
+    {
+      "rawFindingId": "20260706-050141-readme-md-src-types-ts-tests:reviewers:5:arch-review:arch-review-res-008",
+      "stepName": "arch-review",
+      "reviewer": "arch-review",
+      "familyTag": "prototype-pollution",
+      "severity": "medium",
+      "title": "StockProjection における存在判定不備の解消確認",
+      "location": "src/domain/stock-projection.ts:49",
+      "description": "src/domain/stock-projection.ts:49 — `Object.hasOwn(shippedReservations, event.reservationId)` を使用して安全に数量を取得するロジックに変更されており、プロトタイプ継承プロパティへのアクセスが遮断されている。F-0012 が解消された。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0012"
+    },
+    {
+      "rawFindingId": "20260706-050141-readme-md-src-types-ts-tests:reviewers:5:ai-antipattern-review:res-09",
+      "stepName": "ai-antipattern-review",
+      "reviewer": "ai-antipattern-review",
+      "familyTag": "logic-error",
+      "severity": "high",
+      "title": "StockProjection におけるプロトタイプ汚染リスクの再導入",
+      "location": "src/domain/stock-projection.ts:14, 25",
+      "description": "src/domain/stock-projection.ts:14 (initialState) および 25 行目 (ProductCreated イベント) において `reservations: Object.create(null)` が使用されており、プロトタイプ汚染リスクが解消されたことを確認した。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0011"
+    },
+    {
+      "rawFindingId": "20260706-050141-readme-md-src-types-ts-tests:reviewers:5:ai-antipattern-review:res-10",
+      "stepName": "ai-antipattern-review",
+      "reviewer": "ai-antipattern-review",
+      "familyTag": "logic-error",
+      "severity": "medium",
+      "title": "StockProjection における存在判定の不備",
+      "location": "src/domain/stock-projection.ts:49",
+      "description": "src/domain/stock-projection.ts:49 において `Object.hasOwn(shippedReservations, event.reservationId)` を用いた厳格な存在判定が導入され、プロトタイプ継承プロパティへのアクセスが遮断されたことを確認した。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0012"
+    },
+    {
+      "rawFindingId": "20260706-050141-readme-md-src-types-ts-tests:reviewers:5:coding-review:RES-0008",
+      "stepName": "coding-review",
+      "reviewer": "coding-review",
+      "familyTag": "ai-antipattern",
+      "severity": "high",
+      "title": "StockProjection におけるプロトタイプ汚染リスクの再導入の解消確認",
+      "location": "src/domain/stock-projection.ts:14",
+      "description": "src/domain/stock-projection.ts:14 および 25 — reservations の初期化に Object.create(null) が使用されており、プロトタイプ汚染リスクが解消されたことを確認。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0011"
+    },
+    {
+      "rawFindingId": "20260706-050141-readme-md-src-types-ts-tests:reviewers:5:coding-review:RES-0009",
+      "stepName": "coding-review",
+      "reviewer": "coding-review",
+      "familyTag": "ai-antipattern",
+      "severity": "medium",
+      "title": "StockProjection における存在判定の不備の解消確認",
+      "location": "src/domain/stock-projection.ts:49",
+      "description": "src/domain/stock-projection.ts:49 — `Object.hasOwn(shippedReservations, event.reservationId)` を使用して予約の存在を確認し、安全に数量を取得する実装に変更されたことを確認。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0012"
+    },
+    {
+      "rawFindingId": "20260706-050141-readme-md-src-types-ts-tests:reviewers:5:implementation-semantics-review:RES-005",
+      "stepName": "implementation-semantics-review",
+      "reviewer": "implementation-semantics-review",
+      "familyTag": "data-structure-selection",
+      "severity": "high",
+      "title": "StockProjection におけるプロトタイプ汚染リスクの解消確認",
+      "location": "src/domain/stock-projection.ts:14",
+      "description": "src/domain/stock-projection.ts:14 および 25 において、reservations が Object.create(null) で初期化されており、プロトタイプ汚染リスクが解消されていることを確認した。これにより F-0011 は解決済みである。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0011"
+    },
+    {
+      "rawFindingId": "20260706-050141-readme-md-src-types-ts-tests:reviewers:5:implementation-semantics-review:RES-006",
+      "stepName": "implementation-semantics-review",
+      "reviewer": "implementation-semantics-review",
+      "familyTag": "data-structure-selection",
+      "severity": "medium",
+      "title": "StockProjection における存在判定の不備の解消確認",
+      "location": "src/domain/stock-projection.ts:49",
+      "description": "src/domain/stock-projection.ts:49 において `Object.hasOwn(shippedReservations, event.reservationId)` を用いた安全な数量取得が実装され、プロトタイプ継承プロパティへの不適切なアクセスが排除されたことを確認した。これにより F-0012 は解決済みである。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0012"
+    },
+    {
+      "rawFindingId": "20260706-050141-readme-md-src-types-ts-tests:reviewers:7:arch-review:arch-review-final-001",
+      "stepName": "arch-review",
+      "reviewer": "arch-review",
+      "familyTag": "arch-review-final",
+      "severity": "low",
+      "title": "累積差分の再走査結果: 問題なし",
+      "location": "-",
+      "description": "累積差分全体を再走査した結果、以前指摘し解消された以下の項目が維持されていることを確認した。\\n- 動的キーの Record 存在判定の遮断 (src/domain/command-decider.ts)\\n- 辞書のプロトタイプ汚染防止初期化 (src/domain/inventory-aggregate.ts)\\n- 公開初期状態の不変性確保 (src/domain/inventory-aggregate.ts)\\n- StockProjection におけるプロトタイプ汚染および存在判定不備の解消 (src/domain/stock-projection.ts)\\n- CommandHandler の状態整合性向上 (src/domain/command-handler.ts)\\n現状、実装意味論の観点から新たなブロッキング問題は検出されなかった。",
+      "suggestion": "なし。現状を維持。",
+      "kind": "issue"
+    },
+    {
+      "rawFindingId": "20260706-050141-readme-md-src-types-ts-tests:reviewers:7:implementation-semantics-review:S-003",
+      "stepName": "implementation-semantics-review",
+      "reviewer": "implementation-semantics-review",
+      "familyTag": "all-criteria-rescan",
+      "severity": "low",
+      "title": "累積差分の再走査結果: 問題なし",
+      "location": "-",
+      "description": "累積差分全体を再走査した結果、以前の指摘事項（プロトタイプ汚染対策、不変状態の更新、初期状態の不変性）が適切に維持されていることを確認した。また、CommandHandler のキャッシュ排除による状態整合性の向上、StockProjection でのプロトタイプ遮断および安全な値取得の実装が確認されており、実装意味論の観点から新たなブロッキング問題は検出されなかった。",
+      "suggestion": "なし。現状を維持。",
+      "kind": "issue"
+    },
+    {
+      "rawFindingId": "20260706-050141-readme-md-src-types-ts-tests:reviewers:8:arch-review:arch-review-final-002",
+      "stepName": "arch-review",
+      "reviewer": "arch-review",
+      "familyTag": "arch-review-final",
+      "severity": "low",
+      "title": "累積差分の再走査結果: 問題なし",
+      "location": "-",
+      "description": "累積差分全体を再走査した結果、以前指摘し解消された以下の項目が維持されていることを確認した。\\n- 動的キーの Record 存在判定の遮断 (src/domain/command-decider.ts)\\n- 辞書のプロトタイプ汚染防止初期化 (src/domain/inventory-aggregate.ts)\\n- 公開初期状態の不変性確保 (src/domain/inventory-aggregate.ts)\\n- StockProjection におけるプロトタイプ汚染および存在判定不備の解消 (src/domain/stock-projection.ts)\\n- CommandHandler の状態整合性向上 (src/domain/command-handler.ts)\\n現状、実装意味論の観点から新たなブロッキング問題は検出されなかった。",
+      "suggestion": "なし。現状を維持。",
+      "kind": "issue"
+    },
+    {
+      "rawFindingId": "20260706-050141-readme-md-src-types-ts-tests:reviewers:8:implementation-semantics-review:S-004",
+      "stepName": "implementation-semantics-review",
+      "reviewer": "implementation-semantics-review",
+      "familyTag": "all-criteria-rescan",
+      "severity": "low",
+      "title": "累積差分の再走査結果: 問題なし",
+      "location": "-",
+      "description": "累積差分全体を再走査した結果、以前の指摘事項（プロトタイプ汚染対策、状態更新の不整合、初期状態の不変性）が適切に維持されていることを確認した。また、CommandHandler のキャッシュ排除による状態整合性の向上、StockProjection でのプロトタイプ遮断および安全な値取得の実装が確認されており、実装意味論の観点から新たなブロッキング問題は検出されなかった。",
+      "suggestion": "なし。現状を維持。",
+      "kind": "issue"
+    },
+    {
+      "rawFindingId": "20260706-050141-readme-md-src-types-ts-tests:reviewers:9:arch-review:arch-review-final-003",
+      "stepName": "arch-review",
+      "reviewer": "arch-review",
+      "familyTag": "arch-review-final",
+      "severity": "low",
+      "title": "累積差分の再走査結果: 問題なし",
+      "location": "-",
+      "description": "累積差分全体を再走査した結果、以前指摘し解消された以下の項目が維持されていることを確認した。\\n- 動的キーの Record 存在判定の遮断 (src/domain/command-decider.ts)\\n- 辞書のプロトタイプ汚染防止初期化 (src/domain/inventory-aggregate.ts)\\n- 公開初期状態の不変性確保 (src/domain/inventory-aggregate.ts)\\n- StockProjection におけるプロトタイプ汚染および存在判定不備の解消 (src/domain/stock-projection.ts)\\n- CommandHandler の状態整合性向上 (src/domain/command-handler.ts)\\n現状、実装意味論の観点から新たなブロッキング問題は検出されなかった。",
+      "suggestion": "なし。現状を維持。",
+      "kind": "issue"
+    },
+    {
+      "rawFindingId": "20260706-050141-readme-md-src-types-ts-tests:reviewers:9:implementation-semantics-review:S-005",
+      "stepName": "implementation-semantics-review",
+      "reviewer": "implementation-semantics-review",
+      "familyTag": "all-criteria-rescan",
+      "severity": "low",
+      "title": "累積差分の再走査結果: 問題なし",
+      "location": "-",
+      "description": "累積差分全体を再走査した結果、以前の指摘事項（プロトタイプ汚染対策、状態更新の不整合、初期状態の不変性）が適切に維持されていることを確認した。また、CommandHandler のキャッシュ排除による状態整合性の向上、StockProjection でのプロトタイプ遮断および安全な値取得の実装が確認されており、実装意味論の観点から新たなブロッキング問題は検出されなかった。",
+      "suggestion": "なし。現状を維持。",
+      "kind": "issue"
+    }
+  ],
+  "conflicts": []
+}

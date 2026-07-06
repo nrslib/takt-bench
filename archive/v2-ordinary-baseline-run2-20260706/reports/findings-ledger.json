@@ -1,0 +1,451 @@
+{
+  "version": 1,
+  "workflowName": "backend-for-local-llm",
+  "nextId": 6,
+  "updatedAt": "2026-07-06T10:48:55.138Z",
+  "findings": [
+    {
+      "id": "F-0001",
+      "status": "resolved",
+      "lifecycle": "resolved",
+      "severity": "high",
+      "title": "入力オブジェクトの直接変更",
+      "location": "src/validation.ts:14, 38",
+      "description": "src/validation.ts において、引数として渡された input オブジェクトのプロパティを直接書き換えている。これは不変性の原則に反し、呼び出し元の状態を予期せず変更する可能性がある。",
+      "suggestion": "バリデーション関数内での直接的なプロパティ書き換え（trim）を禁止し、正規化後の値を戻り値として返すか、Service層での代入時にのみ行うように修正してください。",
+      "reviewers": [
+        "arch-review"
+      ],
+      "rawFindingIds": [
+        "20260706-103305-readme-md-src-types-ts-tests-6:reviewers:1:arch-review:arch-rev-001"
+      ],
+      "firstSeen": {
+        "runId": "20260706-103305-readme-md-src-types-ts-tests-6",
+        "stepName": "arch-review",
+        "timestamp": "2026-07-06T10:42:33.955Z"
+      },
+      "lastSeen": {
+        "runId": "20260706-103305-readme-md-src-types-ts-tests-6",
+        "stepName": "reviewers",
+        "timestamp": "2026-07-06T10:42:33.955Z"
+      },
+      "resolvedAt": "2026-07-06T10:48:55.138Z",
+      "resolvedEvidence": "いずれも kind=resolution_confirmation で targetFindingId=F-0001 を明示し、src/validation.ts の入力オブジェクト直接変更が削除され、正規化値を返す形になったことを確認している。"
+    },
+    {
+      "id": "F-0002",
+      "status": "resolved",
+      "lifecycle": "resolved",
+      "severity": "medium",
+      "title": "バリデーションロジックの重複",
+      "location": "src/validation.ts:4-24, 26-46",
+      "description": "`validateCreateTask` と `validateUpdateTask` で title のバリデーションロジックが重複している。また、description の trim 処理も重複している。README の「アーキテクチャ要件」にある「検証ロジックは一箇所に集約し、create / update で重複実装しない」という要件に違反している。",
+      "suggestion": "title や description の共通バリデーション/正規化関数を抽出し、両方の関数から呼び出すように変更してください。",
+      "reviewers": [
+        "ai-antipattern-review"
+      ],
+      "rawFindingIds": [
+        "20260706-103305-readme-md-src-types-ts-tests-6:reviewers:1:ai-antipattern-review:dry-validation-logic"
+      ],
+      "firstSeen": {
+        "runId": "20260706-103305-readme-md-src-types-ts-tests-6",
+        "stepName": "ai-antipattern-review",
+        "timestamp": "2026-07-06T10:42:33.955Z"
+      },
+      "lastSeen": {
+        "runId": "20260706-103305-readme-md-src-types-ts-tests-6",
+        "stepName": "reviewers",
+        "timestamp": "2026-07-06T10:42:33.955Z"
+      },
+      "resolvedAt": "2026-07-06T10:48:55.138Z",
+      "resolvedEvidence": "いずれも kind=resolution_confirmation で targetFindingId=F-0002 を明示し、src/validation.ts の共通関数抽出により create/update の重複バリデーションが解消されたことを確認している。"
+    },
+    {
+      "id": "F-0003",
+      "status": "resolved",
+      "lifecycle": "resolved",
+      "severity": "high",
+      "title": "入力オブジェクトの直接変更による副作用",
+      "location": "src/validation.ts:14, 38",
+      "description": "`validateCreateTask` および `validateUpdateTask` 内で、引数として渡された `input` オブジェクトの `description` フィールドを直接書き換えている（`input.description = input.description.trim()`）。これは関数が副作用を持ち、呼び出し元のオブジェクトを予期せず変更するため、不適切な実装である。",
+      "suggestion": "バリデーション関数は値を変更せず、正規化が必要な場合は正規化した値を返すか、サービス層で新しいオブジェクトを作成して保存するようにしてください。",
+      "reviewers": [
+        "ai-antipattern-review"
+      ],
+      "rawFindingIds": [
+        "20260706-103305-readme-md-src-types-ts-tests-6:reviewers:1:ai-antipattern-review:mutation-of-input-object"
+      ],
+      "firstSeen": {
+        "runId": "20260706-103305-readme-md-src-types-ts-tests-6",
+        "stepName": "ai-antipattern-review",
+        "timestamp": "2026-07-06T10:42:33.955Z"
+      },
+      "lastSeen": {
+        "runId": "20260706-103305-readme-md-src-types-ts-tests-6",
+        "stepName": "reviewers",
+        "timestamp": "2026-07-06T10:42:33.955Z"
+      },
+      "resolvedAt": "2026-07-06T10:48:55.138Z",
+      "resolvedEvidence": "いずれも kind=resolution_confirmation で targetFindingId=F-0003 を明示し、src/validation.ts で input.description などへの代入がなくなり、副作用が排除されたことを確認している。"
+    },
+    {
+      "id": "F-0004",
+      "status": "resolved",
+      "lifecycle": "resolved",
+      "severity": "low",
+      "title": "サービス層での冗長なトリミング処理",
+      "location": "src/index.ts:95-99",
+      "description": "`TaskService.createTask` において、`input.title.trim()` を保存しているが、`validateCreateTask` でも同様に `trim()` してチェックしている。同様に `description` も重複して `trim()` されている。また、`assignee` の trim も `createTask` 内で行われているが、`validateCreateTask` ではチェックのみ行っている。正規化とバリデーションの責務が混在し、重複して処理が行われている。",
+      "suggestion": "正規化（trim 等）はバリデーション関数または専用の正規化関数に集約し、サービス層ではその結果を利用するようにしてください。",
+      "reviewers": [
+        "ai-antipattern-review"
+      ],
+      "rawFindingIds": [
+        "20260706-103305-readme-md-src-types-ts-tests-6:reviewers:1:ai-antipattern-review:redundant-trimming-in-service"
+      ],
+      "firstSeen": {
+        "runId": "20260706-103305-readme-md-src-types-ts-tests-6",
+        "stepName": "ai-antipattern-review",
+        "timestamp": "2026-07-06T10:42:33.955Z"
+      },
+      "lastSeen": {
+        "runId": "20260706-103305-readme-md-src-types-ts-tests-6",
+        "stepName": "reviewers",
+        "timestamp": "2026-07-06T10:42:33.955Z"
+      },
+      "resolvedAt": "2026-07-06T10:48:55.138Z",
+      "resolvedEvidence": "いずれも kind=resolution_confirmation で targetFindingId=F-0004 を明示し、src/index.ts が validation の戻り値を利用するようになり、サービス層の冗長な trim 処理が解消されたことを確認している。"
+    },
+    {
+      "id": "F-0005",
+      "status": "resolved",
+      "lifecycle": "resolved",
+      "severity": "medium",
+      "title": "validation関数での入力ミューテーション",
+      "location": "src/validation.ts:14,38",
+      "description": "The `validateCreateTask` and `validateUpdateTask` functions in `src/validation.ts` directly mutate the `input` object (e.g., `input.description = input.description.trim()`). This is a side-effect in a validation function, which is unexpected and can lead to bugs if the caller expects the original input object to remain unchanged. The README also emphasizes defensive copying and state protection, which this mutation violates.",
+      "suggestion": "Validation functions should be read-only. Perform trimming and normalization inside the service layer when creating the final `TaskRecord` or use a returned normalized object instead of mutating the input.",
+      "reviewers": [
+        "coding-review"
+      ],
+      "rawFindingIds": [
+        "20260706-103305-readme-md-src-types-ts-tests-6:reviewers:1:coding-review:finding-001"
+      ],
+      "firstSeen": {
+        "runId": "20260706-103305-readme-md-src-types-ts-tests-6",
+        "stepName": "coding-review",
+        "timestamp": "2026-07-06T10:42:33.955Z"
+      },
+      "lastSeen": {
+        "runId": "20260706-103305-readme-md-src-types-ts-tests-6",
+        "stepName": "reviewers",
+        "timestamp": "2026-07-06T10:42:33.955Z"
+      },
+      "resolvedAt": "2026-07-06T10:48:55.138Z",
+      "resolvedEvidence": "いずれも kind=resolution_confirmation で targetFindingId=F-0005 を明示し、src/validation.ts の validateCreateTask/validateUpdateTask が入力を変更しない read-only な実装になったことを確認している。"
+    }
+  ],
+  "rawFindings": [
+    {
+      "rawFindingId": "20260706-103305-readme-md-src-types-ts-tests-6:reviewers:1:arch-review:arch-rev-001",
+      "stepName": "arch-review",
+      "reviewer": "arch-review",
+      "familyTag": "mutation",
+      "severity": "high",
+      "title": "入力オブジェクトの直接変更（ミューテーション）",
+      "location": "src/validation.ts:14, 38",
+      "description": "src/validation.ts において、引数として渡された input オブジェクトのプロパティを直接書き換えている。これは不変性の原則に反し、呼び出し元の状態を予期せず変更する可能性がある。",
+      "suggestion": "バリデーション関数内での直接的なプロパティ書き換え（trim）を禁止し、正規化後の値を戻り値として返すか、Service層での代入時にのみ行うように修正してください。",
+      "kind": "issue"
+    },
+    {
+      "rawFindingId": "20260706-103305-readme-md-src-types-ts-tests-6:reviewers:1:ai-antipattern-review:dry-validation-logic",
+      "stepName": "ai-antipattern-review",
+      "reviewer": "ai-antipattern-review",
+      "familyTag": "DRY違反",
+      "severity": "medium",
+      "title": "バリデーションロジックの重複",
+      "location": "src/validation.ts:4-24, 26-46",
+      "description": "`validateCreateTask` と `validateUpdateTask` で title のバリデーションロジックが重複している。また、description の trim 処理も重複している。README の「アーキテクチャ要件」にある「検証ロジックは一箇所に集約し、create / update で重複実装しない」という要件に違反している。",
+      "suggestion": "title や description の共通バリデーション/正規化関数を抽出し、両方の関数から呼び出すように変更してください。",
+      "kind": "issue"
+    },
+    {
+      "rawFindingId": "20260706-103305-readme-md-src-types-ts-tests-6:reviewers:1:ai-antipattern-review:mutation-of-input-object",
+      "stepName": "ai-antipattern-review",
+      "reviewer": "ai-antipattern-review",
+      "familyTag": "オブジェクトの直接変更",
+      "severity": "high",
+      "title": "入力オブジェクトの直接変更による副作用",
+      "location": "src/validation.ts:14, 38",
+      "description": "`validateCreateTask` および `validateUpdateTask` 内で、引数として渡された `input` オブジェクトの `description` フィールドを直接書き換えている（`input.description = input.description.trim()`）。これは関数が副作用を持ち、呼び出し元のオブジェクトを予期せず変更するため、不適切な実装である。",
+      "suggestion": "バリデーション関数は値を変更せず、正規化が必要な場合は正規化した値を返すか、サービス層で新しいオブジェクトを作成して保存するようにしてください。",
+      "kind": "issue"
+    },
+    {
+      "rawFindingId": "20260706-103305-readme-md-src-types-ts-tests-6:reviewers:1:ai-antipattern-review:redundant-trimming-in-service",
+      "stepName": "ai-antipattern-review",
+      "reviewer": "ai-antipattern-review",
+      "familyTag": "冗長なロジック",
+      "severity": "low",
+      "title": "サービス層での冗長なトリミング処理",
+      "location": "src/index.ts:95-99",
+      "description": "`TaskService.createTask` において、`input.title.trim()` を保存しているが、`validateCreateTask` でも同様に `trim()` してチェックしている。同様に `description` も重複して `trim()` されている。また、`assignee` の trim も `createTask` 内で行われているが、`validateCreateTask` ではチェックのみ行っている。正規化とバリデーションの責務が混在し、重複して処理が行われている。",
+      "suggestion": "正規化（trim 等）はバリデーション関数または専用の正規化関数に集約し、サービス層ではその結果を利用するようにしてください。",
+      "kind": "issue"
+    },
+    {
+      "rawFindingId": "20260706-103305-readme-md-src-types-ts-tests-6:reviewers:1:coding-review:finding-001",
+      "stepName": "coding-review",
+      "reviewer": "coding-review",
+      "familyTag": "mutation-of-input",
+      "severity": "medium",
+      "title": "Input mutation in validation functions",
+      "location": "src/validation.ts:14,38",
+      "description": "The `validateCreateTask` and `validateUpdateTask` functions in `src/validation.ts` directly mutate the `input` object (e.g., `input.description = input.description.trim()`). This is a side-effect in a validation function, which is unexpected and can lead to bugs if the caller expects the original input object to remain unchanged. The README also emphasizes defensive copying and state protection, which this mutation violates.",
+      "suggestion": "Validation functions should be read-only. Perform trimming and normalization inside the service layer when creating the final `TaskRecord` or use a returned normalized object instead of mutating the input.",
+      "kind": "issue"
+    },
+    {
+      "rawFindingId": "20260706-103305-readme-md-src-types-ts-tests-6:reviewers:2:arch-review:res-001",
+      "stepName": "arch-review",
+      "reviewer": "arch-review",
+      "familyTag": "mutation",
+      "severity": "high",
+      "title": "入力オブジェクトの直接変更の解消確認",
+      "location": "src/validation.ts:42-47, 50-67",
+      "description": "src/validation.ts:42, 43, 44 および 57, 60 において、入力オブジェクトを直接変更せず、正規化された新しい値を返却する構造に変更されており、ミューテーションが解消されていることを確認した。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0001"
+    },
+    {
+      "rawFindingId": "20260706-103305-readme-md-src-types-ts-tests-6:reviewers:2:arch-review:res-002",
+      "stepName": "arch-review",
+      "reviewer": "arch-review",
+      "familyTag": "dry-violation",
+      "severity": "medium",
+      "title": "バリデーションロジック重複の解消確認",
+      "location": "src/validation.ts:4-34, 42-67",
+      "description": "src/validation.ts において、trimTitle, trimDescription, trimAssignee, validateDueDate などの共通関数が抽出され、validateCreateTask と validateUpdateTask の両方で利用されており、重複実装が解消されていることを確認した。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0002"
+    },
+    {
+      "rawFindingId": "20260706-103305-readme-md-src-types-ts-tests-6:reviewers:2:arch-review:res-003",
+      "stepName": "arch-review",
+      "reviewer": "arch-review",
+      "familyTag": "mutation",
+      "severity": "high",
+      "title": "入力オブジェクト直接変更による副作用の解消確認",
+      "location": "src/validation.ts:42-67",
+      "description": "src/validation.ts:42-47 および 50-67 において、引数 input のプロパティを直接書き換える処理が削除され、正規化された値を return する形式に変更されており、副作用が排除されていることを確認した。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0003"
+    },
+    {
+      "rawFindingId": "20260706-103305-readme-md-src-types-ts-tests-6:reviewers:2:arch-review:res-004",
+      "stepName": "arch-review",
+      "reviewer": "arch-review",
+      "familyTag": "redundant-logic",
+      "severity": "low",
+      "title": "サービス層での冗長なトリミング処理の解消確認",
+      "location": "src/index.ts:87-100, 127-145",
+      "description": "src/index.ts:87-100 および 127-145 において、validateCreateTask / validateUpdateTask の戻り値（正規化済み値）を直接 TaskRecord の生成に使用しており、Service層での冗長な trim 処理が排除されていることを確認した。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0004"
+    },
+    {
+      "rawFindingId": "20260706-103305-readme-md-src-types-ts-tests-6:reviewers:2:arch-review:res-005",
+      "stepName": "arch-review",
+      "reviewer": "arch-review",
+      "familyTag": "mutation",
+      "severity": "medium",
+      "title": "validation関数での入力ミューテーションの解消確認",
+      "location": "src/validation.ts:36-67",
+      "description": "src/validation.ts のバリデーション関数が read-only な純粋関数となり、正規化結果を戻り値で返す設計に変更されたことで、入力ミューテーションが完全に解消されていることを確認した。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0005"
+    },
+    {
+      "rawFindingId": "20260706-103305-readme-md-src-types-ts-tests-6:reviewers:2:ai-antipattern-review:res-dry-validation-logic",
+      "stepName": "ai-antipattern-review",
+      "reviewer": "ai-antipattern-review",
+      "familyTag": "DRY違反",
+      "severity": "medium",
+      "title": "バリデーションロジックの重複の解消確認",
+      "location": "src/validation.ts:42-67",
+      "description": "src/validation.ts:42-47 および 55-66 で、共通関数 (trimTitle, trimDescription, validateDueDate) を利用して検証と正規化が行われており、重複が解消されていることを確認した。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0002"
+    },
+    {
+      "rawFindingId": "20260706-103305-readme-md-src-types-ts-tests-6:reviewers:2:ai-antipattern-review:res-mutation-of-input-object",
+      "stepName": "ai-antipattern-review",
+      "reviewer": "ai-antipattern-review",
+      "familyTag": "オブジェクトの直接変更",
+      "severity": "high",
+      "title": "入力オブジェクトの直接変更の解消確認",
+      "location": "src/validation.ts:36-67",
+      "description": "src/validation.ts において、input オブジェクトを直接書き換えず、正規化した値を新しいオブジェクトとして返却する実装に変更されており、副作用が除去されていることを確認した。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0001"
+    },
+    {
+      "rawFindingId": "20260706-103305-readme-md-src-types-ts-tests-6:reviewers:2:ai-antipattern-review:res-mutation-side-effect",
+      "stepName": "ai-antipattern-review",
+      "reviewer": "ai-antipattern-review",
+      "familyTag": "オブジェクトの直接変更による副作用",
+      "severity": "high",
+      "title": "入力オブジェクトの直接変更による副作用の解消確認",
+      "location": "src/validation.ts:36-67, src/index.ts:87-103",
+      "description": "src/validation.ts において、input オブジェクトの直接書き換えが解消され、正規化後の値が返却されるようになった。また src/index.ts:87-103 でも、バリデーション関数の戻り値 (validated) を使用しており、重複した trim 処理が削除されている。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0003"
+    },
+    {
+      "rawFindingId": "20260706-103305-readme-md-src-types-ts-tests-6:reviewers:2:ai-antipattern-review:res-redundant-trimming-in-service",
+      "stepName": "ai-antipattern-review",
+      "reviewer": "ai-antipattern-review",
+      "familyTag": "冗長なロジック",
+      "severity": "low",
+      "title": "サービス層での冗長なトリミング処理の解消確認",
+      "location": "src/index.ts:87-103",
+      "description": "src/index.ts:87-103 において、validateCreateTask の戻り値を使用するように変更され、サービス層での冗長な trim 呼び出しが削除されていることを確認した。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0004"
+    },
+    {
+      "rawFindingId": "20260706-103305-readme-md-src-types-ts-tests-6:reviewers:2:ai-antipattern-review:res-validation-mutation",
+      "stepName": "ai-antipattern-review",
+      "reviewer": "ai-antipattern-review",
+      "familyTag": "validation関数での入力ミューテーション",
+      "severity": "medium",
+      "title": "validation関数での入力ミューテーションの解消確認",
+      "location": "src/validation.ts:36-67",
+      "description": "src/validation.ts において、input オブジェクトへのミューテーションが解消され、正規化後の値を返却する設計に変更されたことを確認した。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0005"
+    },
+    {
+      "rawFindingId": "20260706-103305-readme-md-src-types-ts-tests-6:reviewers:2:coding-review:conf-001",
+      "stepName": "coding-review",
+      "reviewer": "coding-review",
+      "familyTag": "mutation-of-input",
+      "severity": "high",
+      "title": "Resolution of input mutation in validation functions",
+      "location": "src/validation.ts:36-67",
+      "description": "Verified that `validateCreateTask` and `validateUpdateTask` no longer mutate the `input` object. Instead, they return a new object containing normalized values. Mutation at `src/validation.ts:14,38` is gone.",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0001"
+    },
+    {
+      "rawFindingId": "20260706-103305-readme-md-src-types-ts-tests-6:reviewers:2:coding-review:conf-002",
+      "stepName": "coding-review",
+      "reviewer": "coding-review",
+      "familyTag": "validation-duplication",
+      "severity": "medium",
+      "title": "Resolution of validation logic duplication",
+      "location": "src/validation.ts:4-34",
+      "description": "Verified that `validateCreateTask` and `validateUpdateTask` now use common helper functions `trimTitle`, `trimDescription`, and `validateDueDate`, fulfilling the architecture requirement to centralize validation logic and avoid duplication.",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0002"
+    },
+    {
+      "rawFindingId": "20260706-103305-readme-md-src-types-ts-tests-6:reviewers:2:coding-review:conf-003",
+      "stepName": "coding-review",
+      "reviewer": "coding-review",
+      "familyTag": "mutation-of-input",
+      "severity": "high",
+      "title": "Resolution of description mutation side-effect",
+      "location": "src/validation.ts:15-17",
+      "description": "Verified that the destructive mutation of `input.description` has been removed. The `trimDescription` helper now returns a new string without modifying the original input.",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0003"
+    },
+    {
+      "rawFindingId": "20260706-103305-readme-md-src-types-ts-tests-6:reviewers:2:coding-review:conf-004",
+      "stepName": "coding-review",
+      "reviewer": "coding-review",
+      "familyTag": "redundant-normalization",
+      "severity": "low",
+      "title": "Resolution of redundant trimming in service layer",
+      "location": "src/index.ts:95-110",
+      "description": "Verified that redundant `trim()` calls in `TaskService` (e.g., `input.title.trim()`) have been replaced with the use of `validated` results returned from the validation functions. Normalization and validation are now consolidated in `src/validation.ts`.",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0004"
+    },
+    {
+      "rawFindingId": "20260706-103305-readme-md-src-types-ts-tests-6:reviewers:2:coding-review:conf-005",
+      "stepName": "coding-review",
+      "reviewer": "coding-review",
+      "familyTag": "mutation-of-input",
+      "severity": "medium",
+      "title": "Resolution of validation function mutation",
+      "location": "src/validation.ts:36-67",
+      "description": "Verified that the `input` object is no longer mutated in `src/validation.ts`. The functions `validateCreateTask` and `validateUpdateTask` are now read-only with respect to their input arguments.",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0005"
+    },
+    {
+      "rawFindingId": "20260706-103305-readme-md-src-types-ts-tests-6:reviewers:2:implementation-semantics-review:res-F-0001",
+      "stepName": "implementation-semantics-review",
+      "reviewer": "implementation-semantics-review",
+      "familyTag": "side-effect",
+      "severity": "high",
+      "title": "入力オブジェクトの直接変更の解消確認",
+      "location": "src/validation.ts:42-48",
+      "description": "src/validation.ts:42-48 において、validateCreateTask は input を変更せず、正規化された値を新しいオブジェクトとして返しており、呼び出し元の入力をミューテートしない実装に変更されていることが確認できた。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0001"
+    },
+    {
+      "rawFindingId": "20260706-103305-readme-md-src-types-ts-tests-6:reviewers:2:implementation-semantics-review:res-F-0002",
+      "stepName": "implementation-semantics-review",
+      "reviewer": "implementation-semantics-review",
+      "familyTag": "dry-violation",
+      "severity": "medium",
+      "title": "バリデーションロジックの重複の解消確認",
+      "location": "src/validation.ts:4-17",
+      "description": "src/validation.ts:4-13 (trimTitle) および 15-17 (trimDescription) が抽出され、validateCreateTask と validateUpdateTask の両方から利用されることで、バリデーションロジックの重複が解消されている。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0002"
+    },
+    {
+      "rawFindingId": "20260706-103305-readme-md-src-types-ts-tests-6:reviewers:2:implementation-semantics-review:res-F-0003",
+      "stepName": "implementation-semantics-review",
+      "reviewer": "implementation-semantics-review",
+      "familyTag": "side-effect",
+      "severity": "high",
+      "title": "入力オブジェクトの直接変更による副作用の解消確認",
+      "location": "src/validation.ts:36-67",
+      "description": "src/validation.ts:36-48 および 50-67 において、input オブジェクトへの代入がなくなり、正規化された結果を戻り値として返す形式に変更されたため、副作用による入力オブジェクトの変更が解消されている。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0003"
+    },
+    {
+      "rawFindingId": "20260706-103305-readme-md-src-types-ts-tests-6:reviewers:2:implementation-semantics-review:res-F-0004",
+      "stepName": "implementation-semantics-review",
+      "reviewer": "implementation-semantics-review",
+      "familyTag": "redundancy",
+      "severity": "low",
+      "title": "サービス層での冗長なトリミング処理の解消確認",
+      "location": "src/index.ts:87-107, 127-148",
+      "description": "src/index.ts:87, 127 等で validateCreateTask/validateUpdateTask の戻り値（validated）を使用し、src/validation.ts 内でトリミングとバリデーションを一貫して行う設計に変更されたため、サービス層での冗長なトリミング処理が解消されている。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0004"
+    },
+    {
+      "rawFindingId": "20260706-103305-readme-md-src-types-ts-tests-6:reviewers:2:implementation-semantics-review:res-F-0005",
+      "stepName": "implementation-semantics-review",
+      "reviewer": "implementation-semantics-review",
+      "familyTag": "side-effect",
+      "severity": "medium",
+      "title": "validation関数での入力ミューテーションの解消確認",
+      "location": "src/validation.ts:36-67",
+      "description": "src/validation.ts の各関数が純粋関数となり、input オブジェクトを直接書き換えない実装に変更されたことを確認した。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0005"
+    }
+  ],
+  "conflicts": []
+}

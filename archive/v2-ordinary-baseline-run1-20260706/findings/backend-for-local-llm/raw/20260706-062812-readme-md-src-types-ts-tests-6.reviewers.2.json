@@ -1,0 +1,110 @@
+[
+  {
+    "rawFindingId": "20260706-062812-readme-md-src-types-ts-tests-6:reviewers:2:arch-review:arch-001-conf",
+    "stepName": "arch-review",
+    "reviewer": "arch-review",
+    "familyTag": "incomplete-implementation",
+    "severity": "low",
+    "title": "主要機能の実装確認",
+    "location": "src/index.ts:21-224",
+    "description": "`src/index.ts`の`InMemoryTaskRepository`および`TaskService`の全メソッドが実装されており、`throw new Error('Not implemented')`は解消されている。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0001"
+  },
+  {
+    "rawFindingId": "20260706-062812-readme-md-src-types-ts-tests-6:reviewers:2:arch-review:arch-002-conf",
+    "stepName": "arch-review",
+    "reviewer": "arch-review",
+    "familyTag": "incomplete-implementation",
+    "severity": "low",
+    "title": "TaskService/Repository実装確認",
+    "location": "src/index.ts:21-224",
+    "description": "`src/index.ts`の`InMemoryTaskRepository`および`TaskService`が実装され、Not implementedエラーが解消されたことを確認した。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0002"
+  },
+  {
+    "rawFindingId": "20260706-062812-readme-md-src-types-ts-tests-6:reviewers:2:arch-review:arch-003",
+    "stepName": "arch-review",
+    "reviewer": "arch-review",
+    "familyTag": "specification-violation",
+    "severity": "medium",
+    "title": "updateTaskにおけるdescriptionのtrim漏れ",
+    "location": "src/index.ts:103-104",
+    "description": "README.mdの「バリデーション規則」において、「description: trim して保存」とあるが、`updateTask`の実装（src/index.ts:103-104）では`input.description`をそのまま（trimせずに）タスクにセットしている。`createTask`では`normalizeCreateInput`を通じてtrimされているが、`updateTask`では正規化プロセスが抜けている。",
+    "suggestion": "`updateTask`でも`description`をtrimして保存するように修正してください。バリデーションロジックを一箇所に集約するというアーキテクチャ要件に従い、`normalizeUpdateInput`のような共通関数を導入することを推奨します。",
+    "kind": "issue"
+  },
+  {
+    "rawFindingId": "20260706-062812-readme-md-src-types-ts-tests-6:reviewers:2:ai-antipattern-review:res-0001",
+    "stepName": "ai-antipattern-review",
+    "reviewer": "ai-antipattern-review",
+    "familyTag": "resolved-implementation",
+    "severity": "critical",
+    "title": "InMemoryTaskRepository の実装確認",
+    "location": "src/index.ts:27,35,49",
+    "description": "src/index.ts:27,35,49 — InMemoryTaskRepository の save, findById, all メソッドが正常に防御的コピーを実装し、内部状態を保護していることを確認した。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0001"
+  },
+  {
+    "rawFindingId": "20260706-062812-readme-md-src-types-ts-tests-6:reviewers:2:ai-antipattern-review:res-0002",
+    "stepName": "ai-antipattern-review",
+    "reviewer": "ai-antipattern-review",
+    "familyTag": "resolved-implementation",
+    "severity": "critical",
+    "title": "TaskService の実装確認",
+    "location": "src/index.ts:60-223",
+    "description": "src/index.ts:60-223 — TaskService の createTask, getTask, updateTask, changeStatus, assign, unassign, listTasks メソッドが README.md の仕様および src/types.ts の契約に従って完全に実装されていることを確認した。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0002"
+  },
+  {
+    "rawFindingId": "20260706-062812-readme-md-src-types-ts-tests-6:reviewers:2:ai-antipattern-review:ai-0001",
+    "stepName": "ai-antipattern-review",
+    "reviewer": "ai-antipattern-review",
+    "familyTag": "logic-error",
+    "severity": "medium",
+    "title": "検証ロジックの重複実装（アーキテクチャ要件違反）",
+    "location": "src/index.ts:237-264",
+    "description": "src/index.ts:237-264 — validateCreateInput と validateUpdateInput が分かれており、title の空チェックや長さチェック、dueDate の過去日チェックなどの共通ロジックが重複して実装されている。README.md の「アーキテクチャ要件」にある「検証ロジックは一箇所に集約し、create / update で重複実装しない」という指示に違反している。",
+    "suggestion": "共通の検証関数を抽出して、create と update の両方から呼び出す構成に変更してください。",
+    "kind": "issue"
+  },
+  {
+    "rawFindingId": "20260706-062812-readme-md-src-types-ts-tests-6:reviewers:2:coding-review:res-001",
+    "stepName": "coding-review",
+    "reviewer": "coding-review",
+    "familyTag": "missing-implementation",
+    "severity": "critical",
+    "title": "TaskService と InMemoryTaskRepository が実装された",
+    "location": "src/index.ts:21-224",
+    "description": "src/index.ts において、InMemoryTaskRepository および TaskService の全メソッドが実装されており、'Not implemented' エラーが解消されていることを確認した。また、npm test により全 60 件のテストが成功している。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0002"
+  },
+  {
+    "rawFindingId": "20260706-062812-readme-md-src-types-ts-tests-6:reviewers:2:implementation-semantics-review:r-001",
+    "stepName": "implementation-semantics-review",
+    "reviewer": "implementation-semantics-review",
+    "familyTag": "implementation-gap",
+    "severity": "critical",
+    "title": "主要機能が実装されたことを確認",
+    "location": "src/index.ts:21-224",
+    "description": "InMemoryTaskRepository および TaskService のすべてのメソッドが具体的に実装され、'Not implemented' エラーを投げなくなったことを確認しました。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0001"
+  },
+  {
+    "rawFindingId": "20260706-062812-readme-md-src-types-ts-tests-6:reviewers:2:implementation-semantics-review:r-002",
+    "stepName": "implementation-semantics-review",
+    "reviewer": "implementation-semantics-review",
+    "familyTag": "implementation-gap",
+    "severity": "critical",
+    "title": "TaskService と InMemoryTaskRepository が実装されたことを確認",
+    "location": "src/index.ts:21-224",
+    "description": "TaskService および InMemoryTaskRepository が完全に実装されたことを確認しました。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0002"
+  }
+]

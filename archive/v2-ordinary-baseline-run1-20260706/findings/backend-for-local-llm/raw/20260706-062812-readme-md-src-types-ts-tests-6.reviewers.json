@@ -1,0 +1,26 @@
+[
+  {
+    "rawFindingId": "20260706-062812-readme-md-src-types-ts-tests-6:reviewers:1:arch-review:arch-001",
+    "stepName": "arch-review",
+    "reviewer": "arch-review",
+    "familyTag": "incomplete-implementation",
+    "severity": "critical",
+    "title": "主要機能が未実装（Not implemented）である",
+    "location": "src/index.ts:21,25,29,33,45,49,53,57,61,65",
+    "description": "`src/index.ts`内の`InMemoryTaskRepository`および`TaskService`の全メソッドが`throw new Error('Not implemented')`となっており、実装が全く行われていない。これはREADME.mdの仕様および`src/types.ts`の公開契約に従った実装を完了させるというタスク要件に完全に反している。",
+    "suggestion": "README.mdのバリデーション規則、TaskServiceの規則、InMemoryTaskRepositoryのセマンティクス、およびアーキテクチャ要件に従って、すべてのメソッドを完全実装してください。",
+    "kind": "issue"
+  },
+  {
+    "rawFindingId": "20260706-062812-readme-md-src-types-ts-tests-6:reviewers:1:coding-review:new-001",
+    "stepName": "coding-review",
+    "reviewer": "coding-review",
+    "familyTag": "missing-implementation",
+    "severity": "critical",
+    "title": "機能が未実装である",
+    "location": "src/index.ts:21,45,49,53,57,61,65,69",
+    "description": "TaskService と InMemoryTaskRepository の全メソッドが 'Not implemented' エラーを投げる状態で、実装が全く行われていない。全 60 件のテストが失敗している。",
+    "suggestion": "README.md の仕様に基づき、TaskService および InMemoryTaskRepository を完全に実装してください。",
+    "kind": "issue"
+  }
+]

@@ -1,0 +1,110 @@
+[
+  {
+    "rawFindingId": "20260706-050141-readme-md-src-types-ts-tests:reviewers:5:arch-review:arch-review-res-006",
+    "stepName": "arch-review",
+    "reviewer": "arch-review",
+    "familyTag": "prototype-pollution",
+    "severity": "high",
+    "title": "StockProjection におけるプロトタイプ汚染リスクの解消確認",
+    "location": "src/domain/stock-projection.ts:14",
+    "description": "src/domain/stock-projection.ts:14 — reservations の初期化に Object.create(null) が使用されており、プロトタイプ汚染リスクが解消されている。F-0011 が解消された。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0011"
+  },
+  {
+    "rawFindingId": "20260706-050141-readme-md-src-types-ts-tests:reviewers:5:arch-review:arch-review-res-007",
+    "stepName": "arch-review",
+    "reviewer": "arch-review",
+    "familyTag": "prototype-pollution",
+    "severity": "high",
+    "title": "StockProjection イベント適用時の初期化解消確認",
+    "location": "src/domain/stock-projection.ts:25",
+    "description": "src/domain/stock-projection.ts:25 — ProductCreated イベント時にも reservations を Object.create(null) で初期化しており、整合性が保たれている。F-0011 の完全な解消を確認。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0011"
+  },
+  {
+    "rawFindingId": "20260706-050141-readme-md-src-types-ts-tests:reviewers:5:arch-review:arch-review-res-008",
+    "stepName": "arch-review",
+    "reviewer": "arch-review",
+    "familyTag": "prototype-pollution",
+    "severity": "medium",
+    "title": "StockProjection における存在判定不備の解消確認",
+    "location": "src/domain/stock-projection.ts:49",
+    "description": "src/domain/stock-projection.ts:49 — `Object.hasOwn(shippedReservations, event.reservationId)` を使用して安全に数量を取得するロジックに変更されており、プロトタイプ継承プロパティへのアクセスが遮断されている。F-0012 が解消された。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0012"
+  },
+  {
+    "rawFindingId": "20260706-050141-readme-md-src-types-ts-tests:reviewers:5:ai-antipattern-review:res-09",
+    "stepName": "ai-antipattern-review",
+    "reviewer": "ai-antipattern-review",
+    "familyTag": "logic-error",
+    "severity": "high",
+    "title": "StockProjection におけるプロトタイプ汚染リスクの再導入",
+    "location": "src/domain/stock-projection.ts:14, 25",
+    "description": "src/domain/stock-projection.ts:14 (initialState) および 25 行目 (ProductCreated イベント) において `reservations: Object.create(null)` が使用されており、プロトタイプ汚染リスクが解消されたことを確認した。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0011"
+  },
+  {
+    "rawFindingId": "20260706-050141-readme-md-src-types-ts-tests:reviewers:5:ai-antipattern-review:res-10",
+    "stepName": "ai-antipattern-review",
+    "reviewer": "ai-antipattern-review",
+    "familyTag": "logic-error",
+    "severity": "medium",
+    "title": "StockProjection における存在判定の不備",
+    "location": "src/domain/stock-projection.ts:49",
+    "description": "src/domain/stock-projection.ts:49 において `Object.hasOwn(shippedReservations, event.reservationId)` を用いた厳格な存在判定が導入され、プロトタイプ継承プロパティへのアクセスが遮断されたことを確認した。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0012"
+  },
+  {
+    "rawFindingId": "20260706-050141-readme-md-src-types-ts-tests:reviewers:5:coding-review:RES-0008",
+    "stepName": "coding-review",
+    "reviewer": "coding-review",
+    "familyTag": "ai-antipattern",
+    "severity": "high",
+    "title": "StockProjection におけるプロトタイプ汚染リスクの再導入の解消確認",
+    "location": "src/domain/stock-projection.ts:14",
+    "description": "src/domain/stock-projection.ts:14 および 25 — reservations の初期化に Object.create(null) が使用されており、プロトタイプ汚染リスクが解消されたことを確認。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0011"
+  },
+  {
+    "rawFindingId": "20260706-050141-readme-md-src-types-ts-tests:reviewers:5:coding-review:RES-0009",
+    "stepName": "coding-review",
+    "reviewer": "coding-review",
+    "familyTag": "ai-antipattern",
+    "severity": "medium",
+    "title": "StockProjection における存在判定の不備の解消確認",
+    "location": "src/domain/stock-projection.ts:49",
+    "description": "src/domain/stock-projection.ts:49 — `Object.hasOwn(shippedReservations, event.reservationId)` を使用して予約の存在を確認し、安全に数量を取得する実装に変更されたことを確認。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0012"
+  },
+  {
+    "rawFindingId": "20260706-050141-readme-md-src-types-ts-tests:reviewers:5:implementation-semantics-review:RES-005",
+    "stepName": "implementation-semantics-review",
+    "reviewer": "implementation-semantics-review",
+    "familyTag": "data-structure-selection",
+    "severity": "high",
+    "title": "StockProjection におけるプロトタイプ汚染リスクの解消確認",
+    "location": "src/domain/stock-projection.ts:14",
+    "description": "src/domain/stock-projection.ts:14 および 25 において、reservations が Object.create(null) で初期化されており、プロトタイプ汚染リスクが解消されていることを確認した。これにより F-0011 は解決済みである。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0011"
+  },
+  {
+    "rawFindingId": "20260706-050141-readme-md-src-types-ts-tests:reviewers:5:implementation-semantics-review:RES-006",
+    "stepName": "implementation-semantics-review",
+    "reviewer": "implementation-semantics-review",
+    "familyTag": "data-structure-selection",
+    "severity": "medium",
+    "title": "StockProjection における存在判定の不備の解消確認",
+    "location": "src/domain/stock-projection.ts:49",
+    "description": "src/domain/stock-projection.ts:49 において `Object.hasOwn(shippedReservations, event.reservationId)` を用いた安全な数量取得が実装され、プロトタイプ継承プロパティへの不適切なアクセスが排除されたことを確認した。これにより F-0012 は解決済みである。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0012"
+  }
+]

@@ -1,0 +1,37 @@
+# Merge Readiness Review
+
+## 結果: REJECT
+
+## サマリー
+前回ブロッカーのうち `listTasks({ tag: '   ' })` は `[]` を返すことを確認し、契約破壊は解消されています。一方で、既存 finding `F-0006` の受入条件「非nullアサーションを削除」がまだ満たされていないため、保守前提ではマージ不可です。
+
+## 保守前提のマージ品質チェック
+| # | 観点 | 状態 | 根拠（ファイル:行 / テスト / 実行証跡） | コメント |
+|---|------|------|---------------------------------------|----------|
+| 1 | 要求充足 | 未充足 | `src/index.ts:143`, `findings-ledger.json` F-0006 | resolved finding の期待結果と実コードが不一致 |
+| 2 | 既存契約・既存フローへの影響 | 問題あり | `src/index.ts:143` | optional な `description` 処理に非nullアサーションが残存 |
+| 3 | テスト・検証 | 一部不足 | `npm test` 60 passed / `npm run typecheck` 成功 | テスト・型チェックは通るが、F-0006 の静的な受入条件未達は検出できていない |
+| 4 | 要求外変更・スコープクリープ | 問題なし | `git diff`: `README.md`, `src/types.ts`, `tests` 差分なし | 禁止ファイル変更は確認されない |
+| 5 | 保守可能性・将来変更容易性 | 問題あり | `rg -n "input\\.description!" src/index.ts` → `src/index.ts:143` | 前回から同じ tracked finding が残っている |
+| 6 | 明白なセキュリティ・データ保護・運用リスク | 問題なし | `src/index.ts:20-31`, `src/index.ts:68-72` | 防御的コピーは `tags` / `Date` に対して実装済み |
+
+## 横断監査証跡
+| # | 変更カテゴリ | 抽出した項目 | 確認した検索語・ファイル | 判定 | コメント |
+|---|--------------|--------------|--------------------------|------|----------|
+| 1 | tracked finding | `F-0006` description 非nullアサーション | `input\.description!|description!|F-0006` / `src/index.ts`, `findings-ledger.json` | 問題あり | `input.description!` が残存 |
+| 2 | helper / entrypoint | `normalizeTag`, `listTasks` | `normalizeTag|tag|listTasks` / `src/index.ts`, `README.md`, `tests/query.test.ts` | 問題なし | 空白 tag は実行確認で `[]` を返した |
+| 3 | API / 型契約 | 公開クラス・メソッド | `export class|createTask|updateTask|listTasks` / `src/index.ts`, `src/types.ts` | 問題なし | 公開 API シグネチャ変更は確認されない |
+| 4 | 時刻 / ID | `clock`, `idGenerator`, `Date.now`, `Math.random` | `new Date\(|Date\.now|Math\.random` / `src/index.ts` | 問題なし | `new Date(ms)` は防御的コピー用途。現在時刻・ID生成の直接取得は検出なし |
+
+## 観測した指摘
+| # | family_tag | カテゴリ | 重大度 | 場所 | 問題 | 修正案 |
+|---|------------|---------|--------|------|------|--------|
+| 1 | maintainability-readiness | 保守困難化 / resolved 未達 | medium | `src/index.ts:143` | 既存 finding `F-0006` は「非nullアサーションを削除」が修正方針だが、`input.description!` が残っている。再現手順 `rg -n "input\\.description!" src/index.ts` の期待結果は該当なし、実結果は 143 行に該当あり。 | `description: input.description === undefined ? existing.description : input.description.trim()` のように、ガード後の通常参照へ置き換える。 |
+
+## 検証証跡
+- ビルド: `npm run typecheck` 成功
+- テスト: `npm test` 成功（4 files / 60 tests passed）
+- 動作確認: 一時ビルド後、公開 API 経由で `listTasks({ tag: '   ' })` を実行し、`[]` を確認
+
+## REJECT判定条件
+- マージを止めるべき観測指摘が1件あるため REJECT。
