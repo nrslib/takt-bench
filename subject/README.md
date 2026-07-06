@@ -5,7 +5,7 @@
 ## 実装するもの
 
 `src/types.ts` の公開契約に準拠して、次の公開 API を実装して
-`src/index.ts` から re-export する。テストは `src/index.ts` と `src/types.ts` にのみ依存する。
+`src/index.ts` から re-export する。利用者は `src/index.ts` と `src/types.ts` だけを import して使う。
 
 | API | 種別 | 責務 |
 |-----|------|------|
