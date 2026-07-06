@@ -13,7 +13,7 @@ NM="$(cd "$SUBJECT_DIR" && pwd)/node_modules"
 if [ ! -d "$NM" ]; then
   NM="$(cd "$(dirname "$SUBJECT_DIR")/subject" && pwd)/node_modules"
 fi
-rm -f "$TMP/node_modules"
+rm -rf "$TMP/node_modules"
 ln -sfn "$NM" "$TMP/node_modules"
 cd "$TMP"
 OUT=$(npx vitest run 2>&1) || { echo "$OUT" | tail -5; exit 1; }
