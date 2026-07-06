@@ -1,0 +1,18 @@
+# 実装意味論レビュー
+
+## 結果: REJECT
+
+## サマリー
+外部入力（reservationId）をキーとする辞書にプレーンオブジェクトを使用しており、プロトタイプ継承プロパティによる誤判定のリスクがあるため、差し戻しとします。
+
+## 観測した指摘
+| # | family_tag | 重大度 | 場所 | 問題 | 壊れる条件 | 修正案 |
+|---|------------|--------|------|------|-----------|--------|
+| 1 | data-structure-semantic-choice | Medium | `src/domain.ts:105, 115, 122` | 外部入力キーに対するプレーンオブジェクトでの存在判定 | `reservationId` に `"toString"` 等の継承プロパティ名が渡された際、未登録でも存在判定が真となる | `Map` を使用するか、`Object.hasOwn` による遮断を行う |
+
+## 検証証跡
+- 差分確認: `src/domain.ts` の `decide` 関数内における `state.reservations` へのアクセスおよび存在判定を走査。
+- 判定根拠の実在確認: `src/domain.ts:105` (`state.reservations[command.reservationId] !== undefined`) などの記述を実コードで確認。
+
+## REJECT判定条件
+- ブロッキング指摘が1件以上あるため REJECT

@@ -1,0 +1,34 @@
+# Merge Readiness Review
+
+## 結果: REJECT
+
+## サマリー
+`src/command-handler.ts` に変更起因の未使用 import が残っており、レビューポリシーの REJECT 条件「未使用コード」に該当します。機能契約・テストは概ね通過していますが、このブロッカーが残るためマージ不可です。
+
+## 保守前提のマージ品質チェック
+| # | 観点 | 状態 | 根拠（ファイル:行 / テスト / 実行証跡） | コメント |
+|---|------|------|---------------------------------------|----------|
+| 1 | 要求充足 | 充足 | `README.md`, `src/index.ts:1-5`, `src/domain.ts`, `src/event-store.ts`, `src/command-handler.ts`, `src/projection.ts` | 公開 API、CQRS/ES 構成、インメモリ実装は確認済み |
+| 2 | 既存契約・既存フローへの影響 | 問題なし | `src/types.ts`, `src/index.ts:1-5` | `types.ts` は変更されず、利用者入口は `index.ts` に集約 |
+| 3 | テスト・検証 | 十分 | `npm test`: 5 files / 58 tests passed | 主要なドメイン、ストア、ハンドラ、プロジェクション、統合経路を検証 |
+| 4 | 要求外変更・スコープクリープ | 問題なし | `git diff --name-only`, 新規 `src/*.ts`, `tests/integration.test.ts` | 実装と対応テストの範囲内 |
+| 5 | 保守可能性・将来変更容易性 | 問題あり | `src/command-handler.ts:5` | 未使用 `ProductState` import が残存 |
+| 6 | 明白なセキュリティ・データ保護・運用リスク | 問題なし | `src/domain.ts:105,115,122`, `tests/domain.test.ts:158-205` | F-0001 は `Object.hasOwn` と回帰テストで解消確認 |
+
+## 横断監査証跡
+| # | 変更カテゴリ | 抽出した項目 | 確認した検索語・ファイル | 判定 | コメント |
+|---|--------------|--------------|--------------------------|------|----------|
+| 1 | entrypoint / 公開 API | `initialState`, `evolve`, `decide`, `InMemoryEventStore`, `CommandHandler`, `StockProjection` | `export` / `src/index.ts:1-5` | 問題なし | README の公開 API が re-export されている |
+| 2 | discriminant / イベント・コマンド | `ProductCreated`, `StockReceived`, `StockReserved`, `ReservationReleased`, `StockShipped` ほか | `type:` / `src/types.ts`, `src/domain.ts`, `src/projection.ts`, `tests/*.test.ts` | 問題なし | 生成・適用・投影・テストの経路を確認 |
+| 3 | helper / 状態契約 | `Object.hasOwn`, `reservedQuantity`, `availableQuantity` | `Object.hasOwn`, `state.reservations` / `src/domain.ts`, `tests/domain.test.ts` | 問題なし | F-0001 の再発なし |
+| 4 | import / 型 | `ProductState` | `ProductState` / `src/command-handler.ts:5` | 問題あり | import されていますが未使用 |
+
+## 観測した指摘
+| # | family_tag | カテゴリ | 重大度 | 場所 | 問題 | 修正案 |
+|---|------------|---------|--------|------|------|--------|
+| 1 | maintainability-readiness | 保守困難化 | low | `src/command-handler.ts:5` | `ProductState` が import されていますが、このファイル内で使用されていません。`npm exec tsc -- --noEmit --noUnusedLocals` でも `TS6196` として検出されました。 | `ProductState` を import リストから削除してください。 |
+
+## 検証証跡
+- ビルド: `npm run typecheck` は成功。追加確認の `npm exec tsc -- --noEmit --noUnusedLocals` は `src/command-handler.ts(5,3)` の未使用 `ProductState` で失敗。
+- テスト: `npm test` は成功。5 test files、58 tests passed。
+- 動作確認: `git diff --check` は成功。F-0001 は `src/domain.ts:105,115,122` の `Object.hasOwn` と関連テストで resolved 維持。

@@ -1,0 +1,11 @@
+# コーディングレビュー
+
+## 結果: APPROVE
+
+## サマリー
+実装は README.md の仕様および `src/types.ts` の公開契約に完全に準拠しています。ドメインロジックの純粋性、イベントストアの楽観的並行性制御、プロジェクションの整合性が正しく実装されており、全テストケースをパスしていることを確認しました。
+
+## 検証証跡
+- 差分確認: `src/domain.ts`, `src/event-store.ts`, `src/command-handler.ts`, `src/projection.ts` の実装内容を仕様と照合
+- ビルド: `npm run typecheck` 相当の型整合性を確認
+- テスト: `npm test` により全 55 テストケースが正常に終了したことを確認

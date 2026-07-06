@@ -1,0 +1,99 @@
+{
+  "version": 1,
+  "workflowName": "backend-cqrs-for-local-llm",
+  "nextId": 2,
+  "updatedAt": "2026-07-06T23:00:54.547Z",
+  "findings": [
+    {
+      "id": "F-0001",
+      "status": "resolved",
+      "lifecycle": "resolved",
+      "severity": "medium",
+      "title": "外部入力キーに対するプレーンオブジェクトでの存在判定",
+      "location": "src/domain.ts:105, 115, 122",
+      "description": "src/domain.ts において、外部入力である reservationId をキーとする reservations オブジェクトに対し、`state.reservations[command.reservationId]` や `in` 演算子に相当するアクセスが行われており、プロトタイプ継承プロパティ（toString 等）が混入するリスクがある。Knowledge の「データ構造の意味選択」に基づき、Map の使用または Object.hasOwn / Object.create(null) による遮断が必要。",
+      "suggestion": "reservations を Map<string, number> に変更するか、存在判定に Object.hasOwn(state.reservations, command.reservationId) を使用するように修正してください。",
+      "reviewers": [
+        "implementation-semantics-review"
+      ],
+      "rawFindingIds": [
+        "20260706-222253-readme-md-api-src-type:reviewers:1:implementation-semantics-review:issue-1"
+      ],
+      "firstSeen": {
+        "runId": "20260706-222253-readme-md-api-src-type",
+        "stepName": "implementation-semantics-review",
+        "timestamp": "2026-07-06T22:36:17.860Z"
+      },
+      "lastSeen": {
+        "runId": "20260706-222253-readme-md-api-src-type",
+        "stepName": "reviewers",
+        "timestamp": "2026-07-06T22:36:17.860Z"
+      },
+      "resolvedAt": "2026-07-06T22:43:23.065Z",
+      "resolvedEvidence": "current raw findings contain resolution_confirmation entries targeting F-0001 for the same location src/domain.ts:105, 115, 122 and same issue meaning: reservationId existence checks now use Object.hasOwn()."
+    }
+  ],
+  "rawFindings": [
+    {
+      "rawFindingId": "20260706-222253-readme-md-api-src-type:reviewers:1:implementation-semantics-review:issue-1",
+      "stepName": "implementation-semantics-review",
+      "reviewer": "implementation-semantics-review",
+      "familyTag": "data-structure-semantic-choice",
+      "severity": "medium",
+      "title": "外部入力キーに対するプレーンオブジェクトでの存在判定",
+      "location": "src/domain.ts:105, 115, 122",
+      "description": "src/domain.ts において、外部入力である reservationId をキーとする reservations オブジェクトに対し、`state.reservations[command.reservationId]` や `in` 演算子に相当するアクセスが行われており、プロトタイプ継承プロパティ（toString 等）が混入するリスクがある。Knowledge の「データ構造の意味選択」に基づき、Map の使用または Object.hasOwn / Object.create(null) による遮断が必要。",
+      "suggestion": "reservations を Map<string, number> に変更するか、存在判定に Object.hasOwn(state.reservations, command.reservationId) を使用するように修正してください。",
+      "kind": "issue"
+    },
+    {
+      "rawFindingId": "20260706-222253-readme-md-api-src-type:reviewers:2:cqrs-es-review:conf-f0001-01",
+      "stepName": "cqrs-es-review",
+      "reviewer": "cqrs-es-review",
+      "familyTag": "security-validation",
+      "severity": "medium",
+      "title": "外部入力キーに対するプレーンオブジェクトでの存在判定の修正確認",
+      "location": "src/domain.ts:105, 115, 122",
+      "description": "src/domain.ts:105, 115, 122 において、外部入力である reservationId の存在判定に Object.hasOwn() が使用されており、プロトタイプ継承プロパティの混入リスクが排除されていることを確認した。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0001"
+    },
+    {
+      "rawFindingId": "20260706-222253-readme-md-api-src-type:reviewers:2:ai-antipattern-review:rev-F-0001",
+      "stepName": "ai-antipattern-review",
+      "reviewer": "ai-antipattern-review",
+      "familyTag": "logic-error",
+      "severity": "medium",
+      "title": "外部入力キーに対するプレーンオブジェクトでの存在判定の修正確認",
+      "location": "src/domain.ts:105, 115, 122",
+      "description": "src/domain.ts:105, 115, 122 において、予約IDの存在判定に Object.hasOwn() が使用されており、プロトタイプ汚染のリスクが解消されていることを確認した。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0001"
+    },
+    {
+      "rawFindingId": "20260706-222253-readme-md-api-src-type:reviewers:2:coding-review:CONF-F-0001",
+      "stepName": "coding-review",
+      "reviewer": "coding-review",
+      "familyTag": "security-hardening",
+      "severity": "medium",
+      "title": "外部入力キーに対するプレーンオブジェクトでの存在判定の解消確認",
+      "location": "src/domain.ts:105, 115, 122",
+      "description": "src/domain.ts の 105, 115, 122 行目において、`state.reservations[command.reservationId]` による直接参照ではなく `Object.hasOwn(state.reservations, command.reservationId)` を使用するように修正されており、プロトタイプ汚染による誤判定リスクが排除されていることを確認しました。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0001"
+    },
+    {
+      "rawFindingId": "20260706-222253-readme-md-api-src-type:reviewers:2:implementation-semantics-review:res-1",
+      "stepName": "implementation-semantics-review",
+      "reviewer": "implementation-semantics-review",
+      "familyTag": "data-structure-semantic-choice",
+      "severity": "medium",
+      "title": "外部入力キーに対するプレーンオブジェクトでの存在判定の修正確認",
+      "location": "src/domain.ts:105, 115, 122",
+      "description": "src/domain.ts:105, 115, 122 において、存在判定が Object.hasOwn(state.reservations, command.reservationId) に修正されており、プロトタイプ継承プロパティの混入リスクが排除されていることを確認した。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0001"
+    }
+  ],
+  "conflicts": []
+}

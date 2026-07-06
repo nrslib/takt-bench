@@ -141,6 +141,22 @@ combos:
         final-gate: { provider: codex, model: gpt-5.5 }
 
 
+  - id: v2r-ordinary-refresh
+    description: refresh 実験腕（主戦場軸）。ローカルモデルの席（implement/fix/レビュー4並列）だけ session refresh でセッション文脈の肥大を毎ステップ解消する。配役・題材は v2-ordinary-baseline と同一
+    workflow: backend-for-local-llm-refresh
+    subject: subject-ordinary
+    task_file: task-ordinary.md
+    persona_providers:
+      findings-manager: { provider: codex, model: gpt-5.5 }
+    routing:
+      tags:
+        plan: { provider: codex, model: gpt-5.5 }
+        test-planning: { provider: codex, model: gpt-5.5 }
+        coding: { provider: opencode, model: ollama-cloud/qwen3-coder-next }
+        review: { provider: opencode, model: ollama-cloud/gemma4:31b }
+        final-gate: { provider: codex, model: gpt-5.5 }
+
+
 smoke:
   id: mock-smoke
   description: mock プロバイダによるハーネス疎通確認

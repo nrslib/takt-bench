@@ -1,0 +1,50 @@
+[
+  {
+    "rawFindingId": "20260706-222253-readme-md-api-src-type:reviewers:2:cqrs-es-review:conf-f0001-01",
+    "stepName": "cqrs-es-review",
+    "reviewer": "cqrs-es-review",
+    "familyTag": "security-validation",
+    "severity": "medium",
+    "title": "外部入力キーに対するプレーンオブジェクトでの存在判定の修正確認",
+    "location": "src/domain.ts:105, 115, 122",
+    "description": "src/domain.ts:105, 115, 122 において、外部入力である reservationId の存在判定に Object.hasOwn() が使用されており、プロトタイプ継承プロパティの混入リスクが排除されていることを確認した。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0001"
+  },
+  {
+    "rawFindingId": "20260706-222253-readme-md-api-src-type:reviewers:2:ai-antipattern-review:rev-F-0001",
+    "stepName": "ai-antipattern-review",
+    "reviewer": "ai-antipattern-review",
+    "familyTag": "logic-error",
+    "severity": "medium",
+    "title": "外部入力キーに対するプレーンオブジェクトでの存在判定の修正確認",
+    "location": "src/domain.ts:105, 115, 122",
+    "description": "src/domain.ts:105, 115, 122 において、予約IDの存在判定に Object.hasOwn() が使用されており、プロトタイプ汚染のリスクが解消されていることを確認した。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0001"
+  },
+  {
+    "rawFindingId": "20260706-222253-readme-md-api-src-type:reviewers:2:coding-review:CONF-F-0001",
+    "stepName": "coding-review",
+    "reviewer": "coding-review",
+    "familyTag": "security-hardening",
+    "severity": "medium",
+    "title": "外部入力キーに対するプレーンオブジェクトでの存在判定の解消確認",
+    "location": "src/domain.ts:105, 115, 122",
+    "description": "src/domain.ts の 105, 115, 122 行目において、`state.reservations[command.reservationId]` による直接参照ではなく `Object.hasOwn(state.reservations, command.reservationId)` を使用するように修正されており、プロトタイプ汚染による誤判定リスクが排除されていることを確認しました。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0001"
+  },
+  {
+    "rawFindingId": "20260706-222253-readme-md-api-src-type:reviewers:2:implementation-semantics-review:res-1",
+    "stepName": "implementation-semantics-review",
+    "reviewer": "implementation-semantics-review",
+    "familyTag": "data-structure-semantic-choice",
+    "severity": "medium",
+    "title": "外部入力キーに対するプレーンオブジェクトでの存在判定の修正確認",
+    "location": "src/domain.ts:105, 115, 122",
+    "description": "src/domain.ts:105, 115, 122 において、存在判定が Object.hasOwn(state.reservations, command.reservationId) に修正されており、プロトタイプ継承プロパティの混入リスクが排除されていることを確認した。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0001"
+  }
+]

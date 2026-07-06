@@ -1,0 +1,14 @@
+[
+  {
+    "rawFindingId": "20260706-222253-readme-md-api-src-type:reviewers:1:implementation-semantics-review:issue-1",
+    "stepName": "implementation-semantics-review",
+    "reviewer": "implementation-semantics-review",
+    "familyTag": "data-structure-semantic-choice",
+    "severity": "medium",
+    "title": "外部入力キーに対するプレーンオブジェクトでの存在判定",
+    "location": "src/domain.ts:105, 115, 122",
+    "description": "src/domain.ts において、外部入力である reservationId をキーとする reservations オブジェクトに対し、`state.reservations[command.reservationId]` や `in` 演算子に相当するアクセスが行われており、プロトタイプ継承プロパティ（toString 等）が混入するリスクがある。Knowledge の「データ構造の意味選択」に基づき、Map の使用または Object.hasOwn / Object.create(null) による遮断が必要。",
+    "suggestion": "reservations を Map<string, number> に変更するか、存在判定に Object.hasOwn(state.reservations, command.reservationId) を使用するように修正してください。",
+    "kind": "issue"
+  }
+]
