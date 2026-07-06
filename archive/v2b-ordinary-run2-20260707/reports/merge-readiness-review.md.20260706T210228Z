@@ -1,0 +1,44 @@
+# Merge Readiness Review
+
+## 結果: REJECT
+
+## サマリー
+`createTask` が README の「検証後に `idGenerator.next()`」という順序契約に違反しており、不正入力でも ID を消費します。加えて、create/update 共通の `dueDate` 検証が重複しており、アーキテクチャ要件の検証集約を満たしていません。
+
+## 保守前提のマージ品質チェック
+| # | 観点 | 状態 | 根拠（ファイル:行 / テスト / 実行証跡） | コメント |
+|---|------|------|---------------------------------------|----------|
+| 1 | 要求充足 | 未充足 | `README.md:26`, `src/index.ts:80` | 不正な title / assignee でも `idGenerator.next()` が先に呼ばれる |
+| 2 | 既存契約・既存フローへの影響 | 問題あり | 一時コンパイル実行結果: 空 title で `ValidationError` かつ `calls=1` | ID 生成器が副作用を持つ場合に ID が欠番・消費される |
+| 3 | テスト・検証 | 不足 | `tests/contract-regressions.test.ts:302` | 過去 dueDate の ID 未消費のみ検証し、空 title / 空 assignee が未検証 |
+| 4 | 要求外変更・スコープクリープ | 問題なし | `git diff --name-status`: `src/index.ts` のみ追跡差分 | 実装対象の範囲内 |
+| 5 | 保守可能性・将来変更容易性 | 問題あり | `README.md:68`, `src/index.ts:238`, `src/index.ts:279` | `dueDate < now` 検証が create/update 系で重複 |
+| 6 | 明白なセキュリティ・データ保護・運用リスク | 問題なし | `rg "Date.now|Math.random|catch|any"` / `src/index.ts` | ブロッキング相当の露出・握りつぶしは未検出 |
+
+## 横断監査証跡
+| # | 変更カテゴリ | 抽出した項目 | 確認した検索語・ファイル | 判定 | コメント |
+|---|--------------|--------------|--------------------------|------|----------|
+| 1 | ID / helper / entrypoint | `idGenerator.next`, `createTask`, `validateAssignee`, `trimAndValidateTitle` | `rg "idGenerator|createTask|assignee|空.*title"` / `src/index.ts`, `tests/*.test.ts`, `README.md` | 問題あり | `idGenerator.next()` が入力検証より前に評価される |
+| 2 | helper / 検証契約 | `validateDueDate`, `updateDueDate` | `rg "validateDueDate|updateDueDate|期限は現在時刻"` / `src/index.ts`, `README.md` | 問題あり | 同じ期限検証の判定・エラーが重複 |
+| 3 | public API / entrypoint | `InMemoryTaskRepository`, `TaskService`, `export *` | `rg "export |from '../src/index|from '../src/types"` / `src`, `tests` | 問題なし | 利用者入口は `src/index.ts` / `src/types.ts` に収まる |
+
+## 要求照合
+| # | 要求（タスクから抽出） | 状態 | 根拠（ファイル:行） | コメント |
+|---|-------------------|------|-------------------|----------|
+| 1 | `createTask` は検証後に ID を生成する | 未充足 | `README.md:26`, `src/index.ts:80` | `id` プロパティが `title` / `assignee` 検証より先に評価される |
+| 2 | 検証ロジックは一箇所に集約し create/update で重複しない | 未充足 | `README.md:68`, `src/index.ts:238`, `src/index.ts:279` | `dueDate < now` と同一エラー生成が二重実装 |
+| 3 | 型定義に準拠し `src/index.ts` から import できる | 充足 | `src/index.ts:23`, `src/index.ts:25`, `src/index.ts:69` | 公開クラスと型 re-export は存在 |
+
+## 観測した指摘
+| # | family_tag | カテゴリ | 重大度 | 場所 | 問題 | 修正案 |
+|---|------------|---------|--------|------|------|--------|
+| 1 | maintainability-readiness | 契約破壊 | high | `src/index.ts:80` | `createTask` が全入力検証完了前に `idGenerator.next()` を呼ぶため、不正 title / assignee でも ID が消費される | `title` / `description` / `assignee` / `tags` / `dueDate` を先に正規化・検証し、成功後に `idGenerator.next()` を呼ぶ。空 title / 空 assignee で ID 未消費かつ repository 空を検証するテストを追加する |
+| 2 | maintainability-readiness | 保守困難化 | medium | `src/index.ts:238`, `src/index.ts:279` | `dueDate < now` の検証と `ValidationError` が `validateDueDate` / `updateDueDate` に重複し、README の検証集約要件に反する | `updateDueDate` の Date 分岐から共通の `validateDueDate(input, now)` を呼ぶなど、期限検証の判定とエラーを一箇所に集約する |
+
+## 検証証跡
+- ビルド: `npm run typecheck` 成功
+- テスト: `npm test` 成功、5 files / 80 tests passed
+- 動作確認: `/private/tmp` への一時コンパイル後、空 title で `{"validationError":true,"calls":1}`、空 assignee で `{"validationError":true,"calls":1,"stored":0}` を確認
+
+## REJECT判定条件
+- マージを止めるべき観測指摘が2件あるため REJECT。

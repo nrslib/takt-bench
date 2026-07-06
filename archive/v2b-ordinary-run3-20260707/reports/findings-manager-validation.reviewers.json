@@ -1,0 +1,98 @@
+{
+  "version": 1,
+  "runId": "20260706-215146-readme-md-api-src-types-ts",
+  "stepName": "reviewers",
+  "retryCount": 1,
+  "ledgerUpdated": true,
+  "finalErrors": [],
+  "attempts": [
+    {
+      "attempt": 1,
+      "managerOutput": {
+        "matches": [
+          {
+            "findingId": "F-0001",
+            "rawFindingIds": [
+              "20260706-215146-readme-md-api-src-types-ts:reviewers:3:arch-review:arch-review-004-persists-split"
+            ],
+            "evidence": "familyTag=file-split-warning、location=src/index.ts:1、issue meaning=300行超過およびTaskService/InMemoryTaskRepositoryの同居による責務混在が既存F-0001と一致する。"
+          },
+          {
+            "findingId": "F-0005",
+            "rawFindingIds": [
+              "20260706-215146-readme-md-api-src-types-ts:reviewers:3:ai-antipattern-review:raw-F-0001-persists"
+            ],
+            "evidence": "familyTag=scope-creep、location=src/index.ts:1、issue meaning=ファイル行数超過とInMemoryTaskRepository/TaskService同居が既存F-0005と一致する。"
+          },
+          {
+            "findingId": "F-0004",
+            "rawFindingIds": [
+              "20260706-215146-readme-md-api-src-types-ts:reviewers:3:ai-antipattern-review:raw-F-0002-regressed"
+            ],
+            "evidence": "familyTag=logic-error、location=src/index.ts:269-357付近、issue meaning=検証ロジック共通化が不十分で中央集約要件に反するという点が既存F-0004のlogic-error系の検証重複指摘と継続関係にある。"
+          },
+          {
+            "findingId": "F-0002",
+            "rawFindingIds": [
+              "20260706-215146-readme-md-api-src-types-ts:reviewers:3:coding-review:issue-validation-logic-still-fragmented"
+            ],
+            "evidence": "familyTag=dry_violation、location=src/index.ts:282-321付近、issue meaning=検証ロジックの中央集約が不十分でDRY違反が残るという点が既存F-0002と一致する。"
+          }
+        ],
+        "newFindings": [],
+        "resolvedFindings": [
+          {
+            "findingId": "F-0002",
+            "rawFindingIds": [
+              "20260706-215146-readme-md-api-src-types-ts:reviewers:3:arch-review:arch-review-003-res-dry"
+            ],
+            "evidence": "kind=resolution_confirmation かつ targetFindingId=F-0002 の raw finding が、validateCommonTaskInput導入により検証ロジック一元化を確認している。"
+          },
+          {
+            "findingId": "F-0003",
+            "rawFindingIds": [
+              "20260706-215146-readme-md-api-src-types-ts:reviewers:3:arch-review:arch-review-003-res-dry2"
+            ],
+            "evidence": "kind=resolution_confirmation かつ targetFindingId=F-0003 の raw finding が、validateCommonTaskInput導入により検証ロジック一元化を確認している。"
+          },
+          {
+            "findingId": "F-0004",
+            "rawFindingIds": [
+              "20260706-215146-readme-md-api-src-types-ts:reviewers:3:arch-review:arch-review-003-res-dry3"
+            ],
+            "evidence": "kind=resolution_confirmation かつ targetFindingId=F-0004 の raw finding が、validateCommonTaskInput導入により検証ロジック一元化を確認している。"
+          }
+        ],
+        "reopenedFindings": [],
+        "conflicts": [
+          {
+            "findingIds": [
+              "F-0002",
+              "F-0004"
+            ],
+            "rawFindingIds": [
+              "20260706-215146-readme-md-api-src-types-ts:reviewers:3:arch-review:arch-review-003-res-dry",
+              "20260706-215146-readme-md-api-src-types-ts:reviewers:3:arch-review:arch-review-003-res-dry3",
+              "20260706-215146-readme-md-api-src-types-ts:reviewers:3:ai-antipattern-review:raw-F-0002-regressed",
+              "20260706-215146-readme-md-api-src-types-ts:reviewers:3:coding-review:issue-validation-logic-still-fragmented"
+            ],
+            "description": "arch-review は F-0002/F-0004 の検証ロジック一元化を resolution_confirmation として報告している一方、ai-antipattern-review と coding-review は同一領域の共通化が不十分でDRY/logic-errorが継続していると報告している。解消確認と継続指摘が同時に存在する。"
+          }
+        ],
+        "resolvedConflicts": [],
+        "waivedFindings": [],
+        "disputeNotes": []
+      },
+      "validationErrors": [
+        "Raw finding id \"20260706-215146-readme-md-api-src-types-ts:reviewers:3:arch-review:arch-review-003-res-dry\" appears in multiple manager decisions: resolvedFindings[0] and conflicts[0]",
+        "Raw finding id \"20260706-215146-readme-md-api-src-types-ts:reviewers:3:arch-review:arch-review-003-res-dry3\" appears in multiple manager decisions: resolvedFindings[2] and conflicts[0]",
+        "Raw finding id \"20260706-215146-readme-md-api-src-types-ts:reviewers:3:ai-antipattern-review:raw-F-0002-regressed\" appears in multiple manager decisions: matches[2] and conflicts[0]",
+        "Raw finding id \"20260706-215146-readme-md-api-src-types-ts:reviewers:3:coding-review:issue-validation-logic-still-fragmented\" appears in multiple manager decisions: matches[3] and conflicts[0]",
+        "Finding id \"F-0002\" appears in multiple manager decisions: matches[3] and resolvedFindings[0]",
+        "Finding id \"F-0004\" appears in multiple manager decisions: matches[2] and resolvedFindings[2]",
+        "Finding id \"F-0002\" appears in multiple manager decisions: matches[3] and conflicts[0]",
+        "Finding id \"F-0004\" appears in multiple manager decisions: matches[2] and conflicts[0]"
+      ]
+    }
+  ]
+}

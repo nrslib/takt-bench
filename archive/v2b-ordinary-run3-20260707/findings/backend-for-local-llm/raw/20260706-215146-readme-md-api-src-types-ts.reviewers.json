@@ -1,0 +1,26 @@
+[
+  {
+    "rawFindingId": "20260706-215146-readme-md-api-src-types-ts:reviewers:1:arch-review:arch-review-001",
+    "stepName": "arch-review",
+    "reviewer": "arch-review",
+    "familyTag": "file-split-warning",
+    "severity": "low",
+    "title": "ファイルサイズ超過および責務混在の警告",
+    "location": "src/index.ts:1",
+    "description": "src/index.ts のファイル行数が 397 行であり、Knowledge の「1ファイル300行超は Warning」という基準に抵触している。TaskService と InMemoryTaskRepository、およびバリデーションロジックが同一ファイルに共存しており、責務が混在している。",
+    "suggestion": "TaskService と InMemoryTaskRepository を別ファイルに分割することを検討してください。また、バリデーションロジックを専用の関数またはクラスに抽出することを推奨します。",
+    "kind": "issue"
+  },
+  {
+    "rawFindingId": "20260706-215146-readme-md-api-src-types-ts:reviewers:1:coding-review:issue-validation-duplication",
+    "stepName": "coding-review",
+    "reviewer": "coding-review",
+    "familyTag": "dry_violation",
+    "severity": "high",
+    "title": "Duplicated validation logic for create and update tasks",
+    "location": "src/index.ts:269-397",
+    "description": "The `TaskService` class implements separate validation methods `validateAndNormalizeCreateInput` and `validateAndNormalizeUpdateInput` which contain nearly identical logic for title length, title trim, assignee trim/empty check, and tag normalization. The README.md architecture requirement (line 68) explicitly states: \"検証ロジックは一箇所に集約し、create / update で重複実装しない\" (Validation logic must be centralized and not duplicated for create / update).",
+    "suggestion": "Extract the common validation and normalization logic (title, description, priority, assignee, tags, dueDate) into a shared private method or a separate validator utility used by both `createTask` and `updateTask`.",
+    "kind": "issue"
+  }
+]

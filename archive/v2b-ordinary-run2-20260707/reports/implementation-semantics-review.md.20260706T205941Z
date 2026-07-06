@@ -1,0 +1,14 @@
+# 実装意味論レビュー
+
+## 結果: APPROVE
+
+## サマリー
+実装の意味論（データ構造、導出値、命名、境界でのfail-fast、内部状態の保護）を走査しましたが、問題は見つかりませんでした。`InMemoryTaskRepository` における `Map` の使用および `cloneTask` による防衛的コピーにより、状態の整合性とカプセル化が適切に確保されています。
+
+## 検証証跡
+- 差分確認: `src/index.ts` および `src/types.ts` の全実装を走査。
+- 判定根拠の実在確認:
+    - データ構造: `InMemoryTaskRepository` で `Map<string, TaskRecord>` を使用し、継承プロパティの混入を防止していることを確認 (`src/index.ts:26`)。
+    - 内部状態の参照漏れ: `save`, `findById`, `all` のすべてで `cloneTask` を介してコピーを返却/保存し、外部からの意図しない状態変更を遮断していることを確認 (`src/index.ts:29, 38, 48`)。
+    - 境界でのfail-fast: `TaskService` の各メソッドにおいて、存在しないIDへのアクセスに `NotFoundError`、不正な状態遷移に `InvalidTransitionError`、入力不備に `ValidationError` を即座にスローしていることを確認 (`src/index.ts:98, 106, 131, 146, 165`)。
+    - 導出値: 状態管理において、導出可能な値を重複して保持している箇所がないことを確認。

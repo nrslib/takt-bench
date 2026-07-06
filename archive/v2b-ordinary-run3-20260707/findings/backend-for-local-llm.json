@@ -1,0 +1,350 @@
+{
+  "version": 1,
+  "workflowName": "backend-for-local-llm",
+  "nextId": 6,
+  "updatedAt": "2026-07-06T22:19:16.175Z",
+  "findings": [
+    {
+      "id": "F-0001",
+      "status": "open",
+      "lifecycle": "persists",
+      "severity": "low",
+      "title": "ファイルサイズ超過および責務混在の警告",
+      "location": "src/index.ts:1",
+      "description": "src/index.ts のファイル行数が 358 行であり、Knowledge の「1ファイル300行超は Warning」という基準に依然として抵触している。TaskService と InMemoryTaskRepository が同一ファイルに共存しており、責務が混在している。F-0001 および F-0005 の指摘事項は未解消である。",
+      "suggestion": "TaskService と InMemoryTaskRepository を別ファイルに分割することを検討してください。",
+      "reviewers": [
+        "arch-review"
+      ],
+      "rawFindingIds": [
+        "20260706-215146-readme-md-api-src-types-ts:reviewers:1:arch-review:arch-review-001",
+        "20260706-215146-readme-md-api-src-types-ts:reviewers:2:arch-review:arch-review-001-persists",
+        "20260706-215146-readme-md-api-src-types-ts:reviewers:3:arch-review:arch-review-004-persists-split"
+      ],
+      "firstSeen": {
+        "runId": "20260706-215146-readme-md-api-src-types-ts",
+        "stepName": "arch-review",
+        "timestamp": "2026-07-06T22:06:29.366Z"
+      },
+      "lastSeen": {
+        "stepName": "reviewers",
+        "runId": "20260706-215146-readme-md-api-src-types-ts",
+        "timestamp": "2026-07-06T22:19:16.175Z"
+      }
+    },
+    {
+      "id": "F-0002",
+      "status": "open",
+      "lifecycle": "persists",
+      "severity": "high",
+      "title": "create/update の検証ロジック重複",
+      "location": "src/index.ts:269-397",
+      "description": "`src/index.ts:269-397` — `validateAndNormalizeCreateInput` and `validateAndNormalizeUpdateInput` still contain nearly identical logic for title, assignee, and tag validation/normalization. The README.md architecture requirement (line 68) \"検証ロジックは一箇所に集約し、create / update で重複実装しない\" is still violated.",
+      "suggestion": "Extract the common validation and normalization logic into a shared private method or a separate validator utility used by both `createTask` and `updateTask`.",
+      "reviewers": [
+        "coding-review"
+      ],
+      "rawFindingIds": [
+        "20260706-215146-readme-md-api-src-types-ts:reviewers:1:coding-review:issue-validation-duplication",
+        "20260706-215146-readme-md-api-src-types-ts:reviewers:2:coding-review:issue-validation-duplication-persists"
+      ],
+      "firstSeen": {
+        "runId": "20260706-215146-readme-md-api-src-types-ts",
+        "stepName": "coding-review",
+        "timestamp": "2026-07-06T22:06:29.366Z"
+      },
+      "lastSeen": {
+        "runId": "20260706-215146-readme-md-api-src-types-ts",
+        "stepName": "reviewers",
+        "timestamp": "2026-07-06T22:10:05.821Z"
+      }
+    },
+    {
+      "id": "F-0003",
+      "status": "resolved",
+      "lifecycle": "resolved",
+      "severity": "high",
+      "title": "create/update の検証ロジック重複",
+      "location": "src/index.ts:269-396",
+      "description": "`validateAndNormalizeCreateInput` (L269-332) と `validateAndNormalizeUpdateInput` (L334-396) の実装を確認したところ、title のバリデーション、assignee のトリミングと空チェック、tags の正規化ロジックがほぼ同一のコードとして重複して実装されており、共通化されていない。Previous Response では共通化されたと報告されていたが、実コードでは依然として重複している。これは README.md の「検証ロジックは一箇所に集約し、create / update で重複実装しない」という要件および Policy の DRY 違反に該当する。",
+      "suggestion": "共通のバリデーションロジックを `validateCommonTaskInput` などの共通メソッドに抽出し、create と update の両方から呼び出す構造に修正してください。",
+      "reviewers": [
+        "arch-review"
+      ],
+      "rawFindingIds": [
+        "20260706-215146-readme-md-api-src-types-ts:reviewers:2:arch-review:arch-review-002-regression"
+      ],
+      "firstSeen": {
+        "runId": "20260706-215146-readme-md-api-src-types-ts",
+        "stepName": "arch-review",
+        "timestamp": "2026-07-06T22:10:05.821Z"
+      },
+      "lastSeen": {
+        "runId": "20260706-215146-readme-md-api-src-types-ts",
+        "stepName": "reviewers",
+        "timestamp": "2026-07-06T22:10:05.821Z"
+      },
+      "resolvedAt": "2026-07-06T22:19:16.175Z",
+      "resolvedEvidence": "kind=resolution_confirmation かつ targetFindingId=F-0003 の raw finding が、validateCommonTaskInput導入により当該 dry-violation 指摘の検証ロジック一元化を確認している。"
+    },
+    {
+      "id": "F-0004",
+      "status": "open",
+      "lifecycle": "new",
+      "severity": "high",
+      "title": "create/update の検証ロジック重複",
+      "location": "src/index.ts:269-397",
+      "description": "src/index.ts:269-397 — `validateAndNormalizeCreateInput` and `validateAndNormalizeUpdateInput` still implement separate, nearly identical logic for title length, trim, assignee validation, and tag normalization. This persists the violation of the architecture requirement to centralize validation logic.",
+      "suggestion": "Extract the shared validation and normalization logic (title, assignee, tags, etc.) into a common private method used by both create and update flows.",
+      "reviewers": [
+        "ai-antipattern-review"
+      ],
+      "rawFindingIds": [
+        "20260706-215146-readme-md-api-src-types-ts:reviewers:2:ai-antipattern-review:raw-F-0002-persists"
+      ],
+      "firstSeen": {
+        "runId": "20260706-215146-readme-md-api-src-types-ts",
+        "stepName": "ai-antipattern-review",
+        "timestamp": "2026-07-06T22:10:05.821Z"
+      },
+      "lastSeen": {
+        "runId": "20260706-215146-readme-md-api-src-types-ts",
+        "stepName": "reviewers",
+        "timestamp": "2026-07-06T22:10:05.821Z"
+      }
+    },
+    {
+      "id": "F-0005",
+      "status": "open",
+      "lifecycle": "persists",
+      "severity": "low",
+      "title": "ファイルサイズ超過および責務混在の警告",
+      "location": "src/index.ts:1",
+      "description": "src/index.ts:1 — The file still contains `InMemoryTaskRepository` and `TaskService` in the same file, and the total line count is 358. While slightly reduced, it still exceeds the 300-line guideline and maintains the responsibility mixing.",
+      "suggestion": "Split `TaskService` and `InMemoryTaskRepository` into separate files.",
+      "reviewers": [
+        "ai-antipattern-review"
+      ],
+      "rawFindingIds": [
+        "20260706-215146-readme-md-api-src-types-ts:reviewers:2:ai-antipattern-review:raw-F-0001-persists",
+        "20260706-215146-readme-md-api-src-types-ts:reviewers:3:ai-antipattern-review:raw-F-0001-persists"
+      ],
+      "firstSeen": {
+        "runId": "20260706-215146-readme-md-api-src-types-ts",
+        "stepName": "ai-antipattern-review",
+        "timestamp": "2026-07-06T22:10:05.821Z"
+      },
+      "lastSeen": {
+        "stepName": "reviewers",
+        "runId": "20260706-215146-readme-md-api-src-types-ts",
+        "timestamp": "2026-07-06T22:19:16.175Z"
+      }
+    }
+  ],
+  "rawFindings": [
+    {
+      "rawFindingId": "20260706-215146-readme-md-api-src-types-ts:reviewers:1:arch-review:arch-review-001",
+      "stepName": "arch-review",
+      "reviewer": "arch-review",
+      "familyTag": "file-split-warning",
+      "severity": "low",
+      "title": "ファイルサイズ超過および責務混在の警告",
+      "location": "src/index.ts:1",
+      "description": "src/index.ts のファイル行数が 397 行であり、Knowledge の「1ファイル300行超は Warning」という基準に抵触している。TaskService と InMemoryTaskRepository、およびバリデーションロジックが同一ファイルに共存しており、責務が混在している。",
+      "suggestion": "TaskService と InMemoryTaskRepository を別ファイルに分割することを検討してください。また、バリデーションロジックを専用の関数またはクラスに抽出することを推奨します。",
+      "kind": "issue"
+    },
+    {
+      "rawFindingId": "20260706-215146-readme-md-api-src-types-ts:reviewers:1:coding-review:issue-validation-duplication",
+      "stepName": "coding-review",
+      "reviewer": "coding-review",
+      "familyTag": "dry_violation",
+      "severity": "high",
+      "title": "Duplicated validation logic for create and update tasks",
+      "location": "src/index.ts:269-397",
+      "description": "The `TaskService` class implements separate validation methods `validateAndNormalizeCreateInput` and `validateAndNormalizeUpdateInput` which contain nearly identical logic for title length, title trim, assignee trim/empty check, and tag normalization. The README.md architecture requirement (line 68) explicitly states: \"検証ロジックは一箇所に集約し、create / update で重複実装しない\" (Validation logic must be centralized and not duplicated for create / update).",
+      "suggestion": "Extract the common validation and normalization logic (title, description, priority, assignee, tags, dueDate) into a shared private method or a separate validator utility used by both `createTask` and `updateTask`.",
+      "kind": "issue"
+    },
+    {
+      "rawFindingId": "20260706-215146-readme-md-api-src-types-ts:reviewers:2:arch-review:arch-review-001-persists",
+      "stepName": "arch-review",
+      "reviewer": "arch-review",
+      "familyTag": "file-split-warning",
+      "severity": "low",
+      "title": "ファイルサイズ超過および責務混在の警告（継続）",
+      "location": "src/index.ts:1",
+      "description": "src/index.ts のファイル行数が 397 行であり、Knowledge の「1ファイル300行超は Warning」という基準に抵触したままとなっている。TaskService と InMemoryTaskRepository が同一ファイルに共存しており、責務が混在している。",
+      "suggestion": "TaskService と InMemoryTaskRepository を別ファイルに分割することを検討してください。",
+      "kind": "issue",
+      "targetFindingId": "F-0001"
+    },
+    {
+      "rawFindingId": "20260706-215146-readme-md-api-src-types-ts:reviewers:2:arch-review:arch-review-002-regression",
+      "stepName": "arch-review",
+      "reviewer": "arch-review",
+      "familyTag": "dry-violation",
+      "severity": "high",
+      "title": "create/update の検証ロジック重複（修正未完了/退行）",
+      "location": "src/index.ts:269-396",
+      "description": "`validateAndNormalizeCreateInput` (L269-332) と `validateAndNormalizeUpdateInput` (L334-396) の実装を確認したところ、title のバリデーション、assignee のトリミングと空チェック、tags の正規化ロジックがほぼ同一のコードとして重複して実装されており、共通化されていない。Previous Response では共通化されたと報告されていたが、実コードでは依然として重複している。これは README.md の「検証ロジックは一箇所に集約し、create / update で重複実装しない」という要件および Policy の DRY 違反に該当する。",
+      "suggestion": "共通のバリデーションロジックを `validateCommonTaskInput` などの共通メソッドに抽出し、create と update の両方から呼び出す構造に修正してください。",
+      "kind": "issue",
+      "targetFindingId": "F-0002"
+    },
+    {
+      "rawFindingId": "20260706-215146-readme-md-api-src-types-ts:reviewers:2:ai-antipattern-review:raw-F-0002-persists",
+      "stepName": "ai-antipattern-review",
+      "reviewer": "ai-antipattern-review",
+      "familyTag": "logic-error",
+      "severity": "high",
+      "title": "create/update の検証ロジック重複 (Persists)",
+      "location": "src/index.ts:269-397",
+      "description": "src/index.ts:269-397 — `validateAndNormalizeCreateInput` and `validateAndNormalizeUpdateInput` still implement separate, nearly identical logic for title length, trim, assignee validation, and tag normalization. This persists the violation of the architecture requirement to centralize validation logic.",
+      "suggestion": "Extract the shared validation and normalization logic (title, assignee, tags, etc.) into a common private method used by both create and update flows.",
+      "kind": "issue",
+      "targetFindingId": "F-0002"
+    },
+    {
+      "rawFindingId": "20260706-215146-readme-md-api-src-types-ts:reviewers:2:ai-antipattern-review:raw-F-0001-persists",
+      "stepName": "ai-antipattern-review",
+      "reviewer": "ai-antipattern-review",
+      "familyTag": "scope-creep",
+      "severity": "low",
+      "title": "ファイルサイズ超過および責務混在の警告 (Persists)",
+      "location": "src/index.ts:1",
+      "description": "src/index.ts:1 — The file still contains `InMemoryTaskRepository`, `TaskService`, and detailed validation logic, totaling 397 lines. This persists the issue of responsibility mixing and exceeding the preferred 300-line limit.",
+      "suggestion": "Split `TaskService` and `InMemoryTaskRepository` into separate files and extract validation logic to a dedicated utility.",
+      "kind": "issue",
+      "targetFindingId": "F-0001"
+    },
+    {
+      "rawFindingId": "20260706-215146-readme-md-api-src-types-ts:reviewers:2:coding-review:issue-validation-duplication-persists",
+      "stepName": "coding-review",
+      "reviewer": "coding-review",
+      "familyTag": "dry_violation",
+      "severity": "high",
+      "title": "create/update の検証ロジック重複が継続している",
+      "location": "src/index.ts:269-397",
+      "description": "`src/index.ts:269-397` — `validateAndNormalizeCreateInput` and `validateAndNormalizeUpdateInput` still contain nearly identical logic for title, assignee, and tag validation/normalization. The README.md architecture requirement (line 68) \"検証ロジックは一箇所に集約し、create / update で重複実装しない\" is still violated.",
+      "suggestion": "Extract the common validation and normalization logic into a shared private method or a separate validator utility used by both `createTask` and `updateTask`.",
+      "kind": "issue",
+      "targetFindingId": "F-0002"
+    },
+    {
+      "rawFindingId": "20260706-215146-readme-md-api-src-types-ts:reviewers:3:arch-review:arch-review-003-res-dry",
+      "familyTag": "dry-violation",
+      "severity": "high",
+      "title": "create/update の検証ロジック重複の解消確認",
+      "location": "src/index.ts:269-357",
+      "description": "`validateCommonTaskInput` (L269-357) が導入され、`createTask` (L76) および `updateTask` (L114) から呼び出されるようになった。これにより、title、assignee、tags の検証および正規化ロジックが 1 つのメソッドに集約されたことが確認できた。F-0002, F-0003, F-0004 の要求事項である検証ロジックの一元化が達成されている。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0002",
+      "reviewer": "arch-review",
+      "stepName": "arch-review"
+    },
+    {
+      "rawFindingId": "20260706-215146-readme-md-api-src-types-ts:reviewers:3:arch-review:arch-review-003-res-dry2",
+      "familyTag": "dry-violation",
+      "severity": "high",
+      "title": "create/update の検証ロジック重複の解消確認",
+      "location": "src/index.ts:269-357",
+      "description": "`validateCommonTaskInput` (L269-357) が導入され、`createTask` (L76) および `updateTask` (L114) から呼び出されるようになった。これにより、title、assignee、tags の検証および正規化ロジックが 1 つのメソッドに集約されたことが確認できた。F-0003 の要求事項である検証ロジックの一元化が達成されている。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0003",
+      "reviewer": "arch-review",
+      "stepName": "arch-review"
+    },
+    {
+      "rawFindingId": "20260706-215146-readme-md-api-src-types-ts:reviewers:3:arch-review:arch-review-003-res-dry3",
+      "familyTag": "dry-violation",
+      "severity": "high",
+      "title": "create/update の検証ロジック重複の解消確認",
+      "location": "src/index.ts:269-357",
+      "description": "`validateCommonTaskInput` (L2 la 14-357) が導入され、`createTask` (L76) および `updateTask` (L114) から呼び出されるようになった。これにより、title、assignee、tags の検証および正規化ロジックが 1 つのメソッドに集約されたことが確認できた。F-0004 の要求事項である検証ロジックの一元化が達成されている。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0004",
+      "reviewer": "arch-review",
+      "stepName": "arch-review"
+    },
+    {
+      "rawFindingId": "20260706-215146-readme-md-api-src-types-ts:reviewers:3:arch-review:arch-review-004-persists-split",
+      "familyTag": "file-split-warning",
+      "severity": "low",
+      "title": "ファイルサイズ超過および責務混在の警告（継続）",
+      "location": "src/index.ts:1",
+      "description": "src/index.ts のファイル行数が 358 行であり、Knowledge の「1ファイル300行超は Warning」という基準に依然として抵触している。TaskService と InMemoryTaskRepository が同一ファイルに共存しており、責務が混在している。F-0001 および F-0005 の指摘事項は未解消である。",
+      "suggestion": "TaskService と InMemoryTaskRepository を別ファイルに分割することを検討してください。",
+      "kind": "issue",
+      "targetFindingId": "F-0001",
+      "reviewer": "arch-review",
+      "stepName": "arch-review"
+    },
+    {
+      "rawFindingId": "20260706-215146-readme-md-api-src-types-ts:reviewers:3:ai-antipattern-review:raw-F-0002-regressed",
+      "familyTag": "logic-error",
+      "severity": "high",
+      "title": "create/update の検証ロジック重複 (不十分な共通化と型安全性低下)",
+      "location": "src/index.ts:269-357",
+      "description": "src/index.ts:269-357 — `validateCommonTaskInput` has been introduced, but it uses `mode === 'create'` and `mode === 'update'` branches to handle title and dueDate validation, which essentially replicates the previous duplication within a single method. This is a \"facade\" commonization that doesn't truly centralize the logic. Furthermore, the `createTask` method (L81-85) now uses non-null assertions (`!`) on the result of `validateCommonTaskInput` because the method returns optional fields, which is a regression in type safety.",
+      "suggestion": "Refactor `validateCommonTaskInput` to truly centralize logic. Use a common interface or a set of validator functions that handle individual fields, rather than branching by 'mode' for the entire process. Avoid non-null assertions in `createTask`.",
+      "kind": "issue",
+      "targetFindingId": "F-0002",
+      "reviewer": "ai-antipattern-review",
+      "stepName": "ai-antipattern-review"
+    },
+    {
+      "rawFindingId": "20260706-215146-readme-md-api-src-types-ts:reviewers:3:ai-antipattern-review:raw-F-0001-persists",
+      "familyTag": "scope-creep",
+      "severity": "low",
+      "title": "ファイルサイズ超過および責務混在の警告 (Persists)",
+      "location": "src/index.ts:1",
+      "description": "src/index.ts:1 — The file still contains `InMemoryTaskRepository` and `TaskService` in the same file, and the total line count is 358. While slightly reduced, it still exceeds the 300-line guideline and maintains the responsibility mixing.",
+      "suggestion": "Split `TaskService` and `InMemoryTaskRepository` into separate files.",
+      "kind": "issue",
+      "targetFindingId": "F-0001",
+      "reviewer": "ai-antipattern-review",
+      "stepName": "ai-antipattern-review"
+    },
+    {
+      "rawFindingId": "20260706-215146-readme-md-api-src-types-ts:reviewers:3:coding-review:issue-validation-logic-still-fragmented",
+      "familyTag": "dry_violation",
+      "severity": "medium",
+      "title": "Validation logic is centralized in one method but still fragmented by mode",
+      "location": "src/index.ts:282-321",
+      "description": "`src/index.ts:269-357` — The previous fragmented validation methods were merged into `validateCommonTaskInput`, but the internal logic still uses `if (mode === 'create') { ... } else { ... }` blocks for `title` and `dueDate` validation. While this centralizes the code into one method, it doesn't truly unify the logic for the shared constraints (e.g., title length and trim are identical for both modes), resulting in redundant code blocks within the same method. This still partially violates the spirit of \"centralizing validation logic\" and the DRY principle.",
+      "suggestion": "Further refactor `validateCommonTaskInput` to extract the purely shared validation logic (like title length and trim checks) into a helper or a shared block that doesn't depend on `mode`, and only use the `mode` switch for properties that truly differ in their requirements (like the nullability of `dueDate` in updates).",
+      "kind": "issue",
+      "targetFindingId": "F-0002",
+      "reviewer": "coding-review",
+      "stepName": "coding-review"
+    }
+  ],
+  "conflicts": [
+    {
+      "id": "C-8E6716E744C6",
+      "status": "active",
+      "findingIds": [
+        "F-0002",
+        "F-0004"
+      ],
+      "rawFindingIds": [
+        "20260706-215146-readme-md-api-src-types-ts:reviewers:3:arch-review:arch-review-003-res-dry",
+        "20260706-215146-readme-md-api-src-types-ts:reviewers:3:arch-review:arch-review-003-res-dry3",
+        "20260706-215146-readme-md-api-src-types-ts:reviewers:3:ai-antipattern-review:raw-F-0002-regressed",
+        "20260706-215146-readme-md-api-src-types-ts:reviewers:3:coding-review:issue-validation-logic-still-fragmented"
+      ],
+      "description": "arch-review は F-0002/F-0004 の検証ロジック一元化を resolution_confirmation として報告している一方、ai-antipattern-review と coding-review は同一領域の共通化が不十分でDRY/logic-errorが継続していると報告している。解消確認と継続指摘が同時に存在するため、同じ findingId を resolved と match の両方には置かず、未裁定の矛盾として扱う。",
+      "firstSeen": {
+        "stepName": "reviewers",
+        "runId": "20260706-215146-readme-md-api-src-types-ts",
+        "timestamp": "2026-07-06T22:19:16.175Z"
+      },
+      "lastSeen": {
+        "stepName": "reviewers",
+        "runId": "20260706-215146-readme-md-api-src-types-ts",
+        "timestamp": "2026-07-06T22:19:16.175Z"
+      }
+    }
+  ]
+}

@@ -1,0 +1,45 @@
+# Merge Readiness Review
+
+## 結果: REJECT
+
+## サマリー
+前回指摘の ID 未消費回帰テスト不足と `dueDate` 検証重複は解消されています。一方で、累積差分上まだ `description` 正規化と `assignee` 検証の重複が残っており、README の検証集約要件およびレビューポリシーの DRY 基準を満たしていません。
+
+## 保守前提のマージ品質チェック
+| # | 観点 | 状態 | 根拠（ファイル:行 / テスト / 実行証跡） | コメント |
+|---|------|------|---------------------------------------|----------|
+| 1 | 要求充足 | 未充足 | `README.md:18`, `README.md:68`, `src/index.ts:85`, `src/index.ts:116` | create/update 共通の `description` trim が重複 |
+| 2 | 既存契約・既存フローへの影響 | 問題あり | `src/index.ts:151`, `src/index.ts:251` | `assignee` の trim + 空文字 `ValidationError` が `assign` と helper に重複 |
+| 3 | テスト・検証 | 十分 | `npm test`: 5 files / 84 tests passed | 前回不足していた ID 未消費テストは追加済み |
+| 4 | 要求外変更・スコープクリープ | 問題なし | `git diff --name-status`: `src/index.ts` | 追跡差分は実装対象内 |
+| 5 | 保守可能性・将来変更容易性 | 問題あり | `rg "validateAssignee|assignee\\.trim|description.*trim"` / `src/index.ts` | 入力契約変更時に片側だけ更新されるリスク |
+| 6 | 明白なセキュリティ・データ保護・運用リスク | 問題なし | `rg "any|TODO|FIXME|Date.now|Math.random|catch"` / `src`, `tests` | ブロッキング相当の露出・握りつぶしは未検出 |
+
+## 横断監査証跡
+| # | 変更カテゴリ | 抽出した項目 | 確認した検索語・ファイル | 判定 | コメント |
+|---|--------------|--------------|--------------------------|------|----------|
+| 1 | helper / 入力正規化 | `description`, `createTask`, `updateTask` | `description.*trim` / `src/index.ts:85`, `src/index.ts:116`, `README.md:18`, `README.md:68` | 問題あり | create/update 共通規則が inline 重複 |
+| 2 | helper / 入力検証 | `assignee`, `validateAssignee`, `assign` | `validateAssignee`, `assignee.trim`, `担当者は空白` / `src/index.ts:151`, `src/index.ts:251` | 問題あり | 同一検証が手書きと helper に分裂 |
+| 3 | ID / entrypoint | `idGenerator.next`, `createTask`, `ValidationError` | `idGenerator`, `calls`, `空 title`, `空 assignee` / `src/index.ts`, `tests/contract-regressions.test.ts` | 問題なし | `src/index.ts:78-81` で検証後 ID 生成、回帰テストも追加済み |
+| 4 | helper / 期限検証 | `validateDueDate`, `updateDueDate` | `validateDueDate`, `updateDueDate`, `期限は現在時刻` / `src/index.ts` | 問題なし | `src/index.ts:290` で共通 helper 呼び出しに修正済み |
+
+## 要求照合
+| # | 要求（タスクから抽出） | 状態 | 根拠（ファイル:行） | コメント |
+|---|-------------------|------|-------------------|----------|
+| 1 | 検証ロジックは一箇所に集約し create/update で重複しない | 未充足 | `README.md:68`, `src/index.ts:85`, `src/index.ts:116` | `description` 正規化が重複 |
+| 2 | 担当者指定時は trim し空なら `ValidationError` | 充足だが保守性問題あり | `src/index.ts:151`, `src/index.ts:251` | 振る舞いは満たすが検証実装が重複 |
+| 3 | `createTask` は検証後に ID を生成する | 充足 | `src/index.ts:78`, `src/index.ts:81`, `tests/contract-regressions.test.ts:324` | 空 title / 空 assignee / 過去 dueDate の ID 未消費を検証済み |
+
+## 観測した指摘
+| # | family_tag | カテゴリ | 重大度 | 場所 | 問題 | 修正案 |
+|---|------------|---------|--------|------|------|--------|
+| 1 | maintainability-readiness | 保守困難化 | medium | `src/index.ts:85`, `src/index.ts:116` | `description` の trim が create/update に重複し、README の検証集約要件に反する | `normalizeDescription` などの helper に抽出し、create/update の両方から呼ぶ |
+| 2 | maintainability-readiness | 保守困難化 | medium | `src/index.ts:151`, `src/index.ts:251` | `assignee.trim()` と空文字 `ValidationError` が `assign` と `validateAssignee` に重複している | `assign` も共通の assignee 検証 helper を通す |
+
+## 検証証跡
+- ビルド: `npm run typecheck` 成功
+- テスト: `npm test` 成功、5 files / 84 tests passed
+- 動作確認: `rg` と対象行再読で、ID 未消費テスト追加、`dueDate` 共通化、残存重複を確認
+
+## REJECT判定条件
+- マージを止めるべき観測指摘が2件あるため REJECT。
