@@ -107,19 +107,23 @@ combos:
   # コピーしない）。台帳 manager は persona_providers で codex に固定する。
 
   - id: v2-cqrs-baseline
-    description: v2 基準系（難所軸）。題材は在庫ES、workflow は builtin backend-cqrs-for-local-llm。coder は Qwen3-Coder-next、レビュアーは Gemma 4 31B、最終ゲートと台帳 manager は codex
+    description: v2 基準系（難所軸）。題材は在庫ES、workflow は builtin backend-cqrs-for-local-llm。判断（plan / test-planning / final-gate / manager）は codex、労働（implement / fix / review）はローカル
     workflow: backend-cqrs-for-local-llm
     persona_providers:
       findings-manager: { provider: codex, model: gpt-5.5 }
     routing:
       tags:
-        plan: { provider: opencode, model: ollama-cloud/qwen3-coder-next }
+        # 判断は商用: 計画（打ち切り権を持つ席、takt#986）とテスト設計（takt#987 の
+        # test-planning タグ。coding より後勝ちで write_tests だけ codex になる）
+        plan: { provider: codex, model: gpt-5.5 }
+        test-planning: { provider: codex, model: gpt-5.5 }
+        # 労働はローカル: 実装・修正（coding）とレビュー4並列
         coding: { provider: opencode, model: ollama-cloud/qwen3-coder-next }
         review: { provider: opencode, model: ollama-cloud/gemma4:31b }
         final-gate: { provider: codex, model: gpt-5.5 }
 
   - id: v2-ordinary-baseline
-    description: v2 基準系（主戦場軸）。題材はタスク管理サービス層（通常コード）、workflow は builtin backend-for-local-llm。配役は v2-cqrs-baseline と同一
+    description: v2 基準系（主戦場軸）。題材はタスク管理サービス層（通常コード）、workflow は builtin backend-for-local-llm。配役は v2-cqrs-baseline と同一（判断=codex、労働=ローカル）
     workflow: backend-for-local-llm
     subject: subject-ordinary
     task_file: task-ordinary.md
@@ -127,7 +131,11 @@ combos:
       findings-manager: { provider: codex, model: gpt-5.5 }
     routing:
       tags:
-        plan: { provider: opencode, model: ollama-cloud/qwen3-coder-next }
+        # 判断は商用: 計画（打ち切り権を持つ席、takt#986）とテスト設計（takt#987 の
+        # test-planning タグ。coding より後勝ちで write_tests だけ codex になる）
+        plan: { provider: codex, model: gpt-5.5 }
+        test-planning: { provider: codex, model: gpt-5.5 }
+        # 労働はローカル: 実装・修正（coding）とレビュー4並列
         coding: { provider: opencode, model: ollama-cloud/qwen3-coder-next }
         review: { provider: opencode, model: ollama-cloud/gemma4:31b }
         final-gate: { provider: codex, model: gpt-5.5 }
