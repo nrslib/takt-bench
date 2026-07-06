@@ -1,0 +1,35 @@
+# Merge Readiness Review
+
+## 結果: REJECT
+
+## サマリー
+公開契約では `TaskRepository` ポートが定義されているにもかかわらず、`TaskService` が `InMemoryTaskRepository` 具象実装へ依存しており、利用者が `src/types.ts` の契約に準拠した別実装を注入できません。加えて、時刻注入を迂回できる `new Date()` フォールバックと未使用コードが残っているため、保守前提でのマージは不可です。
+
+## 保守前提のマージ品質チェック
+| # | 観点 | 状態 | 根拠（ファイル:行 / テスト / 実行証跡） | コメント |
+|---|------|------|---------------------------------------|----------|
+| 1 | 要求充足 | 未充足 | `src/service.ts:11`, `src/service.ts:18`, `src/types.ts:57` | `TaskService` が `TaskRepository` ではなく具象 `InMemoryTaskRepository` を要求している |
+| 2 | 既存契約・既存フローへの影響 | 問題あり | `src/types.ts:57`, `src/service.ts:18` | 公開ポート契約より狭い型を公開入口の constructor に露出している |
+| 3 | テスト・検証 | 十分 | `npm test`: 72 passed、`npm run typecheck`: 成功 | ただし通常 typecheck では未使用コードを検出しない |
+| 4 | 要求外変更・スコープクリープ | 問題なし | `src/index.ts:6-9` | 公開入口の re-export 自体はタスク範囲内 |
+| 5 | 保守可能性・将来変更容易性 | 問題あり | `src/task-validation.ts:55-61`, `src/service.ts:9`, `src/service.ts:13`, `src/service.ts:175` | 注入時刻を迂回する helper 契約と未使用コードが残存 |
+| 6 | 明白なセキュリティ・データ保護・運用リスク | 問題なし | `rg "\bany\b|TODO|FIXME|catch\s*\(|Date\.now\(|Math\.random\(" src tests README.md` | 機密露出・空 catch・TODO・`any` は確認範囲では未検出 |
+
+## 横断監査証跡
+| # | 変更カテゴリ | 抽出した項目 | 確認した検索語・ファイル | 判定 | コメント |
+|---|--------------|--------------|--------------------------|------|----------|
+| 1 | entrypoint / adapter / 型 | `TaskService`, `InMemoryTaskRepository`, `TaskRepository` | `TaskRepository|InMemoryTaskRepository`, `src/service.ts:11`, `src/service.ts:18`, `src/types.ts:57` | 問題あり | サービス層がポートではなくインメモリ実装へ依存 |
+| 2 | helper / 時刻契約 | `validateDueDate`, `clock.now`, `new Date()` | `validateDueDate|new Date\(\)`, `src/task-validation.ts:55-61`, `README.md:66-67` | 問題あり | `now` optional により注入 clock を迂回できる |
+| 3 | 未使用コード | `Priority`, `ValidationError`, `activeSet` | `npx tsc --noEmit --noUnusedLocals --pretty false`, `src/service.ts:9`, `src/service.ts:13`, `src/service.ts:175` | 問題あり | 変更起因の未使用コード |
+
+## 観測した指摘
+| # | family_tag | カテゴリ | 重大度 | 場所 | 問題 | 修正案 |
+|---|------------|---------|--------|------|------|--------|
+| 1 | maintainability-readiness | 契約破壊 | high | `src/service.ts:11`, `src/service.ts:18` | `TaskService` が `TaskRepository` ポートではなく `InMemoryTaskRepository` 具象型を import / constructor 型にしている。README の注入形と `src/types.ts` の公開ポート契約を狭めている。 | `service.ts` は `TaskRepository` を type import し、constructor を `private readonly repo: TaskRepository` に戻す。`InMemoryTaskRepository` import は削除する。 |
+| 2 | maintainability-readiness | 保守困難化 | high | `src/task-validation.ts:55-61` | `validateDueDate` の `now` が optional で、未指定時に `new Date()` へフォールバックする。README の「時刻は必ず注入された clock から取得」に反する経路が helper 契約として残る。 | `now: Date` を必須にし、`const nowDate = now || new Date()` を削除して `now.getTime()` で比較する。 |
+| 3 | maintainability-readiness | 保守困難化 | medium | `src/service.ts:9`, `src/service.ts:13`, `src/service.ts:175` | `Priority`、`ValidationError`、`activeSet` が未使用。ポリシー上、変更起因の未使用コードはマージ不可。 | 未使用 import と `activeSet` を削除する。active status helper を使うなら `overdueAsOf` 判定に実際に適用する。 |
+
+## 検証証跡
+- ビルド: `npm run typecheck` 成功。追加確認の `npx tsc --noEmit --noUnusedLocals --pretty false` は未使用コード 3 件で失敗。
+- テスト: `npm test` 成功、4ファイル 72 tests passed。
+- 動作確認: `README.md`, `src/types.ts`, `src/index.ts`, `src/service.ts`, `src/repository.ts`, `src/task-validation.ts`, `src/task-copy.ts`, `tests/*.test.ts` を再読し、公開契約・helper・entrypoint を検索で横断確認。

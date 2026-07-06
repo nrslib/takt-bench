@@ -1,0 +1,33 @@
+# Merge Readiness Review
+
+## 結果: REJECT
+
+## サマリー
+前回ブロッカーのうち、`TaskService` の `TaskRepository` ポート依存化と `validateDueDate` の実時刻フォールバック削除は解消済みです。ただし変更起因の未使用コードがまだ残っており、レビューポリシー上、保守前提でのマージは不可です。
+
+## 保守前提のマージ品質チェック
+| # | 観点 | 状態 | 根拠（ファイル:行 / テスト / 実行証跡） | コメント |
+|---|------|------|---------------------------------------|----------|
+| 1 | 要求充足 | 充足 | `src/service.ts:17`, `src/task-validation.ts:55-61`, `src/index.ts:6-9` | 公開入口、ポート注入、clock 基準の dueDate 検証は確認済み |
+| 2 | 既存契約・既存フローへの影響 | 問題なし | `src/types.ts:57`, `src/service.ts:17` | `TaskService` は `TaskRepository` 契約へ依存している |
+| 3 | テスト・検証 | 十分 | `npm test`: 72 passed、`npm run typecheck`: 成功 | 通常検証は成功 |
+| 4 | 要求外変更・スコープクリープ | 問題なし | `git diff -- README.md src tests package.json tsconfig.json vitest.config.ts` | 実装・公開入口・仕様直結テストの範囲内 |
+| 5 | 保守可能性・将来変更容易性 | 問題あり | `src/service.ts:12`, `src/service.ts:174`, `npx tsc --noEmit --noUnusedLocals --pretty false` | 未使用 import / 変数が残存 |
+| 6 | 明白なセキュリティ・データ保護・運用リスク | 問題なし | `rg "\bany\b|TODO|FIXME|catch\s*\(|Date\.now\(|Math\.random\(" src tests README.md` | `any`、TODO/FIXME、空 catch、直接乱数・現在時刻取得は確認範囲では未検出 |
+
+## 横断監査証跡
+| # | 変更カテゴリ | 抽出した項目 | 確認した検索語・ファイル | 判定 | コメント |
+|---|--------------|--------------|--------------------------|------|----------|
+| 1 | 型 / adapter / entrypoint | `TaskRepository`, `InMemoryTaskRepository`, `TaskService` | `TaskRepository|InMemoryTaskRepository|new TaskService` / `src/service.ts:1-20`, `src/repository.ts:1-8`, `tests/helpers.ts:32-33` | 問題なし | 具象依存は解消済み |
+| 2 | helper / 時刻契約 | `validateDueDate`, `clock.now`, `new Date()` | `validateDueDate|new Date\(\)|Date\.now\(` / `src/task-validation.ts:55-61`, `src/service.ts:22-70` | 問題なし | `validateDueDate` の `now` は必須、実時刻フォールバックなし |
+| 3 | 未使用コード | `ValidationError`, `activeSet`, `getActiveStatuses` | `ValidationError|activeSet|getActiveStatuses` / `src/service.ts:12`, `src/service.ts:174`, `src/task-validation.ts:123` | 問題あり | `ValidationError` と `activeSet` が未使用 |
+
+## 観測した指摘
+| # | family_tag | カテゴリ | 重大度 | 場所 | 問題 | 修正案 |
+|---|------------|---------|--------|------|------|--------|
+| 1 | maintainability-readiness | 保守困難化 | medium | `src/service.ts:12`, `src/service.ts:174` | `ValidationError` import と `activeSet` が未使用です。`npx tsc --noEmit --noUnusedLocals --pretty false` で `TS6133` として再現します。変更起因の未使用コードはポリシー上 REJECT 対象です。 | `ValidationError` import を削除してください。`activeSet` と `getActiveStatuses()` は、`overdueAsOf` 判定で実際に使うか、不要なら両方削除してください。 |
+
+## 検証証跡
+- ビルド: `npm run typecheck` 成功。追加の未使用検査 `npx tsc --noEmit --noUnusedLocals --pretty false` は `src/service.ts(12,10)` と `src/service.ts(174,11)` で失敗。
+- テスト: `npm test` 成功、4 files / 72 tests passed。
+- 動作確認: `README.md`, `src/types.ts`, `src/index.ts`, `src/service.ts`, `src/repository.ts`, `src/task-validation.ts`, `src/task-copy.ts`, `tests/helpers.ts`, `tests/query.test.ts` を再読し、公開契約・helper・entrypoint・未使用コードを検索で横断確認。

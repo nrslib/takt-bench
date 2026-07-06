@@ -1,0 +1,33 @@
+# Merge Readiness Review
+
+## 結果: REJECT
+
+## サマリー
+未使用コードの前回指摘は解消され、通常テスト・型チェック・未使用検査はいずれも成功しました。ただし `createTask` の `assignee` 空文字入力が README の ValidationError 契約を満たしておらず、マージ不可です。
+
+## 保守前提のマージ品質チェック
+| # | 観点 | 状態 | 根拠（ファイル:行 / テスト / 実行証跡） | コメント |
+|---|------|------|---------------------------------------|----------|
+| 1 | 要求充足 | 未充足 | `README.md:20`, `src/task-validation.ts:78` | `assignee: ''` が指定済み空値として検証されない |
+| 2 | 既存契約・既存フローへの影響 | 問題あり | `src/task-validation.ts:44-52`, `src/task-validation.ts:78`, `src/service.ts:22-24` | `assign` は `normalizeAssignee` を必ず通すが、`createTask` は truthy 判定で空文字を迂回する |
+| 3 | テスト・検証 | 不足 | `tests/create-task.test.ts:78-81`, `rg "assignee.*''|assignee.*\"\"" tests src README.md` | 空白文字列 `'   '` のテストはあるが、空文字 `''` のテストがない |
+| 4 | 要求外変更・スコープクリープ | 問題なし | `git diff -- README.md src tests package.json tsconfig.json vitest.config.ts` | 実装・公開入口・仕様直結テストの範囲内 |
+| 5 | 保守可能性・将来変更容易性 | 問題あり | `src/task-validation.ts:78` | optional 判定と空値検証の境界が分離しておらず、契約追跡が難しい |
+| 6 | 明白なセキュリティ・データ保護・運用リスク | 問題なし | `rg "\bany\b|TODO|FIXME|catch\s*\(|Date\.now\(|Math\.random\(" src tests README.md` | `any`、TODO/FIXME、空 catch、直接乱数・現在時刻取得は確認範囲では未検出 |
+
+## 横断監査証跡
+| # | 変更カテゴリ | 抽出した項目 | 確認した検索語・ファイル | 判定 | コメント |
+|---|--------------|--------------|--------------------------|------|----------|
+| 1 | 型 / adapter / entrypoint | `TaskRepository`, `InMemoryTaskRepository`, `TaskService` | `TaskRepository|InMemoryTaskRepository|new TaskService` / `src/service.ts:1-20`, `src/repository.ts:1-8`, `tests/helpers.ts:32-33` | 問題なし | ポート注入と公開入口は問題なし |
+| 2 | helper / 時刻契約 | `validateDueDate`, `clock.now`, `new Date()` | `validateDueDate|new Date\(\)|Date\.now\(` / `src/task-validation.ts:55-61`, `src/service.ts:22-70` | 問題なし | 実時刻フォールバックは削除済み |
+| 3 | helper / 入力検証 | `assignee`, `normalizeAssignee`, `normalizeCreateTaskInput`, `createTask`, `assign` | `assignee|normalizeAssignee\(|normalizeCreateTaskInput|createTask\(|assign\(` / `README.md:20`, `src/task-validation.ts:44-52`, `src/task-validation.ts:78`, `tests/create-task.test.ts:78-81` | 問題あり | `createTask` だけ空文字 assignee を検証せず undefined 扱いする |
+
+## 観測した指摘
+| # | family_tag | カテゴリ | 重大度 | 場所 | 問題 | 修正案 |
+|---|------------|---------|--------|------|------|--------|
+| 1 | maintainability-readiness | 要求未充足 / テスト不足 | high | `src/task-validation.ts:78` | README は `assignee` が指定された場合、trim 後に空なら `ValidationError` と定義しているが、`normalizeCreateTaskInput` は `input.assignee ? normalizeAssignee(input.assignee) : undefined` の truthy 判定のため、`createTask({ title: 't', assignee: '' })` が `normalizeAssignee` を通らない。既存テストも空文字を検証していない。 | `input.assignee !== undefined ? normalizeAssignee(input.assignee) : undefined` に変更し、`createTask({ title: 't', assignee: '' })` が `ValidationError` になるテストを追加する。 |
+
+## 検証証跡
+- ビルド: `npm run typecheck` 成功。`npx tsc --noEmit --noUnusedLocals --pretty false` 成功。
+- テスト: `npm test` 成功、4 files / 72 tests passed。
+- 動作確認: `README.md`, `src/types.ts`, `src/index.ts`, `src/service.ts`, `src/repository.ts`, `src/task-validation.ts`, `src/task-copy.ts`, `tests/*.test.ts` を再読し、公開契約・helper・entrypoint・`assignee` 入力検証を検索で横断確認。

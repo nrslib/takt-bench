@@ -9,7 +9,13 @@ trap 'rm -rf "$TMP"' EXIT
 cp -R "$SUBJECT_DIR"/ "$TMP"/
 rm -rf "$TMP/src"
 cp -R "$RUN_DIR/src" "$TMP/src"
-ln -sfn "$(cd "$SUBJECT_DIR" && pwd)/node_modules" "$TMP/node_modules" 2>/dev/null || true
+NM="$(cd "$SUBJECT_DIR" && pwd)/node_modules"
+if [ ! -d "$NM" ]; then
+  NM="$(cd "$(dirname "$SUBJECT_DIR")/subject" && pwd)/node_modules"
+fi
+rm -f "$TMP/node_modules"
+ln -sfn "$NM" "$TMP/node_modules"
 cd "$TMP"
-npx vitest run 2>&1 | grep -E "Tests " | tail -1
+OUT=$(npx vitest run 2>&1) || { echo "$OUT" | tail -5; exit 1; }
+echo "$OUT" | grep -E "Tests " | tail -1
 npx tsc --noEmit && echo "typecheck OK"

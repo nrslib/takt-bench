@@ -1,0 +1,27 @@
+# アーキテクチャレビュー
+
+## 結果: APPROVE
+
+## サマリー
+FINAL GATEで指摘された未使用コード（未使用import、未使用変数、未使用関数）がすべて適切に削除され、コードの純潔性が向上したことを確認しました。
+
+## 確認した観点
+- [x] 構造・設計
+- [x] コード品質
+- [x] 変更スコープ
+- [x] テストカバレッジ
+- [x] デッドコード
+- [x] 呼び出しチェーン検証
+
+## 観測した指摘
+なし
+
+## 検証証跡
+- ビルド: `src/service.ts` および `src/task-validation.ts` を確認し、指摘された未使用コードが削除されていることを実コードで検証。
+- テスト: 前段ステップにて全 72 テストが合格していることを確認。
+- 動作確認: `src/service.ts:12` の `ValidationError` import、`src/service.ts:174` の `activeSet` 変数、`src/task-validation.ts` の `getActiveStatuses()` 関数が削除されていることを確認。
+
+## 再走査証跡
+- 構造・設計: `src/service.ts`, `src/repository.ts`, `src/task-validation.ts` を再走査。依存方向および責務分離に問題がないことを確認。
+- コード品質: `noUnusedLocals` 等の厳格チェックに基づき、不要なコードが残存していないことを全ファイル走査により確認。
+- 公開状態の不変性: `copyTaskRecord` による防御的コピーが維持されていることを再確認。
