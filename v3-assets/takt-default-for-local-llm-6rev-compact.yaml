@@ -243,10 +243,29 @@ steps:
           report:
             - name: contract-lifecycle-review.md
               format: coding-review-finding-contract
+
+      - name: robustness-review
+        tags:
+          - review
+        edit: false
+        session: compact
+        persona: robustness-reviewer
+        policy:
+          - review
+          - robustness
+        pass_previous_response: false
+        instruction: robustness-review
+        rules:
+          - condition: approved
+          - condition: needs_fix
+        output_contracts:
+          report:
+            - name: robustness-review.md
+              format: coding-review-finding-contract
     rules:
-      - condition: all("approved", "AI特有の問題なし", "approved", "approved", "approved") && when(findings.open.count == 0 && findings.conflicts.count == 0)
+      - condition: all("approved", "AI特有の問題なし", "approved", "approved", "approved", "approved") && when(findings.open.count == 0 && findings.conflicts.count == 0)
         next: final-gate
-      - condition: any("needs_fix", "AI特有の問題あり", "needs_fix", "needs_fix", "needs_fix") && when(findings.conflicts.count == 0)
+      - condition: any("needs_fix", "AI特有の問題あり", "needs_fix", "needs_fix", "needs_fix", "needs_fix") && when(findings.conflicts.count == 0)
         next: fix
       - condition: when(findings.conflicts.count == 0 && findings.open.count > 0)
         next: fix
