@@ -157,6 +157,22 @@ combos:
         final-gate: { provider: codex, model: gpt-5.5 }
 
 
+  - id: v2c-ordinary-compact
+    description: compact 実験腕（主戦場軸）。ローカルモデルのステップ（implement/fix/レビュー4並列）に session compact を付け、resume 後に Phase 1 前だけ opencode の圧縮を呼ぶ（takt#995）。max_steps 200 = 完走まで回す方針。配役・題材は v2-ordinary-baseline と同一
+    workflow: backend-for-local-llm-compact
+    subject: subject-ordinary
+    task_file: task-ordinary.md
+    persona_providers:
+      findings-manager: { provider: codex, model: gpt-5.5 }
+    routing:
+      tags:
+        plan: { provider: codex, model: gpt-5.5 }
+        test-planning: { provider: codex, model: gpt-5.5 }
+        coding: { provider: opencode, model: ollama-cloud/qwen3-coder-next }
+        review: { provider: opencode, model: ollama-cloud/gemma4:31b }
+        final-gate: { provider: codex, model: gpt-5.5 }
+
+
 smoke:
   id: mock-smoke
   description: mock プロバイダによるハーネス疎通確認
