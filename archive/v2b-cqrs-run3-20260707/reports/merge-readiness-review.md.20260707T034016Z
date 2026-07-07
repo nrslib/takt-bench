@@ -1,0 +1,51 @@
+# Merge Readiness Review
+
+## 結果: REJECT
+
+## サマリー
+`StockProjection.apply(StockShipped)` に、予約存在確認後の不要な `?? 0` フォールバックが残っています。F-0002 と同種の「不整合を既定値で隠す」問題であり、保守前提ではマージを止めるべきです。
+
+## 保守前提のマージ品質チェック
+| # | 観点 | 状態 | 根拠（ファイル:行 / テスト / 実行証跡） | コメント |
+|---|------|------|---------------------------------------|----------|
+| 1 | 要求充足 | 充足 | `README.md:12-17`, `src/index.ts:6-11`, `src/domain.ts:26`, `src/event-store.ts:4`, `src/command-handler.ts:4`, `src/projection.ts:15` | 要求 API は `src/index.ts` から利用可能 |
+| 2 | 既存契約・既存フローへの影響 | 問題あり | `src/projection.ts:79-82` | 予約存在確認後に `?? 0` で不整合を隠している |
+| 3 | テスト・検証 | 十分 | `npm test -- --run`: 10 files / 77 tests passed、`npm run typecheck`: passed | 実行証跡は成功 |
+| 4 | 要求外変更・スコープクリープ | 問題なし | `git diff --name-only`, `git ls-files --others --exclude-standard` | 実装・契約テスト追加はタスク範囲内 |
+| 5 | 保守可能性・将来変更容易性 | 問題あり | `src/projection.ts:82` | 到達不能なはずの状態を既定値で処理するため、将来の不整合調査を困難にする |
+| 6 | 明白なセキュリティ・データ保護・運用リスク | 問題なし | `src/domain.ts:4-16`, `src/projection.ts:3-6` | `reservationId` 周辺は `Object.hasOwn` / `Object.create(null)` / `Map` で扱われている |
+
+## 横断監査証跡
+| # | 変更カテゴリ | 抽出した項目 | 確認した検索語・ファイル | 判定 | コメント |
+|---|--------------|--------------|--------------------------|------|----------|
+| 1 | entrypoint / public API | `initialState`, `evolve`, `decide`, `InMemoryEventStore`, `CommandHandler`, `StockProjection`, `types` | `export` / `src/index.ts:6-11` | 問題なし | 要求 API のみ公開入口から re-export |
+| 2 | 型 / helper | `ProductState.reservations`, `hasReservation`, `copyReservations` | `reservations`, `Object.hasOwn`, `Object.create` / `src/domain.ts:4-16` | 問題なし | F-0003 のプロトタイプ継承誤判定は再発していない |
+| 3 | projection state | `ProjectionState.reservations: Map<string, number>` | `Map`, `Object.values`, `lowStock` / `src/projection.ts:3-6`, `src/projection.ts:100`, `src/projection.ts:112` | 問題なし | F-0005/F-0006/F-0007/F-0008 は再発していない |
+| 4 | fallback | `??` | `??` / `src/projection.ts:82` | 問題あり | 予約存在確認後の `?? 0` が残存 |
+
+## 要求照合
+| # | 要求（タスクから抽出） | 状態 | 根拠（ファイル:行） | コメント |
+|---|-------------------|------|-------------------|----------|
+| 1 | README 仕様に従う在庫 ES ライブラリ | 充足 | `src/domain.ts:83-158`, `src/projection.ts:22-119` | ドメインルールと projection は実装済み |
+| 2 | 公開 API は `src/types.ts` に準拠し `src/index.ts` から import 可能 | 充足 | `src/types.ts:9-119`, `src/index.ts:6-11` | 型定義変更は確認されていない |
+| 3 | フレームワーク非依存・インメモリ完結 | 充足 | `package.json:10-13`, `src/event-store.ts:4-29` | 実行時フレームワーク依存なし |
+| 4 | アーキテクチャ要件遵守 | 充足 | `src/command-handler.ts:1-17`, `src/projection.ts:1-2`, `tests/architecture.test.ts:17-38` | `CommandHandler` は `EventStore` ポートに依存 |
+
+## 要求外変更・既存影響
+| # | 変更 | ファイル | 判定 | コメント |
+|---|------|---------|------|----------|
+| 1 | 実装を `domain/event-store/command-handler/projection` に分割 | `src/*.ts` | 妥当 | README がモジュール分割を設計判断に委ねている |
+| 2 | 契約補強テスト追加 | `tests/*-contracts.test.ts`, `tests/architecture.test.ts` | 妥当 | resolved finding とアーキテクチャ要件の回帰防止 |
+
+## 観測した指摘
+| # | family_tag | カテゴリ | 重大度 | 場所 | 問題 | 修正案 |
+|---|------------|---------|--------|------|------|--------|
+| 1 | maintainability-readiness | 保守困難化 | medium | `src/projection.ts:82` | `state.reservations.has(event.reservationId)` で存在を確認済みなのに、`state.reservations.get(event.reservationId) ?? 0` でフォールバックしている。予約数量が必ず存在する契約を既定値で隠し、Projection の状態不整合時に `onHand` 減算漏れを発見しにくくする。 | `?? 0` を削除し、存在確認後に取得した値をそのまま使う。型上必要なら、予約数量取得用 helper を作り、存在しない場合は throw して fail-fast にする。 |
+
+## 検証証跡
+- ビルド: `npm run typecheck` を実行し成功
+- テスト: `npm test -- --run` を実行し 10 files / 77 tests passed
+- 動作確認: `rg -n "\\?\\?|Object\\.values|reservations" src tests README.md`、`rg -n "ProductCreated|StockReceived|StockReserved|ReservationReleased|StockShipped|initialState|evolve|decide|InMemoryEventStore|CommandHandler|StockProjection|lowStock|getStock" src tests README.md` で横断確認
+
+## REJECT判定条件
+- マージを止めるべき観測指摘が1件あるため REJECT。

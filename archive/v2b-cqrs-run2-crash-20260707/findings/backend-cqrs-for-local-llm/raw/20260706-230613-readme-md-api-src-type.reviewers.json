@@ -1,0 +1,14 @@
+[
+  {
+    "rawFindingId": "20260706-230613-readme-md-api-src-type:reviewers:1:implementation-semantics-review:sem-001",
+    "stepName": "implementation-semantics-review",
+    "reviewer": "implementation-semantics-review",
+    "familyTag": "data-structure-semantics",
+    "severity": "medium",
+    "title": "外部入力キーを持つ辞書のプロトタイプ汚染/混入リスク",
+    "location": "src/domain.ts:107,126,141; src/projection.ts:6,18,21,24",
+    "description": "`ProductState.reservations` および `StockState.reservations` が `Record<string, number>` として実装されており、`in` 演算子や `delete` を使用して存在判定および操作が行われている。`reservationId` は外部入力由来であるため、`\"toString\"` や `\"constructor\"` などのプロトタイプ継承プロパティを持つ ID が渡された場合に、未登録であるにもかかわらず存在すると判定される、あるいは意図しない挙動を示すリスクがある。",
+    "suggestion": "`Record<string, number>` の代わりに `Map<string, number>` を使用するか、`Object.hasOwn()` を用いて継承プロパティを遮断して存在判定を行ってください。",
+    "kind": "issue"
+  }
+]

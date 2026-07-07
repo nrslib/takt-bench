@@ -1,0 +1,79 @@
+# テスト作成レポート
+
+## 要件-テスト対応表
+| 要件ID | 観測可能な契約 | 入口/経路 | テスト | 結果 | 未カバー理由 |
+|--------|----------------|-----------|--------|------|--------------|
+| R01 | `src/types.ts` の公開契約を変更しない | TypeScript 型チェック | `npm run typecheck` | 既存 | 型定義ファイル自体の不変性は実行時契約ではないため、差分確認で扱う |
+| R02 | 利用者が `src/index.ts` から公開 API を import できる | Public API import | 既存 `tests/*.test.ts` 全般 | 既存 | |
+| R03 | `initialState` は未作成・在庫なしの商品状態を表す | `initialState` | `tests/domain.test.ts` | 既存 | |
+| R04-R06 | `evolve` はイベントを状態へ適用し、throw せず、引数を変更しない | `evolve(state, event)` | `tests/domain.test.ts`, `tests/domain-contracts.test.ts` | 既存 + 作成 | |
+| R07-R08 | `decide` はコマンドからイベントを導出し、不変条件違反で `DomainError` | `decide(state, command)` | `tests/domain.test.ts` | 既存 | |
+| R09-R11 | `CreateProduct`: 再作成拒否、trim 後空名拒否、trim 後名で `ProductCreated` | `decide` | `tests/domain.test.ts`, `tests/domain-contracts.test.ts` | 既存 + 作成 | |
+| R12-R13 | `ReceiveStock`: 未作成拒否、正の整数数量のみ許可 | `decide` | `tests/domain.test.ts` | 既存 | |
+| R14-R17 | `ReserveStock`: 未作成拒否、正の整数、available 以内、予約ID重複拒否 | `decide` | `tests/domain.test.ts` | 既存 | |
+| R18-R21 | `ReleaseReservation` / `ShipStock`: 既存予約のみ、予約削除、出荷時 onHand 減算 | `decide`, `evolve` | `tests/domain.test.ts`, `tests/domain-contracts.test.ts` | 既存 + 作成 | |
+| R22-R27 | `InMemoryEventStore`: 空 stream、version、競合、部分保存禁止、load 配列コピー | `load`, `append` | `tests/event-store.test.ts`, `tests/event-store-contracts.test.ts` | 既存 + 作成 | |
+| R28-R30 | `CommandHandler`: `load -> replay -> decide -> append`、`EventStore` ポート依存、productId stream 分離 | `CommandHandler.handle` | `tests/command-handler.test.ts`, `tests/command-handler-contracts.test.ts` | 既存 + 作成 | |
+| R31-R35 | `StockProjection`: イベントから読み取りモデル構築、未知商品 undefined、stock 算出、lowStock 昇順 | `StockProjection.apply/getStock/lowStock` | `tests/projection.test.ts`, `tests/projection-contracts.test.ts` | 既存 + 作成 | |
+| R36-R37 | ドメインはストア/プロジェクション非依存、プロジェクションは書き込みモデル非依存 | ソース import 境界 | `tests/architecture.test.ts` | 作成 | |
+| R38 | フレームワーク非依存 | package / import 境界 | `tests/architecture.test.ts` | 一部作成 | 外部依存追加の完全検出は package 差分レビューで扱う |
+| R39 | インメモリで完結する | `InMemoryEventStore`, 統合経路 | `tests/event-store.test.ts`, `tests/integration.test.ts` | 既存 + 作成 | |
+| R40 | 既存公開テストの契約を維持する | 既存テストスイート | 既存 `tests/*.test.ts` | 既存 | |
+
+## 危険分岐テスト
+| 分岐 | 失敗させたい誤実装 | テスト | 未カバー理由 |
+|------|--------------------|--------|--------------|
+| trim 後の名前保存 | 空判定だけ trim し、イベントには未 trim 名を保存する | `tests/domain-contracts.test.ts` | |
+| `evolve` の不正予約履歴 | 予約がない `ReservationReleased` / `StockShipped` で throw する | `tests/domain-contracts.test.ts` | |
+| sequential append の順序 | version だけ増え、イベント順序が壊れる | `tests/event-store-contracts.test.ts` | |
+| CommandHandler の具象依存 | `InMemoryEventStore` 前提で実装し、任意の `EventStore` を扱えない | `tests/command-handler-contracts.test.ts` | |
+| decide 失敗時の部分保存 | `DomainError` 後に append される | `tests/command-handler-contracts.test.ts` | |
+| projection の予約ID衝突 | productId を無視し reservationId だけで予約管理する | `tests/projection-contracts.test.ts` | |
+| アーキテクチャ逆依存 | domain が adapter/projection に依存、projection が write model に依存 | `tests/architecture.test.ts` | |
+
+## 横断経路テスト
+| 経路 | 生成側 | 消費側 | 保証する契約 | テスト | 未カバー理由 |
+|------|----------|----------|--------------|--------|--------------|
+| `CommandHandler.handle -> InMemoryEventStore.load/append -> StockProjection.apply` | CommandHandler が生成・保存する DomainEvent | StockProjection | 保存済みイベントを読み取りモデルへ流し、onHand/reserved/available が一致する | `tests/integration.test.ts` | |
+| `EventStore` ポート fake -> CommandHandler | RecordingEventStore | CommandHandler | 具象 store なしで load version を expectedVersion として append する | `tests/command-handler-contracts.test.ts` | |
+
+## 否定契約
+| 禁止する挙動 | 観測方法 | テスト | 未カバー理由 |
+|--------------|----------|--------|--------------|
+| `CreateProduct` が未 trim の名前をイベントに出す | 戻り値の `ProductCreated.name` を比較 | `tests/domain-contracts.test.ts` | |
+| `evolve` が不正履歴で例外を投げる | `expect(...).not.toThrow()` | `tests/domain-contracts.test.ts` | |
+| CommandHandler が reject 後に保存する | fake store の `appendCalls` が空であることを確認 | `tests/command-handler-contracts.test.ts` | |
+| CommandHandler が具体 store に依存する | `InMemoryEventStore` を含まない fake store で実行 | `tests/command-handler-contracts.test.ts` | |
+| projection が商品をまたいで予約を混同する | 同じ `reservationId` を別 productId で使い、片方だけ出荷 | `tests/projection-contracts.test.ts` | |
+| domain / projection の禁止依存 | import 行と禁止識別子を静的確認 | `tests/architecture.test.ts` | |
+
+## 作成テスト
+| ファイル | 種別 | テスト数 | 概要 |
+|---------|------|---------|------|
+| `tests/domain-contracts.test.ts` | 単体 | 3 | trim 正規化、不正予約履歴でも `evolve` が total であること |
+| `tests/event-store-contracts.test.ts` | 単体 | 1 | sequential append 後のイベント順序と version |
+| `tests/command-handler-contracts.test.ts` | 単体 | 2 | `EventStore` ポート経由の orchestration、reject 時 append 禁止 |
+| `tests/projection-contracts.test.ts` | 単体 | 1 | productId ごとの予約スコープ分離 |
+| `tests/integration.test.ts` | 統合 | 1 | command から保存イベントを projection に流す横断経路 |
+| `tests/architecture.test.ts` | 静的契約 | 3 | 計画されたモジュール分割の依存方向チェック |
+
+## 未カバー項目
+| 要件/分岐 | 未カバー理由 | 後続で必要な確認 |
+|-----------|--------------|------------------|
+| package 依存追加によるフレームワーク混入 | 本ステップではプロダクションコード・package 設定を変更しないため、追加テストではなく差分レビュー対象 | implement / reviewers で `package.json` と import 差分を確認 |
+| `src/types.ts` のファイル内容不変 | 実行時挙動ではなく変更禁止ルールのため、テストより差分確認が適切 | final-gate で `src/types.ts` に差分がないことを確認 |
+| README や説明文の固定 | 非実行資産の本文・章タイトル固定テストは禁止されているため未作成 | 不要 |
+
+## 実行結果（参考）
+実装前のためテスト失敗・import エラーは想定内。
+
+| 状態 | 件数 | 備考 |
+|------|------|------|
+| Pass | 0 | `npm test` は未実装スタブにより失敗 |
+| Fail / Import Error（想定内） | 32 tests + 1 suite | `src/index.ts` の `Not implemented`、および未作成の `src/domain.ts` / `src/command-handler.ts` / `src/projection.ts` 起因 |
+| Error（要対応） | 0 | `npm run typecheck` は成功。追加テスト由来の型エラーは解消済み |
+
+## 備考（判断がある場合のみ）
+- プロダクションコードは変更していない。
+- 追加した `tests/architecture.test.ts` は計画レポートで採用された内部モジュール分割を前提にしているため、implement ステップでは `src/domain.ts`、`src/event-store.ts`、`src/command-handler.ts`、`src/projection.ts` への分割が必要。
+- Finding ledger に既存 finding ID はないため、新規 finding ID は付与していない。

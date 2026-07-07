@@ -1,0 +1,85 @@
+# テスト作成レポート
+
+## 要件-テスト対応表
+| 要件ID | 観測可能な契約 | 入口/経路 | テスト | 結果 | 未カバー理由 |
+|--------|----------------|-----------|--------|------|--------------|
+| R01 | `src/types.ts` の公開契約を変更しない | TypeScript 型チェック | `npm run typecheck` | 既存 | 型定義ファイル自体の不変性は差分確認で扱う |
+| R02 | `src/index.ts` の公開 API シグネチャを維持する | Public API import | 既存 `tests/*.test.ts` 全般 | 既存 | |
+| R03 | 利用者は `src/index.ts` と `src/types.ts` だけを import して使える | Public API import | 既存 `tests/*.test.ts` 全般 | 既存 | |
+| R04 | ドメインロジックはストアやプロジェクションに依存しない | import 境界 | `tests/architecture.test.ts` | 既存 | |
+| R05 | `evolve` は throw しない | `evolve(state, event)` | `tests/domain-contracts.test.ts` | 既存 | |
+| R06 | `evolve` は引数を変更しない | `evolve(state, event)` | `tests/domain.test.ts` | 既存 | |
+| R07 | `decide` は不変条件違反で `DomainError` を throw する | `decide(state, command)` | `tests/domain.test.ts`, `tests/domain-contracts.test.ts` | 既存 + 作成 | |
+| R08 | `ProductState.reservations` は公開型 `Record<string, number>` を維持する | `src/types.ts` 型契約 | `npm run typecheck` | 既存 | 型内容の不変性は差分確認で扱う |
+| R09 / F-0003 | prototype 継承プロパティを予約 ID と誤判定しない | `decide`, `evolve` | `tests/domain-contracts.test.ts` | 作成 | |
+| R10 / F-0002 | `StockShipped` の missing reservation を `?? 0` で隠さず、明示分岐で元 state を返す | `evolve` | `tests/domain-contracts.test.ts` | 作成 | |
+| R11 | `CommandHandler` は `EventStore` ポートにのみ依存する | `CommandHandler.handle`, import 境界 | `tests/command-handler-contracts.test.ts`, `tests/architecture.test.ts` | 既存 | |
+| R12 | Projection は書き込みモデルを参照せず、イベントのみから構築する | import 境界, `StockProjection.apply` | `tests/architecture.test.ts`, `tests/projection.test.ts` | 既存 | |
+| R13 / F-0001 | `StockProjection.apply` は `ProjectionState` を直接変更せず、新しい state object に置き換える | `StockProjection.apply` | `tests/projection-contracts.test.ts` | 作成 | |
+| R14 / F-0005 | Projection 内部の reservations は prototype 汚染リスクを避ける | `StockProjection` 内部状態 | `tests/projection-contracts.test.ts` | 作成 | |
+| R15 / F-0004 | ProductCreated 以外で未知 productId のイベントを fail-fast する | `StockProjection.apply` | `tests/projection-contracts.test.ts` | 作成 | |
+| R16 | フレームワークへ依存しない | package / import 境界 | `tests/architecture.test.ts` | 既存 | 外部依存追加の完全検出は package 差分レビューで扱う |
+| R17 | インメモリで完結する | `InMemoryEventStore`, 統合経路 | `tests/event-store.test.ts`, `tests/integration.test.ts` | 既存 | |
+| R18 | テスト以外のプロダクションコードを変更しない | git 差分確認 | 作業範囲確認 | 既存 | 自動検査ではなく差分レビューで扱う |
+
+## 危険分岐テスト
+| 分岐 | 失敗させたい誤実装 | テスト | 未カバー理由 |
+|------|--------------------|--------|--------------|
+| missing reservation の `StockShipped` | `?? 0` で missing を隠し、新しい state を返す | `tests/domain-contracts.test.ts` / `F-0002 returns the original state when shipping a missing reservation` | |
+| `toString` 予約 ID | `in` 演算子で prototype 継承プロパティを既存予約と誤判定する | `tests/domain-contracts.test.ts` / `F-0003 allows reserving an Object prototype property name...` | |
+| inherited property の release/ship | own property でない予約 ID を存在する予約として扱う | `tests/domain-contracts.test.ts` / `F-0003 rejects ... inherited Object prototype property name` | |
+| inherited property の shipped quantity | inherited `toString` などを数量として扱い `onHand` を壊す | `tests/domain-contracts.test.ts` / `F-0003 does not use inherited Object prototype properties...` | |
+| ProjectionState 直接変更 | Map に格納済みの同じ state object を mutate する | `tests/projection-contracts.test.ts` / `F-0001 replaces ProjectionState...` | |
+| Projection reservations の plain object | 内部予約辞書に plain object を使い続ける | `tests/projection-contracts.test.ts` / `F-0005 keeps internal reservation storage as a Map` | |
+| 未知 productId の projection event | 不整合なイベントを黙って無視する | `tests/projection-contracts.test.ts` / `F-0004 fails fast...` | |
+
+## 横断経路テスト
+| 経路 | 生成側 | 消費側 | 保証する契約 | テスト | 未カバー理由 |
+|------|----------|----------|--------------|--------|--------------|
+| `CommandHandler.handle -> InMemoryEventStore -> StockProjection.apply` | CommandHandler が生成・保存する DomainEvent | StockProjection | 保存済みイベントを読み取りモデルへ反映し、`onHand/reserved/available` が一致する | `tests/integration.test.ts` | |
+| `EventStore` ポート fake -> CommandHandler | RecordingEventStore | CommandHandler | 具象 store なしで `load -> replay -> decide -> append` を行う | `tests/command-handler-contracts.test.ts` | |
+| `decide/evolve` の予約 ID 境界 | 外部入力 `reservationId` | Domain state | prototype 継承プロパティを own reservation として扱わない | `tests/domain-contracts.test.ts` | |
+| `StockProjection.apply` の内部状態更新 | DomainEvent | Projection internal state / read model | 内部 state を置き換えつつ読み取りモデル契約を保つ | `tests/projection-contracts.test.ts`, 既存 `tests/projection.test.ts` | |
+
+## 否定契約
+| 禁止する挙動 | 観測方法 | テスト | 未カバー理由 |
+|--------------|----------|--------|--------------|
+| `evolve` が missing reservation を `?? 0` で処理して新 state を返す | `next` が元 state と同一参照であることを確認 | `tests/domain-contracts.test.ts` | |
+| `decide` が `toString` を既存予約として扱う | `ReserveStock` が `StockReserved` を返すことを確認 | `tests/domain-contracts.test.ts` | |
+| `decide` が inherited property を release/ship 可能な予約として扱う | `DomainError` を throw することを確認 | `tests/domain-contracts.test.ts` | |
+| `evolve` が inherited property を shipped quantity として使う | `next` が元 state と同一参照であることを確認 | `tests/domain-contracts.test.ts` | |
+| `StockProjection.apply` が既存 state object を直接変更する | apply 前後の内部 state object 参照が異なることを確認 | `tests/projection-contracts.test.ts` | |
+| Projection 内部 reservations に plain object を使う | 内部 `reservations` が `Map` instance であることを確認 | `tests/projection-contracts.test.ts` | |
+| Projection が未知 productId のイベントを黙って無視する | `apply` が `Error` を throw することを確認 | `tests/projection-contracts.test.ts` | |
+
+## 作成テスト
+| ファイル | 種別 | テスト数 | 概要 |
+|---------|------|---------|------|
+| `tests/domain-contracts.test.ts` | 単体 | 5 | F-0002/F-0003 の missing reservation、prototype 継承プロパティ予約 ID、inherited shipped quantity を固定 |
+| `tests/projection-contracts.test.ts` | 単体 | 9 | F-0001/F-0005/F-0004 の ProjectionState 置換、内部 reservations Map、未知 productId fail-fast を固定 |
+
+## 未カバー項目
+| 要件/分岐 | 未カバー理由 | 後続で必要な確認 |
+|-----------|--------------|------------------|
+| `src/types.ts` の内容不変 | 実行時挙動ではなく変更禁止ルールのため、差分確認が適切 | implement / final-gate で `src/types.ts` に差分がないことを確認 |
+| package 依存追加によるフレームワーク混入 | 本ステップでは package 変更を行わず、追加テストでは完全検出できない | reviewers / final-gate で `package.json` と import 差分を確認 |
+| ProjectionState の private 内部構造を完全なブラックボックスで検出すること | F-0001/F-0005 は内部実装構造への finding であり、公開 API だけでは直接変更と Map 化を区別できない | 現在は white-box テストで固定。レビューでも実装差分を確認 |
+
+## 実行結果（参考）
+実装前のため、追加した finding 固定テストの失敗は想定内。
+
+| 状態 | 件数 | 備考 |
+|------|------|------|
+| Pass | 66 | 既存契約と F-0004 fail-fast 回帰テストは通過 |
+| Fail / Import Error（想定内） | 10 | F-0001/F-0002/F-0003/F-0005 の現行未修正コード起因 |
+| Error（要対応） | 0 | `npm run typecheck` は成功 |
+
+## Disputed Findings
+| findingId | reason | evidence |
+|-----------|--------|----------|
+| F-0004 | stale。現行 `StockProjection.apply` は ProductCreated 以外のイベントで state が存在しない場合、黙って無視せず `Error` を throw している | `src/projection.ts:25-27`, `src/projection.ts:34-36`, `src/projection.ts:43-45`, `src/projection.ts:53-55` |
+
+## 備考（判断がある場合のみ）
+- プロダクションコードは変更していない。
+- 今回の追加テストは、open finding ID `F-0001`、`F-0002`、`F-0003`、`F-0004`、`F-0005` を明示的に参照している。
+- `F-0004` は現行コードでは既に満たされているため、再修正対象ではなく dispute として報告する。

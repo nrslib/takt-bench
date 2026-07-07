@@ -1,0 +1,18 @@
+# 実装意味論レビュー
+
+## 結果: REJECT
+
+## サマリー
+`decide` 関数の `ReserveStock` および `ReleaseReservation` では `Object.hasOwn` による遮断が行われましたが、`ShipStock` の存在判定において依然として `undefined` チェックが残っており、プロトタイプ汚染のリスクが解消されていません。
+
+## 観測した指摘
+| # | family_tag | 重大度 | 場所 | 問題 | 壊れる条件 | 修正案 |
+|---|------------|--------|------|------|-----------|--------|
+| 1 | data-structure-semantics | medium | `src/domain.ts:95` | `ShipStock` 処理における Record の存在判定に `undefined` チェックを使用している | `reservationId` に `"toString"` 等の標準プロパティ名が渡された場合、未登録でも存在すると判定され不正に処理が進む | `Object.hasOwn(state.reservations, command.reservationId)` を使用してください。 |
+
+## 検証証跡
+- 差分確認: `src/domain.ts` の `decide` 関数内を再走査。
+- 判定根拠の実在確認: `src/domain.ts:95` にて `if (state.reservations[command.reservationId] === undefined)` という記述があることを確認済み。
+
+## REJECT判定条件
+- ブロッキング指摘（data-structure-semantics）が1件あるため REJECT。

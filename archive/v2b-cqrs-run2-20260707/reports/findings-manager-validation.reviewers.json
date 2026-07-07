@@ -1,0 +1,77 @@
+{
+  "version": 1,
+  "runId": "20260707-011805-readme-md-api-src-type",
+  "stepName": "reviewers",
+  "retryCount": 1,
+  "ledgerUpdated": false,
+  "finalErrors": [
+    "Resolution confirmation \"20260707-011805-readme-md-api-src-type:reviewers:5:implementation-semantics-review:res-003\" cannot be cited as issue evidence in matches[0]",
+    "Cannot match finding \"F-0005\" because it is not open",
+    "Finding id \"F-0005\" appears in multiple manager decisions: matches[0] and conflicts[0]"
+  ],
+  "attempts": [
+    {
+      "attempt": 1,
+      "managerOutput": {
+        "matches": [],
+        "newFindings": [],
+        "resolvedFindings": [
+          {
+            "findingId": "F-0005",
+            "rawFindingIds": [
+              "20260707-011805-readme-md-api-src-type:reviewers:5:cqrs-es-review:res-f-0005-domain",
+              "20260707-011805-readme-md-api-src-type:reviewers:5:cqrs-es-review:res-f-0005-proj",
+              "20260707-011805-readme-md-api-src-type:reviewers:5:implementation-semantics-review:res-003"
+            ],
+            "evidence": "現在の raw findings に F-0005 を targetFindingId とする resolution_confirmation が3件含まれている。うち implementation-semantics-review:res-003 は既存 F-0005 と同じ data-structure-semantics familyTag で src/domain.ts:95 の ShipStock 存在判定リスク解消を確認している。cqrs-es-review の2件も同じ F-0005 を対象に StockShipped replay/projection 経路の関連リスク解消を確認しているため、F-0005 の解消確認として集約する。"
+          }
+        ],
+        "reopenedFindings": [],
+        "conflicts": [],
+        "resolvedConflicts": [],
+        "waivedFindings": [],
+        "disputeNotes": []
+      },
+      "validationErrors": [
+        "Cannot resolve finding \"F-0005\" because it is not open"
+      ]
+    },
+    {
+      "attempt": 2,
+      "managerOutput": {
+        "matches": [
+          {
+            "findingId": "F-0005",
+            "rawFindingIds": [
+              "20260707-011805-readme-md-api-src-type:reviewers:5:implementation-semantics-review:res-003"
+            ],
+            "evidence": "F-0005 は前版 ledger で既に resolved のため再度 resolvedFindings には入れない。raw finding は targetFindingId=F-0005 で、familyTag=data-structure-semantics、location=src/domain.ts:95、ShipStock の Record 存在判定リスクという既存 F-0005 と同一問題の解消確認として対応づける。"
+          }
+        ],
+        "newFindings": [],
+        "resolvedFindings": [],
+        "reopenedFindings": [],
+        "conflicts": [
+          {
+            "findingIds": [
+              "F-0005"
+            ],
+            "rawFindingIds": [
+              "20260707-011805-readme-md-api-src-type:reviewers:5:cqrs-es-review:res-f-0005-domain",
+              "20260707-011805-readme-md-api-src-type:reviewers:5:cqrs-es-review:res-f-0005-proj"
+            ],
+            "description": "この2件は targetFindingId=F-0005 を指しているが、familyTag=implementation-semantics で、location は src/domain.ts:39 / src/projection.ts:94、issue meaning は StockShipped replay/projection 経路の数量取得リスクである。既存 F-0005 は familyTag=data-structure-semantics、location=src/domain.ts:95、decide 関数の ShipStock 存在判定リスクであり、familyTag・location・issue meaning が一致しないため F-0005 の解消確認として統合できない。"
+          }
+        ],
+        "resolvedConflicts": [],
+        "waivedFindings": [],
+        "disputeNotes": []
+      },
+      "validationErrors": [
+        "Resolution confirmation \"20260707-011805-readme-md-api-src-type:reviewers:5:implementation-semantics-review:res-003\" cannot be cited as issue evidence in matches[0]",
+        "Cannot match finding \"F-0005\" because it is not open",
+        "Finding id \"F-0005\" appears in multiple manager decisions: matches[0] and conflicts[0]"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,50 @@
+[
+  {
+    "rawFindingId": "20260707-011805-readme-md-api-src-type:reviewers:4:cqrs-es-review:res-f-0005",
+    "stepName": "cqrs-es-review",
+    "reviewer": "cqrs-es-review",
+    "familyTag": "implementation-semantics",
+    "severity": "medium",
+    "title": "ShipStock 処理における Record 存在判定リスクの解消確認",
+    "location": "src/domain.ts:95",
+    "description": "`src/domain.ts:95` において、`ShipStock` の存在判定に `!Object.hasOwn(state.reservations, command.reservationId)` が使用されており、外部入力キーによる Record 存在判定リスクが解消されていることを確認しました。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0005"
+  },
+  {
+    "rawFindingId": "20260707-011805-readme-md-api-src-type:reviewers:4:ai-antipattern-review:res-005",
+    "stepName": "ai-antipattern-review",
+    "reviewer": "ai-antipattern-review",
+    "familyTag": "security-risk",
+    "severity": "medium",
+    "title": "ShipStock 処理における Record 存在判定リスクの解消確認",
+    "location": "src/domain.ts:95",
+    "description": "`src/domain.ts` の `decide` 関数における `ShipStock` 処理の存在判定が `!Object.hasOwn(state.reservations, command.reservationId)` に修正され、プロトタイプ汚染等のリスクが解消されていることを確認した。 (src/domain.ts:95)",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0005"
+  },
+  {
+    "rawFindingId": "20260707-011805-readme-md-api-src-type:reviewers:4:coding-review:res-F-0005",
+    "stepName": "coding-review",
+    "reviewer": "coding-review",
+    "familyTag": "resolution_confirmation",
+    "severity": "medium",
+    "title": "ShipStock 処理における Record 存在判定リスクの解消確認",
+    "location": "src/domain.ts:95",
+    "description": "`src/domain.ts` の `decide` 関数における `ShipStock` 処理において、`Object.hasOwn(state.reservations, command.reservationId)` を使用して存在判定を行うように修正されていることを確認しました。 (src/domain.ts:95)",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0005"
+  },
+  {
+    "rawFindingId": "20260707-011805-readme-md-api-src-type:reviewers:4:implementation-semantics-review:res-002",
+    "stepName": "implementation-semantics-review",
+    "reviewer": "implementation-semantics-review",
+    "familyTag": "data-structure-semantics",
+    "severity": "medium",
+    "title": "ShipStock 処理における Record 存在判定リスクの解消確認",
+    "location": "src/domain.ts:95",
+    "description": "src/domain.ts:95 — decide 関数の ShipStock 処理において、Object.hasOwn(state.reservations, command.reservationId) を使用して継承経路を遮断するように修正されています。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0005"
+  }
+]

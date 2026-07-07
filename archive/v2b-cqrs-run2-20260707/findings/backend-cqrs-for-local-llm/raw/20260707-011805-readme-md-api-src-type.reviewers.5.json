@@ -1,0 +1,38 @@
+[
+  {
+    "rawFindingId": "20260707-011805-readme-md-api-src-type:reviewers:5:cqrs-es-review:res-f-0005-domain",
+    "stepName": "cqrs-es-review",
+    "reviewer": "cqrs-es-review",
+    "familyTag": "implementation-semantics",
+    "severity": "medium",
+    "title": "StockShipped (evolve) の Record 存在判定リスクの解消確認",
+    "location": "src/domain.ts:39",
+    "description": "`src/domain.ts:39` の `evolve` 関数内における `StockShipped` 処理において、`Object.hasOwn(state.reservations, event.reservationId)` を用いて数量を取得しており、継承プロパティによる誤判定リスクが解消されていることを確認しました。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0005"
+  },
+  {
+    "rawFindingId": "20260707-011805-readme-md-api-src-type:reviewers:5:cqrs-es-review:res-f-0005-proj",
+    "stepName": "cqrs-es-review",
+    "reviewer": "cqrs-es-review",
+    "familyTag": "implementation-semantics",
+    "severity": "medium",
+    "title": "StockShipped (projection) の Record 存在判定リスクの解消確認",
+    "location": "src/projection.ts:94",
+    "description": "`src/projection.ts:94` の `shipStock` メソッドにおいて、`Object.hasOwn(s.reservations, reservationId)` を用いて数量を取得しており、継承プロパティによる誤判定リスクが解消されていることを確認しました。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0005"
+  },
+  {
+    "rawFindingId": "20260707-011805-readme-md-api-src-type:reviewers:5:implementation-semantics-review:res-003",
+    "stepName": "implementation-semantics-review",
+    "reviewer": "implementation-semantics-review",
+    "familyTag": "data-structure-semantics",
+    "severity": "medium",
+    "title": "ShipStock 処理における Record 存在判定リスクの解消確認",
+    "location": "src/domain.ts:95",
+    "description": "src/domain.ts:95 — decide 関数の ShipStock 処理において、Object.hasOwn(state.reservations, command.reservationId) を使用して継承経路を遮断するように修正されています。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0005"
+  }
+]

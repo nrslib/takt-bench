@@ -1,0 +1,66 @@
+{
+  "version": 1,
+  "runId": "20260707-024116-readme-md-api-src-type",
+  "stepName": "reviewers",
+  "retryCount": 1,
+  "ledgerUpdated": false,
+  "finalErrors": [
+    "Cannot match raw findings with different familyTag values: \"logic-error\" and \"none\" (matches[0], finding \"F-0006\")",
+    "Resolution confirmation \"20260707-024116-readme-md-api-src-type:reviewers:4:ai-antipattern-review:res-final-001\" cannot be cited as issue evidence in matches[0]",
+    "Cannot match finding \"F-0006\" because it is not open"
+  ],
+  "attempts": [
+    {
+      "attempt": 1,
+      "managerOutput": {
+        "matches": [],
+        "newFindings": [],
+        "resolvedFindings": [
+          {
+            "findingId": "F-0006",
+            "rawFindingIds": [
+              "20260707-024116-readme-md-api-src-type:reviewers:2:cqrs-es-review:iss-0001",
+              "20260707-024116-readme-md-api-src-type:reviewers:2:ai-antipattern-review:finding-006",
+              "20260707-024116-readme-md-api-src-type:reviewers:4:ai-antipattern-review:res-final-001"
+            ],
+            "evidence": "current raw finding は kind=resolution_confirmation で targetFindingId=F-0006 を明示しており、F-0006 の同一問題（src/projection.ts:112 の Map に対する Object.values 誤用）の解消確認として扱う。"
+          }
+        ],
+        "reopenedFindings": [],
+        "conflicts": [],
+        "resolvedConflicts": [],
+        "waivedFindings": [],
+        "disputeNotes": []
+      },
+      "validationErrors": [
+        "Cannot resolve finding \"F-0006\" because it is not open"
+      ]
+    },
+    {
+      "attempt": 2,
+      "managerOutput": {
+        "matches": [
+          {
+            "findingId": "F-0006",
+            "rawFindingIds": [
+              "20260707-024116-readme-md-api-src-type:reviewers:4:ai-antipattern-review:res-final-001"
+            ],
+            "evidence": "current raw finding は kind=resolution_confirmation で targetFindingId=F-0006 を明示しているが、previous ledger では F-0006 は既に status=resolved/lifecycle=resolved のため、解消遷移は行わず既存 finding への確認として対応づける。"
+          }
+        ],
+        "newFindings": [],
+        "resolvedFindings": [],
+        "reopenedFindings": [],
+        "conflicts": [],
+        "resolvedConflicts": [],
+        "waivedFindings": [],
+        "disputeNotes": []
+      },
+      "validationErrors": [
+        "Cannot match raw findings with different familyTag values: \"logic-error\" and \"none\" (matches[0], finding \"F-0006\")",
+        "Resolution confirmation \"20260707-024116-readme-md-api-src-type:reviewers:4:ai-antipattern-review:res-final-001\" cannot be cited as issue evidence in matches[0]",
+        "Cannot match finding \"F-0006\" because it is not open"
+      ]
+    }
+  ]
+}

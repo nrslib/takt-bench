@@ -1,0 +1,68 @@
+## Goal
+- Implement an event-sourcing based inventory management library following CQRS+ES principles.
+
+## Constraints & Preferences
+- No framework dependencies; purely in-memory implementation.
+- Public API must adhere to `src/types.ts` and be exportable from `src/index.ts`.
+- Prohibit direct mutation of state objects (must use spread syntax or new objects).
+- Use `Object.hasOwn` for `Record` key existence checks to avoid inherited property risks (e.g., `toString`, `__proto__`).
+- Ensure all domain logic is encapsulated in `decide` (Command Model) and `evolve` (Event Sourcing), and read models are handled by `StockProjection`.
+
+## Progress
+### Done
+- Implemented `ProductState`, `evolve`, and `decide` in `src/domain.ts`.
+- Implemented `InMemoryEventStore` in `src/event-store.ts`.
+- Implemented `CommandHandler` in `src/command-handler.ts`.
+- Implemented `StockProjection` in `src/projection.ts`.
+- Exported all components via `src/index.ts`.
+- Fixed state mutation bugs (F-0001, F-0002).
+- Unified `initialState` usage in `CommandHandler` (F-0003).
+- Resolved `Record` existence check risks using `Object.hasOwn` for `ReserveStock`, `ReleaseReservation`, and `ShipStock` (F-0004, F-0005).
+- Added regression tests in `tests/domain.test.ts` and `tests/projection.test.ts` for inherited key attacks on `StockShipped` processing.
+- Verified build with `npm run typecheck` and tests with `npm test` (68 tests passed).
+
+### In Progress
+- (none)
+
+### Blocked
+- (none)
+
+## Key Decisions
+- Use `Object.hasOwn` instead of `undefined` checks for `ProductState.reservations` to prevent prototype pollution/inherited property access during event replay.
+- Enforce immutable state updates in both the Command Model and Projection to prevent side effects and ensure predictability.
+
+## Next Steps
+- (none)
+
+## Critical Context
+- Ledger findings F-0001 through F-0005 are all marked as `resolved`.
+- `ProductState.reservations` is defined as `Record<string, number>` in the immutable `src/types.ts` contract, necessitating the use of `Object.hasOwn` since `Map` cannot be used.
+
+## Relevant Files
+- `src/types.ts`: Public API contracts and type definitions (immutable).
+- `src/domain.ts`: Core domain logic (`decide` for commands, `evolve` for event application).
+- `src/projection.ts`: Read model implementation (`StockProjection`).
+- `src/command-handler.ts`: Orchestrates loading state and appending events.
+- `src/event-store.ts`: In-memory event stream storage.
+- `src/index.ts`: Public entry point for the library.
+- `tests/domain.test.ts`: Domain logic and event sourcing tests.
+- `tests/projection.test.ts`: Projection accuracy and robustness tests.
+Continue if you have next steps, or stop and ask for clarification if you are unsure how to proceed.
+# CQRS+ESレビュー
+
+## 結果: APPROVE
+
+## サマリー
+CQRS+ES原則に基づいた在庫管理ライブラリの実装を確認しました。不変性の確保、イベントストアによる状態遷移の再現、およびプロジェクションによる読み取りモデルの分離が正しく実装されており、潜在的なプロトタイプ汚染リスク（Object.hasOwnの導入）も含め、すべての指摘事項が解消されています。
+
+## 確認した観点
+| 観点 | 結果 | 備考 |
+|------|------|------|
+| Aggregate設計 | ✅ | `decide`と`evolve`による純粋関数的な状態遷移を実現 |
+| イベント設計 | ✅ | 状態変更をイベントとして定義し、不変性を維持 |
+| Command/Query分離 | ✅ | `CommandHandler`と`StockProjection`で責任を明確に分離 |
+| プロジェクション | ✅ | イベントストリームから正確に読み取りモデルを構築 |
+| 結果整合性 | ✅ | イベントストアを正解とし、プロジェクションがそれを追随する構造 |
+
+## 観測した指摘
+（なし：すべての指摘事項 F-0001 〜 F-0005 は解決済み）

@@ -1,0 +1,74 @@
+[
+  {
+    "rawFindingId": "20260707-024116-readme-md-api-src-type:reviewers:3:cqrs-es-review:res-f0006-0008",
+    "stepName": "cqrs-es-review",
+    "reviewer": "cqrs-es-review",
+    "familyTag": "logic-error",
+    "severity": "high",
+    "title": "F-0006/F-0007/F-0008 解消確認",
+    "location": "src/projection.ts:112",
+    "description": "src/projection.ts:112 — lowStock メソッド内において、Map 型の state.reservations から値を取得する処理が Array.from(state.reservations.values()).reduce(...) に修正されており、正しく予約数量の合計が計算されるようになった。したがって F-0006, F-0007, F-0008 はすべて解消された。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0006"
+  },
+  {
+    "rawFindingId": "20260707-024116-readme-md-api-src-type:reviewers:3:ai-antipattern-review:res-003",
+    "stepName": "ai-antipattern-review",
+    "reviewer": "ai-antipattern-review",
+    "familyTag": "logic-error",
+    "severity": "high",
+    "title": "lowStock の計算ロジック解消確認",
+    "location": "src/projection.ts:112",
+    "description": "src/projection.ts:112 — lowStock メソッド内での予約数量合計計算において、`Array.from(state.reservations.values()).reduce(...)` が使用されており、Map の値が正しく集計される実装になっていることを確認。これにより F-0006, F-0007, F-0008 の問題が解消された。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0006"
+  },
+  {
+    "rawFindingId": "20260707-024116-readme-md-api-src-type:reviewers:3:coding-review:R-0006",
+    "stepName": "coding-review",
+    "reviewer": "coding-review",
+    "familyTag": "bug",
+    "severity": "high",
+    "title": "Map に対して Object.values を使用した低在庫判定の誤計算の解消確認",
+    "location": "src/projection.ts:112",
+    "description": "src/projection.ts:112 — `Object.values(state.reservations)` が `Array.from(state.reservations.values())` に修正され、Map の値に基づいた正しい予約数量の集計が行われるようになった。これにより lowStock 判定が正しく機能する。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0006"
+  },
+  {
+    "rawFindingId": "20260707-024116-readme-md-api-src-type:reviewers:3:coding-review:R-0007",
+    "stepName": "coding-review",
+    "reviewer": "coding-review",
+    "familyTag": "bug",
+    "severity": "high",
+    "title": "Map に対して Object.values() を使用しているため在庫計算が正しく行われないことの解消確認",
+    "location": "src/projection.ts:112",
+    "description": "src/projection.ts:112 — `Object.values(state.reservations)` が `Array.from(state.reservations.values())` に修正され、Map の値に基づいた正しい予約数量の集計が行われるようになった。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0007"
+  },
+  {
+    "rawFindingId": "20260707-024116-readme-md-api-src-type:reviewers:3:coding-review:R-0008",
+    "stepName": "coding-review",
+    "reviewer": "coding-review",
+    "familyTag": "bug",
+    "severity": "high",
+    "title": "Map 型のコレクションに対して Object.values を使用しているため集計が失敗することの解消確認",
+    "location": "src/projection.ts:112",
+    "description": "src/projection.ts:112 — `Object.values(state.reservations)` が `Array.from(state.reservations.values())` に修正され、Map の値に基づいた正しい予約数量の集計が行われるようになった。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0008"
+  },
+  {
+    "rawFindingId": "20260707-024116-readme-md-api-src-type:reviewers:3:implementation-semantics-review:res-4",
+    "stepName": "implementation-semantics-review",
+    "reviewer": "implementation-semantics-review",
+    "familyTag": "data-structure-choice",
+    "severity": "high",
+    "title": "Map 型のコレクションに対して Object.values を使用しているため集計が失敗する (Resolved)",
+    "location": "src/projection.ts:112",
+    "description": "src/projection.ts:112 — `lowStock` メソッド内での予約数量集計において、`Object.values(state.reservations)` が `Array.from(state.reservations.values())` に修正されており、Map の値を正しく集計できるようになっている。解決済み。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0008"
+  }
+]

@@ -1,0 +1,34 @@
+# Merge Readiness Review
+
+## 結果: REJECT
+
+## サマリー
+既存 finding `F-0004` は resolved 扱いですが、同じ外部入力キーによる `Record` 存在判定リスクが `ShipStock` に残っています。公開 API 経由で存在しない予約 `"toString"` を出荷でき、集約・プロジェクションの在庫値が破損するため、この状態ではマージ不可です。
+
+## 保守前提のマージ品質チェック
+| # | 観点 | 状態 | 根拠（ファイル:行 / テスト / 実行証跡） | コメント |
+|---|------|------|---------------------------------------|----------|
+| 1 | 要求充足 | 未充足 | `README.md:25`, `src/domain.ts:95` | `ShipStock` は予約存在が必須だが、継承プロパティ名を存在予約として誤判定する |
+| 2 | 既存契約・既存フローへの影響 | 問題あり | `src/domain.ts:39`, `src/projection.ts:94` | 不正 `StockShipped` が replay/projection で `NaN` を発生させる |
+| 3 | テスト・検証 | 不足 | `tests/domain.test.ts:210`, 実行証跡 | 通常の未知予約 `r9` は検証済みだが、`toString` 等の inherited key 境界が未検証 |
+| 4 | 要求外変更・スコープクリープ | 問題なし | `git diff --name-only` | 実装・テスト追加はタスク範囲内 |
+| 5 | 保守可能性・将来変更容易性 | 問題あり | `src/domain.ts:80`, `src/domain.ts:89`, `src/domain.ts:95` | 同じ予約存在契約が分岐ごとに異なる実装になっている |
+| 6 | 明白なセキュリティ・データ保護・運用リスク | 問題あり | `src/domain.ts:95` | 外部入力 `reservationId` によって不正イベントが保存される |
+
+## 横断監査証跡
+| # | 変更カテゴリ | 抽出した項目 | 確認した検索語・ファイル | 判定 | コメント |
+|---|--------------|--------------|--------------------------|------|----------|
+| 1 | 型 / discriminant | `ShipStock`, `reservationId` | `ShipStock|reservationId|Object.hasOwn` / `src/domain.ts`, `src/projection.ts`, `tests/*` | 問題あり | `ReleaseReservation` は `Object.hasOwn`、`ShipStock` はブラケット参照のまま |
+| 2 | entrypoint | `src/index.ts` re-export | `initialState|evolve|decide|InMemoryEventStore|CommandHandler|StockProjection` / `src/index.ts:6-12` | 問題なし | 公開 API 名は入口から export されている |
+| 3 | 状態変更経路 | `decide -> append -> replay -> projection` | 一時ビルド後の公開 API 実行 | 問題あり | 不正 `StockShipped` が保存され、`onHand` が `NaN` 化する |
+| 4 | resolved finding | `F-0004` | `findings-ledger.json`, `src/domain.ts:80`, `src/domain.ts:89`, `src/domain.ts:95` | 問題あり | 受入条件が `ShipStock` 分岐まで横断されていない |
+
+## 観測した指摘
+| # | family_tag | カテゴリ | 重大度 | 場所 | 問題 | 修正案 |
+|---|------------|---------|--------|------|------|--------|
+| 1 | maintainability-readiness | 契約破壊 | high | `src/domain.ts:95` | `ShipStock` の存在判定が `state.reservations[command.reservationId] === undefined` のため、`reservationId: "toString"` が未予約でも存在扱いされる。再現結果は `ReleaseReservation DomainError` に対し `ShipStock returned [{"type":"StockShipped","productId":"p-1","reservationId":"toString"}]`。その後 replay/projection で `onHand` が `NaN` になる。 | `ShipStock` も `Object.hasOwn(state.reservations, command.reservationId)` で判定する。あわせて `evolve` と `StockProjection` の `StockShipped` 適用側も inherited property を数量として読まないようにし、`toString` 等の回帰テストを追加する。 |
+
+## 検証証跡
+- ビルド: `tsc --outDir /private/tmp/inventory-review-out ... src/types.ts src/domain.ts src/index.ts` 成功
+- テスト: `npm test` は 5 files / 64 tests passed、`npm run typecheck` 成功
+- 動作確認: 一時ビルドした公開 API で `decide(state, { type: 'ShipStock', reservationId: 'toString' })` が `DomainError` ではなく `StockShipped` を返すことを確認。`CommandHandler` 経由では不正イベント保存後に aggregate `onHand` が `NaN`、projection 出力は JSON 上 `null` 相当になることを確認。

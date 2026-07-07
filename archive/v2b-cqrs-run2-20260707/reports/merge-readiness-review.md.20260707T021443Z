@@ -1,0 +1,33 @@
+# Merge Readiness Review
+
+## 結果: REJECT
+
+## サマリー
+`decide` 側の F-0005 は修正されていますが、公開 API の `evolve` と `StockProjection.apply` に `StockShipped` イベントを直接再注入する経路で inherited key を数量として読み、在庫値が `NaN` になります。イベントソーシングの replay / projection 入口が状態を破壊するため、この状態ではマージ不可です。
+
+## 保守前提のマージ品質チェック
+| # | 観点 | 状態 | 根拠（ファイル:行 / テスト / 実行証跡） | コメント |
+|---|------|------|---------------------------------------|----------|
+| 1 | 要求充足 | 未充足 | `README.md:13`, `README.md:36`, `src/domain.ts:39`, `src/projection.ts:94` | `evolve` は throw しないだけでなく状態を壊さない必要があるが、`StockShipped(toString)` で `NaN` になる |
+| 2 | 既存契約・既存フローへの影響 | 問題あり | `src/domain.ts:39`, `src/projection.ts:94` | 保存済み・外部由来イベントを replay / projection したときに読み取り値が破損する |
+| 3 | テスト・検証 | 不足 | `tests/domain.test.ts:79`, `tests/projection.test.ts:43`, 実行証跡 | 通常の missing reservation は検証済みだが、inherited key 境界の回帰テストがない |
+| 4 | 要求外変更・スコープクリープ | 問題なし | `git diff --name-only`, `rg --files` | 実装・テスト追加はタスク範囲内 |
+| 5 | 保守可能性・将来変更容易性 | 問題あり | `src/domain.ts:80`, `src/domain.ts:89`, `src/domain.ts:95`, `src/domain.ts:39`, `src/projection.ts:94` | コマンド判定側だけ own property 化され、イベント適用側に同じ意味契約が横断されていない |
+| 6 | 明白なセキュリティ・データ保護・運用リスク | 問題あり | `src/domain.ts:39`, `src/projection.ts:94` | 外部入力由来の `reservationId` を含むイベントで在庫値を破損できる |
+
+## 横断監査証跡
+| # | 変更カテゴリ | 抽出した項目 | 確認した検索語・ファイル | 判定 | コメント |
+|---|--------------|--------------|--------------------------|------|----------|
+| 1 | 型 / discriminant / entrypoint | `ShipStock`, `StockShipped`, `reservationId`, `evolve`, `StockProjection.apply` | `reservations\\[|Object.hasOwn|StockShipped|ShipStock|toString|reservationId` / `src/domain.ts`, `src/projection.ts`, `tests/*`, `README.md` | 問題あり | `decide` は `Object.hasOwn` だが、`evolve` と projection はブラケット参照のまま |
+| 2 | resolved finding | `F-0005` | `findings-ledger.json`, `implementation-semantics-review.md`, `src/domain.ts:95` | 問題なし | F-0005 の ledger 上の対象である `decide` の `ShipStock` 判定は解消済み |
+| 3 | 状態再注入経路 | `EventStore.load -> evolve`, `EventStore.load -> StockProjection.apply` | `CommandHandler`, `integration.test.ts`, 一時ビルド後の公開 API 実行 | 問題あり | 直接イベント投入で aggregate / projection の `onHand` が `NaN` |
+
+## 観測した指摘
+| # | family_tag | カテゴリ | 重大度 | 場所 | 問題 | 修正案 |
+|---|------------|---------|--------|------|------|--------|
+| 1 | maintainability-readiness | 契約破壊 | high | `src/domain.ts:39`, `src/projection.ts:94` | `StockShipped` 適用時に `state.reservations[event.reservationId] ?? 0` / `s.reservations[reservationId] ?? 0` が inherited property を数量として読む。再現結果は `decide ShipStock DomainError` だが、直接 `StockShipped(toString)` を replay / projection すると `aggregate.onHand NaN`, `projection.onHand NaN`。 | `Object.hasOwn(..., reservationId)` を確認してから own property の数量だけを読む。存在しない場合は `0` として状態を壊さない。`evolve` と `StockProjection.apply` に `toString` 等 inherited key の回帰テストを追加する。 |
+
+## 検証証跡
+- ビルド: `tsc --outDir /private/tmp/inventory-review-out ... src/types.ts src/domain.ts src/projection.ts src/index.ts src/event-store.ts src/command-handler.ts` 成功
+- テスト: `npm test` は 5 files / 64 tests passed、`npm run typecheck` 成功
+- 動作確認: 一時ビルドした公開 API で `decide(state, { type: 'ShipStock', reservationId: 'toString' })` は `DomainError`。同じ `reservationId` の `StockShipped` を `evolve` / `StockProjection.apply` に直接投入すると `aggregate.onHand NaN`, `projection.onHand NaN` になることを確認。

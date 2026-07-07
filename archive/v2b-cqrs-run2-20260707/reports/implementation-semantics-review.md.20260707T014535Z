@@ -1,0 +1,16 @@
+# 実装意味論レビュー
+
+## 結果: APPROVE
+
+## サマリー
+前回指摘した外部入力キーによる Record の存在判定リスク（F-0004）が `Object.hasOwn` の導入により解消されており、その他の実装意味論上の問題は見当たりませんでした。
+
+## 検証証跡
+- 差分確認: `src/domain.ts` の `decide` 関数における `ReserveStock` (L80) および `ReleaseReservation` (L89) の存在判定を再確認。
+- 判定根拠の実在確認: `src/domain.ts:80` にて `Object.hasOwn(state.reservations, command.reservationId)` が使用されていることを確認し、継承プロパティによる誤判定が遮断されていることを検証済み。
+- 再走査証跡:
+    - データ構造の意味選択: `src/domain.ts`, `src/projection.ts` を走査。遮断済み Record または Map が使用されており OK。
+    - 導出値の単一情報源: `src/domain.ts`, `src/projection.ts` を走査。在庫数や予約合計を別変数で保持せず、必要時に計算または状態遷移で正しく更新されており OK。
+    - 命名と意味の整合: 変数名と格納される値の整合性を `src/domain.ts`, `src/command-handler.ts` で確認し OK。
+    - 境界での fail-fast: `decide` 関数内の不変条件チェック（存在確認、数量バリデーション）が適切に行われており OK。
+    - 内部状態の参照漏れ: `src/projection.ts:46` 等で新しいオブジェクトを返しており、内部状態の参照が漏れていないことを確認し OK。

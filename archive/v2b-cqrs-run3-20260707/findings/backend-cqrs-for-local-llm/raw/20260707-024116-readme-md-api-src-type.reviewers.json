@@ -1,0 +1,62 @@
+[
+  {
+    "rawFindingId": "20260707-024116-readme-md-api-src-type:reviewers:1:ai-antipattern-review:finding-001",
+    "stepName": "ai-antipattern-review",
+    "reviewer": "ai-antipattern-review",
+    "familyTag": "mutation-of-shared-state",
+    "severity": "high",
+    "title": "ProjectionState の直接変更",
+    "location": "src/projection.ts:27",
+    "description": "src/projection.ts:27, 35, 44, 54-55 — StockProjection.apply 内で ProjectionState (Map の値) を直接変更している。レビューポリシーの「オブジェクト/配列の直接変更」に抵触する。不変性を維持し、新しい状態オブジェクトを set するべきである。",
+    "suggestion": "状態を更新する際は、スプレッド構文等を用いて新しいオブジェクトを作成し、Map.set() で更新してください。",
+    "kind": "issue"
+  },
+  {
+    "rawFindingId": "20260707-024116-readme-md-api-src-type:reviewers:1:ai-antipattern-review:finding-002",
+    "stepName": "ai-antipattern-review",
+    "reviewer": "ai-antipattern-review",
+    "familyTag": "fallback-abuse",
+    "severity": "medium",
+    "title": "evolve 内でのフォールバック値の濫用",
+    "location": "src/domain.ts:46",
+    "description": "src/domain.ts:46 — evolve 関数内で state.reservations[event.reservationId] ?? 0 とフォールバック値を使用している。レビューポリシーの「フォールバック値の乱用」に抵触する。StockShipped イベントが適用される時点で、状態に予約が存在することはドメインルール（decide 側）で保証されているはずであり、不確実性を ?? で隠すべきではない。",
+    "suggestion": "フォールバックを削除し、期待される値が確実に存在することを前提とした実装にするか、不整合がある場合に適切に処理してください。",
+    "kind": "issue"
+  },
+  {
+    "rawFindingId": "20260707-024116-readme-md-api-src-type:reviewers:1:implementation-semantics-review:finding-1",
+    "stepName": "implementation-semantics-review",
+    "reviewer": "implementation-semantics-review",
+    "familyTag": "data-structure-choice",
+    "severity": "high",
+    "title": "外部入力(reservationId)をキーとする辞書にプレーンオブジェクトを使用している",
+    "location": "src/domain.ts:98, 115, 126",
+    "description": "ProductState.reservations が Record<string, number> (プレーンオブジェクト) で実装されており、`command.reservationId in state.reservations` による存在判定を行っている。これにより、`toString` や `__proto__` などのプロトタイプ継承プロパティを持つ ID が渡された場合に、未登録の予約が存在するように誤判定される脆弱性がある。",
+    "suggestion": "ProductState.reservations を Map<string, number> に変更し、存在判定を `.has()` で行うように修正してください。",
+    "kind": "issue"
+  },
+  {
+    "rawFindingId": "20260707-024116-readme-md-api-src-type:reviewers:1:implementation-semantics-review:finding-2",
+    "stepName": "implementation-semantics-review",
+    "reviewer": "implementation-semantics-review",
+    "familyTag": "fail-fast",
+    "severity": "medium",
+    "title": "Projection でのイベント適用時に存在しない productId のイベントを黙って無視している",
+    "location": "src/projection.ts:25, 33, 41, 50",
+    "description": "StockProjection.apply において、StockReceived などのイベントを処理する際、`this.states.get(event.productId)` が undefined の場合に `if (state)` でチェックして何もしない（黙って無視する）実装になっている。これは、イベントログの不整合や ProductCreated イベントの欠落を検出し得ない設計であり、境界での fail-fast に反している。",
+    "suggestion": "ProductCreated 以外のイベントで state が取得できない場合は、Error を投げて不整合を早期に検出するようにしてください。",
+    "kind": "issue"
+  },
+  {
+    "rawFindingId": "20260707-024116-readme-md-api-src-type:reviewers:1:implementation-semantics-review:finding-3",
+    "stepName": "implementation-semantics-review",
+    "reviewer": "implementation-semantics-review",
+    "familyTag": "data-structure-choice",
+    "severity": "high",
+    "title": "ProjectionState の reservations にプレーンオブジェクトを使用している",
+    "location": "src/projection.ts:5",
+    "description": "ProjectionState.reservations が Record<string, number> で実装されており、ドメイン層と同様にプロトタイプ汚染による誤動作の可能性がある。",
+    "suggestion": "Map<string, number> への変更を推奨します。",
+    "kind": "issue"
+  }
+]

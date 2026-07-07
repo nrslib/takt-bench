@@ -1,0 +1,50 @@
+[
+  {
+    "rawFindingId": "20260707-011805-readme-md-api-src-type:reviewers:1:ai-antipattern-review:mut-001",
+    "stepName": "ai-antipattern-review",
+    "reviewer": "ai-antipattern-review",
+    "familyTag": "mutability-violation",
+    "severity": "high",
+    "title": "状態オブジェクトの直接変更",
+    "location": "src/domain.ts:21",
+    "description": "`src/domain.ts` の `evolve` 関数内で、`newState.onHand += event.quantity` 等のようにオブジェクトのプロパティを直接変更している。レビューポリシーの「判定基準 > REJECT」にある「オブジェクト/配列の直接変更」に該当する。純粋関数として実装し、常に新しいオブジェクトを返す必要がある。",
+    "suggestion": "プロパティを直接変更せず、スプレッド構文や新しいオブジェクトのリテラルを使用して状態を更新してください。",
+    "kind": "issue"
+  },
+  {
+    "rawFindingId": "20260707-011805-readme-md-api-src-type:reviewers:1:ai-antipattern-review:mut-002",
+    "stepName": "ai-antipattern-review",
+    "reviewer": "ai-antipattern-review",
+    "familyTag": "mutability-violation",
+    "severity": "high",
+    "title": "プロジェクション状態の直接変更",
+    "location": "src/projection.ts:66",
+    "description": "`src/projection.ts` の `updateOnHand`, `addReservation`, `removeReservation`, `shipStock` メソッドにおいて、`Map` から取得した状態オブジェクト `s` のプロパティを直接変更している。これはレビューポリシーの「オブジェクト/配列の直接変更」に該当し、予期せぬ副作用を招く可能性がある。",
+    "suggestion": "状態オブジェクトを直接変更せず、新しいオブジェクトを作成して `Map.set` で更新してください。",
+    "kind": "issue"
+  },
+  {
+    "rawFindingId": "20260707-011805-readme-md-api-src-type:reviewers:1:ai-antipattern-review:dry-001",
+    "stepName": "ai-antipattern-review",
+    "reviewer": "ai-antipattern-review",
+    "familyTag": "dry-violation",
+    "severity": "medium",
+    "title": "初期状態定義の重複",
+    "location": "src/command-handler.ts:14",
+    "description": "`src/command-handler.ts` の `handle` メソッド内で、`events.reduce(evolve, { exists: false, name: '', onHand: 0, reservations: {} })` としており、`src/domain.ts` で定義されている `initialState` を使用していない。これは「本質的に同じロジックの重複（DRY違反）」および「一貫性の欠如」に該当する。",
+    "suggestion": "`initialState` を import して使用してください。",
+    "kind": "issue"
+  },
+  {
+    "rawFindingId": "20260707-011805-readme-md-api-src-type:reviewers:1:implementation-semantics-review:finding-001",
+    "stepName": "implementation-semantics-review",
+    "reviewer": "implementation-semantics-review",
+    "familyTag": "data-structure-semantics",
+    "severity": "medium",
+    "title": "外部入力キーによる Record の存在判定におけるプロトタイプ汚染のリスク",
+    "location": "src/domain.ts:72",
+    "description": "`ProductState.reservations` は `Record<string, number>` で実装されており、外部入力である `reservationId` をキーとして使用している。`decide` 関数内で `state.reservations[command.reservationId] !== undefined` のように存在判定を行っているが、これは `__proto__` や `toString` などの継承プロパティが存在する場合に誤判定を起こす可能性がある。",
+    "suggestion": "`ProductState` の `reservations` を `Map<string, number>` に変更するか、存在判定に `Object.hasOwn(state.reservations, command.reservationId)` を使用して継承経路を遮断してください。",
+    "kind": "issue"
+  }
+]

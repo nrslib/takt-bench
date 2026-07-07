@@ -1,0 +1,20 @@
+# 実装意味論レビュー
+
+## 結果: REJECT
+
+## サマリー
+外部入力（reservationId）をキーとする辞書にプレーンオブジェクトを使用しており、プロトタイプ汚染による誤判定の脆弱性があるため、および Projection 層での不整合検知が不足しているため。
+
+## 観測した指摘
+| # | family_tag | 重大度 | 場所 | 問題 | 壊れる条件 | 修正案 |
+|---|------------|--------|------|------|-----------|--------|
+| 1 | data-structure-choice | High | `src/domain.ts:98, 115, 126` | 予約管理に `Record` を使用し `in` 演算子で判定している | `reservationId` に `"toString"` 等の継承プロパティ名が渡された際、未登録でも存在扱いになる | `Map` を使用し `.has()` で判定する |
+| 2 | fail-fast | Medium | `src/projection.ts:25, 33, 41, 50` | 未知の `productId` に対するイベント適用を黙って無視している | `ProductCreated` イベントが欠落した状態で後続イベントが届いた際、不整合が検出されず静かにデータが欠損する | state が取得できない場合は Error を投げる |
+| 3 | data-structure-choice | High | `src/projection.ts:5` | ProjectionState でも予約管理に `Record` を使用している | ドメイン層と同様、プロトタイプ汚染により予約数量の集計や削除が誤動作する | `Map` へ変更する |
+
+## 検証証跡
+- 差分確認: `src/domain.ts`, `src/projection.ts` の状態管理および判定ロジックを走査
+- 判定根拠の実在確認: `src/domain.ts:98` の `command.reservationId in state.reservations` 等の実コードを確認済み
+
+## REJECT判定条件
+- ブロッキング指摘（High/Medium）が3件あり、REJECT。

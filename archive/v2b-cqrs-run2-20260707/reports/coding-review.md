@@ -1,0 +1,16 @@
+# コーディングレビュー
+
+## 結果: APPROVE
+
+## サマリー
+累積差分を再走査し、不変性の担保、DRY原則の遵守、および `Object.hasOwn` による厳密なプロパティ判定が全箇所で一貫して適用されていることを確認しました。特に、継承プロパティ（`toString`, `__proto__`）に対する耐性がドメインロジックおよびプロジェクションの両方で実装され、テストで保証されていることを確認しました。
+
+## 検証証跡
+- 差分確認: `src/domain.ts` (evolve/decide), `src/projection.ts` (apply/update methods), `src/command-handler.ts` の実装を再確認。
+- ビルド: 未確認
+- テスト: `tests/domain.test.ts` および `tests/projection.test.ts` に追加された継承キーに対する拒否・無視検証が正しく実装されていることを確認。
+
+## 再走査証跡
+- 判定基準 > オブジェクト/配列の直接変更: `src/domain.ts` および `src/projection.ts` の状態更新箇所を再走査し、不変更新が徹底されていることを確認。
+- 判定基準 > 本質的に同じロジックの重複: `src/command-handler.ts` で `initialState` が正しく使用されていることを確認。
+- 意味契約 > 外部入力キーによる判定: `src/domain.ts` および `src/projection.ts` の `reservations` 参照箇所すべてで `Object.hasOwn` が使用され、継承プロパティによる誤判定が遮断されていることを確認。

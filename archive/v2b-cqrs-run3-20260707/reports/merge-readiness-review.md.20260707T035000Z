@@ -1,0 +1,51 @@
+# Merge Readiness Review
+
+## 結果: REJECT
+
+## サマリー
+前回指摘した `StockProjection.apply(StockShipped)` の `?? 0` フォールバックは解消されていますが、同じ `src/projection.ts` に未使用 helper `copyProjectionState` が残っています。レビューポリシーの「未使用コード」に該当するため、保守前提ではマージ不可です。
+
+## 保守前提のマージ品質チェック
+| # | 観点 | 状態 | 根拠（ファイル:行 / テスト / 実行証跡） | コメント |
+|---|------|------|---------------------------------------|----------|
+| 1 | 要求充足 | 充足 | `README.md:12-17`, `src/index.ts:6-11`, `src/domain.ts:26`, `src/event-store.ts:4`, `src/command-handler.ts:4`, `src/projection.ts:15` | 要求 API は公開入口から利用可能 |
+| 2 | 既存契約・既存フローへの影響 | 問題なし | `src/projection.ts:79-82`, `src/projection.ts:100`, `src/projection.ts:112` | 前回の fallback と Map 集計問題は再発なし |
+| 3 | テスト・検証 | 十分 | `npm test -- --run`: 10 files / 77 tests passed、`npm run typecheck`: passed | 実行証跡は成功 |
+| 4 | 要求外変更・スコープクリープ | 問題なし | `git status --short`, `git diff --stat` | 実装分割と契約テスト追加はタスク範囲内 |
+| 5 | 保守可能性・将来変更容易性 | 問題あり | `src/projection.ts:8`, `rg -n "copyProjectionState" src tests README.md` | 未使用 helper が残存 |
+| 6 | 明白なセキュリティ・データ保護・運用リスク | 問題なし | `src/domain.ts:4-16`, `src/projection.ts:3-6` | `reservationId` 周辺の prototype 誤判定・Map 誤用は再発なし |
+
+## 横断監査証跡
+| # | 変更カテゴリ | 抽出した項目 | 確認した検索語・ファイル | 判定 | コメント |
+|---|--------------|--------------|--------------------------|------|----------|
+| 1 | entrypoint / public API | `initialState`, `evolve`, `decide`, `InMemoryEventStore`, `CommandHandler`, `StockProjection`, `types` | `export` / `src/index.ts:6-11` | 問題なし | 要求 API のみ re-export |
+| 2 | helper | `copyProjectionState` | `copyProjectionState` / `src/projection.ts:8` | 問題あり | 定義のみで呼び出し元なし |
+| 3 | projection state / Map 集計 | `ProjectionState.reservations`, `getStock`, `lowStock` | `Object.values`, `reservations.values`, `lowStock` / `src/projection.ts:3-6`, `src/projection.ts:100`, `src/projection.ts:112` | 問題なし | F-0005/F-0006/F-0007/F-0008 は再発なし |
+| 4 | fallback | `??` | `??` / `src/projection.ts:79-82`, `src/domain.ts:64-68` | 問題なし | production 側の不適切 fallback は確認されず、テスト double のみ `?? []` を使用 |
+
+## 要求照合
+| # | 要求（タスクから抽出） | 状態 | 根拠（ファイル:行） | コメント |
+|---|-------------------|------|-------------------|----------|
+| 1 | README 仕様に従う在庫 ES ライブラリ | 充足 | `src/domain.ts:83-158`, `src/projection.ts:22-119` | ドメインルールと projection は実装済み |
+| 2 | 公開 API は `src/types.ts` に準拠し `src/index.ts` から import 可能 | 充足 | `src/types.ts:9-119`, `src/index.ts:6-11` | 公開契約に沿って re-export |
+| 3 | フレームワーク非依存・インメモリ完結 | 充足 | `package.json:10-13`, `src/event-store.ts:4-29` | 実行時フレームワーク依存なし |
+| 4 | アーキテクチャ要件遵守 | 充足 | `src/command-handler.ts:1-17`, `src/projection.ts:1-2`, `tests/architecture.test.ts:17-38` | `CommandHandler` は `EventStore` ポート依存 |
+
+## 要求外変更・既存影響
+| # | 変更 | ファイル | 判定 | コメント |
+|---|------|---------|------|----------|
+| 1 | 実装を `domain/event-store/command-handler/projection` に分割 | `src/*.ts` | 妥当 | README がモジュール分割を設計判断に委ねている |
+| 2 | 契約補強テスト追加 | `tests/*-contracts.test.ts`, `tests/architecture.test.ts` | 妥当 | resolved finding とアーキテクチャ要件の回帰防止 |
+
+## 観測した指摘
+| # | family_tag | カテゴリ | 重大度 | 場所 | 問題 | 修正案 |
+|---|------------|---------|--------|------|------|--------|
+| 1 | maintainability-readiness | 保守困難化 | medium | `src/projection.ts:8` | `copyProjectionState` が定義されていますが、`rg -n "copyProjectionState" src tests README.md` では定義箇所しか出ず、呼び出し元がありません。レビューポリシーの「未使用コード」に該当します。 | `copyProjectionState` を削除してください。現行の projection 更新は各分岐で `new Map(...)` と `this.states.set(...)` により行われており、この helper は不要です。 |
+
+## 検証証跡
+- ビルド: `npm run typecheck` を実行し成功
+- テスト: `npm test -- --run` を実行し 10 files / 77 tests passed
+- 動作確認: `rg -n "copyProjectionState|\?\?|\bany\b|TODO|FIXME|catch\s*\(|Object\.values\(state\.reservations\)|Object\.values\(.*Map|Not implemented" src tests README.md` で横断確認
+
+## REJECT判定条件
+- マージを止めるべき観測指摘が1件あるため REJECT。

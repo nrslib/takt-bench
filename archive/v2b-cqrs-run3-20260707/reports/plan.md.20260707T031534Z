@@ -1,0 +1,146 @@
+# タスク計画
+
+## 元の要求
+在庫管理ドメインをイベントソーシングで実装するライブラリを作ってください。
+
+仕様は README.md に記載されています。公開 API は src/types.ts の型定義に準拠し、利用者が src/index.ts から import できる形にしてください。
+
+フレームワークには依存せず、インメモリで完結するライブラリとして実装してください。アーキテクチャ上の制約は README.md の「アーキテクチャ要件」に従ってください。
+
+## 分析結果
+
+### 目的
+既に実装済みのイベントソーシング在庫管理ライブラリについて、現在 open の Finding Contract 指摘を、README.md と src/types.ts の公開契約を破らずに解消する。
+
+今回の replan では、Previous Response の「ProductState.reservations を Map に変更する」方針を撤回する。`src/types.ts` は変更禁止であり、現在の公開型は `ProductState.reservations: Record<string, number>` で固定されているためである。
+
+### 分解した要件
+| # | 要件 | 種別 | 備考 |
+|---|------|------|------|
+| 1 | `src/types.ts` の公開契約を変更しない | 明示 | README.md:46、src/types.ts:89-95 |
+| 2 | `src/index.ts` の公開 API シグネチャを変更しない | 明示 | README.md:46、src/index.ts:6-11 |
+| 3 | 利用者は `src/index.ts` と `src/types.ts` だけを import して使える | 明示 | README.md:7-8、src/index.ts:6-11 |
+| 4 | ドメインロジックは純粋に保ち、ストアやプロジェクションに依存しない | 明示 | README.md:43、tests/architecture.test.ts:18-22 |
+| 5 | `evolve` は throw しない | 明示 | README.md:13、tests/domain-contracts.test.ts:29-41 |
+| 6 | `evolve` は引数を変更しない | 明示 | README.md:13、tests/domain.test.ts:81-85 |
+| 7 | `decide` は不変条件違反で `DomainError` を throw する | 明示 | README.md:14、src/types.ts:107-108 |
+| 8 | `ProductState.reservations` の公開型は `Record<string, number>` のまま維持する | 明示 | README.md:46、src/types.ts:93-94 |
+| 9 | `Record<string, number>` のまま、プロトタイプ継承プロパティによる予約 ID 誤判定を防ぐ | 暗黙 | F-0003 の原因に対する、公開契約変更なしの修正 |
+| 10 | `evolve` の `StockShipped` で `?? 0` により不整合を隠さない | 暗黙 | F-0002 対応。ただし `evolve` は throw しない仕様を維持する |
+| 11 | `CommandHandler` は `EventStore` ポートにのみ依存する | 明示 | README.md:44、src/command-handler.ts:1-2、tests/architecture.test.ts:24-29 |
+| 12 | プロジェクションは書き込みモデルを参照せずイベントのみから構築する | 明示 | README.md:45、src/projection.ts:1、tests/architecture.test.ts:31-38 |
+| 13 | `StockProjection.apply` は ProjectionState を直接変更しない | 暗黙 | F-0001 対応 |
+| 14 | `StockProjection` の内部 reservations はプロトタイプ汚染リスクを避ける | 暗黙 | F-0005 対応。内部型なので Map 化可能 |
+| 15 | ProductCreated 以外の projection イベントで未知 productId なら fail-fast する | 暗黙 | F-0004 対応。ただし現行コードでは既に実装済み |
+| 16 | フレームワークへ依存しない | 明示 | ユーザー要求、package.json:10-13 |
+| 17 | インメモリで完結する | 明示 | ユーザー要求、src/event-store.ts:4-29 |
+| 18 | テストファイルは変更しない | 明示 | README.md:51 |
+
+### 参照資料の調査結果
+参照資料として README.md、src/types.ts、Knowledge Source、現行 src 配下、現行 tests 配下、Finding ledger を確認した。
+
+- README.md は公開 API、ドメインルール、イベントストア、プロジェクション、アーキテクチャ要件を定義している。
+- `src/types.ts` は公開契約であり、`ProductState.reservations` は `Record<string, number>` と定義されている。
+- `src/index.ts` は `types`, `domain`, `event-store`, `command-handler`, `projection` を re-export しており、利用者入口は維持されている。
+- `src/domain.ts` は現在 `state.reservations[event.reservationId] ?? 0` と `in` 演算子を使っているため、F-0002/F-0003 は現行コードに一致する。
+- `src/projection.ts` は現在 `ProjectionState.reservations: Record<string, number>` で、`state.onHand +=`、`state.reservations[...] =`、`state.reservations =`、`state.onHand -=` により Map の値である state オブジェクトを直接変更しているため、F-0001/F-0005 は現行コードに一致する。
+- `src/projection.ts` は ProductCreated 以外で state がない場合に `throw new Error(...)` しているため、F-0004 の「黙って無視している」という説明は現行コードに一致しない。
+- `npm test` は 10 files / 62 tests すべて通過。
+- `npm run typecheck` は通過。
+- Knowledge Source では、domain はフレームワーク非依存、application は domain とポートへ依存、adapter 具象へ依存しない、読み取りと書き込みを分離する制約が示されている。現行の分割構成はこの方向と整合している。
+
+### スコープ
+変更対象は Finding 修正に必要な `src/domain.ts` と `src/projection.ts` に限定する。
+
+| ファイル | 変更要否 | 理由 |
+|---------|----------|------|
+| `src/domain.ts` | 変更要 | F-0002/F-0003 対応。`?? 0` と `in` 演算子を置き換える |
+| `src/projection.ts` | 変更要 | F-0001/F-0005 対応。内部 reservations を Map 化し、状態更新を immutable にする |
+| `src/types.ts` | 変更不要・変更禁止 | README.md:46 により公開契約変更禁止。F-0003 の Map 化案は採用しない |
+| `src/index.ts` | 変更不要 | 現行で re-export 済み |
+| `src/command-handler.ts` | 変更不要 | EventStore ポート依存を満たしている |
+| `src/event-store.ts` | 変更不要 | 現行テストで仕様を満たしている |
+| `tests/` | 変更不要・変更禁止 | README.md:51 |
+
+### 検討したアプローチ
+| アプローチ | 採否 | 理由 |
+|-----------|------|------|
+| `ProductState.reservations` を `Map<string, number>` に変更する | 不採用 | README.md:46 と src/types.ts:89-95 に反する。Previous Response で試行されたが公開契約変更になる |
+| `ProductState.reservations` は `Record` のまま、`Object.hasOwn` と null-prototype copy で安全化する | 採用 | 公開契約を維持しつつ、F-0003 のプロトタイプ継承プロパティ誤判定を防げる |
+| `evolve` の missing reservation で throw する | 不採用 | README.md:13 の「throw しない」と tests/domain-contracts.test.ts:29-41 に反する |
+| `evolve` の missing reservation で `?? 0` を使い続ける | 不採用 | F-0002 が指摘するフォールバック濫用に該当する |
+| `evolve` の missing reservation は明示的に `return state` する | 採用 | throw しない仕様を維持し、`?? 0` で不整合を隠す実装を避けられる |
+| `ProjectionState.reservations` も `Record` のまま維持する | 不採用 | 内部型なので公開契約に縛られない。F-0005 を解消できない |
+| `ProjectionState.reservations` を `Map<string, number>` に変更する | 採用 | 内部実装なので公開契約を破らず、予約 ID のキー問題を避けられる |
+| Projection の state オブジェクトを直接変更し続ける | 不採用 | F-0001 に該当する |
+| Projection 更新ごとに新しい `ProjectionState` と新しい reservations Map を `this.states.set()` する | 採用 | F-0001 を解消できる |
+
+### 実装アプローチ
+1. `src/domain.ts` に reservation 操作用の小さなヘルパーを追加する。
+   - `hasOwnReservation(reservations, reservationId)` は `Object.hasOwn(reservations, reservationId)` を使う。
+   - `reservationQuantity(reservations, reservationId)` は own property の値だけを返し、存在しなければ `undefined` を返す。
+   - `copyReservations(reservations)` は `Object.assign(Object.create(null), reservations)` で null-prototype の `Record<string, number>` を作る。
+   - `setReservation` / `removeReservation` 相当の処理は null-prototype copy を作ってから更新する。
+2. `src/domain.ts` の `decide` を修正する。
+   - `command.reservationId in state.reservations` を使わない。
+   - 重複チェック、ReleaseReservation、ShipStock の存在チェックは `reservationQuantity(...) !== undefined` または `Object.hasOwn` で行う。
+   - `Object.values(state.reservations)` は own enumerable values の合計なので継続可。ただし null-prototype copy と組み合わせる。
+3. `src/domain.ts` の `evolve` を修正する。
+   - `StockReserved` は null-prototype copy に予約を追加して返す。
+   - `ReservationReleased` は対象予約が own property として存在しない場合 `return state`。存在する場合のみ予約を削除した新 state を返す。
+   - `StockShipped` は `const reservedQuantity = reservationQuantity(...)` とし、`undefined` の場合は `return state`。`?? 0` は使わない。
+   - これにより README.md:13 の throw しない仕様と tests/domain-contracts.test.ts:29-41 を維持する。
+4. `src/projection.ts` の内部型を変更する。
+   - `ProjectionState.reservations` を `Map<string, number>` にする。
+   - これは private/internal な型であり、`src/types.ts` の公開 `ProductState` とは別物なので公開契約に影響しない。
+5. `src/projection.ts` の `apply` を immutable 更新にする。
+   - `StockReceived`: `this.states.set(productId, { ...state, onHand: state.onHand + event.quantity })`
+   - `StockReserved`: `const reservations = new Map(state.reservations); reservations.set(event.reservationId, event.quantity); this.states.set(productId, { ...state, reservations })`
+   - `ReservationReleased`: state と予約が存在することを確認し、新しい Map から `delete` して `set` する。
+   - `StockShipped`: state と予約が存在することを確認し、予約数量ぶん `onHand` を減らし、新しい Map から `delete` して `set` する。
+   - `state.onHand +=`、`state.reservations[...] =`、`state.reservations =`、`state.onHand -=` は使わない。
+6. `src/projection.ts` の読み取り計算を Map 対応にする。
+   - `reserved` は `Array.from(state.reservations.values()).reduce(...)` で計算する。
+   - `lowStock` も同じ計算ヘルパーを使う。
+7. F-0004 は現行コードですでに対応済みなので、再修正しない。Disputed Findings に stale として記載する。
+8. 実装後に `npm run typecheck` と `npm test` を実行する。
+
+### 到達経路・起動条件
+| 項目 | 内容 |
+|------|------|
+| 利用者が到達する入口 | `src/index.ts` からの named import |
+| 更新が必要な呼び出し元・配線 | なし。`src/index.ts` の re-export は現行維持 |
+| 起動条件 | 認証、権限、URL、フラグなし。ライブラリ利用者が関数・クラスを直接呼び出す |
+| 未対応項目 | なし |
+
+## 実装ガイドライン
+- `src/types.ts` は変更しない。`ProductState.reservations` を `Map` に変更してはいけない。
+- F-0003 は「Map にする」ではなく、「公開型 Record のまま own property 判定に置き換える」ことで解消する。
+- `in` 演算子を予約存在判定に使わない。`Object.hasOwn` を使う。
+- `evolve` は絶対に throw しない。予約が存在しない `ReservationReleased` / `StockShipped` は `return state` で扱う。
+- `?? 0` による数量フォールバックは使わない。`undefined` を明示的に分岐する。
+- domain は `projection.ts`、`event-store.ts`、`command-handler.ts` を import しない。
+- projection は `domain.ts`、`index.ts`、`ProductState`、`evolve`、`decide` を参照しない。
+- projection 内部の reservations は `Map<string, number>` に変更してよい。これは公開型ではない。
+- projection の `apply` では Map に格納済みの state オブジェクトを直接変更しない。更新ごとに新しい state オブジェクトを作り `this.states.set()` する。
+- ProductCreated 以外の projection イベントで productId が未初期化なら現行どおり `Error` を throw する。
+- tests は変更しない。
+- 実装後は `npm run typecheck` と `npm test` を必ず実行する。
+
+## Disputed Findings
+| findingId | reason | evidence |
+|-----------|--------|----------|
+| F-0004 | stale。現行 `StockProjection.apply` は ProductCreated 以外のイベントで state が存在しない場合に黙って無視せず `Error` を throw している | src/projection.ts:25-27, src/projection.ts:33-36, src/projection.ts:43-45, src/projection.ts:53-55 |
+
+## スコープ外
+| 項目 | 除外理由 |
+|------|---------|
+| `src/types.ts` の変更 | README.md:46 で変更禁止 |
+| `ProductState.reservations` の Map 化 | 公開契約変更になるため |
+| テスト変更 | README.md:51 で tests 配下は変更禁止 |
+| 外部永続化 | ユーザー要求はインメモリ完結 |
+| フレームワーク導入 | ユーザー要求はフレームワーク非依存 |
+| `src/index.ts` の公開 API 名変更 | README.md:46 で公開 API シグネチャ変更禁止 |
+
+## 確認事項
+なし。

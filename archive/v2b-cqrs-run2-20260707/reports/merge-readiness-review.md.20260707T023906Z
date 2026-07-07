@@ -1,0 +1,33 @@
+# Merge Readiness Review
+
+## 結果: REJECT
+
+## サマリー
+実装修正と `StockProjection.apply` 側の inherited key 回帰テストは確認できましたが、公開 API `evolve` への `StockShipped(toString)` / `StockShipped(__proto__)` 直接再注入を固定するリグレッションテストがまだありません。前回ブロッカーの一部がテストで保証されていないため、マージ不可です。
+
+## 保守前提のマージ品質チェック
+| # | 観点 | 状態 | 根拠（ファイル:行 / テスト / 実行証跡） | コメント |
+|---|------|------|---------------------------------------|----------|
+| 1 | 要求充足 | 充足 | `README.md:13`, `src/domain.ts:39`, `src/projection.ts:94` | 実装上は `StockShipped(toString)` でも aggregate / projection の `onHand` は 10 のまま |
+| 2 | 既存契約・既存フローへの影響 | 問題なし | 動作確認 | 前回の `NaN` 破損は再現しない |
+| 3 | テスト・検証 | 不足 | `tests/domain.test.ts:221`, `tests/projection.test.ts:103` | `decide` と projection は固定済みだが、`evolve` の直接 replay ケースが未検証 |
+| 4 | 要求外変更・スコープクリープ | 問題なし | `git diff --name-only`, `rg --files` | 実装・テスト追加はタスク範囲内 |
+| 5 | 保守可能性・将来変更容易性 | 問題あり | `src/domain.ts:39`, `tests/domain.test.ts:79` | `evolve` の回帰がテストで検出できない |
+| 6 | 明白なセキュリティ・データ保護・運用リスク | 問題なし | 動作確認 | 外部入力キー由来の `NaN` 化は現行実装では解消済み |
+
+## 横断監査証跡
+| # | 変更カテゴリ | 抽出した項目 | 確認した検索語・ファイル | 判定 | コメント |
+|---|--------------|--------------|--------------------------|------|----------|
+| 1 | 型 / discriminant / entrypoint | `ShipStock`, `StockShipped`, `reservationId`, `evolve`, `StockProjection.apply` | `toString|__proto__|StockShipped|ShipStock|Object.hasOwn|reservations\\[` / `src/domain.ts`, `src/projection.ts`, `tests/*` | 問題あり | `StockProjection.apply` は inherited key テストあり、`evolve` はなし |
+| 2 | resolved finding | `F-0005` | `findings-ledger.json`, `src/domain.ts:95` | 問題なし | ledger 上の `decide` の `ShipStock` 判定は解消済み |
+| 3 | 状態再注入経路 | `EventStore.load -> evolve`, `EventStore.load -> StockProjection.apply` | 一時ビルド後の公開 API 実行 | 問題なし | `decide ShipStock DomainError`, `aggregate.onHand 10`, `projection.onHand 10` を確認 |
+
+## 観測した指摘
+| # | family_tag | カテゴリ | 重大度 | 場所 | 問題 | 修正案 |
+|---|------------|---------|--------|------|------|--------|
+| 1 | maintainability-readiness | テスト不足 | high | `tests/domain.test.ts:79` | 前回ブロッカーだった `evolve` への `StockShipped(toString)` 直接再注入は実装修正済みだが、domain テストでは `decide` の inherited key 拒否だけが追加され、`evolve` の replay 挙動が固定されていない。 | `tests/domain.test.ts` の `evolve` セクションに、`StockShipped` の `reservationId: "toString"` と `reservationId: "__proto__"` を直接適用して、`onHand` と `reservations` が壊れないことを検証するテストを追加する。 |
+
+## 検証証跡
+- ビルド: `tsc --outDir /private/tmp/inventory-review-out ... src/types.ts src/domain.ts src/projection.ts src/index.ts src/event-store.ts src/command-handler.ts` 成功
+- テスト: `npm test` は 5 files / 68 tests passed、`npm run typecheck` 成功
+- 動作確認: 一時ビルドした公開 API で `decide ShipStock DomainError`, `aggregate.onHand 10`, `projection.onHand 10` を確認。

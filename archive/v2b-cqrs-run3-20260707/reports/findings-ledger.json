@@ -1,0 +1,597 @@
+{
+  "version": 1,
+  "workflowName": "backend-cqrs-for-local-llm",
+  "nextId": 9,
+  "updatedAt": "2026-07-07T03:48:34.466Z",
+  "findings": [
+    {
+      "id": "F-0001",
+      "status": "resolved",
+      "lifecycle": "resolved",
+      "severity": "high",
+      "title": "ProjectionState の直接変更",
+      "location": "src/projection.ts:27",
+      "description": "src/projection.ts:27, 35, 44, 54-55 — StockProjection.apply 内で ProjectionState (Map の値) を直接変更している。レビューポリシーの「オブジェクト/配列の直接変更」に抵触する。不変性を維持し、新しい状態オブジェクトを set するべきである。",
+      "suggestion": "状態を更新する際は、スプレッド構文等を用いて新しいオブジェクトを作成し、Map.set() で更新してください。",
+      "reviewers": [
+        "ai-antipattern-review"
+      ],
+      "rawFindingIds": [
+        "20260707-024116-readme-md-api-src-type:reviewers:1:ai-antipattern-review:finding-001"
+      ],
+      "firstSeen": {
+        "runId": "20260707-024116-readme-md-api-src-type",
+        "stepName": "ai-antipattern-review",
+        "timestamp": "2026-07-07T02:54:59.765Z"
+      },
+      "lastSeen": {
+        "runId": "20260707-024116-readme-md-api-src-type",
+        "stepName": "reviewers",
+        "timestamp": "2026-07-07T02:54:59.765Z"
+      },
+      "resolvedAt": "2026-07-07T03:11:43.979Z",
+      "resolvedEvidence": "targetFindingId が F-0001 の resolution_confirmation があり、ProjectionState の直接変更が immutable 更新へ変更されたことを確認している。"
+    },
+    {
+      "id": "F-0002",
+      "status": "resolved",
+      "lifecycle": "resolved",
+      "severity": "medium",
+      "title": "evolve 内でのフォールバック値の濫用",
+      "location": "src/domain.ts:46",
+      "description": "src/domain.ts:46 — evolve 関数内で state.reservations[event.reservationId] ?? 0 とフォールバック値を使用している。レビューポリシーの「フォールバック値の乱用」に抵触する。StockShipped イベントが適用される時点で、状態に予約が存在することはドメインルール（decide 側）で保証されているはずであり、不確実性を ?? で隠すべきではない。",
+      "suggestion": "フォールバックを削除し、期待される値が確実に存在することを前提とした実装にするか、不整合がある場合に適切に処理してください。",
+      "reviewers": [
+        "ai-antipattern-review"
+      ],
+      "rawFindingIds": [
+        "20260707-024116-readme-md-api-src-type:reviewers:1:ai-antipattern-review:finding-002"
+      ],
+      "firstSeen": {
+        "runId": "20260707-024116-readme-md-api-src-type",
+        "stepName": "ai-antipattern-review",
+        "timestamp": "2026-07-07T02:54:59.765Z"
+      },
+      "lastSeen": {
+        "runId": "20260707-024116-readme-md-api-src-type",
+        "stepName": "reviewers",
+        "timestamp": "2026-07-07T02:54:59.765Z"
+      },
+      "resolvedAt": "2026-07-07T03:11:43.979Z",
+      "resolvedEvidence": "targetFindingId が F-0002 の resolution_confirmation があり、evolve 内の ?? 0 フォールバック削除を確認している。"
+    },
+    {
+      "id": "F-0003",
+      "status": "resolved",
+      "lifecycle": "resolved",
+      "severity": "high",
+      "title": "外部入力 reservationId をキーとする辞書にプレーンオブジェクトを使用している",
+      "location": "src/domain.ts:98, 115, 126",
+      "description": "ProductState.reservations が Record<string, number> (プレーンオブジェクト) で実装されており、`command.reservationId in state.reservations` による存在判定を行っている。これにより、`toString` や `__proto__` などのプロトタイプ継承プロパティを持つ ID が渡された場合に、未登録の予約が存在するように誤判定される脆弱性がある。",
+      "suggestion": "ProductState.reservations を Map<string, number> に変更し、存在判定を `.has()` で行うように修正してください。",
+      "reviewers": [
+        "implementation-semantics-review"
+      ],
+      "rawFindingIds": [
+        "20260707-024116-readme-md-api-src-type:reviewers:1:implementation-semantics-review:finding-1"
+      ],
+      "firstSeen": {
+        "runId": "20260707-024116-readme-md-api-src-type",
+        "stepName": "implementation-semantics-review",
+        "timestamp": "2026-07-07T02:54:59.765Z"
+      },
+      "lastSeen": {
+        "runId": "20260707-024116-readme-md-api-src-type",
+        "stepName": "reviewers",
+        "timestamp": "2026-07-07T02:54:59.765Z"
+      },
+      "resolvedAt": "2026-07-07T03:11:43.979Z",
+      "resolvedEvidence": "targetFindingId が F-0003 の resolution_confirmation があり、Object.hasOwn と Object.create(null) による reservationId のプロトタイプ汚染対策を確認している。"
+    },
+    {
+      "id": "F-0004",
+      "status": "resolved",
+      "lifecycle": "resolved",
+      "severity": "medium",
+      "title": "Projection で存在しない productId のイベントを黙って無視している",
+      "location": "src/projection.ts:25, 33, 41, 50",
+      "description": "StockProjection.apply において、StockReceived などのイベントを処理する際、`this.states.get(event.productId)` が undefined の場合に `if (state)` でチェックして何もしない（黙って無視する）実装になっている。これは、イベントログの不整合や ProductCreated イベントの欠落を検出し得ない設計であり、境界での fail-fast に反している。",
+      "suggestion": "ProductCreated 以外のイベントで state が取得できない場合は、Error を投げて不整合を早期に検出するようにしてください。",
+      "reviewers": [
+        "implementation-semantics-review"
+      ],
+      "rawFindingIds": [
+        "20260707-024116-readme-md-api-src-type:reviewers:1:implementation-semantics-review:finding-2"
+      ],
+      "firstSeen": {
+        "runId": "20260707-024116-readme-md-api-src-type",
+        "stepName": "implementation-semantics-review",
+        "timestamp": "2026-07-07T02:54:59.765Z"
+      },
+      "lastSeen": {
+        "runId": "20260707-024116-readme-md-api-src-type",
+        "stepName": "reviewers",
+        "timestamp": "2026-07-07T02:54:59.765Z"
+      },
+      "resolvedAt": "2026-07-07T03:11:43.979Z",
+      "resolvedEvidence": "targetFindingId が F-0004 の resolution_confirmation があり、ProductCreated 以外で state が存在しない場合に throw する fail-fast 実装を確認している。"
+    },
+    {
+      "id": "F-0005",
+      "status": "resolved",
+      "lifecycle": "resolved",
+      "severity": "high",
+      "title": "ProjectionState の reservations にプレーンオブジェクトを使用している",
+      "location": "src/projection.ts:5",
+      "description": "ProjectionState.reservations が Record<string, number> で実装されており、ドメイン層と同様にプロトタイプ汚染による誤動作の可能性がある。",
+      "suggestion": "Map<string, number> への変更を推奨します。",
+      "reviewers": [
+        "implementation-semantics-review"
+      ],
+      "rawFindingIds": [
+        "20260707-024116-readme-md-api-src-type:reviewers:1:implementation-semantics-review:finding-3"
+      ],
+      "firstSeen": {
+        "runId": "20260707-024116-readme-md-api-src-type",
+        "stepName": "implementation-semantics-review",
+        "timestamp": "2026-07-07T02:54:59.765Z"
+      },
+      "lastSeen": {
+        "runId": "20260707-024116-readme-md-api-src-type",
+        "stepName": "reviewers",
+        "timestamp": "2026-07-07T02:54:59.765Z"
+      },
+      "resolvedAt": "2026-07-07T03:11:43.979Z",
+      "resolvedEvidence": "targetFindingId が F-0005 の resolution_confirmation があり、ProjectionState.reservations が Map<string, number> へ変更されたことを確認している。"
+    },
+    {
+      "id": "F-0006",
+      "status": "resolved",
+      "lifecycle": "resolved",
+      "severity": "high",
+      "title": "Map に対して Object.values を使用した低在庫判定の誤計算",
+      "location": "src/projection.ts:112",
+      "description": "src/projection.ts:112 — lowStock メソッド内で state.reservations (Map) に対して Object.values() を使用している。Map の値を取得するには state.reservations.values() を使用すべきであり、現在の実装は意図した動作（予約数量の合計計算）をせず、空配列または不正確な結果を返す。",
+      "suggestion": "Object.values(state.reservations) を Array.from(state.reservations.values()) またはそれに準ずる Map 互換の反復処理に変更してください。",
+      "reviewers": [
+        "cqrs-es-review",
+        "ai-antipattern-review"
+      ],
+      "rawFindingIds": [
+        "20260707-024116-readme-md-api-src-type:reviewers:2:cqrs-es-review:iss-0001",
+        "20260707-024116-readme-md-api-src-type:reviewers:2:ai-antipattern-review:finding-006"
+      ],
+      "firstSeen": {
+        "runId": "20260707-024116-readme-md-api-src-type",
+        "stepName": "cqrs-es-review",
+        "timestamp": "2026-07-07T03:11:43.979Z"
+      },
+      "lastSeen": {
+        "runId": "20260707-024116-readme-md-api-src-type",
+        "stepName": "reviewers",
+        "timestamp": "2026-07-07T03:11:43.979Z"
+      },
+      "resolvedAt": "2026-07-07T03:22:18.262Z",
+      "resolvedEvidence": "current raw findings contain resolution_confirmation entries whose targetFindingId is F-0006 at the same location src/projection.ts:112 and same lowStock Map values aggregation issue meaning."
+    },
+    {
+      "id": "F-0007",
+      "status": "resolved",
+      "lifecycle": "resolved",
+      "severity": "high",
+      "title": "Map に対して Object.values() を使用しているため在庫計算が正しく行われない",
+      "location": "src/projection.ts:112",
+      "description": "src/projection.ts:112 — lowStock メソッド内で state.reservations (Map) に対して Object.values() を使用している。Map の値を取得するには Array.from(state.reservations.values()) などとする必要があり、現状のコードは予約数量の合計を正しく計算できず常に 0 となる。",
+      "suggestion": "`Object.values(state.reservations)` を `Array.from(state.reservations.values())` に変更してください。",
+      "reviewers": [
+        "coding-review"
+      ],
+      "rawFindingIds": [
+        "20260707-024116-readme-md-api-src-type:reviewers:2:coding-review:F-0006"
+      ],
+      "firstSeen": {
+        "runId": "20260707-024116-readme-md-api-src-type",
+        "stepName": "coding-review",
+        "timestamp": "2026-07-07T03:11:43.979Z"
+      },
+      "lastSeen": {
+        "runId": "20260707-024116-readme-md-api-src-type",
+        "stepName": "reviewers",
+        "timestamp": "2026-07-07T03:11:43.979Z"
+      },
+      "resolvedAt": "2026-07-07T03:22:18.262Z",
+      "resolvedEvidence": "current raw finding is a resolution_confirmation whose targetFindingId is F-0007, matching the prior src/projection.ts:112 lowStock Object.values-on-Map issue."
+    },
+    {
+      "id": "F-0008",
+      "status": "resolved",
+      "lifecycle": "resolved",
+      "severity": "high",
+      "title": "Map 型のコレクションに対して Object.values を使用しているため集計が失敗する",
+      "location": "src/projection.ts:112",
+      "description": "src/projection.ts:112 — `lowStock` メソッド内で、Map であるはずの state.reservations に対して `Object.values(state.reservations)` を使用している。Map に対して Object.values を適用すると、Map のエントリーではなく Map オブジェクト自体のプロパティを列挙しようとするため、予約数量の合計が常に 0 となり、在庫不足の判定が正しく行われない。",
+      "suggestion": "`Array.from(state.reservations.values()).reduce(...)` または `[...state.reservations.values()].reduce(...)` を使用して Map の値を取得してください。",
+      "reviewers": [
+        "implementation-semantics-review"
+      ],
+      "rawFindingIds": [
+        "20260707-024116-readme-md-api-src-type:reviewers:2:implementation-semantics-review:issue-1"
+      ],
+      "firstSeen": {
+        "runId": "20260707-024116-readme-md-api-src-type",
+        "stepName": "implementation-semantics-review",
+        "timestamp": "2026-07-07T03:11:43.979Z"
+      },
+      "lastSeen": {
+        "runId": "20260707-024116-readme-md-api-src-type",
+        "stepName": "reviewers",
+        "timestamp": "2026-07-07T03:11:43.979Z"
+      },
+      "resolvedAt": "2026-07-07T03:22:18.262Z",
+      "resolvedEvidence": "current raw findings contain resolution_confirmation entries whose targetFindingId is F-0008 at src/projection.ts:112 for the same Map collection aggregation failure issue."
+    }
+  ],
+  "rawFindings": [
+    {
+      "rawFindingId": "20260707-024116-readme-md-api-src-type:reviewers:1:ai-antipattern-review:finding-001",
+      "stepName": "ai-antipattern-review",
+      "reviewer": "ai-antipattern-review",
+      "familyTag": "mutation-of-shared-state",
+      "severity": "high",
+      "title": "ProjectionState の直接変更",
+      "location": "src/projection.ts:27",
+      "description": "src/projection.ts:27, 35, 44, 54-55 — StockProjection.apply 内で ProjectionState (Map の値) を直接変更している。レビューポリシーの「オブジェクト/配列の直接変更」に抵触する。不変性を維持し、新しい状態オブジェクトを set するべきである。",
+      "suggestion": "状態を更新する際は、スプレッド構文等を用いて新しいオブジェクトを作成し、Map.set() で更新してください。",
+      "kind": "issue"
+    },
+    {
+      "rawFindingId": "20260707-024116-readme-md-api-src-type:reviewers:1:ai-antipattern-review:finding-002",
+      "stepName": "ai-antipattern-review",
+      "reviewer": "ai-antipattern-review",
+      "familyTag": "fallback-abuse",
+      "severity": "medium",
+      "title": "evolve 内でのフォールバック値の濫用",
+      "location": "src/domain.ts:46",
+      "description": "src/domain.ts:46 — evolve 関数内で state.reservations[event.reservationId] ?? 0 とフォールバック値を使用している。レビューポリシーの「フォールバック値の乱用」に抵触する。StockShipped イベントが適用される時点で、状態に予約が存在することはドメインルール（decide 側）で保証されているはずであり、不確実性を ?? で隠すべきではない。",
+      "suggestion": "フォールバックを削除し、期待される値が確実に存在することを前提とした実装にするか、不整合がある場合に適切に処理してください。",
+      "kind": "issue"
+    },
+    {
+      "rawFindingId": "20260707-024116-readme-md-api-src-type:reviewers:1:implementation-semantics-review:finding-1",
+      "stepName": "implementation-semantics-review",
+      "reviewer": "implementation-semantics-review",
+      "familyTag": "data-structure-choice",
+      "severity": "high",
+      "title": "外部入力(reservationId)をキーとする辞書にプレーンオブジェクトを使用している",
+      "location": "src/domain.ts:98, 115, 126",
+      "description": "ProductState.reservations が Record<string, number> (プレーンオブジェクト) で実装されており、`command.reservationId in state.reservations` による存在判定を行っている。これにより、`toString` や `__proto__` などのプロトタイプ継承プロパティを持つ ID が渡された場合に、未登録の予約が存在するように誤判定される脆弱性がある。",
+      "suggestion": "ProductState.reservations を Map<string, number> に変更し、存在判定を `.has()` で行うように修正してください。",
+      "kind": "issue"
+    },
+    {
+      "rawFindingId": "20260707-024116-readme-md-api-src-type:reviewers:1:implementation-semantics-review:finding-2",
+      "stepName": "implementation-semantics-review",
+      "reviewer": "implementation-semantics-review",
+      "familyTag": "fail-fast",
+      "severity": "medium",
+      "title": "Projection でのイベント適用時に存在しない productId のイベントを黙って無視している",
+      "location": "src/projection.ts:25, 33, 41, 50",
+      "description": "StockProjection.apply において、StockReceived などのイベントを処理する際、`this.states.get(event.productId)` が undefined の場合に `if (state)` でチェックして何もしない（黙って無視する）実装になっている。これは、イベントログの不整合や ProductCreated イベントの欠落を検出し得ない設計であり、境界での fail-fast に反している。",
+      "suggestion": "ProductCreated 以外のイベントで state が取得できない場合は、Error を投げて不整合を早期に検出するようにしてください。",
+      "kind": "issue"
+    },
+    {
+      "rawFindingId": "20260707-024116-readme-md-api-src-type:reviewers:1:implementation-semantics-review:finding-3",
+      "stepName": "implementation-semantics-review",
+      "reviewer": "implementation-semantics-review",
+      "familyTag": "data-structure-choice",
+      "severity": "high",
+      "title": "ProjectionState の reservations にプレーンオブジェクトを使用している",
+      "location": "src/projection.ts:5",
+      "description": "ProjectionState.reservations が Record<string, number> で実装されており、ドメイン層と同様にプロトタイプ汚染による誤動作の可能性がある。",
+      "suggestion": "Map<string, number> への変更を推奨します。",
+      "kind": "issue"
+    },
+    {
+      "rawFindingId": "20260707-024116-readme-md-api-src-type:reviewers:2:cqrs-es-review:res-f0003",
+      "stepName": "cqrs-es-review",
+      "reviewer": "cqrs-es-review",
+      "familyTag": "implementation-semantics-review",
+      "severity": "high",
+      "title": "F-0003 解消確認",
+      "location": "src/domain.ts:5",
+      "description": "src/domain.ts:5, 12, 16 — プレーンオブジェクトを用いたRecord型に対し、Object.hasOwn() や Object.assign(Object.create(null), ...) を導入してプロトタイプ汚染対策を行っているが、依然として ProductState.reservations の型定義は Record<string, number> である。これは型定義上の Record がプレーンオブジェクトであることを前提としており、実装で Object.create(null) を使用しても静的解析上の不整合はなく、実質的にプロトタイプ汚染リスクは排除されている。したがって F-0003 は解消された。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0003"
+    },
+    {
+      "rawFindingId": "20260707-024116-readme-md-api-src-type:reviewers:2:cqrs-es-review:res-f0002",
+      "stepName": "cqrs-es-review",
+      "reviewer": "cqrs-es-review",
+      "familyTag": "ai-antipattern-review",
+      "severity": "medium",
+      "title": "F-0002 解消確認",
+      "location": "src/domain.ts:65",
+      "description": "src/domain.ts:65-68 — evolve 関数内で ?? 0 によるフォールバックを削除し、getReservationQuantity() による undefined チェックと早期リターン (return state) に変更した。不確実性を隠蔽せず、ドメインイベント適用時の整合性を維持している。したがって F-0002 は解消された。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0002"
+    },
+    {
+      "rawFindingId": "20260707-024116-readme-md-api-src-type:reviewers:2:cqrs-es-review:res-f0001",
+      "stepName": "cqrs-es-review",
+      "reviewer": "cqrs-es-review",
+      "familyTag": "ai-antipattern-review",
+      "severity": "high",
+      "title": "F-0001 解消確認",
+      "location": "src/projection.ts:36",
+      "description": "src/projection.ts:36-39, 50-53, 67-70, 85-89 — StockProjection.apply 内で直接的なプロパティ変更を排除し、スプレッド構文および新しい Map オブジェクトを作成して this.states.set() する immutable 更新へと変更された。したがって F-0001 は解消された。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0001"
+    },
+    {
+      "rawFindingId": "20260707-024116-readme-md-api-src-type:reviewers:2:cqrs-es-review:res-f0004",
+      "stepName": "cqrs-es-review",
+      "reviewer": "cqrs-es-review",
+      "familyTag": "implementation-semantics-review",
+      "severity": "medium",
+      "title": "F-0004 解消確認",
+      "location": "src/projection.ts:33",
+      "description": "src/projection.ts:33-35, 45-47, 59-61, 76-78 — ProductCreated 以外のイベント処理において、state が取得できない場合に throw new Error() する fail-fast 実装が導入された。したがって F-0004 は解消された。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0004"
+    },
+    {
+      "rawFindingId": "20260707-024116-readme-md-api-src-type:reviewers:2:cqrs-es-review:res-f0005",
+      "stepName": "cqrs-es-review",
+      "reviewer": "cqrs-es-review",
+      "familyTag": "implementation-semantics-review",
+      "severity": "high",
+      "title": "F-0005 解消確認",
+      "location": "src/projection.ts:5",
+      "description": "src/projection.ts:5, 26 — ProjectionState.reservations が Record<string, number> から Map<string, number> に変更され、プロトタイプ汚染リスクが排除された。したがって F-0005 は解消された。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0005"
+    },
+    {
+      "rawFindingId": "20260707-024116-readme-md-api-src-type:reviewers:2:cqrs-es-review:iss-0001",
+      "stepName": "cqrs-es-review",
+      "reviewer": "cqrs-es-review",
+      "familyTag": "logic-error",
+      "severity": "high",
+      "title": "Map に対する Object.values の誤用",
+      "location": "src/projection.ts:112",
+      "description": "src/projection.ts:112 — lowStock メソッド内で state.reservations (Map) に対して Object.values() を使用している。Map の値を取得するには state.reservations.values() を使用すべきであり、現在の実装は意図した動作（予約数量の合計計算）をせず、空配列または不正確な結果を返す。",
+      "suggestion": "Object.values(state.reservations) を Array.from(state.reservations.values()) またはそれに準ずる Map 互換の反復処理に変更してください。",
+      "kind": "issue"
+    },
+    {
+      "rawFindingId": "20260707-024116-readme-md-api-src-type:reviewers:2:ai-antipattern-review:res-001",
+      "stepName": "ai-antipattern-review",
+      "reviewer": "ai-antipattern-review",
+      "familyTag": "mutation-of-shared-state",
+      "severity": "high",
+      "title": "ProjectionState の直接変更の解消確認",
+      "location": "src/projection.ts:36",
+      "description": "src/projection.ts:36, 50, 67, 85 — StockProjection.apply 内で states.set() を使用し、新しい状態オブジェクトを保存する実装に変更されており、不変性が維持されていることを確認。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0001"
+    },
+    {
+      "rawFindingId": "20260707-024116-readme-md-api-src-type:reviewers:2:ai-antipattern-review:res-002",
+      "stepName": "ai-antipattern-review",
+      "reviewer": "ai-antipattern-review",
+      "familyTag": "fallback-abuse",
+      "severity": "medium",
+      "title": "evolve 内でのフォールバック値の濫用解消確認",
+      "location": "src/domain.ts:65",
+      "description": "src/domain.ts:65-68 — evolve 関数内の StockShipped 処理において、`getReservationQuantity` を使用し、undefined の場合に早期リターン（state をそのまま返す）するように変更されており、`?? 0` による不確実性の隠蔽が解消されていることを確認。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0002"
+    },
+    {
+      "rawFindingId": "20260707-024116-readme-md-api-src-type:reviewers:2:ai-antipattern-review:finding-006",
+      "stepName": "ai-antipattern-review",
+      "reviewer": "ai-antipattern-review",
+      "familyTag": "logic-error",
+      "severity": "high",
+      "title": "Map に対して Object.values を使用したことによるロジックエラー",
+      "location": "src/projection.ts:112",
+      "description": "src/projection.ts:112 — lowStock メソッド内で state.reservations (Map) に対して Object.values() を呼び出している。Map は Object.values() の対象にならず、予約合計額が常に 0 となり、低在庫判定が誤作動する。これは不変性修正に伴い導入された回帰バグである。",
+      "suggestion": "`Array.from(state.reservations.values()).reduce(...)` または `state.reservations.values()` を直接 iterate する実装に変更してください（getStock メソッドの 100 行目と同様の実装にしてください）。",
+      "kind": "issue"
+    },
+    {
+      "rawFindingId": "20260707-024116-readme-md-api-src-type:reviewers:2:coding-review:F-0006",
+      "stepName": "coding-review",
+      "reviewer": "coding-review",
+      "familyTag": "bug",
+      "severity": "high",
+      "title": "Map に対して Object.values() を使用しているため在庫計算が正しく行われない",
+      "location": "src/projection.ts:112",
+      "description": "src/projection.ts:112 — lowStock メソッド内で state.reservations (Map) に対して Object.values() を使用している。Map の値を取得するには Array.from(state.reservations.values()) などとする必要があり、現状のコードは予約数量の合計を正しく計算できず常に 0 となる。",
+      "suggestion": "`Object.values(state.reservations)` を `Array.from(state.reservations.values())` に変更してください。",
+      "kind": "issue"
+    },
+    {
+      "rawFindingId": "20260707-024116-readme-md-api-src-type:reviewers:2:coding-review:R-0001",
+      "stepName": "coding-review",
+      "reviewer": "coding-review",
+      "familyTag": "anti-pattern",
+      "severity": "high",
+      "title": "ProjectionState の直接変更の解消確認",
+      "location": "src/projection.ts:27, 36-39, 50-53, 67-70, 85-89",
+      "description": "src/projection.ts:27, 36-39, 50-53, 67-70, 85-89 — StockProjection.apply 内で状態更新時に新しいオブジェクトを生成して set しており、直接変更を回避していることが確認された。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0001"
+    },
+    {
+      "rawFindingId": "20260707-024116-readme-md-api-src-type:reviewers:2:coding-review:R-0002",
+      "stepName": "coding-review",
+      "reviewer": "coding-review",
+      "familyTag": "anti-pattern",
+      "severity": "medium",
+      "title": "evolve 内でのフォールバック値の濫用の解消確認",
+      "location": "src/domain.ts:65-68",
+      "description": "src/domain.ts:65-68 — evolve 内で getReservationQuantity (Object.hasOwn チェックあり) を使用し、undefined 時に早期リターンする実装に変更された。?? によるフォールバックの濫用が解消されている。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0002"
+    },
+    {
+      "rawFindingId": "20260707-024116-readme-md-api-src-type:reviewers:2:coding-review:R-0003",
+      "stepName": "coding-review",
+      "reviewer": "coding-review",
+      "familyTag": "security",
+      "severity": "high",
+      "title": "外部入力 reservationId のプロトタイプ汚染リスクの解消確認",
+      "location": "src/domain.ts:5, 9, 16",
+      "description": "src/domain.ts:5, 9, 16 — 予約の存在判定および取得に Object.hasOwn() を使用し、かつコピー時に Object.create(null) を用いたプレーンオブジェクトを作成することで、プロトタイプ汚染による誤判定を防止する実装に変更された。Map への変更ではないが、同等の安全性が確保されている。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0003"
+    },
+    {
+      "rawFindingId": "20260707-024116-readme-md-api-src-type:reviewers:2:coding-review:R-0004",
+      "stepName": "coding-review",
+      "reviewer": "coding-review",
+      "familyTag": "implementation-semantics",
+      "severity": "medium",
+      "title": "Projection で存在しない productId のイベントを無視する問題の解消確認",
+      "location": "src/projection.ts:33-34, 45-46, 59-60, 76-77",
+      "description": "src/projection.ts:33-34, 45-46, 59-60, 76-77 — ProductCreated 以外のイベントで state が取得できない場合に Error を投げる実装に変更され、不整合を早期に検出できるようになっている。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0004"
+    },
+    {
+      "rawFindingId": "20260707-024116-readme-md-api-src-type:reviewers:2:coding-review:R-0005",
+      "stepName": "coding-review",
+      "reviewer": "coding-review",
+      "familyTag": "security",
+      "severity": "high",
+      "title": "ProjectionState の reservations のプロトタイプ汚染リスクの解消確認",
+      "location": "src/projection.ts:5",
+      "description": "src/projection.ts:5 — ProjectionState.reservations が Map<string, number> に変更された。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0005"
+    },
+    {
+      "rawFindingId": "20260707-024116-readme-md-api-src-type:reviewers:2:implementation-semantics-review:res-1",
+      "stepName": "implementation-semantics-review",
+      "reviewer": "implementation-semantics-review",
+      "familyTag": "data-structure-choice",
+      "severity": "high",
+      "title": "外部入力 reservationId をキーとする辞書にプレーンオブジェクトを使用している (Resolved)",
+      "location": "src/domain.ts:4, 15",
+      "description": "src/domain.ts:4, 8, 15 — 外部入力 reservationId をキーとする辞書に Record<string, number> が使用されているが、判定に Object.hasOwn() を使用し、更新時に Object.create(null) を用いたコピーを作成することで継承経路を完全に遮断している。これは Knowledge の「Object.create(null) / Object.hasOwn で継承経路を遮断している場合は OK」という基準を満たしており、解決済みである。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0003"
+    },
+    {
+      "rawFindingId": "20260707-024116-readme-md-api-src-type:reviewers:2:implementation-semantics-review:res-2",
+      "stepName": "implementation-semantics-review",
+      "reviewer": "implementation-semantics-review",
+      "familyTag": "fail-fast",
+      "severity": "medium",
+      "title": "Projection で存在しない productId のイベントを黙って無視している (Resolved)",
+      "location": "src/projection.ts:33, 45, 59, 76",
+      "description": "src/projection.ts:33, 45, 59, 76 — ProductCreated 以外のイベント処理において、state が存在しない場合に `throw new Error(...)` を行う実装に変更されており、不整合を即座に検出する fail-fast 構造になっている。解決済み。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0004"
+    },
+    {
+      "rawFindingId": "20260707-024116-readme-md-api-src-type:reviewers:2:implementation-semantics-review:res-3",
+      "stepName": "implementation-semantics-review",
+      "reviewer": "implementation-semantics-review",
+      "familyTag": "data-structure-choice",
+      "severity": "high",
+      "title": "ProjectionState の reservations にプレーンオブジェクトを使用している (Resolved)",
+      "location": "src/projection.ts:5",
+      "description": "src/projection.ts:5 — ProjectionState.reservations が Map<string, number> に変更され、プロトタイプ汚染のリスクが排除されている。解決済み。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0005"
+    },
+    {
+      "rawFindingId": "20260707-024116-readme-md-api-src-type:reviewers:2:implementation-semantics-review:issue-1",
+      "stepName": "implementation-semantics-review",
+      "reviewer": "implementation-semantics-review",
+      "familyTag": "data-structure-choice",
+      "severity": "high",
+      "title": "Map 型のコレクションに対して Object.values を使用しているため集計が失敗する",
+      "location": "src/projection.ts:112",
+      "description": "src/projection.ts:112 — `lowStock` メソッド内で、Map であるはずの state.reservations に対して `Object.values(state.reservations)` を使用している。Map に対して Object.values を適用すると、Map のエントリーではなく Map オブジェクト自体のプロパティを列挙しようとするため、予約数量の合計が常に 0 となり、在庫不足の判定が正しく行われない。",
+      "suggestion": "`Array.from(state.reservations.values()).reduce(...)` または `[...state.reservations.values()].reduce(...)` を使用して Map の値を取得してください。",
+      "kind": "issue"
+    },
+    {
+      "rawFindingId": "20260707-024116-readme-md-api-src-type:reviewers:3:cqrs-es-review:res-f0006-0008",
+      "stepName": "cqrs-es-review",
+      "reviewer": "cqrs-es-review",
+      "familyTag": "logic-error",
+      "severity": "high",
+      "title": "F-0006/F-0007/F-0008 解消確認",
+      "location": "src/projection.ts:112",
+      "description": "src/projection.ts:112 — lowStock メソッド内において、Map 型の state.reservations から値を取得する処理が Array.from(state.reservations.values()).reduce(...) に修正されており、正しく予約数量の合計が計算されるようになった。したがって F-0006, F-0007, F-0008 はすべて解消された。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0006"
+    },
+    {
+      "rawFindingId": "20260707-024116-readme-md-api-src-type:reviewers:3:ai-antipattern-review:res-003",
+      "stepName": "ai-antipattern-review",
+      "reviewer": "ai-antipattern-review",
+      "familyTag": "logic-error",
+      "severity": "high",
+      "title": "lowStock の計算ロジック解消確認",
+      "location": "src/projection.ts:112",
+      "description": "src/projection.ts:112 — lowStock メソッド内での予約数量合計計算において、`Array.from(state.reservations.values()).reduce(...)` が使用されており、Map の値が正しく集計される実装になっていることを確認。これにより F-0006, F-0007, F-0008 の問題が解消された。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0006"
+    },
+    {
+      "rawFindingId": "20260707-024116-readme-md-api-src-type:reviewers:3:coding-review:R-0006",
+      "stepName": "coding-review",
+      "reviewer": "coding-review",
+      "familyTag": "bug",
+      "severity": "high",
+      "title": "Map に対して Object.values を使用した低在庫判定の誤計算の解消確認",
+      "location": "src/projection.ts:112",
+      "description": "src/projection.ts:112 — `Object.values(state.reservations)` が `Array.from(state.reservations.values())` に修正され、Map の値に基づいた正しい予約数量の集計が行われるようになった。これにより lowStock 判定が正しく機能する。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0006"
+    },
+    {
+      "rawFindingId": "20260707-024116-readme-md-api-src-type:reviewers:3:coding-review:R-0007",
+      "stepName": "coding-review",
+      "reviewer": "coding-review",
+      "familyTag": "bug",
+      "severity": "high",
+      "title": "Map に対して Object.values() を使用しているため在庫計算が正しく行われないことの解消確認",
+      "location": "src/projection.ts:112",
+      "description": "src/projection.ts:112 — `Object.values(state.reservations)` が `Array.from(state.reservations.values())` に修正され、Map の値に基づいた正しい予約数量の集計が行われるようになった。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0007"
+    },
+    {
+      "rawFindingId": "20260707-024116-readme-md-api-src-type:reviewers:3:coding-review:R-0008",
+      "stepName": "coding-review",
+      "reviewer": "coding-review",
+      "familyTag": "bug",
+      "severity": "high",
+      "title": "Map 型のコレクションに対して Object.values を使用しているため集計が失敗することの解消確認",
+      "location": "src/projection.ts:112",
+      "description": "src/projection.ts:112 — `Object.values(state.reservations)` が `Array.from(state.reservations.values())` に修正され、Map の値に基づいた正しい予約数量の集計が行われるようになった。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0008"
+    },
+    {
+      "rawFindingId": "20260707-024116-readme-md-api-src-type:reviewers:3:implementation-semantics-review:res-4",
+      "stepName": "implementation-semantics-review",
+      "reviewer": "implementation-semantics-review",
+      "familyTag": "data-structure-choice",
+      "severity": "high",
+      "title": "Map 型のコレクションに対して Object.values を使用しているため集計が失敗する (Resolved)",
+      "location": "src/projection.ts:112",
+      "description": "src/projection.ts:112 — `lowStock` メソッド内での予約数量集計において、`Object.values(state.reservations)` が `Array.from(state.reservations.values())` に修正されており、Map の値を正しく集計できるようになっている。解決済み。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0008"
+    }
+  ],
+  "conflicts": []
+}

@@ -1,0 +1,14 @@
+[
+  {
+    "rawFindingId": "20260707-011805-readme-md-api-src-type:reviewers:3:implementation-semantics-review:finding-002",
+    "stepName": "implementation-semantics-review",
+    "reviewer": "implementation-semantics-review",
+    "familyTag": "data-structure-semantics",
+    "severity": "medium",
+    "title": "ShipStock 処理における Record 存在判定のリスク（残存）",
+    "location": "src/domain.ts:95",
+    "description": "src/domain.ts:95 — decide 関数の ShipStock 処理において、依然として `state.reservations[command.reservationId] === undefined` による存在判定が行われている。これは外部入力キーによる Record の存在判定リスクに該当し、`Object.hasOwn` 等による遮断が必要。",
+    "suggestion": "`Object.hasOwn(state.reservations, command.reservationId)` を使用してください。",
+    "kind": "issue"
+  }
+]

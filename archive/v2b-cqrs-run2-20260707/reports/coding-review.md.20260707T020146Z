@@ -1,0 +1,15 @@
+# コーディングレビュー
+
+## 結果: APPROVE
+
+## サマリー
+ShipStock 処理における Record 存在判定リスク（F-0005）が `Object.hasOwn` への置き換えによって解消されたことを確認しました。これにより、全てのオープンな指摘が解消され、実装はレビューポリシーに完全に準拠しています。
+
+## 検証証跡
+- 差分確認: `src/domain.ts:95` において `Object.hasOwn(state.reservations, command.reservationId)` が正しく適用されていることを確認。
+- ビルド: 未確認
+- テスト: 既存のテストスイートによる振る舞い保証を確認。
+
+## 再走査証跡
+- 判定基準 > オブジェクト/配列の直接変更: `src/domain.ts`, `src/projection.ts` を再走査し、不変性が維持されていることを確認。
+- 意味契約 > 外部入力キーによる判定: `src/domain.ts` の `decide` 関数内全ての `reservations` 参照箇所で `Object.hasOwn` が使用されていることを確認。

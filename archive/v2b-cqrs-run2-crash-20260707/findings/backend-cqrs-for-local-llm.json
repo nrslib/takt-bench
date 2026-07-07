@@ -1,0 +1,100 @@
+{
+  "version": 1,
+  "workflowName": "backend-cqrs-for-local-llm",
+  "nextId": 2,
+  "updatedAt": "2026-07-06T23:46:54.871Z",
+  "findings": [
+    {
+      "id": "F-0001",
+      "status": "resolved",
+      "lifecycle": "resolved",
+      "severity": "medium",
+      "title": "外部入力キーを持つ辞書のプロトタイプ汚染/混入リスク",
+      "location": "src/domain.ts:107,126,141; src/projection.ts:6,18,21,24",
+      "description": "`ProductState.reservations` および `StockState.reservations` が `Record<string, number>` として実装されており、`in` 演算子や `delete` を使用して存在判定および操作が行われている。`reservationId` は外部入力由来であるため、`\"toString\"` や `\"constructor\"` などのプロトタイプ継承プロパティを持つ ID が渡された場合に、未登録であるにもかかわらず存在すると判定される、あるいは意図しない挙動を示すリスクがある。",
+      "suggestion": "`Record<string, number>` の代わりに `Map<string, number>` を使用するか、`Object.hasOwn()` を用いて継承プロパティを遮断して存在判定を行ってください。",
+      "reviewers": [
+        "implementation-semantics-review"
+      ],
+      "rawFindingIds": [
+        "20260706-230613-readme-md-api-src-type:reviewers:1:implementation-semantics-review:sem-001"
+      ],
+      "firstSeen": {
+        "runId": "20260706-230613-readme-md-api-src-type",
+        "stepName": "implementation-semantics-review",
+        "timestamp": "2026-07-06T23:20:32.898Z"
+      },
+      "lastSeen": {
+        "runId": "20260706-230613-readme-md-api-src-type",
+        "stepName": "reviewers",
+        "timestamp": "2026-07-06T23:20:32.898Z"
+      },
+      "resolvedAt": "2026-07-06T23:26:39.098Z",
+      "resolvedEvidence": "現在の raw findings に F-0001 を targetFindingId とする resolution_confirmation があり、src/domain.ts の hasOwnKey/getOwnKeys と reservation 操作ヘルパー、および src/projection.ts のそれらの利用により、既存指摘のプロトタイプ継承プロパティ混入リスク解消が確認されている。"
+    }
+  ],
+  "rawFindings": [
+    {
+      "rawFindingId": "20260706-230613-readme-md-api-src-type:reviewers:1:implementation-semantics-review:sem-001",
+      "stepName": "implementation-semantics-review",
+      "reviewer": "implementation-semantics-review",
+      "familyTag": "data-structure-semantics",
+      "severity": "medium",
+      "title": "外部入力キーを持つ辞書のプロトタイプ汚染/混入リスク",
+      "location": "src/domain.ts:107,126,141; src/projection.ts:6,18,21,24",
+      "description": "`ProductState.reservations` および `StockState.reservations` が `Record<string, number>` として実装されており、`in` 演算子や `delete` を使用して存在判定および操作が行われている。`reservationId` は外部入力由来であるため、`\"toString\"` や `\"constructor\"` などのプロトタイプ継承プロパティを持つ ID が渡された場合に、未登録であるにもかかわらず存在すると判定される、あるいは意図しない挙動を示すリスクがある。",
+      "suggestion": "`Record<string, number>` の代わりに `Map<string, number>` を使用するか、`Object.hasOwn()` を用いて継承プロパティを遮断して存在判定を行ってください。",
+      "kind": "issue"
+    },
+    {
+      "rawFindingId": "20260706-230613-readme-md-api-src-type:reviewers:2:cqrs-es-review:res-f-0001-prototype-pollution",
+      "stepName": "cqrs-es-review",
+      "reviewer": "cqrs-es-review",
+      "familyTag": "security-hardening",
+      "severity": "medium",
+      "title": "外部入力キーを持つ辞書のプロトタイプ汚染/混入リスクの解消確認",
+      "location": "src/domain.ts:4-74, src/projection.ts:15-50",
+      "description": "src/domain.ts:8, 12, 38, 45, 56, 68 などの箇所で Object.prototype.hasOwnProperty.call() を使用し、src/projection.ts:25, 32, 38, 43 等でもこれら安全関数を用いて操作されており、プロトタイプ汚染リスクが解消されていることを確認した。",
+      "suggestion": "eimpty string",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0001"
+    },
+    {
+      "rawFindingId": "20260706-230613-readme-md-api-src-type:reviewers:2:ai-antipattern-review:CONF-0001",
+      "stepName": "ai-antipattern-review",
+      "reviewer": "ai-antipattern-review",
+      "familyTag": "logic-error",
+      "severity": "medium",
+      "title": "外部入力キーを持つ辞書のプロトタイプ汚染/混入リスクの解消確認",
+      "location": "src/domain.ts:8, src/projection.ts:25",
+      "description": "src/domain.ts:8, 13, 38, 45, 56, 68 および src/projection.ts:25, 32, 38, 43 において、`Object.prototype.hasOwnProperty.call()` を使用する `hasOwnKey` 等のヘルパー関数を導入し、`reservationId` による存在判定および操作が行われている。これにより、プロトタイプ汚染や継承プロパティによる誤判定リスクが解消されていることを確認した。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0001"
+    },
+    {
+      "rawFindingId": "20260706-230613-readme-md-api-src-type:reviewers:2:coding-review:rev-f0001-confirm",
+      "stepName": "coding-review",
+      "reviewer": "coding-review",
+      "familyTag": "security",
+      "severity": "medium",
+      "title": "外部入力キーを持つ辞書のプロトタイプ汚染/混入リスクの解消確認",
+      "location": "src/domain.ts:4-49, src/projection.ts:3-61",
+      "description": "src/domain.ts:4-49 および src/projection.ts:3-61 において、`Object.prototype.hasOwnProperty.call` を使用したヘルパー関数（hasReservationKey, getReservationValue 等）が導入され、`Record<string, number>` へのアクセス時にプロトタイプ継承プロパティを遮断する実装に変更されている。これにより、外部入力由来の `reservationId` によるプロトタイプ汚染/混入リスクが解消された。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0001"
+    },
+    {
+      "rawFindingId": "20260706-230613-readme-md-api-src-type:reviewers:2:implementation-semantics-review:res-001",
+      "stepName": "implementation-semantics-review",
+      "reviewer": "implementation-semantics-review",
+      "familyTag": "data-structure-semantics",
+      "severity": "medium",
+      "title": "外部入力キーを持つ辞書のプロトタイプ汚染/混入リスクの解消確認",
+      "location": "src/domain.ts:4-15,34-74; src/projection.ts:25-46",
+      "description": "`src/domain.ts` の `hasOwnKey` (L8) および `getOwnKeys` (L12) で `Object.prototype.hasOwnProperty.call(obj, key)` が使用されており、外部入力キーによるプロトタイプ継承プロパティの混入が正しく遮断されていることを確認した。これらは `hasReservationKey`, `getReservationValue`, `setReservation`, `deleteReservation` を通じて `ProductState.reservations` および `StockState.reservations` の操作に適用されている。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0001"
+    }
+  ],
+  "conflicts": []
+}

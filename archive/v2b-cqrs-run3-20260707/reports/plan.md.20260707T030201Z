@@ -1,0 +1,166 @@
+# タスク計画
+
+## 元の要求
+在庫管理ドメインをイベントソーシングで実装するライブラリを作ってください。
+
+仕様は README.md に記載されています。公開 API は src/types.ts の型定義に準拠し、利用者が src/index.ts から import できる形にしてください。
+
+フレームワークには依存せず、インメモリで完結するライブラリとして実装してください。アーキテクチャ上の制約は README.md の「アーキテクチャ要件」に従ってください。
+
+## 分析結果
+
+### 目的
+`README.md` の仕様と `src/types.ts` の公開契約に従い、在庫管理ドメインのイベントソーシングライブラリを実装する。利用者は `src/index.ts` と `src/types.ts` だけを import して、ドメイン関数、インメモリイベントストア、コマンドハンドラ、在庫プロジェクションを利用できる状態にする。
+
+### 分解した要件
+| # | 要件 | 種別 | 備考 |
+|---|------|------|------|
+| 1 | `src/types.ts` の公開契約を変更しない | 明示 | README.md:43-46、src/types.ts:1-120 |
+| 2 | `src/index.ts` から公開 API を import できる | 明示 | README.md:7-8、src/index.ts:14-63 |
+| 3 | `initialState` は未作成の商品状態を表す | 明示 | README.md:12、tests/domain.test.ts:29-34。現行実装済みだが、分割時も公開維持が必要 |
+| 4 | `evolve(state, event)` はイベントを状態へ適用する | 明示 | README.md:13、tests/domain.test.ts:37-86 |
+| 5 | `evolve` は throw しない | 明示 | README.md:13 |
+| 6 | `evolve` は引数を変更しない | 明示 | README.md:13、tests/domain.test.ts:81-85 |
+| 7 | `decide(state, command)` はコマンドから新イベントを導出する | 明示 | README.md:14、tests/domain.test.ts:88-186 |
+| 8 | `decide` は不変条件違反で `DomainError` を throw する | 明示 | README.md:14、src/types.ts:107-108 |
+| 9 | `CreateProduct` は既存商品の再作成を拒否する | 明示 | README.md:21、tests/domain.test.ts:94-98 |
+| 10 | `CreateProduct` は trim 後に空の名前を拒否する | 明示 | README.md:21、tests/domain.test.ts:100-103 |
+| 11 | `CreateProduct` は trim 後の名前で `ProductCreated` を返す | 暗黙 | 明示要件「名前は trim 後に空でないこと」から導出。空判定だけでなく保存名も正規化する |
+| 12 | `ReceiveStock` は商品未作成なら拒否する | 明示 | README.md:22、tests/domain.test.ts:113-116 |
+| 13 | `ReceiveStock` は正の整数以外の数量を拒否する | 明示 | README.md:22、tests/domain.test.ts:118-122 |
+| 14 | `ReserveStock` は商品未作成なら拒否する | 明示 | README.md:23、tests/domain.test.ts:148-151 |
+| 15 | `ReserveStock` は正の整数以外の数量を拒否する | 明示 | README.md:23、tests/domain.test.ts:153-156 |
+| 16 | `ReserveStock` は available 以内の数量だけ許可する | 明示 | README.md:23、tests/domain.test.ts:128-141 |
+| 17 | `ReserveStock` は重複 `reservationId` を拒否する | 明示 | README.md:23、tests/domain.test.ts:143-146 |
+| 18 | `ReleaseReservation` は存在する予約だけ解放する | 明示 | README.md:24、tests/domain.test.ts:162-170 |
+| 19 | `ReleaseReservation` は `onHand` を変更しない | 明示 | README.md:24、tests/domain.test.ts:56-60 |
+| 20 | `ShipStock` は存在する予約だけ出荷する | 明示 | README.md:25、tests/domain.test.ts:172-180 |
+| 21 | `ShipStock` は予約数量ぶん `onHand` を減らし予約を消す | 明示 | README.md:25、tests/domain.test.ts:62-66 |
+| 22 | `InMemoryEventStore` は `EventStore` ポートを実装する | 明示 | README.md:15、src/types.ts:115-120 |
+| 23 | 空ストリームの `load` は `{ events: [], version: 0 }` を返す | 明示 | README.md:29、tests/event-store.test.ts:7-10 |
+| 24 | `version` は保存済みイベント数を表す | 明示 | README.md:29、tests/event-store.test.ts:12-25 |
+| 25 | `append` は `expectedVersion` 不一致時に `ConcurrencyError` を throw する | 明示 | README.md:30、tests/event-store.test.ts:27-32 |
+| 26 | `append` は競合時に何も保存しない | 明示 | README.md:30、tests/event-store.test.ts:34-39 |
+| 27 | `load` の戻り配列を変更してもストア内部へ影響しない | 明示 | README.md:31、tests/event-store.test.ts:49-55 |
+| 28 | `CommandHandler` は `load → replay → decide → append` を実行する | 明示 | README.md:16、tests/command-handler.test.ts:13-79 |
+| 29 | `CommandHandler` は `EventStore` インターフェースにのみ依存する | 明示 | README.md:44、src/index.ts:41-47 |
+| 30 | `CommandHandler` は `command.productId` ごとにストリームを分離する | 暗黙 | tests/command-handler.test.ts:69-78。全 Command 型が `productId` を持つため src/types.ts:49-78 から導出 |
+| 31 | `StockProjection` はイベントだけから読み取りモデルを構築する | 明示 | README.md:17、README.md:45 |
+| 32 | `getStock(productId)` は未知の商品で `undefined` を返す | 明示 | README.md:35、tests/projection.test.ts:17-19 |
+| 33 | `getStock(productId)` は `{ onHand, reserved, available }` を返す | 明示 | README.md:35、tests/projection.test.ts:21-57 |
+| 34 | `StockShipped` のプロジェクションは予約数量ぶん `onHand` と `reserved` を減らす | 明示 | README.md:36、tests/projection.test.ts:43-48 |
+| 35 | `lowStock(threshold)` は `available < threshold` の productId を昇順で返す | 明示 | README.md:37、tests/projection.test.ts:59-68 |
+| 36 | ドメインロジックはストアやプロジェクションへ依存しない | 明示 | README.md:43 |
+| 37 | プロジェクションは書き込みモデルを参照しない | 明示 | README.md:45 |
+| 38 | フレームワークに依存しない | 明示 | ユーザー要求、README.md:39-46 |
+| 39 | インメモリで完結する | 明示 | ユーザー要求、README.md:15、README.md:27-31 |
+| 40 | `tests/` は変更しない | 明示 | README.md:51 |
+
+### 参照資料の調査結果
+参照資料として明示されている `README.md` と `src/types.ts` を確認した。
+
+- `README.md` は実装対象 API、ドメインルール、イベントストアのセマンティクス、プロジェクションのセマンティクス、アーキテクチャ要件を定義している。
+- `src/types.ts` はイベント、コマンド、集約状態、読み取りモデル、`DomainError`、`ConcurrencyError`、`EventStore` の公開契約を定義している。
+- 現在の `src/index.ts` は `initialState` だけ値が入っているが、`evolve`、`decide`、`InMemoryEventStore`、`CommandHandler`、`StockProjection` はすべて `Not implemented` を throw するスタブである。
+- `npm run typecheck` は通過したが、これは未実装スタブが型上成立しているためである。
+- `npm test` は未実装により失敗した。`projection`、`command-handler`、`event-store` は計 21 件失敗し、`domain.test.ts` はトップレベルの `evolve` 実行でスイート自体が失敗している。
+- Knowledge Source のヘキサゴナルアーキテクチャ要件では、ドメイン層はフレームワーク非依存、外向き依存禁止、UseCase/Application はポートへ依存、読み取りと書き込みの責務分離が求められている。今回の README のアーキテクチャ要件と整合する。
+- coding skill の追加参照パス `/Users/m_naruse/work/git/takt/builtins/ja/...` はこの環境では存在せず読めなかったため、計画の根拠には含めない。
+
+### スコープ
+影響範囲は `src/` 配下の実装ファイルに限定する。
+
+- 変更対象:
+  - `src/index.ts`
+  - 新規追加候補: `src/domain.ts`
+  - 新規追加候補: `src/event-store.ts`
+  - 新規追加候補: `src/command-handler.ts`
+  - 新規追加候補: `src/projection.ts`
+- 変更禁止:
+  - `src/types.ts`
+  - `tests/` 配下
+  - README.md
+  - package 設定類
+
+### 検討したアプローチ
+| アプローチ | 採否 | 理由 |
+|-----------|------|------|
+| すべてを `src/index.ts` に直接実装する | 不採用 | 実装量は小さいが、ドメイン、ストア、アプリケーション、プロジェクションの責務が混在する。README のアーキテクチャ要件と Knowledge の責務分離に対して弱い |
+| 内部モジュールを責務別に分け、`src/index.ts` から re-export する | 採用 | `src/index.ts` の公開入口を維持しつつ、ドメインロジック、イベントストア、コマンドハンドラ、プロジェクションを分離できる |
+| クラスを増やして Aggregate や Value Object を追加する | 不採用 | 要件は公開 API とインメモリ実装で満たせる。過度な抽象化になる |
+| プロジェクションで `evolve` / `ProductState` を再利用する | 不採用 | README.md:45 の「プロジェクションは書き込みモデルを参照せず、イベントのみから構築」に反する |
+| イベントストアに永続化や外部 I/O を追加する | 不採用 | ユーザー要求の「インメモリで完結」「フレームワーク非依存」に反する |
+
+### 実装アプローチ
+1. `src/domain.ts` を作成し、`initialState`、`evolve`、`decide`、必要な小さなヘルパーを実装する。
+   - `evolve` は全イベントを `switch` で処理し、常に新しい `ProductState` を返す。
+   - `StockReserved`、`ReservationReleased`、`StockShipped` では `reservations` をコピーしてから更新する。
+   - `StockShipped` はイベント自体に数量がないため、現在 state の `reservations[event.reservationId]` を取得して `onHand` を減らす。存在しない場合でも `evolve` は throw しない必要があるため、数量は `0` として扱い、予約削除のみを安全に処理する。
+   - `decide` は `switch` で Command を処理し、不変条件違反は `DomainError` を throw する。
+   - 正の整数判定は `Number.isInteger(quantity) && quantity > 0` とする。
+   - available は `state.onHand - sum(Object.values(state.reservations))` で計算する。
+2. `src/event-store.ts` を作成し、`InMemoryEventStore implements EventStore` を実装する。
+   - 内部状態は `Map<string, DomainEvent[]>`。
+   - `load` は未登録 streamId で `{ events: [], version: 0 }` を返す。
+   - `load` は `events: [...stored]` を返し、呼び出し側の配列変更から内部配列を守る。
+   - `append` は現在 version と `expectedVersion` を先に比較し、不一致なら `ConcurrencyError` を throw して保存しない。
+   - 一致時のみ既存配列と新規イベントを結合して保存する。
+3. `src/command-handler.ts` を作成し、`CommandHandler` を実装する。
+   - constructor は `EventStore` を受け取り、具象 `InMemoryEventStore` には依存しない。
+   - `handle(command)` は `command.productId` を streamId として使う。
+   - `store.load(streamId)` の events を `events.reduce(evolve, initialState)` で replay する。
+   - `decide` で得たイベントを `store.append(streamId, newEvents, version)` で保存し、同じ配列を返す。
+   - `decide` が `DomainError` を throw した場合、`append` は呼ばれず保存されない。
+4. `src/projection.ts` を作成し、`StockProjection` を実装する。
+   - 書き込みモデル `ProductState` や `evolve` は使わない。
+   - 内部状態は productId ごとの `onHand` と `reservations: Record<string, number>` または `Map<string, number>`。
+   - `ProductCreated` で productId の読み取りモデルを初期化する。
+   - `StockReceived` で `onHand` を加算する。
+   - `StockReserved` で reservationId と数量を記録する。
+   - `ReservationReleased` で reservationId を削除する。
+   - `StockShipped` で reservationId の数量を取得し、`onHand` を減らして予約を削除する。
+   - `getStock` は未知 productId で `undefined`、既知 productId では `reserved` と `available` を計算したオブジェクトを返す。
+   - `lowStock` は `available < threshold` の productId を抽出して `sort()` する。
+5. `src/index.ts` は公開入口として維持する。
+   - `export * from './types.js';`
+   - `export { initialState, evolve, decide } from './domain.js';`
+   - `export { InMemoryEventStore } from './event-store.js';`
+   - `export { CommandHandler } from './command-handler.js';`
+   - `export { StockProjection } from './projection.js';`
+   - 公開 API 名と型シグネチャは現行と同じにする。
+
+### 到達経路・起動条件
+| 項目 | 内容 |
+|------|------|
+| 利用者が到達する入口 | `src/index.ts` からの named import |
+| 更新が必要な呼び出し元・配線 | `src/index.ts` の re-export。内部実装ファイルから型を `src/types.ts` より import |
+| 起動条件 | 認証、権限、URL、フラグはなし。ライブラリ利用者が関数・クラスを直接呼び出す |
+| 未対応項目 | なし |
+
+## 実装ガイドライン
+- `src/types.ts` は変更しない。`DomainError` と `ConcurrencyError` は既存クラスをそのまま import して使う。
+- `tests/` は変更しない。既存テストが仕様の検証として十分に API 全体を覆っている。
+- `src/index.ts` の公開 API 名を変更しない。内部モジュールへ分割しても、利用者は `src/index.ts` から同じ名前で import できる状態を維持する。
+- TypeScript の ESM 設定に合わせ、相対 import は既存と同じ `.js` 拡張子を使う。
+- `domain.ts` は `EventStore`、`InMemoryEventStore`、`CommandHandler`、`StockProjection` に依存させない。
+- `command-handler.ts` は `EventStore` 型、`initialState`、`evolve`、`decide` のみに依存させる。`InMemoryEventStore` を import しない。
+- `projection.ts` は `ProductState`、`initialState`、`evolve`、`decide` を import しない。イベントだけから読み取りモデルを更新する。
+- `evolve` は throw しない。イベント履歴は通常 `decide` が正当性を保証するが、不正履歴でも `evolve` 自体は例外を投げない実装にする。
+- `decide` のエラーは `DomainError` に統一する。汎用 `Error` や文字列 throw は使わない。
+- `append` の競合時は保存前に判定する。判定後に部分保存される構造にしない。
+- `load` は配列コピーを返す。内部イベント配列をそのまま返さない。
+- 後方互換用の別名 API、未使用ヘルパー、TODO コメントは追加しない。
+- 実装後は `npm test` と `npm run typecheck` を実行して確認する。
+
+## スコープ外
+| 項目 | 除外理由 |
+|------|---------|
+| `src/types.ts` の型追加・変更 | README.md で変更禁止 |
+| テスト追加・変更 | README.md で `tests/` 変更禁止 |
+| 外部永続化 | ユーザー要求がインメモリ完結 |
+| REST API / Controller / フレームワーク導入 | ユーザー要求がフレームワーク非依存のライブラリ |
+| package 設定変更 | 現行の TypeScript/Vitest 設定で実装可能。`npm run typecheck` は現状通過済み |
+| 後方互換 API | 明示要求なし。計画原則により不要 |
+
+## 確認事項
+なし。

@@ -1,0 +1,18 @@
+# 実装意味論レビュー
+
+## 結果: REJECT
+
+## サマリー
+前回指摘したデータ構造の不備と fail-fast の欠如は解消されましたが、Projection の在庫集計処理において Map 型への変更に伴う API 誤用があり、在庫不足の判定が常に正しく行われない致命的なバグが導入されています。
+
+## 観測した指摘
+| # | family_tag | 重大度 | 場所 | 問題 | 壊れる条件 | 修正案 |
+|---|------------|--------|------|------|-----------|--------|
+| 1 | data-structure-choice | High | `src/projection.ts:112` | Map 型の `state.reservations` に対して `Object.values()` を使用している | `lowStock` 実行時、予約数量の合計が常に 0 と判定され、実際には在庫不足である商品が検出されない | `Array.from(state.reservations.values())` 等を使用して Map の値を取り出すよう修正する |
+
+## 検証証跡
+- 差分確認: `src/domain.ts` で `Object.hasOwn` および `Object.create(null)` による遮断を確認し F-0003 を解決済みと判定。`src/projection.ts` で `Map` への変更および例外スローの導入を確認し F-0004, F-0005 を解決済みと判定。
+- 判定根拠の実在確認: `src/projection.ts:112` の `Object.values(state.reservations)` が Map インスタンスに対して呼ばれていることを実コードで確認。
+
+## REJECT判定条件
+- ブロッキング指摘（High）が1件あり、REJECT。

@@ -1,0 +1,33 @@
+# Merge Readiness Review
+
+## 結果: REJECT
+
+## サマリー
+前回の `StockShipped(toString)` による `NaN` 破損は実装上は解消されていますが、そのバグ修正に対応するリグレッションテストが追加されていません。レビューポリシーの REJECT 条件「バグ修正にリグレッションテストがない」に該当するため、マージ不可です。
+
+## 保守前提のマージ品質チェック
+| # | 観点 | 状態 | 根拠（ファイル:行 / テスト / 実行証跡） | コメント |
+|---|------|------|---------------------------------------|----------|
+| 1 | 要求充足 | 充足 | `README.md:13`, `README.md:36`, `src/domain.ts:39`, `src/projection.ts:94` | `StockShipped(toString)` でも aggregate / projection の `onHand` は 10 のまま |
+| 2 | 既存契約・既存フローへの影響 | 問題なし | `src/domain.ts:39`, `src/projection.ts:94`, 動作確認 | 前回の `NaN` 破損は再現しない |
+| 3 | テスト・検証 | 不足 | `rg -n "toString|__proto__|constructor" src tests README.md`, `tests/domain.test.ts:79`, `tests/projection.test.ts:43` | inherited key 境界を固定するテストがない |
+| 4 | 要求外変更・スコープクリープ | 問題なし | `git diff --name-only`, `rg --files` | 実装・テスト追加はタスク範囲内 |
+| 5 | 保守可能性・将来変更容易性 | 問題あり | `src/domain.ts:39`, `src/projection.ts:94` | 修正意図がテストで固定されず、同じ回帰を検出できない |
+| 6 | 明白なセキュリティ・データ保護・運用リスク | 問題なし | 動作確認 | 前回の外部入力キー由来の `NaN` 化は解消済み |
+
+## 横断監査証跡
+| # | 変更カテゴリ | 抽出した項目 | 確認した検索語・ファイル | 判定 | コメント |
+|---|--------------|--------------|--------------------------|------|----------|
+| 1 | 型 / discriminant / entrypoint | `ShipStock`, `StockShipped`, `reservationId`, `evolve`, `StockProjection.apply` | `reservations\\[|Object.hasOwn|StockShipped|ShipStock|toString|reservationId` / `src/domain.ts`, `src/projection.ts`, `tests/*`, `README.md` | 問題あり | 実装は own property 化済みだが、`toString` 等の回帰テストがない |
+| 2 | resolved finding | `F-0005` | `findings-ledger.json`, `src/domain.ts:95` | 問題なし | ledger 上の `decide` の `ShipStock` 判定は解消済み |
+| 3 | 状態再注入経路 | `EventStore.load -> evolve`, `EventStore.load -> StockProjection.apply` | 一時ビルド後の公開 API 実行 | 問題なし | `aggregate.onHand 10`, `projection.onHand 10` を確認 |
+
+## 観測した指摘
+| # | family_tag | カテゴリ | 重大度 | 場所 | 問題 | 修正案 |
+|---|------------|---------|--------|------|------|--------|
+| 1 | maintainability-readiness | テスト不足 | high | `tests/domain.test.ts:79`, `tests/projection.test.ts:43` | 前回ブロッカーだった inherited key (`toString`) による `StockShipped` 再注入の `NaN` 破損は実装修正済みだが、対応するリグレッションテストがない。`rg -n "toString|__proto__|constructor" src tests README.md` でもテスト内に該当ケースは存在しない。 | `tests/domain.test.ts` に `evolve` が `StockShipped(toString)` で状態を壊さないテストを追加し、`tests/projection.test.ts` に `StockProjection.apply` が同じイベントで `onHand/reserved/available` を `NaN` にしないテストを追加する。 |
+
+## 検証証跡
+- ビルド: `tsc --outDir /private/tmp/inventory-review-out ... src/types.ts src/domain.ts src/projection.ts src/index.ts src/event-store.ts src/command-handler.ts` 成功
+- テスト: `npm test` は 5 files / 64 tests passed、`npm run typecheck` 成功
+- 動作確認: 一時ビルドした公開 API で `decide ShipStock DomainError`, `aggregate.onHand 10`, `projection.onHand 10` を確認。
