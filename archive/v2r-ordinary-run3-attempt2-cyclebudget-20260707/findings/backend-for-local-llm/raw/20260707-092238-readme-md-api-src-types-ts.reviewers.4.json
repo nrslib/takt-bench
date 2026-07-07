@@ -1,0 +1,50 @@
+[
+  {
+    "rawFindingId": "20260707-092238-readme-md-api-src-types-ts:reviewers:4:arch-review:RF-0003",
+    "stepName": "arch-review",
+    "reviewer": "arch-review",
+    "familyTag": "resolution-confirmation",
+    "severity": "low",
+    "title": "タグフィルタの空文字列処理の修正確認",
+    "location": "src/service.ts:148",
+    "description": "src/validation.ts:99 および src/service.ts:148 にて、タグフィルタの空文字列指定時に undefined を返し、フィルタを適用しない挙動に変更されており、F-0002 の指摘内容（空文字列の場合もタグとして検索される）が解消されていることを確認した。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0002"
+  },
+  {
+    "rawFindingId": "20260707-092238-readme-md-api-src-types-ts:reviewers:4:ai-antipattern-review:res-003",
+    "stepName": "ai-antipattern-review",
+    "reviewer": "ai-antipattern-review",
+    "familyTag": "logic-error",
+    "severity": "medium",
+    "title": "タグフィルタ空文字処理とテストの整合性確認済み",
+    "location": "src/service.ts:148",
+    "description": "src/validation.ts:99 において `normalizeTagFilter` が空文字・空白文字を `undefined` として返すようになり、src/service.ts:148 の `tagFilter !== undefined` という条件によって、空文字指定時にフィルタリングがスキップされ全件返却される実装となっている。これは tests/query.test.ts:76-85 の期待通りであり、F-0001 および F-0002 の問題が解消していることを確認した。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0002"
+  },
+  {
+    "rawFindingId": "20260707-092238-readme-md-api-src-types-ts:reviewers:4:coding-review:res-0001",
+    "stepName": "coding-review",
+    "reviewer": "coding-review",
+    "familyTag": "bug",
+    "severity": "medium",
+    "title": "タグフィルタの空文字処理の修正確認",
+    "location": "src/validation.ts:99",
+    "description": "src/validation.ts:99 において `normalizeTagFilter` が空文字列または空白文字列の場合に `undefined` を返すように修正された。これにより、src/service.ts:148-150 の `if (tagFilter !== undefined && ...)` という判定において、空文字指定時は `tagFilter` が `undefined` となり、フィルタリングがスキップされる。これは tests/query.test.ts:78-86 の期待値（空文字フィルタは全件返却）と一致し、F-0002 の指摘事項が解消された。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0002"
+  },
+  {
+    "rawFindingId": "20260707-092238-readme-md-api-src-types-ts:reviewers:4:implementation-semantics-review:res-0004",
+    "stepName": "implementation-semantics-review",
+    "reviewer": "implementation-semantics-review",
+    "familyTag": "data-structure",
+    "severity": "medium",
+    "title": "タグフィルタの空文字処理とテストの不整合の解消確認",
+    "location": "src/service.ts:148",
+    "description": "src/validation.ts:99 において `normalizeTagFilter` が空文字列の場合に `undefined` を返すよう修正され、それに伴い src/service.ts:148-150 のフィルタリングロジックにて `tagFilter === undefined` の場合に正しくフィルタをスキップする（＝全件抽出される）挙動となっている。これにより、空文字タグ指定時に全件拒否される不整合（F-0002 / F-0001）が解消されている。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0002"
+  }
+]

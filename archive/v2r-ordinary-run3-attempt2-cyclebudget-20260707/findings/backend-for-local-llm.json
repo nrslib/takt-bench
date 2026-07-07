@@ -1,0 +1,250 @@
+{
+  "version": 1,
+  "workflowName": "backend-for-local-llm-refresh",
+  "nextId": 3,
+  "updatedAt": "2026-07-07T11:14:45.414Z",
+  "findings": [
+    {
+      "id": "F-0001",
+      "status": "resolved",
+      "lifecycle": "resolved",
+      "severity": "medium",
+      "title": "タグフィルタの空文字列処理による不自然な除外",
+      "location": "src/service.ts:147",
+      "description": "src/service.ts:147-149 において、`tagFilter` が空文字列（`''`）の場合に `false` を返しており、タグが指定されていない（undefined）場合と、空文字列として正規化された場合の挙動が混在している。`normalizeTagFilter` が空文字列を返す仕様であるため、空文字指定時に全タスクを拒否する挙動は意図したものか確認が必要。通常、空のフィルタは無視されるべきであり、現状のロジックでは「空文字タグを持つタスク」を探そうとして失敗し、結果的に何も返さないことになっている。",
+      "suggestion": "tagFilter が空文字列の場合の挙動を、仕様（README.md:47）および期待されるフィルタ動作（空文字指定時は無視するか、適切に処理する）に合わせて修正してください。",
+      "reviewers": [
+        "ai-antipattern-review"
+      ],
+      "rawFindingIds": [
+        "20260707-092238-readme-md-api-src-types-ts:reviewers:1:ai-antipattern-review:finding-001"
+      ],
+      "firstSeen": {
+        "runId": "20260707-092238-readme-md-api-src-types-ts",
+        "stepName": "ai-antipattern-review",
+        "timestamp": "2026-07-07T09:39:18.633Z"
+      },
+      "lastSeen": {
+        "runId": "20260707-092238-readme-md-api-src-types-ts",
+        "stepName": "reviewers",
+        "timestamp": "2026-07-07T09:39:18.633Z"
+      },
+      "resolvedAt": "2026-07-07T09:55:26.295Z",
+      "resolvedEvidence": "current raw findings に kind=resolution_confirmation かつ targetFindingId=F-0001 を明示する3件があり、いずれも src/validation.ts:99 と src/service.ts:148 のタグフィルタ空文字処理が F-0001 の指摘内容を解消していると確認している。"
+    },
+    {
+      "id": "F-0002",
+      "status": "resolved",
+      "lifecycle": "resolved",
+      "severity": "medium",
+      "title": "タグフィルタの空文字処理とテストの不整合",
+      "location": "src/service.ts:148",
+      "description": "src/service.ts:148-150 において、`tagFilter` が undefined でない場合にのみ `task.tags.includes(tagFilter)` を検証するロジックとなっており、空文字列（''）の場合もタグとして検索される。しかし、`tests/query.test.ts:78-86` では、空文字列や空白文字列のタグフィルタを指定した際に全件返却される（フィルタなし扱いにする）ことを期待している。現状の実装では `normalizeTagFilter('')` が `''` を返し、`task.tags.includes('')` は通常 false になるため、テストは失敗する。前回のレビューで指摘された F-0001 と同様の問題が依然として存在し、テストケースとの不整合が解消されていない。",
+      "suggestion": "`tagFilter` が空文字列である場合に、フィルタリングをスキップ（trueを返す）するようにロジックを修正してください。",
+      "reviewers": [
+        "coding-review"
+      ],
+      "rawFindingIds": [
+        "20260707-092238-readme-md-api-src-types-ts:reviewers:3:coding-review:F-0003"
+      ],
+      "firstSeen": {
+        "runId": "20260707-092238-readme-md-api-src-types-ts",
+        "stepName": "coding-review",
+        "timestamp": "2026-07-07T09:55:26.295Z"
+      },
+      "lastSeen": {
+        "runId": "20260707-092238-readme-md-api-src-types-ts",
+        "stepName": "reviewers",
+        "timestamp": "2026-07-07T09:55:26.295Z"
+      },
+      "resolvedAt": "2026-07-07T10:02:34.541Z",
+      "resolvedEvidence": "現在の raw findings に kind=resolution_confirmation かつ targetFindingId=F-0002 の確認が4件あり、いずれもタグフィルタ空文字処理が undefined 正規化と service 側の条件分岐により解消済みであることを確認しているため。"
+    }
+  ],
+  "rawFindings": [
+    {
+      "rawFindingId": "20260707-092238-readme-md-api-src-types-ts:reviewers:1:ai-antipattern-review:finding-001",
+      "stepName": "ai-antipattern-review",
+      "reviewer": "ai-antipattern-review",
+      "familyTag": "hallucinated-logic",
+      "severity": "medium",
+      "title": "タグフィルタの空文字列処理による不自然な除外",
+      "location": "src/service.ts:147",
+      "description": "src/service.ts:147-149 において、`tagFilter` が空文字列（`''`）の場合に `false` を返しており、タグが指定されていない（undefined）場合と、空文字列として正規化された場合の挙動が混在している。`normalizeTagFilter` が空文字列を返す仕様であるため、空文字指定時に全タスクを拒否する挙動は意図したものか確認が必要。通常、空のフィルタは無視されるべきであり、現状のロジックでは「空文字タグを持つタスク」を探そうとして失敗し、結果的に何も返さないことになっている。",
+      "suggestion": "tagFilter が空文字列の場合の挙動を、仕様（README.md:47）および期待されるフィルタ動作（空文字指定時は無視するか、適切に処理する）に合わせて修正してください。",
+      "kind": "issue"
+    },
+    {
+      "rawFindingId": "20260707-092238-readme-md-api-src-types-ts:reviewers:2:arch-review:RF-0001",
+      "stepName": "arch-review",
+      "reviewer": "arch-review",
+      "familyTag": "resolution-confirmation",
+      "severity": "low",
+      "title": "タグフィルタの空文字列処理の修正確認",
+      "location": "src/service.ts:148",
+      "description": "src/validation.ts:99 および src/service.ts:148 にて、タグフィルタの空文字列指定時に undefined を返し、フィルタを適用しない挙動に変更されており、F-0001 の指摘内容（空文字列による不自然な除外）が解消されていることを確認した。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0001"
+    },
+    {
+      "rawFindingId": "20260707-092238-readme-md-api-src-types-ts:reviewers:2:ai-antipattern-review:res-001",
+      "stepName": "ai-antipattern-review",
+      "reviewer": "ai-antipattern-review",
+      "familyTag": "logic-error",
+      "severity": "medium",
+      "title": "タグフィルタの空文字列処理の修正確認",
+      "location": "src/service.ts:148",
+      "description": "src/validation.ts:99 および src/service.ts:148 において、`normalizeTagFilter` が空文字を `undefined` として返すようになり、また `listTasks` のフィルタリング条件が `tagFilter !== undefined` になったことで、空文字指定時にフィルタが正しく無視される（全件表示される）よう修正されていることを確認した。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0001"
+    },
+    {
+      "rawFindingId": "20260707-092238-readme-md-api-src-types-ts:reviewers:2:coding-review:F-0002",
+      "stepName": "coding-review",
+      "reviewer": "coding-review",
+      "familyTag": "bug",
+      "severity": "medium",
+      "title": "タグフィルタの空文字処理とテストの不整合",
+      "location": "src/service.ts:148",
+      "description": "src/service.ts:148-150 において、`tagFilter` が undefined でない場合にのみ `task.tags.includes(tagFilter)` を検証するロジックに変更されており、空文字列（''）の場合もタグとして検索される（結果的に不一致となり空配列を返す）挙動となっている。一方、テスト `tests/query.test.ts` の 78-86行目 では、空文字列や空白文字列のタグフィルタを指定した際に「フィルタなし扱いにする（全件返却）」ことを期待して `expect(service.listTasks({ tag })).toHaveLength(2)` としており、この期待値と実装が矛盾している。現状の実装では `normalizeTagFilter('')` が `''` を返し、`task.tags.includes('')` は通常 false になるため、テストが失敗するはずである。",
+      "suggestion": "`normalizeTagFilter` の結果が空文字列である場合に、フィルタを適用しない（無視する）ロジックにするか、テストの期待値を修正してください。README.md:47 では「フィルタ値も trim → 小文字化してから比較する」とあるだけで空文字時の挙動は明記されていませんが、一般的に空のフィルタは全件返却となるべきです。",
+      "kind": "issue"
+    },
+    {
+      "rawFindingId": "20260707-092238-readme-md-api-src-types-ts:reviewers:2:implementation-semantics-review:res-0001",
+      "stepName": "implementation-semantics-review",
+      "reviewer": "implementation-semantics-review",
+      "familyTag": "data-structure",
+      "severity": "medium",
+      "title": "タグフィルタの空文字列処理による不自然な除外の解消確認",
+      "location": "src/service.ts:148",
+      "description": "src/validation.ts:99 において `normalizeTagFilter` が空文字列の場合に `undefined` を返すよう修正され、それに伴い src/service.ts:148-150 のフィルタリングロジックにて `tagFilter === undefined` の場合に正しくフィルタをスキップする（＝全件抽出される）挙動となった。これにより、空文字タグ指定時に全件拒否される問題が解消されている。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0001"
+    },
+    {
+      "rawFindingId": "20260707-092238-readme-md-api-src-types-ts:reviewers:3:arch-review:RF-0002",
+      "stepName": "arch-review",
+      "reviewer": "arch-review",
+      "familyTag": "resolution-confirmation",
+      "severity": "low",
+      "title": "タグフィルタの空文字列処理の修正確認",
+      "location": "src/service.ts:148",
+      "description": "src/validation.ts:99 および src/service.ts:148 にて、タグフィルタの空文字列指定時に undefined を返し、フィルタを適用しない挙動に変更されており、F-0001 の指摘内容（空文字列による不自然な除外）が解消されていることを確認した。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0001"
+    },
+    {
+      "rawFindingId": "20260707-092238-readme-md-api-src-types-ts:reviewers:3:ai-antipattern-review:res-002",
+      "stepName": "ai-antipattern-review",
+      "reviewer": "ai-antipattern-review",
+      "familyTag": "logic-error",
+      "severity": "medium",
+      "title": "タグフィルタの空文字列処理の再確認修正済み",
+      "location": "src/service.ts:148",
+      "description": "src/validation.ts:99 および src/service.ts:148 において、`normalizeTagFilter` が空文字を `undefined` として返すようになり、また `listTasks` のフィルタリング条件が `tagFilter !== undefined` になったことで、空文字指定時にフィルタが正しく無視される（全件表示される）よう修正されていることを確認した。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0001"
+    },
+    {
+      "rawFindingId": "20260707-092238-readme-md-api-src-types-ts:reviewers:3:coding-review:F-0003",
+      "stepName": "coding-review",
+      "reviewer": "coding-review",
+      "familyTag": "bug",
+      "severity": "medium",
+      "title": "タグフィルタの空文字処理とテストの不整合",
+      "location": "src/service.ts:148",
+      "description": "src/service.ts:148-150 において、`tagFilter` が undefined でない場合にのみ `task.tags.includes(tagFilter)` を検証するロジックとなっており、空文字列（''）の場合もタグとして検索される。しかし、`tests/query.test.ts:78-86` では、空文字列や空白文字列のタグフィルタを指定した際に全件返却される（フィルタなし扱いにする）ことを期待している。現状の実装では `normalizeTagFilter('')` が `''` を返し、`task.tags.includes('')` は通常 false になるため、テストは失敗する。前回のレビューで指摘された F-0001 と同様の問題が依然として存在し、テストケースとの不整合が解消されていない。",
+      "suggestion": "`tagFilter` が空文字列である場合に、フィルタリングをスキップ（trueを返す）するようにロジックを修正してください。",
+      "kind": "issue"
+    },
+    {
+      "rawFindingId": "20260707-092238-readme-md-api-src-types-ts:reviewers:3:implementation-semantics-review:res-0003",
+      "stepName": "implementation-semantics-review",
+      "reviewer": "implementation-semantics-review",
+      "familyTag": "data-structure",
+      "severity": "medium",
+      "title": "タグフィルタの空文字列処理による不自然な除外の解消確認",
+      "location": "src/service.ts:148",
+      "description": "src/validation.ts:99 において `normalizeTagFilter` が空文字列の場合に `undefined` を返すよう修正され、それに伴い src/service.ts:148-150 のフィルタリングロジックにて `tagFilter === undefined` の場合に正しくフィルタをスキップする（＝全件抽出される）挙動となっている。これにより、空文字タグ指定時に全件拒否される不自然な挙動（F-0001）が解消されている。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0001"
+    },
+    {
+      "rawFindingId": "20260707-092238-readme-md-api-src-types-ts:reviewers:4:arch-review:RF-0003",
+      "stepName": "arch-review",
+      "reviewer": "arch-review",
+      "familyTag": "resolution-confirmation",
+      "severity": "low",
+      "title": "タグフィルタの空文字列処理の修正確認",
+      "location": "src/service.ts:148",
+      "description": "src/validation.ts:99 および src/service.ts:148 にて、タグフィルタの空文字列指定時に undefined を返し、フィルタを適用しない挙動に変更されており、F-0002 の指摘内容（空文字列の場合もタグとして検索される）が解消されていることを確認した。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0002"
+    },
+    {
+      "rawFindingId": "20260707-092238-readme-md-api-src-types-ts:reviewers:4:ai-antipattern-review:res-003",
+      "stepName": "ai-antipattern-review",
+      "reviewer": "ai-antipattern-review",
+      "familyTag": "logic-error",
+      "severity": "medium",
+      "title": "タグフィルタ空文字処理とテストの整合性確認済み",
+      "location": "src/service.ts:148",
+      "description": "src/validation.ts:99 において `normalizeTagFilter` が空文字・空白文字を `undefined` として返すようになり、src/service.ts:148 の `tagFilter !== undefined` という条件によって、空文字指定時にフィルタリングがスキップされ全件返却される実装となっている。これは tests/query.test.ts:76-85 の期待通りであり、F-0001 および F-0002 の問題が解消していることを確認した。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0002"
+    },
+    {
+      "rawFindingId": "20260707-092238-readme-md-api-src-types-ts:reviewers:4:coding-review:res-0001",
+      "stepName": "coding-review",
+      "reviewer": "coding-review",
+      "familyTag": "bug",
+      "severity": "medium",
+      "title": "タグフィルタの空文字処理の修正確認",
+      "location": "src/validation.ts:99",
+      "description": "src/validation.ts:99 において `normalizeTagFilter` が空文字列または空白文字列の場合に `undefined` を返すように修正された。これにより、src/service.ts:148-150 の `if (tagFilter !== undefined && ...)` という判定において、空文字指定時は `tagFilter` が `undefined` となり、フィルタリングがスキップされる。これは tests/query.test.ts:78-86 の期待値（空文字フィルタは全件返却）と一致し、F-0002 の指摘事項が解消された。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0002"
+    },
+    {
+      "rawFindingId": "20260707-092238-readme-md-api-src-types-ts:reviewers:4:implementation-semantics-review:res-0004",
+      "stepName": "implementation-semantics-review",
+      "reviewer": "implementation-semantics-review",
+      "familyTag": "data-structure",
+      "severity": "medium",
+      "title": "タグフィルタの空文字処理とテストの不整合の解消確認",
+      "location": "src/service.ts:148",
+      "description": "src/validation.ts:99 において `normalizeTagFilter` が空文字列の場合に `undefined` を返すよう修正され、それに伴い src/service.ts:148-150 のフィルタリングロジックにて `tagFilter === undefined` の場合に正しくフィルタをスキップする（＝全件抽出される）挙動となっている。これにより、空文字タグ指定時に全件拒否される不整合（F-0002 / F-0001）が解消されている。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0002"
+    }
+  ],
+  "conflicts": [
+    {
+      "id": "C-1CA24A220BC7",
+      "status": "resolved",
+      "findingIds": [
+        "F-0001"
+      ],
+      "rawFindingIds": [
+        "20260707-092238-readme-md-api-src-types-ts:reviewers:2:arch-review:RF-0001",
+        "20260707-092238-readme-md-api-src-types-ts:reviewers:2:ai-antipattern-review:res-001",
+        "20260707-092238-readme-md-api-src-types-ts:reviewers:2:coding-review:F-0002",
+        "20260707-092238-readme-md-api-src-types-ts:reviewers:2:implementation-semantics-review:res-0001"
+      ],
+      "description": "F-0001 について3件の resolution_confirmation が targetFindingId=F-0001 を明示して解消を確認している一方、coding-review の issue は同じタグフィルタ空文字処理について未解消と主張している。coding-review の familyTag は既存 F-0001 と異なるため既存 finding には統合せず、矛盾として隔離する。",
+      "firstSeen": {
+        "runId": "20260707-092238-readme-md-api-src-types-ts",
+        "stepName": "reviewers",
+        "timestamp": "2026-07-07T09:45:02.758Z"
+      },
+      "lastSeen": {
+        "runId": "20260707-092238-readme-md-api-src-types-ts",
+        "stepName": "reviewers",
+        "timestamp": "2026-07-07T09:45:02.758Z"
+      },
+      "resolvedAt": "2026-07-07T10:02:34.541Z",
+      "resolvedEvidence": "既存 conflict は F-0001 の解消確認と F-0002 の未解消主張の矛盾だったが、現在の raw findings では F-0002 を targetFindingId とする resolution_confirmation が複数レビュワーから提出され、未解消主張が明示的に解消確認へ転じているため。"
+    }
+  ]
+}

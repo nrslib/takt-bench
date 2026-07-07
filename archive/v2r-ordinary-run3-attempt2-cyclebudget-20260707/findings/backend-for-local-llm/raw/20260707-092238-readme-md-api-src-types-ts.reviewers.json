@@ -1,0 +1,14 @@
+[
+  {
+    "rawFindingId": "20260707-092238-readme-md-api-src-types-ts:reviewers:1:ai-antipattern-review:finding-001",
+    "stepName": "ai-antipattern-review",
+    "reviewer": "ai-antipattern-review",
+    "familyTag": "hallucinated-logic",
+    "severity": "medium",
+    "title": "タグフィルタの空文字列処理による不自然な除外",
+    "location": "src/service.ts:147",
+    "description": "src/service.ts:147-149 において、`tagFilter` が空文字列（`''`）の場合に `false` を返しており、タグが指定されていない（undefined）場合と、空文字列として正規化された場合の挙動が混在している。`normalizeTagFilter` が空文字列を返す仕様であるため、空文字指定時に全タスクを拒否する挙動は意図したものか確認が必要。通常、空のフィルタは無視されるべきであり、現状のロジックでは「空文字タグを持つタスク」を探そうとして失敗し、結果的に何も返さないことになっている。",
+    "suggestion": "tagFilter が空文字列の場合の挙動を、仕様（README.md:47）および期待されるフィルタ動作（空文字指定時は無視するか、適切に処理する）に合わせて修正してください。",
+    "kind": "issue"
+  }
+]
