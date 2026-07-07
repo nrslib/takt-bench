@@ -1,0 +1,14 @@
+[
+  {
+    "rawFindingId": "20260707-203015-pr-task-attachments-takt-add-p:reviewers:1:ai-antipattern-review:req-gap-001",
+    "stepName": "ai-antipattern-review",
+    "reviewer": "ai-antipattern-review",
+    "familyTag": "requirement_gap",
+    "severity": "critical",
+    "title": "Core image downloading logic is missing",
+    "location": "src/infra/github/pr.ts",
+    "description": "The user requested the implementation of a feature to download images from PR comments and place them in task attachments. However, looking at the provided git diff and codebase, there is no code that actually performs the downloading of images from GitHub URLs. The changes focus on managing `ImageAttachmentStore` and integrating it into the interactive mode and task execution, but the core logic for extracting URLs from PR bodies/comments and downloading them via `gh api` or similar is missing.",
+    "suggestion": "Implement the logic to extract image URLs from `PrReviewData` (body, comments, reviews) and a service to download these images using GitHub authentication (e.g., `gh api` or authenticated requests) to save them as `StoredImageAttachment`.",
+    "kind": "issue"
+  }
+]

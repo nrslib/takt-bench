@@ -1,0 +1,90 @@
+# テスト作成レポート
+
+## 要件-テスト対応表
+| 要件ID | 観測可能な契約 | 入口/経路 | テスト | 結果 | 未カバー理由 |
+|--------|----------------|-----------|--------|------|--------------|
+| R1 | `PrReviewData.body` 内の画像 URL が検出される | PR review data 変換 | `src/__tests__/prReviewImageAttachments.test.ts` / `Given PR body, conversation comments, and review comments contain images...` | 作成 | |
+| R2 | `PrReviewData.comments[].body` 内の画像 URL が検出される | PR review data 変換 | `src/__tests__/prReviewImageAttachments.test.ts` / `Given PR body, conversation comments, and review comments contain images...` | 作成 | |
+| R3 | `PrReviewData.reviews[].body` 内の画像 URL が検出される | PR review data 変換 | `src/__tests__/prReviewImageAttachments.test.ts` / `Given PR body, conversation comments, and review comments contain images...` | 作成 | |
+| R4 | Markdown image syntax `![alt](url)` が placeholder に置換される | PR review data 変換 | `src/__tests__/prReviewImageAttachments.test.ts` / `Given PR body, conversation comments, and review comments contain images...` | 作成 | |
+| R5 | HTML `<img src="...">` が placeholder に置換される | PR review data 変換 | `src/__tests__/prReviewImageAttachments.test.ts` / `Given PR body, conversation comments, and review comments contain images...` | 作成 | |
+| R6 | GitHub attachment URL だけを取得対象にし、外部 URL は取得しない | ダウンロード境界 | `src/__tests__/prReviewImageAttachments.test.ts` / `isGitHubImageAttachmentUrl`, `Given an image points outside GitHub attachment hosts...` | 作成 | |
+| R7 | PNG/JPEG/GIF/WebP のみ対応し、Content-Type と magic bytes を検証する | ダウンロード検証 | `src/__tests__/prReviewImageAttachments.test.ts` / unsupported Content-Type, magic mismatch tests | 作成 | |
+| R8 | 画像サイズ上限を超えるレスポンスを拒否する | ダウンロード検証 | `src/__tests__/prReviewImageAttachments.test.ts` / `Given Content-Length exceeds the configured limit...` | 作成 | |
+| R9 | ダウンロード画像を `TaskAttachment[]` に変換する | PR review data 変換 | `src/__tests__/prReviewImageAttachments.test.ts` / attachment placeholder/fileName/tempPath 検証 | 作成 | |
+| R10 | `.takt/tasks/<slug>/attachments/image-N.ext` に保存される | `takt add --pr` 永続化 | `src/__tests__/addTask.test.ts` / `should save PR image attachments under the task attachment directory when adding with --pr` | 作成 | |
+| R11 | `order.md` に `## 添付画像` と既存 attachment 形式が追記される | `takt add --pr` 永続化 | `src/__tests__/addTask.test.ts` / `should save PR image attachments under the task attachment directory when adding with --pr` | 作成 | |
+| R12 | 元コメント本文内の画像参照が `[Image #N]` として参照可能になる | PR review data 変換 | `src/__tests__/prReviewImageAttachments.test.ts` / placeholder 置換検証 | 作成 | |
+| R13 | `takt add --pr <number>` で attachment を保存する | CLI add 経路 | `src/__tests__/addTask.test.ts` / PR attachment 保存、body-only attachment task 作成 | 作成 | |
+| R14 | `takt --pr <number>` の interactive 経路で attachment を渡す | CLI routing / interactive seed | `src/__tests__/cli-routing-pr-resolve.test.ts` / `should pass PR image attachments to the interactive seed...` | 作成 | |
+| R15 | `--pipeline --pr <number>` で attachment 付き task spec を stage して実行する | pipeline 実行経路 | `src/__tests__/pipelineExecution.test.ts` / `should stage PR image attachments before executing a pipeline PR task` | 作成 | |
+| R16 | ダウンロード失敗・検証失敗を黙って無視しない | エラー分類 / 例外 | `src/__tests__/prReviewImageAttachments.test.ts` / Content-Type、magic bytes、size、redirect reject tests | 作成 | |
+| R17 | 一時 attachment ファイルを cleanup する | cleanup 副作用 | `src/__tests__/prReviewImageAttachments.test.ts`, `addTask.test.ts`, `cli-routing-pr-resolve.test.ts`, `pipelineExecution.test.ts` | 作成 | |
+| R18 | 新規ロジックに単体テストを追加する | unit test | `src/__tests__/prReviewImageAttachments.test.ts` | 作成 | |
+
+## 危険分岐テスト
+| 分岐 | 失敗させたい誤実装 | テスト | 未カバー理由 |
+|------|--------------------|--------|--------------|
+| URL allowlist | 任意外部 URL を `fetch` してしまう | `Given an image points outside GitHub attachment hosts...` | |
+| GitHub URL path 判定 | `github.com` なら任意 path を許可してしまう | `isGitHubImageAttachmentUrl` | |
+| Content-Type 不正 | SVG などを画像 attachment として保存してしまう | `Given an allowed image response has an unsupported Content-Type...` | |
+| magic bytes 不一致 | `Content-Type` だけを信じて JPEG を PNG として保存してしまう | `Given Content-Type and magic bytes disagree...` | |
+| サイズ上限 | `arrayBuffer()` 後まで巨大レスポンスを読んでしまう | `Given Content-Length exceeds the configured limit...` | |
+| redirect | allowlist 済み URL から外部 host へ redirect された画像を保存してしまう | `Given GitHub redirects an attachment to an untrusted host...` | |
+| 重複 URL | 同一 URL を複数回 download し、placeholder が分裂する | `Given the same image URL appears multiple times...` | |
+| PR body のみ画像 | comments/reviews が空という理由だけで画像付き PR task を拒否する | `should create a PR task when the PR body has image attachments and no comments or reviews` | |
+| cleanup | workflow cancel / dispatch 例外 / pipeline 実行後に一時ファイルが残る | addTask / routing / pipeline cleanup tests | |
+
+## 横断経路テスト
+| 経路 | 生成側 | 消費側 | 保証する契約 | テスト | 未カバー理由 |
+|------|----------|----------|--------------|--------|--------------|
+| `takt add --pr` | `preparePrReviewImageAttachments()` | `saveTaskFile()` / `prepareTaskSpecDirectory()` | `attachments` が `order.md` と `attachments/` に保存される | `src/__tests__/addTask.test.ts` / `should save PR image attachments...` | |
+| `takt add --pr` | PR body image attachment | PR task 作成判定 | comments/reviews が空でも attachment があれば task 作成する | `src/__tests__/addTask.test.ts` / body-only attachment test | |
+| `takt --pr` | `resolvePrInput()` | `interactiveMode()` | `sourceContext` と `attachments` が interactive seed に渡る | `src/__tests__/cli-routing-pr-resolve.test.ts` / interactive seed test | |
+| `takt --pr` | PR input cleanup owner | routing finally | dispatch 例外時も cleanup が呼ばれる | `src/__tests__/cli-routing-pr-resolve.test.ts` / cleanup on throw test | |
+| `--pipeline --pr` | PR attachment helper | task spec staging / `executeTask()` | attachment 付き task spec を stage し、staged prompt と同じ `reportDirName` で実行する | `src/__tests__/pipelineExecution.test.ts` / pipeline staging test | |
+
+## 否定契約
+| 禁止する挙動 | 観測方法 | テスト | 未カバー理由 |
+|--------------|----------|--------|--------------|
+| 外部 URL を取得する | `fetch` と `gh auth token` が呼ばれないこと、元 Markdown が残ること | `Given an image points outside GitHub attachment hosts...` | |
+| Content-Type だけで保存する | magic bytes mismatch が reject されること | `Given Content-Type and magic bytes disagree...` | |
+| redirect 後 host を検証しない | `response.url` が外部 host の場合 reject されること | `Given GitHub redirects an attachment to an untrusted host...` | |
+| サイズ上限超過を読み込む | `arrayBuffer()` が呼ばれないこと | `Given Content-Length exceeds the configured limit...` | |
+| 画像付き PR body を「review comment なし」で拒否する | task が作成され、no review comments error が出ないこと | `should create a PR task when the PR body has image attachments and no comments or reviews` | |
+| pipeline で raw task 文字列のまま実行する | `executeTask.task` が staged task prompt になること | `should stage PR image attachments before executing a pipeline PR task` | |
+
+## 作成テスト
+| ファイル | 種別 | テスト数 | 概要 |
+|---------|------|---------|------|
+| `src/__tests__/prReviewImageAttachments.test.ts` | 単体 | 8 | PR review data から画像 URL を抽出・置換・download・検証・attachment 化・cleanup する契約 |
+| `src/__tests__/addTask.test.ts` | 統合寄り単体 | 3 追加、既存 PR 系期待値更新 | `takt add --pr` で attachment を保存し、画像のみ PR body も task 化する契約 |
+| `src/__tests__/cli-routing-pr-resolve.test.ts` | 統合寄り単体 | 2 追加、既存 PR cwd 期待値更新 | `takt --pr` の interactive seed と cleanup への attachment 伝搬 |
+| `src/__tests__/pipelineExecution.test.ts` | 統合寄り単体 | 1 追加 | pipeline `--pr` で attachment 付き task spec を stage して実行する契約 |
+
+## 未カバー項目
+| 要件/分岐 | 未カバー理由 | 後続で必要な確認 |
+|-----------|--------------|------------------|
+| 実 GitHub private repository 画像の end-to-end download | 認証済み `gh` と実ネットワークに依存し、単体テストで安全に固定する対象ではないため | 実装後に手元または CI の許可された環境で手動確認 |
+| GitHub image CDN host の追加 allowlist | 計画上「必要に応じて」とされており、対象 host が確定していないため | 実装時に対象 host を確定した場合、allowlist テストを追加 |
+| GitLab MR attachment | スコープ外。要求は GitHub PR と `gh` 認証が前提 | なし |
+| 任意外部 URL の download | 安全性制約によりスコープ外。取得しない契約をテスト済み | なし |
+| E2E テスト | 実 `gh` / network / repository 状態に依存するため、このステップでは unit/integration 寄りテストで主要経路を固定 | 実装後、必要なら mock provider E2E または手動確認を追加 |
+
+## 実行結果（参考）
+実装前のためテスト失敗・import エラーは想定内。
+
+実行コマンド:
+
+`npm test -- --run src/__tests__/prReviewImageAttachments.test.ts src/__tests__/addTask.test.ts src/__tests__/cli-routing-pr-resolve.test.ts src/__tests__/pipelineExecution.test.ts`
+
+| 状態 | 件数 | 備考 |
+|------|------|------|
+| Pass | 85 | 既存テストの通過分 |
+| Fail / Import Error（想定内） | 11 | `prReviewImageAttachments.ts` / `imageData.ts` 未実装、既存コードがまだ helper を呼んでいないことによる失敗 |
+| Error（要対応） | 0 | 実装後も残る import path ミスは現時点では確認なし |
+
+## 備考（判断がある場合のみ）
+- プロダクションコードは変更していない。
+- `git diff --check` は更新済み既存テストファイルについて成功した。
+- 作業前から存在していた `.takt/config.yaml` と `.takt/workflows/` の未コミット変更には触れていない。

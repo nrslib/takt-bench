@@ -1,0 +1,15 @@
+[
+  {
+    "rawFindingId": "20260707-203015-pr-task-attachments-takt-add-p:reviewers:3:ai-antipattern-review:req-gap-001-persists-2",
+    "stepName": "ai-antipattern-review",
+    "reviewer": "ai-antipattern-review",
+    "familyTag": "requirement_gap",
+    "severity": "critical",
+    "title": "Core image downloading logic is still missing (Iteration 3)",
+    "location": "src/infra/github/pr.ts",
+    "description": "Previous finding F-0001 stated that core image downloading logic is missing. Despite multiple review iterations, the provided code still only focuses on the management and passing of `StoredImageAttachment` and `ImageAttachmentStore`. There is still no implementation for extracting image URLs from `PrReviewData` or downloading them from GitHub. The core requirement of the user request remains unaddressed.",
+    "suggestion": "Implement the logic to extract image URLs from `PrReviewData` (body, comments, reviews) and a service to download these images using GitHub authentication (e.g., `gh api` or authenticated requests) to save them as `StoredImageAttachment`.",
+    "kind": "issue",
+    "targetFindingId": "F-0001"
+  }
+]

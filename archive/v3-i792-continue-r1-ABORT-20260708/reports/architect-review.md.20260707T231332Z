@@ -1,0 +1,17 @@
+# アーキテクチャレビュー
+
+## 結果: APPROVE
+
+## サマリー
+PRコメント内の画像抽出・ダウンロード機能およびTask Attachmentsへの統合が適切に実装されました。Ledger上の指摘事項 (F-0001) も解消されており、設計原則に準拠しています。
+
+## 再走査証跡
+- **構造・設計**: `src/features/tasks/prReviewImageAttachments.ts` による責務分離を確認。
+- **コード品質**: `imageData.ts` でのMagic Bytes検証およびサイズ制限の実装を確認。
+- **呼び出しチェーン**: `resolvePrInput` → `executeDefaultAction` → `selectAndExecuteTask` への `attachments` 伝播を確認。
+- **副作用管理**: `cleanupAttachments` による一時ディレクトリの削除経路が正常・異常系ともに確保されていることを確認。
+
+## 検証証跡
+- ビルド: 未確認（quality-gateにて実施）
+- テスト: `addTask.test.ts`, `cli-routing-pr-resolve.test.ts`, `pipelineExecution.test.ts` にて、画像保存およびクリーンアップの振る舞いが検証されていることを確認。
+- 動作確認: 未確認

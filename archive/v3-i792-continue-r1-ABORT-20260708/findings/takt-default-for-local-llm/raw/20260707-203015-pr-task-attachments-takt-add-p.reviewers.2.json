@@ -1,0 +1,51 @@
+[
+  {
+    "rawFindingId": "20260707-203015-pr-task-attachments-takt-add-p:reviewers:2:arch-review:res-f0001",
+    "stepName": "arch-review",
+    "reviewer": "arch-review",
+    "familyTag": "resolution_confirmation",
+    "severity": "critical",
+    "title": "Core image downloading logic has been implemented",
+    "location": "src/features/tasks/prReviewImageAttachments.ts:76",
+    "description": "The open finding F-0001 stated that the core image downloading logic was missing. I have verified that `src/features/tasks/prReviewImage uma-attachments.ts` now implements `downloadImage` (lines 76-136) and `preparePrReviewImageAttachments` (lines 138-223), which extract URLs, use `gh auth token` for authentication, and validate image types and sizes.",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0001"
+  },
+  {
+    "rawFindingId": "20260707-203015-pr-task-attachments-takt-add-p:reviewers:2:ai-antipattern-review:req-gap-001-persists",
+    "stepName": "ai-antipattern-review",
+    "reviewer": "ai-antipattern-review",
+    "familyTag": "requirement_gap",
+    "severity": "critical",
+    "title": "Core image downloading logic is still missing",
+    "location": "src/infra/github/pr.ts",
+    "description": "Previous finding F-0001 stated that core image downloading logic is missing. After reviewing the latest diff, it is confirmed that the core logic to extract image URLs from PR data and download them to the local filesystem is still completely missing. The current changes only introduce management for already stored images (ImageAttachmentStore, cleanup, etc.) but do not implement the actual \"download from GitHub\" requirement.",
+    "suggestion": "Implement the logic to extract image URLs from `PrReviewData` (body, comments, reviews) and a service to download these images using GitHub authentication (e.g., `gh api` or authenticated requests) to save them as `StoredImageAttachment`.",
+    "kind": "issue",
+    "targetFindingId": "F-0001"
+  },
+  {
+    "rawFindingId": "20260707-203015-pr-task-attachments-takt-add-p:reviewers:2:coding-review:res-F-0001",
+    "stepName": "coding-review",
+    "reviewer": "coding-review",
+    "familyTag": "resolution_confirmation",
+    "severity": "critical",
+    "title": "Core image downloading logic is now implemented",
+    "location": "src/features/tasks/prReviewImageAttachments.ts:75-223",
+    "description": "Verified that image downloading logic is implemented in `src/features/tasks/prReviewImageAttachments.ts`. It extracts URLs from PR body, comments, and reviews, downloads them using `gh auth token`, validates Content-Type and magic bytes, and saves them to a temporary directory. This directly addresses the missing logic previously noted in F-0001.",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0001"
+  },
+  {
+    "rawFindingId": "20260707-203015-pr-task-attachments-takt-add-p:reviewers:2:implementation-semantics-review:res-f0001-semantics",
+    "stepName": "implementation-semantics-review",
+    "reviewer": "implementation-semantics-review",
+    "familyTag": "resolution_confirmation",
+    "severity": "critical",
+    "title": "Core image downloading logic is now implemented",
+    "location": "src/features/tasks/prReviewImageAttachments.ts:132-223",
+    "description": "The core logic for extracting and downloading images from PR review data was missing in the initial implementation. Based on the current code in `src/features/tasks/prReviewImageAttachments.ts`, the `preparePrReviewImageAttachments` function now correctly extracts URLs from the PR body, comments, and reviews, and `downloadImage` uses `gh auth token` to fetch these images and save them as task attachments.",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0001"
+  }
+]

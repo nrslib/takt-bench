@@ -1,0 +1,100 @@
+{
+  "version": 1,
+  "runId": "20260707-203015-pr-task-attachments-takt-add-p",
+  "stepName": "reviewers",
+  "retryCount": 1,
+  "ledgerUpdated": false,
+  "finalErrors": [
+    "Finding id \"F-0001\" appears in multiple manager decisions: resolvedFindings[0] and conflicts[0]"
+  ],
+  "attempts": [
+    {
+      "attempt": 1,
+      "managerOutput": {
+        "matches": [
+          {
+            "findingId": "F-0001",
+            "rawFindingIds": [
+              "20260707-203015-pr-task-attachments-takt-add-p:reviewers:2:ai-antipattern-review:req-gap-001-persists"
+            ],
+            "evidence": "既存 F-0001 と同じ familyTag=requirement_gap、同じ location=src/infra/github/pr.ts、同じ「PR コメント画像の抽出・ダウンロード中核ロジック欠落」という問題内容を再報告しているため。"
+          }
+        ],
+        "newFindings": [],
+        "resolvedFindings": [
+          {
+            "findingId": "F-0001",
+            "rawFindingIds": [
+              "20260707-203015-pr-task-attachments-takt-add-p:reviewers:2:arch-review:res-f0001",
+              "20260707-203015-pr-task-attachments-takt-add-p:reviewers:2:coding-review:res-F-0001",
+              "20260707-203015-pr-task-attachments-takt-add-p:reviewers:2:implementation-semantics-review:res-f0001-semantics"
+            ],
+            "evidence": "3件の current raw finding が kind=resolution_confirmation かつ targetFindingId=F-0001 として、対象指摘の解消確認を報告しているため。"
+          }
+        ],
+        "reopenedFindings": [],
+        "conflicts": [
+          {
+            "findingIds": [
+              "F-0001"
+            ],
+            "rawFindingIds": [
+              "20260707-203015-pr-task-attachments-takt-add-p:reviewers:2:arch-review:res-f0001",
+              "20260707-203015-pr-task-attachments-takt-add-p:reviewers:2:ai-antipattern-review:req-gap-001-persists",
+              "20260707-203015-pr-task-attachments-takt-add-p:reviewers:2:coding-review:res-F-0001",
+              "20260707-203015-pr-task-attachments-takt-add-p:reviewers:2:implementation-semantics-review:res-f0001-semantics"
+            ],
+            "description": "F-0001 について、3件の resolution_confirmation は解消済みと報告している一方、1件の issue raw finding は同一問題が継続していると報告しており、現在 raw findings 間で状態判断が矛盾している。"
+          }
+        ],
+        "resolvedConflicts": [],
+        "waivedFindings": [],
+        "disputeNotes": []
+      },
+      "validationErrors": [
+        "Raw finding id \"20260707-203015-pr-task-attachments-takt-add-p:reviewers:2:arch-review:res-f0001\" appears in multiple manager decisions: resolvedFindings[0] and conflicts[0]",
+        "Raw finding id \"20260707-203015-pr-task-attachments-takt-add-p:reviewers:2:ai-antipattern-review:req-gap-001-persists\" appears in multiple manager decisions: matches[0] and conflicts[0]",
+        "Raw finding id \"20260707-203015-pr-task-attachments-takt-add-p:reviewers:2:coding-review:res-F-0001\" appears in multiple manager decisions: resolvedFindings[0] and conflicts[0]",
+        "Raw finding id \"20260707-203015-pr-task-attachments-takt-add-p:reviewers:2:implementation-semantics-review:res-f0001-semantics\" appears in multiple manager decisions: resolvedFindings[0] and conflicts[0]",
+        "Finding id \"F-0001\" appears in multiple manager decisions: matches[0] and resolvedFindings[0]",
+        "Finding id \"F-0001\" appears in multiple manager decisions: matches[0] and conflicts[0]"
+      ]
+    },
+    {
+      "attempt": 2,
+      "managerOutput": {
+        "matches": [],
+        "newFindings": [],
+        "resolvedFindings": [
+          {
+            "findingId": "F-0001",
+            "rawFindingIds": [
+              "20260707-203015-pr-task-attachments-takt-add-p:reviewers:2:arch-review:res-f0001",
+              "20260707-203015-pr-task-attachments-takt-add-p:reviewers:2:coding-review:res-F-0001",
+              "20260707-203015-pr-task-attachments-takt-add-p:reviewers:2:implementation-semantics-review:res-f0001-semantics"
+            ],
+            "evidence": "3件の current raw finding が kind=resolution_confirmation かつ targetFindingId=F-0001 として、既存 F-0001 の対象指摘である PR コメント画像の抽出・ダウンロード中核ロジックの実装を確認しているため。"
+          }
+        ],
+        "reopenedFindings": [],
+        "conflicts": [
+          {
+            "findingIds": [
+              "F-0001"
+            ],
+            "rawFindingIds": [
+              "20260707-203015-pr-task-attachments-takt-add-p:reviewers:2:ai-antipattern-review:req-gap-001-persists"
+            ],
+            "description": "F-0001 について、resolution_confirmation により解消確認が報告されている一方、この issue raw finding は同じ familyTag=requirement_gap、同じ location=src/infra/github/pr.ts、同じ問題内容として継続を主張しており、状態判断が矛盾している。raw finding の重複参照を避けるため、この conflict には継続主張側の rawFindingId のみを含める。"
+          }
+        ],
+        "resolvedConflicts": [],
+        "waivedFindings": [],
+        "disputeNotes": []
+      },
+      "validationErrors": [
+        "Finding id \"F-0001\" appears in multiple manager decisions: resolvedFindings[0] and conflicts[0]"
+      ]
+    }
+  ]
+}

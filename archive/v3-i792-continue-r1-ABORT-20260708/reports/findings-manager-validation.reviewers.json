@@ -1,0 +1,63 @@
+{
+  "version": 1,
+  "runId": "20260707-203015-pr-task-attachments-takt-add-p",
+  "stepName": "reviewers",
+  "retryCount": 1,
+  "ledgerUpdated": true,
+  "finalErrors": [],
+  "attempts": [
+    {
+      "attempt": 1,
+      "managerOutput": {
+        "matches": [
+          {
+            "findingId": "F-0001",
+            "rawFindingIds": [
+              "20260707-203015-pr-task-attachments-takt-add-p:reviewers:4:ai-antipattern-review:req-gap-001-persists-3"
+            ],
+            "evidence": "既存 ledger の F-0001 と同じ familyTag=requirement_gap、targetFindingId=F-0001、location=src/infra/github/pr.ts、issue meaning は PR 画像 URL 抽出・GitHub 画像ダウンロード実装欠落の継続指摘で一致。"
+          }
+        ],
+        "newFindings": [],
+        "resolvedFindings": [
+          {
+            "findingId": "F-0001",
+            "rawFindingIds": [
+              "20260707-203015-pr-task-attachments-takt-add-p:reviewers:4:implementation-semantics-review:res-f0001-semantics-v4"
+            ],
+            "evidence": "current raw finding が kind=resolution_confirmation かつ targetFindingId=F-0001 として、src/features/tasks/prReviewImageAttachments.ts:50-136 に URL 抽出と authenticated download 実装があると確認している。"
+          }
+        ],
+        "reopenedFindings": [],
+        "conflicts": [
+          {
+            "findingIds": [
+              "F-0001"
+            ],
+            "rawFindingIds": [
+              "20260707-203015-pr-task-attachments-takt-add-p:reviewers:4:ai-antipattern-review:req-gap-001-persists-3",
+              "20260707-203015-pr-task-attachments-takt-add-p:reviewers:4:implementation-semantics-review:res-f0001-semantics-v4"
+            ],
+            "description": "同一 finding F-0001 について、一方の raw finding は core image downloading logic が未実装として継続報告し、もう一方は kind=resolution_confirmation で実装済みとして解消確認しているため矛盾している。"
+          }
+        ],
+        "resolvedConflicts": [],
+        "waivedFindings": [],
+        "disputeNotes": [
+          {
+            "findingId": "F-0001",
+            "reason": "coder は F-0001 が stale/実装済みと dispute しているが、既存 ledger の severity が critical のため waiver 条件を満たさない。resolution_confirmation は別途解消候補として扱うが、waive は不可。",
+            "evidence": "ledger:F-0001 severity=critical; coder evidence src/features/tasks/prReviewImageAttachments.ts:76-136, src/features/tasks/prReviewImageAttachments.ts:138-263"
+          }
+        ]
+      },
+      "validationErrors": [
+        "Raw finding id \"20260707-203015-pr-task-attachments-takt-add-p:reviewers:4:ai-antipattern-review:req-gap-001-persists-3\" appears in multiple manager decisions: matches[0] and conflicts[0]",
+        "Raw finding id \"20260707-203015-pr-task-attachments-takt-add-p:reviewers:4:implementation-semantics-review:res-f0001-semantics-v4\" appears in multiple manager decisions: resolvedFindings[0] and conflicts[0]",
+        "Cannot record a dispute on \"F-0001\" because it also has a state transition in this output (disputeNotes[0])",
+        "Finding id \"F-0001\" appears in multiple manager decisions: matches[0] and resolvedFindings[0]",
+        "Finding id \"F-0001\" appears in multiple manager decisions: matches[0] and conflicts[0]"
+      ]
+    }
+  ]
+}

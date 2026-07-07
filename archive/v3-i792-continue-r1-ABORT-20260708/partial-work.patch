@@ -1,0 +1,1165 @@
+diff --git a/.takt/config.yaml b/.takt/config.yaml
+index bf4b6382..e086d810 100644
+--- a/.takt/config.yaml
++++ b/.takt/config.yaml
+@@ -8,33 +8,19 @@ workflow_overrides:
+         - "Run `npm run build` and verify the build succeeds"
+         - "Run `npm run lint` and verify lint passes"
+         - "Run `npm test` and verify unit tests pass"
+-        - "Run `npm run test:it` and verify integration tests pass"
+-        - "Run `npm run test:e2e:mock` and verify full mock E2E tests pass"
+     fix:
+       quality_gates:
+         - "Run `npm run build` and verify the build succeeds"
+         - "Run `npm run lint` and verify lint passes"
+         - "Run `npm test` and verify unit tests pass"
+-        - "Run `npm run test:it` and verify integration tests pass"
+-        - "Run `npm run test:e2e:mock` and verify full mock E2E tests pass"
+-    ai_fix:
+-      quality_gates:
+-        - "Run `npm run build` and verify the build succeeds"
+-        - "Run `npm run lint` and verify lint passes"
+-        - "Run `npm test` and verify unit tests pass"
+-        - "Run `npm run test:it` and verify integration tests pass"
+-        - "Run `npm run test:e2e:mock` and verify full mock E2E tests pass"
+-    ai-antipattern-fix:
+-      quality_gates:
+-        - "Run `npm run build` and verify the build succeeds"
+-        - "Run `npm run lint` and verify lint passes"
+-        - "Run `npm test` and verify unit tests pass"
+-        - "Run `npm run test:it` and verify integration tests pass"
+-        - "Run `npm run test:e2e:mock` and verify full mock E2E tests pass"
+-    fix_supervisor:
+-      quality_gates:
+-        - "Run `npm run build` and verify the build succeeds"
+-        - "Run `npm run lint` and verify lint passes"
+-        - "Run `npm test` and verify unit tests pass"
+-        - "Run `npm run test:it` and verify integration tests pass"
+-        - "Run `npm run test:e2e:mock` and verify full mock E2E tests pass"
++
++provider_routing:
++  tags:
++    plan: { provider: codex, model: gpt-5.5 }
++    test-planning: { provider: codex, model: gpt-5.5 }
++    coding: { provider: opencode, model: ollama-cloud/qwen3-coder-next }
++    review: { provider: opencode, model: ollama-cloud/gemma4:31b }
++    final-gate: { provider: codex, model: gpt-5.5 }
++
++persona_providers:
++  findings-manager: { provider: codex, model: gpt-5.5 }
+diff --git a/src/__tests__/addTask.test.ts b/src/__tests__/addTask.test.ts
+index ed549653..56b86044 100644
+--- a/src/__tests__/addTask.test.ts
++++ b/src/__tests__/addTask.test.ts
+@@ -6,6 +6,7 @@ import { parse as parseYaml } from 'yaml';
+ 
+ const mockCheckCliStatus = vi.fn();
+ const mockFetchPrReviewComments = vi.fn();
++const mockPreparePrReviewImageAttachments = vi.fn();
+ 
+ vi.mock('../features/interactive/index.js', () => ({
+   interactiveMode: vi.fn(),
+@@ -81,6 +82,10 @@ vi.mock('../infra/git/index.js', () => ({
+   formatPrReviewAsTask: (...args: unknown[]) => mockFormatPrReviewAsTask(...args),
+ }));
+ 
++vi.mock('../features/tasks/prReviewImageAttachments.js', () => ({
++  preparePrReviewImageAttachments: (...args: unknown[]) => mockPreparePrReviewImageAttachments(...args),
++}));
++
+ import { interactiveMode } from '../features/interactive/index.js';
+ import { promptInput, confirm } from '../shared/prompt/index.js';
+ import { error, info } from '../shared/ui/index.js';
+@@ -110,6 +115,18 @@ function addTaskWithPrOption(cwd: string, task: string, prNumber: number): Promi
+   return addTask(cwd, task, { prNumber });
+ }
+ 
++function createTempAttachment(root: string, fileName: string, content: Buffer | string) {
++  const attachmentDir = path.join(root, 'tmp-attachments');
++  fs.mkdirSync(attachmentDir, { recursive: true });
++  const tempPath = path.join(attachmentDir, fileName);
++  fs.writeFileSync(tempPath, content);
++  return {
++    placeholder: '[Image #1]',
++    tempPath,
++    fileName,
++  };
++}
++
+ function createMockPrReview(overrides: Partial<PrReviewData & { baseRefName?: string }> = {}): PrReviewData {
+   return {
+     number: 456,
+@@ -132,6 +149,11 @@ beforeEach(() => {
+   mockGetCurrentBranch.mockReturnValue('main');
+   mockBranchExists.mockReturnValue(true);
+   mockCheckCliStatus.mockReturnValue({ available: true });
++  mockPreparePrReviewImageAttachments.mockImplementation(async (_cwd: string, prReview: PrReviewData) => ({
++    rewrittenPrReview: prReview,
++    attachments: [],
++    cleanupAttachments: vi.fn(),
++  }));
+ });
+ 
+ afterEach(() => {
+@@ -258,7 +280,7 @@ describe('addTask', () => {
+ 
+   it('should create task from PR review comments with PR-specific task settings', async () => {
+     const prReview = createMockPrReview();
+-    const formattedTask = '## PR #456 Review Comments: Fix auth bug';
++    const formattedTask = `## PR #${prReview.number} Review Comments: ${prReview.title}\n\n${prReview.body}`;
+     mockFetchPrReviewComments.mockReturnValue(prReview);
+     mockFormatPrReviewAsTask.mockReturnValue(formattedTask);
+ 
+@@ -269,7 +291,7 @@ describe('addTask', () => {
+       mockFetchPrReviewComments.mock.invocationCallOrder[0],
+     );
+     expect(mockFetchPrReviewComments).toHaveBeenCalledWith(456, testDir);
+-    expect(mockFormatPrReviewAsTask).toHaveBeenCalledWith(prReview);
++    expect(mockPreparePrReviewImageAttachments).toHaveBeenCalledWith(testDir, prReview);
+     expect(mockIsIssueReference).not.toHaveBeenCalled();
+     expect(mockParseIssueNumbers).not.toHaveBeenCalled();
+     expect(mockResolveIssueTask).not.toHaveBeenCalled();
+@@ -288,9 +310,74 @@ describe('addTask', () => {
+     expect(readOrderContent(testDir, task.task_dir)).toContain(formattedTask);
+   });
+ 
++  it('should save PR image attachments under the task attachment directory when adding with --pr', async () => {
++    const originalPrReview = createMockPrReview({
++      body: 'Please inspect ![screen](https://github.com/user-attachments/assets/1).',
++      comments: [],
++      reviews: [],
++    });
++    const prReview = createMockPrReview({
++      body: 'Please inspect [Image #1].',
++      comments: [],
++      reviews: [],
++    });
++    const attachment = createTempAttachment(testDir, 'image-1.png', 'png-data');
++    const cleanupAttachments = vi.fn(() => {
++      fs.rmSync(path.dirname(attachment.tempPath), { recursive: true, force: true });
++    });
++    mockFetchPrReviewComments.mockReturnValue(originalPrReview);
++    mockFormatPrReviewAsTask.mockReturnValue(`## PR #${prReview.number} Review Comments: ${prReview.title}\n\n${prReview.body}`);
++    mockPreparePrReviewImageAttachments.mockResolvedValue({
++      rewrittenPrReview: prReview,
++      attachments: [attachment],
++      cleanupAttachments,
++    });
++
++    await addTaskWithPrOption(testDir, 'placeholder', 456);
++
++    expect(mockFormatPrReviewAsTask).toHaveBeenCalledWith(prReview);
++    const task = loadTasks(testDir).tasks[0]!;
++    const orderContent = readOrderContent(testDir, task.task_dir);
++    expect(orderContent).toContain('Please inspect [Image #1].');
++    expect(orderContent).toContain('## 添付画像');
++    expect(orderContent).toContain('- [Image #1]: `attachments/image-1.png`');
++    expect(fs.readFileSync(path.join(testDir, String(task.task_dir), 'attachments', 'image-1.png'), 'utf-8')).toBe('png-data');
++    expect(cleanupAttachments).toHaveBeenCalledTimes(1);
++  });
++
++  it('should create a PR task when the PR body has image attachments and no comments or reviews', async () => {
++    const originalPrReview = createMockPrReview({
++      body: 'Body image ![screen](https://github.com/user-attachments/assets/1).',
++      comments: [],
++      reviews: [],
++    });
++    const prReview = createMockPrReview({
++      body: 'Body image [Image #1].',
++      comments: [],
++      reviews: [],
++    });
++    const attachment = createTempAttachment(testDir, 'image-1.png', 'png-data');
++    mockFetchPrReviewComments.mockReturnValue(originalPrReview);
++    mockFormatPrReviewAsTask.mockReturnValue(`## PR #${prReview.number} Review Comments: ${prReview.title}\n\n${prReview.body}`);
++    mockPreparePrReviewImageAttachments.mockResolvedValue({
++      rewrittenPrReview: prReview,
++      attachments: [attachment],
++      cleanupAttachments: vi.fn(),
++    });
++
++    await addTaskWithPrOption(testDir, 'placeholder', 456);
++
++    expect(mockError).not.toHaveBeenCalledWith(expect.stringContaining('has no review comments'));
++    const task = loadTasks(testDir).tasks[0]!;
++    const orderContent = readOrderContent(testDir, task.task_dir);
++    expect(orderContent).toContain('Body image [Image #1].');
++    expect(orderContent).toContain('## 添付画像');
++    expect(orderContent).toContain('- [Image #1]: `attachments/image-1.png`');
++  });
++
+   it('should store PR base_ref as base_branch when adding with --pr', async () => {
+     const prReview = createMockPrReview({ baseRefName: 'release/main' });
+-    const formattedTask = '## PR #456 Review Comments: Fix auth bug';
++    const formattedTask = `## PR #${prReview.number} Review Comments: ${prReview.title}\n\n${prReview.body || ''}`;
+     mockFetchPrReviewComments.mockReturnValue(prReview);
+     mockFormatPrReviewAsTask.mockReturnValue(formattedTask);
+ 
+@@ -301,15 +388,20 @@ describe('addTask', () => {
+     expect(task.should_publish_branch_to_origin).toBe(true);
+   });
+ 
+-  it('should not create a PR task when PR has no review comments', async () => {
+-    const prReview = createMockPrReview({ comments: [], reviews: [] });
++  it('should show error when PR has no review comments and no image attachments', async () => {
++    const prReview = createMockPrReview({ body: 'Body without images', comments: [], reviews: [] });
+     mockFetchPrReviewComments.mockReturnValue(prReview);
++    mockPreparePrReviewImageAttachments.mockResolvedValue({
++      rewrittenPrReview: prReview,
++      attachments: [],
++      cleanupAttachments: vi.fn(),
++    });
+ 
+     await addTaskWithPrOption(testDir, 'placeholder', 456);
+ 
+     expect(mockCheckCliStatus).toHaveBeenCalled();
+     expect(mockFetchPrReviewComments).toHaveBeenCalledWith(456, testDir);
+-    expect(mockFormatPrReviewAsTask).not.toHaveBeenCalled();
++    expect(mockPreparePrReviewImageAttachments).toHaveBeenCalledWith(testDir, prReview);
+     expect(mockDetermineWorkflow).not.toHaveBeenCalled();
+     expect(mockError).toHaveBeenCalled();
+     expect(fs.existsSync(path.join(testDir, '.takt', 'tasks.yaml'))).toBe(false);
+@@ -322,7 +414,7 @@ describe('addTask', () => {
+ 
+     expect(mockCheckCliStatus).toHaveBeenCalled();
+     expect(mockFetchPrReviewComments).toHaveBeenCalledWith(456, testDir);
+-    expect(mockFormatPrReviewAsTask).not.toHaveBeenCalled();
++    expect(mockPreparePrReviewImageAttachments).not.toHaveBeenCalled();
+     expect(mockDetermineWorkflow).not.toHaveBeenCalled();
+     expect(mockError).toHaveBeenCalledWith(expect.stringContaining('network timeout'));
+     expect(fs.existsSync(path.join(testDir, '.takt', 'tasks.yaml'))).toBe(false);
+@@ -334,7 +426,7 @@ describe('addTask', () => {
+     await addTaskWithPrOption(testDir, 'placeholder', 456);
+ 
+     expect(mockFetchPrReviewComments).not.toHaveBeenCalled();
+-    expect(mockFormatPrReviewAsTask).not.toHaveBeenCalled();
++    expect(mockPreparePrReviewImageAttachments).not.toHaveBeenCalled();
+     expect(mockDetermineWorkflow).not.toHaveBeenCalled();
+     expect(mockError).toHaveBeenCalled();
+     expect(fs.existsSync(path.join(testDir, '.takt', 'tasks.yaml'))).toBe(false);
+@@ -342,7 +434,7 @@ describe('addTask', () => {
+ 
+   it('should not perform issue parsing when PR task text looks like issue reference', async () => {
+     const prReview = createMockPrReview();
+-    const formattedTask = '## PR #456 Review Comments: Fix auth bug';
++    const formattedTask = `## PR #${prReview.number} Review Comments: ${prReview.title}\n\n${prReview.body || ''}`;
+     mockFetchPrReviewComments.mockReturnValue(prReview);
+     mockFormatPrReviewAsTask.mockReturnValue(formattedTask);
+ 
+@@ -354,7 +446,7 @@ describe('addTask', () => {
+     expect(mockResolveIssueTask).not.toHaveBeenCalled();
+     expect(mockCheckCliStatus).toHaveBeenCalled();
+     expect(mockFetchPrReviewComments).toHaveBeenCalledWith(456, testDir);
+-    expect(mockFormatPrReviewAsTask).toHaveBeenCalledWith(prReview);
++    expect(mockPreparePrReviewImageAttachments).toHaveBeenCalledWith(testDir, prReview);
+     const task = loadTasks(testDir).tasks[0]!;
+     expect(task.content).toBeUndefined();
+     expect(task.branch).toBe('feature/fix-auth-bug');
+@@ -371,17 +463,24 @@ describe('addTask', () => {
+ 
+   it('should not save PR task when workflow selection is cancelled', async () => {
+     const prReview = createMockPrReview();
+-    const formattedTask = '## PR #456 Review Comments: Fix auth bug';
++    const formattedTask = `## PR #${prReview.number} Review Comments: ${prReview.title}\n\n${prReview.body || ''}`;
++    const cleanupAttachments = vi.fn();
+     mockDetermineWorkflow.mockResolvedValue(null);
+     mockFetchPrReviewComments.mockReturnValue(prReview);
+     mockFormatPrReviewAsTask.mockReturnValue(formattedTask);
++    mockPreparePrReviewImageAttachments.mockResolvedValue({
++      rewrittenPrReview: prReview,
++      attachments: [],
++      cleanupAttachments,
++    });
+ 
+     await addTaskWithPrOption(testDir, 'placeholder', 456);
+ 
+     expect(mockCheckCliStatus).toHaveBeenCalled();
+     expect(mockFetchPrReviewComments).toHaveBeenCalledWith(456, testDir);
+-    expect(mockFormatPrReviewAsTask).toHaveBeenCalledWith(prReview);
++    expect(mockPreparePrReviewImageAttachments).toHaveBeenCalledWith(testDir, prReview);
+     expect(mockDetermineWorkflow).toHaveBeenCalledTimes(1);
++    expect(cleanupAttachments).toHaveBeenCalledTimes(1);
+     expect(fs.existsSync(path.join(testDir, '.takt', 'tasks.yaml'))).toBe(false);
+   });
+ });
+diff --git a/src/__tests__/cli-routing-pr-resolve.test.ts b/src/__tests__/cli-routing-pr-resolve.test.ts
+index 4c1cddff..504f7eda 100644
+--- a/src/__tests__/cli-routing-pr-resolve.test.ts
++++ b/src/__tests__/cli-routing-pr-resolve.test.ts
+@@ -28,6 +28,7 @@ const {
+   mockResolveAssistantConfigLayers,
+   mockLoadPersonaSessions,
+   mockResolveAgentOverrides,
++  mockPreparePrReviewImageAttachments,
+ } = vi.hoisted(() => ({
+   mockCheckCliStatus: vi.fn(),
+   mockFetchIssue: vi.fn(),
+@@ -37,6 +38,7 @@ const {
+   mockResolveAssistantConfigLayers: vi.fn(() => ({ local: {}, global: {} })),
+   mockLoadPersonaSessions: vi.fn(() => ({})),
+   mockResolveAgentOverrides: vi.fn(),
++  mockPreparePrReviewImageAttachments: vi.fn(),
+ }));
+ 
+ vi.mock('../infra/git/index.js', () => ({
+@@ -49,8 +51,12 @@ vi.mock('../infra/git/index.js', () => ({
+   formatIssueAsTask: vi.fn(),
+   isIssueReference: vi.fn(),
+   resolveIssueTask: vi.fn(),
+-  formatPrReviewAsTask: vi.fn((pr: { number: number; title: string }) =>
+-    `## PR #${pr.number} Review Comments: ${pr.title}`),
++  formatPrReviewAsTask: vi.fn((pr: { number: number; title: string; body?: string }) =>
++    [`## PR #${pr.number} Review Comments: ${pr.title}`, pr.body].filter(Boolean).join('\n\n')),
++}));
++
++vi.mock('../features/tasks/prReviewImageAttachments.js', () => ({
++  preparePrReviewImageAttachments: (...args: unknown[]) => mockPreparePrReviewImageAttachments(...args),
+ }));
+ 
+ vi.mock('../features/tasks/index.js', () => ({
+@@ -191,6 +197,11 @@ beforeEach(() => {
+   mockResolveAssistantConfigLayers.mockReturnValue({ local: {}, global: {} });
+   mockLoadPersonaSessionsFn.mockReturnValue({});
+   mockResolveAgentOverrides.mockReturnValue(undefined);
++  mockPreparePrReviewImageAttachments.mockImplementation(async (_cwd: string | undefined, prReview: PrReviewData) => ({
++    rewrittenPrReview: prReview,
++    attachments: [],
++    cleanupAttachments: vi.fn(),
++  }));
+ });
+ 
+ describe('interactive image attachment routing', () => {
+@@ -297,12 +308,13 @@ describe('PR resolution in routing', () => {
+       await executeDefaultAction();
+ 
+       // Then
+-      expect(mockFetchPrReviewComments).toHaveBeenCalledWith(456, undefined);
++      expect(mockFetchPrReviewComments).toHaveBeenCalledWith(456, '/test/cwd');
++      expect(mockPreparePrReviewImageAttachments).toHaveBeenCalledWith('/test/cwd', prReview);
+       expect(mockInteractiveMode).toHaveBeenCalledWith(
+         '/test/cwd',
+-        {
++        expect.objectContaining({
+           sourceContext: expect.stringContaining('## PR #456 Review Comments:'),
+-        },
++        }),
+         expect.anything(),
+         undefined,
+         undefined,
+@@ -310,6 +322,109 @@ describe('PR resolution in routing', () => {
+       );
+     });
+ 
++    it('should not pass an empty attachments array when the PR has no image attachments', async () => {
++      mockOpts.pr = 456;
++      const prReview = createMockPrReview();
++      mockCheckCliStatus.mockReturnValue({ available: true });
++      mockFetchPrReviewComments.mockReturnValue(prReview);
++
++      await executeDefaultAction();
++
++      const seed = mockInteractiveMode.mock.calls[0]?.[1];
++      expect(seed).toEqual({
++        sourceContext: expect.stringContaining('## PR #456 Review Comments:'),
++      });
++    });
++
++    it('should pass PR image attachments to the interactive seed and cleanup them after dispatch', async () => {
++      mockOpts.pr = 456;
++      const prReview = createMockPrReview({ body: 'Use [Image #1].' });
++      const cleanupAttachments = vi.fn();
++      mockCheckCliStatus.mockReturnValue({ available: true });
++      mockFetchPrReviewComments.mockReturnValue(prReview);
++      mockPreparePrReviewImageAttachments.mockResolvedValue({
++        rewrittenPrReview: {
++          ...prReview,
++          body: 'Use [Image #1].',
++        },
++        attachments: [testAttachment],
++        cleanupAttachments,
++      });
++
++      await executeDefaultAction();
++
++      expect(mockInteractiveMode).toHaveBeenCalledWith(
++        '/test/cwd',
++        {
++          sourceContext: '## PR #456 Review Comments: Fix auth bug\n\nUse [Image #1].',
++          attachments: [testAttachment],
++        },
++        {
++          name: 'default',
++          description: 'test workflow',
++          workflowStructure: '',
++          stepPreviews: [],
++          taskHistory: [],
++        },
++        undefined,
++        undefined,
++        { excludeActions: ['create_issue'] },
++      );
++      expect(cleanupAttachments).toHaveBeenCalledTimes(1);
++    });
++
++    it('should cleanup PR image attachments when interactive execution handling throws', async () => {
++      mockOpts.pr = 456;
++      const prReview = createMockPrReview({ body: 'Use [Image #1].' });
++      const cleanupAttachments = vi.fn();
++      mockCheckCliStatus.mockReturnValue({ available: true });
++      mockFetchPrReviewComments.mockReturnValue(prReview);
++      mockPreparePrReviewImageAttachments.mockResolvedValue({
++        rewrittenPrReview: {
++          ...prReview,
++          body: 'Use [Image #1].',
++        },
++        attachments: [testAttachment],
++        cleanupAttachments,
++      });
++      mockSelectAndExecuteTask.mockRejectedValueOnce(new Error('execute failed'));
++
++      await expect(executeDefaultAction()).rejects.toThrow('execute failed');
++
++      expect(cleanupAttachments).toHaveBeenCalledTimes(1);
++    });
++
++    it('should not duplicate PR image attachments when the interactive result already includes the initial attachments', async () => {
++      mockOpts.pr = 456;
++      const prReview = createMockPrReview({ body: 'Use [Image #1].' });
++      mockCheckCliStatus.mockReturnValue({ available: true });
++      mockFetchPrReviewComments.mockReturnValue(prReview);
++      mockPreparePrReviewImageAttachments.mockResolvedValue({
++        rewrittenPrReview: {
++          ...prReview,
++          body: 'Use [Image #1].',
++        },
++        attachments: [testAttachment],
++        cleanupAttachments: vi.fn(),
++      });
++      mockInteractiveMode.mockResolvedValue({
++        action: 'execute',
++        task: 'Use [Image #1].',
++        attachments: [testAttachment],
++      } satisfies InteractiveModeResult);
++
++      await executeDefaultAction();
++
++      expect(mockSelectAndExecuteTask).toHaveBeenCalledWith(
++        '/test/cwd',
++        'Use [Image #1].',
++        expect.objectContaining({
++          attachments: [testAttachment],
++        }),
++        undefined,
++      );
++    });
++
+     it('should pass PR base branch as baseBranch when interactive save_task is selected', async () => {
+       // Given
+       mockOpts.pr = 456;
+@@ -418,9 +533,9 @@ describe('PR resolution in routing', () => {
+       // Then: PR title/description/files are still passed to interactive mode
+       expect(mockInteractiveMode).toHaveBeenCalledWith(
+         '/test/cwd',
+-        {
++        expect.objectContaining({
+           sourceContext: expect.stringContaining('## PR #456 Review Comments:'),
+-        },
++        }),
+         expect.anything(),
+         undefined,
+         undefined,
+@@ -439,9 +554,9 @@ describe('PR resolution in routing', () => {
+ 
+       expect(mockQuietMode).toHaveBeenCalledWith(
+         '/test/cwd',
+-        {
++        expect.objectContaining({
+           sourceContext: expect.stringContaining('## PR #456 Review Comments:'),
+-        },
++        }),
+         expect.anything(),
+       );
+       expect(mockInteractiveMode).not.toHaveBeenCalled();
+@@ -470,9 +585,9 @@ describe('PR resolution in routing', () => {
+       expect(mockPersonaMode).toHaveBeenCalledWith(
+         '/test/cwd',
+         expect.anything(),
+-        {
++        expect.objectContaining({
+           sourceContext: expect.stringContaining('## PR #456 Review Comments:'),
+-        },
++        }),
+         expect.anything(),
+       );
+       expect(mockInteractiveMode).not.toHaveBeenCalled();
+@@ -493,9 +608,9 @@ describe('PR resolution in routing', () => {
+       );
+       expect(mockInteractiveMode).toHaveBeenCalledWith(
+         '/test/cwd',
+-        {
++        expect.objectContaining({
+           sourceContext: expect.stringContaining('## PR #456 Review Comments:'),
+-        },
++        }),
+         expect.anything(),
+         undefined,
+         undefined,
+diff --git a/src/__tests__/git-cwd-propagation.test.ts b/src/__tests__/git-cwd-propagation.test.ts
+index 74dd6e10..58be8da4 100644
+--- a/src/__tests__/git-cwd-propagation.test.ts
++++ b/src/__tests__/git-cwd-propagation.test.ts
+@@ -17,6 +17,7 @@ const {
+   mockFindExistingPr,
+   mockCreatePullRequest,
+   mockCommentOnPr,
++  mockPreparePrReviewImageAttachments,
+ } = vi.hoisted(() => ({
+   mockCheckCliStatus: vi.fn(),
+   mockFetchIssue: vi.fn(),
+@@ -25,6 +26,7 @@ const {
+   mockFindExistingPr: vi.fn(),
+   mockCreatePullRequest: vi.fn(),
+   mockCommentOnPr: vi.fn(),
++  mockPreparePrReviewImageAttachments: vi.fn(),
+ }));
+ 
+ vi.mock('../infra/git/index.js', () => ({
+@@ -62,9 +64,18 @@ vi.mock('../shared/utils/index.js', async (importOriginal) => ({
+   }),
+ }));
+ 
++vi.mock('../features/tasks/prReviewImageAttachments.js', () => ({
++  preparePrReviewImageAttachments: (...args: unknown[]) => mockPreparePrReviewImageAttachments(...args),
++}));
++
+ beforeEach(() => {
+   vi.clearAllMocks();
+   mockCheckCliStatus.mockReturnValue({ available: true });
++  mockPreparePrReviewImageAttachments.mockImplementation(async (_cwd: string, prReview: unknown) => ({
++    rewrittenPrReview: prReview,
++    attachments: [],
++    cleanupAttachments: vi.fn(),
++  }));
+ });
+ 
+ describe('cwd propagation: routing-inputs', () => {
+@@ -141,12 +152,12 @@ describe('cwd propagation: routing-inputs', () => {
+ 
+       const { resolvePrInput } = await import('../app/cli/routing-inputs.js');
+ 
+-      // When
+-      await resolvePrInput(100);
++      // When: cwd を渡す
++      await resolvePrInput(100, '/test/project');
+ 
+-      // Then
+-      expect(mockCheckCliStatus).toHaveBeenCalledTimes(1);
+-      expect(mockFetchPrReviewComments).toHaveBeenCalledTimes(1);
++      // Then: cwd が渡されたこと
++      expect(mockCheckCliStatus).toHaveBeenCalledWith('/test/project');
++      expect(mockFetchPrReviewComments).toHaveBeenCalledWith(100, '/test/project');
+     });
+   });
+ });
+diff --git a/src/__tests__/pipelineExecution.test.ts b/src/__tests__/pipelineExecution.test.ts
+index f38ea8b9..91328da6 100644
+--- a/src/__tests__/pipelineExecution.test.ts
++++ b/src/__tests__/pipelineExecution.test.ts
+@@ -17,17 +17,28 @@ const mockStripTaktManagedPrMarker = vi.fn((body: string) => body
+   .replace(/\n{3,}/g, '\n\n')
+   .trimEnd());
+ const mockFetchPrReviewComments = vi.fn();
+-const mockFormatPrReviewAsTask = vi.fn((pr: { number: number; title: string }) =>
+-  `## PR #${pr.number} Review Comments: ${pr.title}`
++const mockFormatPrReviewAsTask = vi.fn((pr: { number: number; title: string; body?: string }) =>
++  [`## PR #${pr.number} Review Comments: ${pr.title}`, pr.body].filter(Boolean).join('\n\n')
+ );
+-
+-vi.mock('../infra/git/index.js', () => ({
+-  getGitProvider: () => ({
+-    checkCliStatus: (...args: unknown[]) => mockCheckGhCli(...args),
+-    fetchIssue: (...args: unknown[]) => mockFetchIssue(...args),
+-    createPullRequest: (...args: unknown[]) => mockCreatePullRequest(...args),
+-    fetchPrReviewComments: (...args: unknown[]) => mockFetchPrReviewComments(...args),
+-  }),
++const mockPreparePrReviewImageAttachments = vi.fn().mockImplementation((_cwd: string, prReview: { body?: string }) => {
++  return {
++    rewrittenPrReview: prReview,
++    attachments: [],
++    cleanupAttachments: vi.fn(),
++  };
++});
++const mockPrepareTaskSpecDirectory = vi.fn();
++const mockCleanupPreparedTaskSpec = vi.fn();
++const mockStageTaskSpecForExecution = vi.fn();
++const mockCleanupStagedTaskSpec = vi.fn();
++
++vi.mock('../infra/git/index.js', () => ({
++  getGitProvider: () => ({
++    checkCliStatus: (...args: unknown[]) => mockCheckGhCli(...args),
++    fetchIssue: (...args: unknown[]) => mockFetchIssue(...args),
++    createPullRequest: (...args: unknown[]) => mockCreatePullRequest(...args),
++    fetchPrReviewComments: (...args: unknown[]) => mockFetchPrReviewComments(...args),
++  }),
+   formatIssueAsTask: vi.fn((issue: { title: string; body: string; number: number }) =>
+     `## Issue #${issue.number}: ${issue.title}\n\n${issue.body}`
+   ),
+@@ -37,7 +48,21 @@ vi.mock('../infra/git/index.js', () => ({
+   formatPrReviewAsTask: (...args: unknown[]) => mockFormatPrReviewAsTask(...args),
+   createPullRequestSafely: (...args: unknown[]) => mockCreatePullRequestSafely(...args),
+ }));
+-
++
++vi.mock('../features/tasks/prReviewImageAttachments.js', () => ({
++  preparePrReviewImageAttachments: (...args: unknown[]) => mockPreparePrReviewImageAttachments(...args),
++}));
++
++vi.mock('../features/tasks/attachments.js', () => ({
++  prepareTaskSpecDirectory: (...args: unknown[]) => mockPrepareTaskSpecDirectory(...args),
++  cleanupPreparedTaskSpec: (...args: unknown[]) => mockCleanupPreparedTaskSpec(...args),
++}));
++
++vi.mock('../features/tasks/execute/taskSpecContext.js', () => ({
++  stageTaskSpecForExecution: (...args: unknown[]) => mockStageTaskSpecForExecution(...args),
++  cleanupStagedTaskSpec: (...args: unknown[]) => mockCleanupStagedTaskSpec(...args),
++}));
++
+ vi.mock('../infra/task/git.js', async (importOriginal) => ({
+   ...(await importOriginal<Record<string, unknown>>()),
+   getCurrentBranch: (...args: unknown[]) => mockGetCurrentBranch(...args),
+@@ -74,10 +99,11 @@ vi.mock('../shared/ui/index.js', () => ({
+   warn: vi.fn(),
+   debug: vi.fn(),
+ }));
+-const mockGetSlackWebhookUrl = vi.fn<() => string | undefined>(() => undefined);
+-const mockSendSlackNotification = vi.fn<(url: string, message: string) => Promise<void>>();
+-const mockBuildSlackRunSummary = vi.fn<(params: unknown) => string>(() => 'TAKT Run Summary');
+-vi.mock('../shared/utils/index.js', async (importOriginal) => ({
++const mockGetSlackWebhookUrl = vi.fn<() => string | undefined>(() => undefined);
++const mockSendSlackNotification = vi.fn<(url: string, message: string) => Promise<void>>();
++const mockBuildSlackRunSummary = vi.fn<(params: unknown) => string>(() => 'TAKT Run Summary');
++
++vi.mock('../shared/utils/index.js', async (importOriginal) => ({
+   ...(await importOriginal<Record<string, unknown>>()),
+   createLogger: () => ({
+     info: vi.fn(),
+@@ -120,6 +146,23 @@ describe('executePipeline', () => {
+     mockGetCurrentBranch.mockReturnValue('current/branch');
+     mockResolveConfigValues.mockReturnValue({ pipeline: undefined });
+     mockResolveConfigValue.mockReturnValue(undefined);
++    mockPreparePrReviewImageAttachments.mockImplementation(async (_cwd: string, prReview: { number: number; title: string }) => ({
++      rewrittenPrReview: prReview,
++      attachments: [],
++      cleanupAttachments: vi.fn(),
++    }));
++    mockPrepareTaskSpecDirectory.mockReturnValue({
++      taskDirRelative: '.takt/tasks/prepared-pr-task',
++      taskDir: '/tmp/test/.takt/tasks/prepared-pr-task',
++    });
++    mockStageTaskSpecForExecution.mockReturnValue({
++      taskPrompt: 'Execute staged task spec',
++      orderContent: 'Use [Image #1].',
++      stagedOrderContent: 'Use run context attachment.',
++      contextTaskDir: '/tmp/test/.takt/runs/run/context/task',
++      contextDir: '/tmp/test/.takt/runs/run/context',
++      runRootDir: '/tmp/test/.takt/runs/run',
++    });
+   });
+ 
+   it('should return exit code 2 when neither --issue nor --task is specified', async () => {
+@@ -291,7 +334,7 @@ describe('executePipeline', () => {
+     expect(mockStatus).toHaveBeenCalledWith('Branch', 'feature\\t');
+   });
+ 
+-  it('should sanitize PR titles, branch names, and worktree paths in terminal output', async () => {
++  it('should sanitize PR titles, branch names, and worktree paths in terminal output', async () => {
+     mockFetchPrReviewComments.mockReturnValueOnce({
+       number: 12,
+       title: 'PR\x1b[31m\n',
+@@ -341,6 +384,81 @@ describe('executePipeline', () => {
+       agentOverrides: { provider: 'codex', model: 'codex-model' },
+     }));
+   });
++
++  it('should stage PR image attachments before executing a pipeline PR task', async () => {
++    const attachment = {
++      placeholder: '[Image #1]',
++      tempPath: '/tmp/takt/pr-attachments/image-1.png',
++      fileName: 'image-1.png',
++    };
++    const cleanupAttachments = vi.fn();
++    mockFetchPrReviewComments.mockReturnValueOnce({
++      number: 12,
++      title: 'PR with screenshot',
++      body: 'Use [Image #1].',
++      headRefName: 'feature/pr-screenshot',
++      baseRefName: 'main',
++      comments: [],
++      reviews: [],
++      files: [],
++    });
++    mockPreparePrReviewImageAttachments.mockResolvedValueOnce({
++      rewrittenPrReview: {
++        number: 12,
++        title: 'PR with screenshot',
++        body: 'Use [Image #1].',
++        headRefName: 'feature/pr-screenshot',
++        baseRefName: 'main',
++        comments: [],
++        reviews: [],
++        files: [],
++        url: 'https://github.com/org/repo/pull/12',
++      },
++      attachments: [attachment],
++      cleanupAttachments,
++    });
++    mockExecuteTask.mockResolvedValueOnce(true);
++
++    const exitCode = await executePipeline({
++      prNumber: 12,
++      workflow: 'default',
++      autoPr: false,
++      skipGit: true,
++      cwd: '/tmp/test',
++    });
++
++    expect(exitCode).toBe(0);
++    expect(mockPreparePrReviewImageAttachments).toHaveBeenCalledWith('/tmp/test', expect.objectContaining({
++      number: 12,
++      title: 'PR with screenshot',
++    }));
++    expect(mockPrepareTaskSpecDirectory).toHaveBeenCalledWith(
++      '/tmp/test',
++      '## PR #12 Review Comments: PR with screenshot\n\nUse [Image #1].',
++      [attachment],
++    );
++    expect(mockStageTaskSpecForExecution).toHaveBeenCalledWith(
++      '/tmp/test',
++      '/tmp/test',
++      '.takt/tasks/prepared-pr-task',
++      expect.any(String),
++    );
++    const reportDirName = mockStageTaskSpecForExecution.mock.calls[0]?.[3];
++    expect(mockExecuteTask).toHaveBeenCalledWith(expect.objectContaining({
++      task: 'Execute staged task spec',
++      reportDirName,
++      traceTaskContext: expect.objectContaining({
++        prNumber: 12,
++        branch: 'feature/pr-screenshot',
++        baseBranch: 'main',
++      }),
++    }));
++    expect(mockCleanupStagedTaskSpec).toHaveBeenCalledWith(expect.objectContaining({
++      taskPrompt: 'Execute staged task spec',
++    }));
++    expect(mockCleanupPreparedTaskSpec).toHaveBeenCalledWith('/tmp/test/.takt/tasks/prepared-pr-task');
++    expect(cleanupAttachments).toHaveBeenCalledTimes(1);
++  });
+ 
+   it('should return exit code 5 when PR creation fails', async () => {
+     mockExecuteTask.mockResolvedValueOnce(true);
+diff --git a/src/app/cli/routing-inputs.ts b/src/app/cli/routing-inputs.ts
+index ef06f674..be5da4ca 100644
+--- a/src/app/cli/routing-inputs.ts
++++ b/src/app/cli/routing-inputs.ts
+@@ -1,6 +1,8 @@
+ import { withProgress } from '../../shared/ui/index.js';
+ import { formatIssueAsTask, parseIssueNumbers, formatPrReviewAsTask, getGitProvider } from '../../infra/git/index.js';
+ import type { PrReviewData } from '../../infra/git/index.js';
++import type { TaskAttachment } from '../../features/tasks/attachments.js';
++import { preparePrReviewImageAttachments } from '../../features/tasks/prReviewImageAttachments.js';
+ import { isDirectTask } from './helpers.js';
+ 
+ export async function resolveIssueInput(
+@@ -50,8 +52,11 @@ export async function resolveIssueInput(
+ export async function resolvePrInput(
+   prNumber: number,
+   cwd?: string,
+-): Promise<{ initialInput: string; prBranch: string; baseBranch?: string }> {
++): Promise<{ initialInput: string; prBranch: string; baseBranch?: string; attachments?: readonly TaskAttachment[]; cleanupAttachments?: () => void }> {
+   const provider = getGitProvider();
++  if (!cwd) {
++    throw new Error('cwd is required for PR input resolution');
++  }
+   const cliStatus = provider.checkCliStatus(cwd);
+   if (!cliStatus.available) {
+     throw new Error(cliStatus.error);
+@@ -63,9 +68,16 @@ export async function resolvePrInput(
+     async () => provider.fetchPrReviewComments(prNumber, cwd),
+   );
+ 
++  const imageAttachmentsResult = await preparePrReviewImageAttachments(cwd, prReview);
++
++  const hasAttachments = imageAttachmentsResult.attachments.length > 0;
+   return {
+-    initialInput: formatPrReviewAsTask(prReview),
++    initialInput: formatPrReviewAsTask({
++      ...imageAttachmentsResult.rewrittenPrReview,
++      body: imageAttachmentsResult.rewrittenPrReview.body,
++    }),
+     prBranch: prReview.headRefName,
+     baseBranch: prReview.baseRefName,
++    ...(hasAttachments ? { attachments: imageAttachmentsResult.attachments, cleanupAttachments: imageAttachmentsResult.cleanupAttachments } : {}),
+   };
+ }
+diff --git a/src/app/cli/routing.ts b/src/app/cli/routing.ts
+index 6115d521..89a5ef68 100644
+--- a/src/app/cli/routing.ts
++++ b/src/app/cli/routing.ts
+@@ -3,6 +3,7 @@ import { getErrorMessage } from '../../shared/utils/index.js';
+ import { getLabel } from '../../shared/i18n/index.js';
+ import { checkoutBranch } from '../../infra/task/index.js';
+ import { selectAndExecuteTask, determineWorkflow, saveTaskFromInteractive, createIssueAndSaveTask, promptLabelSelection, type SelectAndExecuteOptions } from '../../features/tasks/index.js';
++import type { TaskAttachment } from '../../features/tasks/attachments.js';
+ import { executePipeline } from '../../features/pipeline/index.js';
+ import {
+   interactiveMode,
+@@ -105,14 +106,18 @@ export async function executeDefaultAction(task?: string): Promise<void> {
+   let prBranch: string | undefined;
+   let prBaseBranch: string | undefined;
+   let sourceIssueNumber: number | undefined;
++  let prAttachments: readonly TaskAttachment[] | undefined;
++  let prAttachmentsCleanup: (() => void) | undefined;
+ 
+   if (prNumber) {
+     try {
+-      const prResult = await resolvePrInput(prNumber);
++      const prResult = await resolvePrInput(prNumber, resolvedCwd);
+       directTask = undefined;
+       sourceContext = prResult.initialInput;
+       prBranch = prResult.prBranch;
+       prBaseBranch = prResult.baseBranch;
++      prAttachments = prResult.attachments;
++      prAttachmentsCleanup = prResult.cleanupAttachments;
+       selectOptions.traceTaskContext = {
+         source: 'pr_review',
+         prNumber,
+@@ -150,6 +155,9 @@ export async function executeDefaultAction(task?: string): Promise<void> {
+   const workflowId = await determineWorkflow(resolvedCwd, selectOptions.workflow);
+   if (workflowId === null) {
+     info(getLabel('interactive.ui.cancelled', lang));
++    if (prAttachmentsCleanup) {
++      prAttachmentsCleanup();
++    }
+     return;
+   }
+ 
+@@ -166,6 +174,9 @@ export async function executeDefaultAction(task?: string): Promise<void> {
+   );
+   if (selectedMode === null) {
+     info(getLabel('interactive.ui.cancelled', lang));
++    if (prAttachmentsCleanup) {
++      prAttachmentsCleanup();
++    }
+     return;
+   }
+ 
+@@ -180,6 +191,7 @@ export async function executeDefaultAction(task?: string): Promise<void> {
+     ? {
+       ...(directTask ? { userMessage: directTask } : {}),
+       ...(sourceContext ? { sourceContext } : {}),
++      ...(prAttachments ? { attachments: [...prAttachments] } : {}),
+     }
+     : undefined;
+   let result: InteractiveModeResult;
+@@ -255,7 +267,9 @@ export async function executeDefaultAction(task?: string): Promise<void> {
+         selectOptions.interactiveMetadata = { confirmed: true, task: confirmedTask };
+         selectOptions.skipTaskList = true;
+         if (result.attachments) {
+-          selectOptions.attachments = result.attachments;
++          selectOptions.attachments = result.attachments as TaskAttachment[];
++        } else if (prAttachments) {
++          selectOptions.attachments = [...prAttachments];
+         }
+         await selectAndExecuteTask(resolvedCwd, confirmedTask, selectOptions, agentOverrides);
+       },
+@@ -287,6 +301,9 @@ export async function executeDefaultAction(task?: string): Promise<void> {
+     });
+   } finally {
+     cleanupInteractiveResultAttachments(result);
++    if (prAttachmentsCleanup) {
++      prAttachmentsCleanup();
++    }
+   }
+ }
+ 
+diff --git a/src/features/pipeline/execute.ts b/src/features/pipeline/execute.ts
+index 8a641629..e7be89f4 100644
+--- a/src/features/pipeline/execute.ts
++++ b/src/features/pipeline/execute.ts
+@@ -9,14 +9,7 @@ import {
+   EXIT_GIT_OPERATION_FAILED,
+   EXIT_PR_CREATION_FAILED,
+ } from '../../shared/exitCodes.js';
+-import {
+-  resolveTaskContent,
+-  resolveExecutionContext,
+-  runWorkflow,
+-  commitAndPush,
+-  buildCommitMessage,
+-  type ExecutionContext,
+-} from './steps.js';
++import { resolveTaskContent, resolveExecutionContext, runWorkflow, commitAndPush, buildCommitMessage, type ExecutionContext } from './steps.js';
+ import { submitPullRequest } from './prSubmission.js';
+ import { sanitizeTerminalText } from '../../shared/utils/text.js';
+ 
+@@ -37,10 +30,11 @@ async function runPipeline(options: PipelineExecutionOptions): Promise<PipelineO
+     success: false, workflow, issueNumber: options.issueNumber, ...overrides,
+   });
+ 
+-  const taskContent = resolveTaskContent(options);
++  const taskContent = await resolveTaskContent(options);
+   if (!taskContent) return { exitCode: EXIT_ISSUE_FETCH_FAILED, result: buildResult() };
+ 
+   let context: ExecutionContext;
++  const taskContentCleanup = taskContent.cleanupAttachments;
+   try {
+     context = await resolveExecutionContext(
+       cwd,
+@@ -56,7 +50,7 @@ async function runPipeline(options: PipelineExecutionOptions): Promise<PipelineO
+   }
+ 
+   log.info('Pipeline workflow execution starting', { workflow, branch: context.branch, skipGit, issueNumber: options.issueNumber });
+-  const workflowOk = await runWorkflow(cwd, workflow, taskContent.task, context.execCwd, options, context);
++  const workflowOk = await runWorkflow(cwd, workflow, taskContent.task, context.execCwd, options, context, taskContent.attachments, taskContent.taskContentWithAttachments);
+   if (!workflowOk) return { exitCode: EXIT_WORKFLOW_FAILED, result: buildResult({ branch: context.branch }) };
+ 
+   if (!skipGit && context.branch) {
+@@ -74,6 +68,10 @@ async function runPipeline(options: PipelineExecutionOptions): Promise<PipelineO
+     info('--auto-pr is ignored when --skip-git is specified (no push was performed)');
+   }
+ 
++  if (taskContentCleanup) {
++    taskContentCleanup();
++  }
++
+   blankLine();
+   const safeWorkflow = sanitizeTerminalText(workflow);
+   const issueStatus = taskContent.issue
+diff --git a/src/features/pipeline/steps.ts b/src/features/pipeline/steps.ts
+index ceb701ed..e4ef2b69 100644
+--- a/src/features/pipeline/steps.ts
++++ b/src/features/pipeline/steps.ts
+@@ -13,6 +13,10 @@ import { statusLine } from '../../shared/ui/StatusLine.js';
+ import { getErrorMessage } from '../../shared/utils/index.js';
+ import type { PipelineConfig } from '../../core/models/index.js';
+ import { sanitizeTerminalText } from '../../shared/utils/text.js';
++import type { TaskAttachment } from '../tasks/attachments.js';
++import { preparePrReviewImageAttachments } from '../tasks/prReviewImageAttachments.js';
++import { prepareTaskSpecDirectory, cleanupPreparedTaskSpec, type PreparedTaskSpec } from '../tasks/attachments.js';
++import { stageTaskSpecForExecution, cleanupStagedTaskSpec } from '../tasks/execute/taskSpecContext.js';
+ import { expandPipelineTemplate } from './templateExpander.js';
+ 
+ export interface TaskContent {
+@@ -20,6 +24,9 @@ export interface TaskContent {
+   issue?: Issue;
+   prBranch?: string;
+   prBaseBranch?: string;
++  taskContentWithAttachments?: string;
++  attachments?: readonly TaskAttachment[];
++  cleanupAttachments?: () => void;
+ }
+ 
+ export interface GitExecutionContext {
+@@ -141,7 +148,7 @@ function fetchVcsResource<T>(
+   }
+ }
+ 
+-export function resolveTaskContent(options: PipelineExecutionOptions): TaskContent | undefined {
++export async function resolveTaskContent(options: PipelineExecutionOptions): Promise<TaskContent | undefined> {
+   const { cwd } = options;
+   if (options.prNumber) {
+     info(`Fetching PR #${options.prNumber} review comments...`);
+@@ -151,13 +158,37 @@ export function resolveTaskContent(options: PipelineExecutionOptions): TaskConte
+       (provider) => provider.fetchPrReviewComments(options.prNumber!, cwd),
+     );
+     if (!prReview) return undefined;
+-    const task = formatPrReviewAsTask(prReview);
+-    success(`PR #${options.prNumber} fetched: "${sanitizeTerminalText(prReview.title)}"`);
+-    return {
+-      task,
+-      prBranch: prReview.headRefName,
+-      prBaseBranch: prReview.baseRefName,
+-    };
++
++    let prAttachmentsCleanup: (() => void) | undefined;
++    let prAttachments: readonly TaskAttachment[] | undefined;
++
++    try {
++      const imageAttachmentsResult = await preparePrReviewImageAttachments(cwd!, prReview);
++      prAttachments = imageAttachmentsResult.attachments;
++      prAttachmentsCleanup = imageAttachmentsResult.cleanupAttachments;
++
++      const task = formatPrReviewAsTask({
++        ...imageAttachmentsResult.rewrittenPrReview,
++        body: imageAttachmentsResult.rewrittenPrReview.body,
++      });
++      
++      const taskContentWithAttachments = formatPrReviewAsTask({
++        ...imageAttachmentsResult.rewrittenPrReview,
++        body: imageAttachmentsResult.rewrittenPrReview.body,
++      });
++      success(`PR #${options.prNumber} fetched: "${sanitizeTerminalText(prReview.title)}"`);
++      return {
++        task,
++        taskContentWithAttachments,
++        prBranch: prReview.headRefName,
++        prBaseBranch: prReview.baseRefName,
++        attachments: prAttachments,
++        cleanupAttachments: prAttachmentsCleanup,
++      };
++    } catch (e) {
++      prAttachmentsCleanup?.();
++      throw e;
++    }
+   }
+   if (options.issueNumber) {
+     info(`Fetching issue #${options.issueNumber}...`);
+@@ -226,6 +257,21 @@ export async function resolveExecutionContext(
+   return { execCwd: cwd, branch, baseBranch, isWorktree: false };
+ }
+ 
++function cleanupTransientTaskSpecs(
++  preparedSpecTaskDir: string | undefined,
++  stagedSpec: ReturnType<typeof stageTaskSpecForExecution> | undefined,
++): void {
++  try {
++    if (stagedSpec) {
++      cleanupStagedTaskSpec(stagedSpec);
++    }
++  } finally {
++    if (preparedSpecTaskDir) {
++      cleanupPreparedTaskSpec(preparedSpecTaskDir);
++    }
++  }
++}
++
+ export async function runWorkflow(
+   projectCwd: string,
+   workflow: string,
+@@ -233,6 +279,8 @@ export async function runWorkflow(
+   execCwd: string,
+   options: Pick<PipelineExecutionOptions, 'provider' | 'model' | 'issueNumber' | 'prNumber'>,
+   context: ExecutionContext,
++  attachments?: readonly TaskAttachment[],
++  taskContentWithAttachments?: string,
+ ): Promise<boolean> {
+   const safeWorkflow = sanitizeTerminalText(workflow);
+   info(`Running workflow: ${safeWorkflow}`);
+@@ -242,17 +290,32 @@ export async function runWorkflow(
+ 
+   statusLine.start('Running...');
+   let taskSuccess: boolean;
++  let preparedSpec: PreparedTaskSpec | undefined;
++  let stagedSpec: ReturnType<typeof stageTaskSpecForExecution> | undefined;
+   try {
++    if (attachments && attachments.length > 0) {
++      const taskContentEffective = taskContentWithAttachments ?? task;
++      preparedSpec = prepareTaskSpecDirectory(execCwd, taskContentEffective, attachments);
++      stagedSpec = stageTaskSpecForExecution(execCwd, execCwd, preparedSpec.taskDirRelative, `pipeline-${Date.now()}`);
++    }
++    const reportDirName = stagedSpec
++      ? `pipeline-${Date.now()}`
++      : undefined;
+     taskSuccess = await executeTask({
+-      task,
++      task: stagedSpec?.taskPrompt ?? task,
+       cwd: execCwd,
+       workflowIdentifier: workflow,
+       projectCwd,
+       agentOverrides,
++      ...(reportDirName ? { reportDirName } : {}),
+       traceTaskContext: buildPipelineTraceTaskContext(options, context),
+     });
++  } catch (error) {
++    cleanupTransientTaskSpecs(preparedSpec?.taskDir, stagedSpec);
++    throw error;
+   } finally {
+     statusLine.stop();
++    cleanupTransientTaskSpecs(preparedSpec?.taskDir, stagedSpec);
+   }
+ 
+   if (!taskSuccess) {
+diff --git a/src/features/tasks/add/index.ts b/src/features/tasks/add/index.ts
+index 726d3101..afde16be 100644
+--- a/src/features/tasks/add/index.ts
++++ b/src/features/tasks/add/index.ts
+@@ -28,12 +28,13 @@ import {
+   prepareTaskSpecDirectory,
+   type TaskAttachment,
+ } from '../attachments.js';
++import { preparePrReviewImageAttachments } from '../prReviewImageAttachments.js';
+ export { extractTitle, createIssueFromTask, createIssueFromTaskResult };
+ 
+ const log = createLogger('add-task');
+ 
+ export type SaveTaskOptions = SaveEnqueuedTaskFileOptions & {
+-  attachments?: TaskAttachment[];
++  attachments?: readonly TaskAttachment[];
+ };
+ 
+ export async function saveTaskFile(
+@@ -191,27 +192,44 @@ export async function addTask(
+       return;
+     }
+ 
+-    if (prReview.reviews.length === 0 && prReview.comments.length === 0) {
+-      error(`PR #${prNumber} has no review comments`);
+-      return;
+-    }
++    let attachmentsCleanup: (() => void) | undefined;
++    let prAttachments: readonly TaskAttachment[] | undefined;
+ 
+-    const taskContent = formatPrReviewAsTask(prReview);
+-    const workflow = await determineWorkflow(cwd, opts?.workflow);
+-    if (workflow === null) {
+-      info('Cancelled.');
+-      return;
+-    }
++    try {
++      const imageAttachmentsResult = await preparePrReviewImageAttachments(cwd, prReview);
++      prAttachments = imageAttachmentsResult.attachments;
++      attachmentsCleanup = imageAttachmentsResult.cleanupAttachments;
++
++      const taskContent = formatPrReviewAsTask({
++        ...imageAttachmentsResult.rewrittenPrReview,
++        body: imageAttachmentsResult.rewrittenPrReview.body,
++      });
+ 
+-    const settings = {
+-      worktree: true,
+-      branch: prReview.headRefName,
+-      baseBranch: prReview.baseRefName,
+-      autoPr: false,
+-      shouldPublishBranchToOrigin: true,
+-    };
+-    const created = await saveTaskFile(cwd, taskContent, { workflow, ...settings, prNumber });
+-    displayTaskCreationResult(created, settings, workflow);
++      if (prAttachments.length === 0 && prReview.comments.length === 0 && prReview.reviews.length === 0) {
++        error('PR has no review comments or image attachments.');
++        return;
++      }
++
++      const workflow = await determineWorkflow(cwd, opts?.workflow);
++      if (workflow === null) {
++        info('Cancelled.');
++        return;
++      }
++
++      const settings = {
++        worktree: true,
++        branch: prReview.headRefName,
++        baseBranch: prReview.baseRefName,
++        autoPr: false,
++        shouldPublishBranchToOrigin: true,
++      };
++      const created = await saveTaskFile(cwd, taskContent, { workflow, ...settings, prNumber, attachments: prAttachments });
++      displayTaskCreationResult(created, settings, workflow);
++    } finally {
++      if (attachmentsCleanup) {
++        attachmentsCleanup();
++      }
++    }
+     return;
+   }
+ 

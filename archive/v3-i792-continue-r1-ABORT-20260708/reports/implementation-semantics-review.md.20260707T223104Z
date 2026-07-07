@@ -1,0 +1,13 @@
+# 実装意味論レビュー
+
+## 結果: APPROVE
+
+## サマリー
+PRコメントからの画像抽出・保存およびタスク本文へのプレースホルダ置換の実装を確認しました。データ構造の選択、命名と意味の整合性、およびリソースのクリーンアップ処理に意味論的な不備は見当たりません。
+
+## 検証証跡
+- 差分確認: `src/features/tasks/prReviewImageAttachments.ts`, `src/shared/utils/imageData.ts` およびそれらを呼び出す `addTask`, `resolvePrInput` の実装を確認。
+- 判定根拠の実在確認:
+    - `src/features/tasks/prReviewImageAttachments.ts`: 画像URLの抽出に `Set` を使用し重複を排除していること、`Map` を用いて URL からプレースホルダへの変換を管理していることを確認。
+    - `src/shared/utils/imageData.ts`: Magic Bytes による MIME タイプの検証と `Content-Type` ヘッダーとの整合性チェックが実装されていることを確認。
+    - `src/features/tasks/add/index.ts`: `finally` ブロックで `attachmentsCleanup()` を呼び出し、一時ディレクトリが確実に削除される経路であることを確認。

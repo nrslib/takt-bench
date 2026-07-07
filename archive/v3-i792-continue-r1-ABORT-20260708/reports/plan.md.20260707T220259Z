@@ -1,0 +1,272 @@
+# タスク計画
+
+## 元の要求
+
+PR コメント内の画像をダウンロードして task attachments に配置する機能を実装してください。
+
+背景:
+現状、`takt add --pr` や `takt --pr` では PR 本文・通常コメント・review thread の本文は取得されるが、コメント内に貼られた PNG などの画像はローカルの `attachments/` に保存されない。
+
+既存の task attachment 仕組みはあるため、PR コメント中の画像 URL を抽出して `TaskAttachment[]` として渡せば、`.takt/tasks/<slug>/attachments/` 配下に配置できるはず。
+
+期待する挙動:
+- `takt add --pr <number>` 実行時に、PR 本文・通常コメント・review thread コメント内の画像 URL を検出する
+- 対応画像をローカルにダウンロードする
+- `.takt/tasks/<slug>/attachments/` に `image-1.png` などとして保存する
+- `order.md` に既存 attachment 形式で追記する
+
+```md
+## 添付画像
+
+- [Image #1]: `attachments/image-1.png`
+```
+
+- 元コメント本文内の画像参照も、可能なら `[Image #1]` のように参照できる形に置換または補足する
+- pipeline の `--pr` 経路でも同等に画像を参照できること
+
+対象とする画像記法の例:
+
+```md
+![screenshot](https://github.com/user-attachments/assets/...)
+![image](https://github.com/org/repo/assets/...)
+<img src="https://github.com/user-attachments/assets/..." />
+```
+
+安全性・制約:
+- 対応形式はまず PNG/JPEG/GIF/WebP
+- Content-Type と magic bytes を検証する
+- サイズ上限を設ける
+- GitHub の private repository 画像に対応するため、`gh api` または認証済み `gh` 経由の取得を優先する
+- 外部 URL を無制限に取得しない。GitHub attachment URL から始めるのが安全
+
+参考（実装方針案）:
+- PR 取得後の `PrReviewData` から画像 URL を抽出する（PR body / conversation comments / review summaries / review thread comments）
+- Markdown image syntax と HTML `<img src="...">` を対象にする
+- ダウンロードした画像を `TaskAttachment[]` に変換する
+- `saveTaskFile()` / `prepareTaskSpecDirectory()` に渡す
+- pipeline 直実行時も attachment 付き task spec を使う経路を追加する
+- PR 取得の既存実装は `src/infra/github/pr.ts` にある
+
+品質要件:
+- 既存のテスト規約に従い、新規ロジックには単体テストを追加する
+- `npm run build`、`npm run lint`、`npm test` が全て成功すること
+
+## 分析結果
+
+### 目的
+
+PR 本文・通常コメント・review summary・review thread コメントに含まれる GitHub attachment 画像を安全に取得し、既存の task attachment 形式に変換して `takt add --pr`、`takt --pr`、`--pipeline --pr` の各経路で参照可能にする。
+
+### 分解した要件
+
+| # | 要件 | 種別 | 備考 |
+|---|------|------|------|
+| 1 | `PrReviewData.body` から画像 URL を抽出する | 明示 | PR 本文が対象 |
+| 2 | `PrReviewData.comments[].body` から画像 URL を抽出する | 明示 | 通常コメントが対象 |
+| 3 | `PrReviewData.reviews[].body` から画像 URL を抽出する | 明示 | review summary と review thread comment は現行実装ではどちらも `reviews` に入る |
+| 4 | Markdown image syntax `![alt](url)` を検出する | 明示 | 対象記法 |
+| 5 | HTML `<img src="url">` を検出する | 明示 | 対象記法 |
+| 6 | GitHub attachment URL だけを取得対象にする | 明示 | 外部 URL の無制限取得を避ける |
+| 7 | PNG/JPEG/GIF/WebP のみ対応する | 明示 | Content-Type と magic bytes の両方で検証 |
+| 8 | 画像サイズ上限を設ける | 明示 | 既存 inline image と同じ 10MiB を使う方針 |
+| 9 | 取得した画像を `TaskAttachment[]` に変換する | 明示 | 既存 attachment pipeline に渡す |
+| 10 | `.takt/tasks/<slug>/attachments/image-N.ext` に保存される | 明示 | 既存 `prepareTaskSpecDirectory()` / `promoteTaskAttachments()` を利用 |
+| 11 | `order.md` に `## 添付画像` セクションを追記する | 明示 | 既存 `buildTaskOrderContent()` が担当 |
+| 12 | 元コメント内の画像参照を `[Image #N]` に置換する | 明示 | 「可能なら」に対し、Markdown/HTML image は全体を placeholder に置換する |
+| 13 | `takt add --pr <number>` で attachment を保存する | 明示 | `saveTaskFile()` に attachments を渡す |
+| 14 | `takt --pr <number>` の interactive 経路で attachment を渡す | 明示 | sourceContext と initial attachments を同時に渡す |
+| 15 | `--pipeline --pr <number>` で attachment 付き task spec を使う | 明示 | pipeline は現状 task 文字列を直接実行しているため staging 追加が必要 |
+| 16 | ダウンロード失敗・検証失敗を黙って無視しない | 暗黙 | 「保存されること」「安全性」から直接導出 |
+| 17 | 一時 attachment ファイルを cleanup する | 暗黙 | ダウンロード temp file を扱うため必要 |
+| 18 | 新規ロジックに単体テストを追加する | 明示 | 品質要件 |
+
+### 参照資料の調査結果
+
+タスク指示に明示的な「参照資料」セクションはなかった。ただし参考として `src/infra/github/pr.ts` が指定されており、PR 取得の現在実装を確認した。
+
+- `fetchPrReviewComments()` は `gh pr view` で PR 本文・通常コメント・review summary・ファイル一覧を取得し、GraphQL `reviewThreads` で thread comment を追加取得している: `src/infra/github/pr.ts:421`
+- 返却型 `PrReviewData` は `body`, `comments`, `reviews`, `files` を持つ: `src/infra/git/types.ts:90`
+- review thread comment は `mapReviewThreadComments()` で `PrReviewComment[]` に変換され、`reviews` に追加される: `src/infra/github/pr.ts:346`, `src/infra/github/pr.ts:445`
+- `formatPrReviewAsTask()` は `PrReviewData` を task text に整形するが、画像 URL 抽出・attachment 化は行っていない: `src/infra/git/format.ts:197`
+- 既存 attachment 形式は `buildTaskOrderContent()` が `## 添付画像` と `- [Image #N]: \`attachments/image-N.ext\`` を生成する: `src/features/tasks/attachments.ts:26`
+- attachment の実ファイルコピーは `promoteTaskAttachments()` が行う: `src/features/tasks/attachments.ts:79`
+- `saveTaskFile()` は `attachments` option を受け取り、`prepareTaskSpecDirectory()` に渡せる: `src/features/tasks/add/index.ts:39`
+- `selectAndExecuteTask()` は direct execution 時にも attachments があれば transient task spec を作り、run context に stage する: `src/features/tasks/execute/selectAndExecute.ts:113`
+- pipeline 経路は attachments を持たず、`runWorkflow()` に task 文字列を直接渡す: `src/features/pipeline/execute.ts:40`, `src/features/pipeline/steps.ts:229`
+
+### スコープ
+
+影響範囲:
+
+- PR review data から attachment を生成する新規 feature module
+- 画像 MIME / magic bytes 判定の shared utility
+- `takt add --pr` の保存経路
+- `takt --pr` の interactive seed / cleanup 経路
+- `--pipeline --pr` の task spec staging 経路
+- 関連 unit test
+
+主な対象ファイル:
+
+- `src/features/tasks/add/index.ts`
+- `src/app/cli/routing-inputs.ts`
+- `src/app/cli/routing.ts`
+- `src/features/pipeline/steps.ts`
+- `src/features/pipeline/execute.ts`
+- `src/features/tasks/attachments.ts` は既存仕様確認のみ。原則変更不要
+- `src/features/interactive/inlineImagePaste.ts`
+- 新規: `src/shared/utils/imageData.ts`
+- 新規: `src/features/tasks/prReviewImageAttachments.ts` など
+
+### 検討したアプローチ
+
+| アプローチ | 採否 | 理由 |
+|-----------|------|------|
+| `src/infra/github/pr.ts` 内で画像抽出・保存まで行う | 不採用 | PR 取得責務と task attachment 作成責務が混ざる。`PrReviewData` の取得は現状維持し、後段で変換する方が責務分離に合う |
+| `src/infra/git/format.ts` で画像 URL を置換する | 不採用 | `format.ts` は provider-neutral な整形層であり、GitHub attachment URL や download 処理を持たせると境界が崩れる |
+| `PrReviewData` をコピーして body/comment/review body を placeholder に置換し、既存 `formatPrReviewAsTask()` に渡す | 採用 | 既存整形ロジックを再利用でき、PR body/comments/reviews の全経路に一貫して適用できる |
+| `gh api` だけで画像 URL を直接取得する | 条件付き不採用 | `gh api --help` 上、endpoint は GitHub API v3 path または `graphql` が前提。attachment URL そのものは API endpoint とは限らない |
+| `gh auth token` で取得した token を使い、allowlist 済み URL を `fetch` する | 採用 | 認証済み `gh` 経由の資格情報を使える。URL allowlist、Content-Type、magic bytes、サイズ上限で安全性を担保する |
+| pipeline では attachment を path 文字列として本文に追記するだけにする | 不採用 | 既存 task attachment 形式を使う要求に反する。run context へ attachments を配置する必要がある |
+| pipeline でも `prepareTaskSpecDirectory()` + `stageTaskSpecForExecution()` を使う | 採用 | direct execution の既存パターンと同じで、attachments path の run context 書き換えも再利用できる |
+
+### 実装アプローチ
+
+1. shared utility を追加する。
+   - `src/shared/utils/imageData.ts`
+   - `SUPPORTED_IMAGE_MIME_TYPES`
+   - `MAX_IMAGE_ATTACHMENT_BYTES = 10 * 1024 * 1024`
+   - `inferImageMimeTypeFromMagicBytes(data: Buffer)`
+   - `extensionForImageMimeType(mimeType)`
+   - `normalizeImageContentType(contentTypeHeader)`
+   - `assertSupportedImageResponse(data, contentTypeHeader)` のような検証関数
+   - 既存 `src/features/interactive/inlineImagePaste.ts:45` の magic bytes 判定をこの utility に移す。
+   - `MAX_INLINE_IMAGE_BYTES` は既存 export として維持し、shared 定数を参照する。
+
+2. PR attachment helper を追加する。
+   - 新規候補: `src/features/tasks/prReviewImageAttachments.ts`
+   - 入力: `cwd`, `PrReviewData`
+   - 出力: `{ taskContent, attachments, cleanupAttachments }`
+   - 内部処理:
+     - `PrReviewData` を shallow/deep copy し、`body`, `comments[].body`, `reviews[].body` を走査する。
+     - Markdown image と HTML img を検出する。
+     - allowlist 済み GitHub attachment URL のみ対象にする。
+     - URL ごとに `[Image #N]` を割り当てる。
+     - 画像記法全体を placeholder に置換する。
+     - 画像を download して temp dir に `image-N.ext` で保存する。
+     - `formatPrReviewAsTask(rewrittenPrReview)` で taskContent を生成する。
+     - `TaskAttachment[]` を返す。
+
+3. URL allowlist を固定する。
+   - 最初の対象:
+     - `https://github.com/user-attachments/assets/...`
+     - `https://github.com/{owner}/{repo}/assets/...`
+   - private repository の表示 URL として必要な場合のみ、GitHub 管理の image CDN host を allowlist に含める。
+   - 任意 host、任意 `github.com` path は対象外にする。
+
+4. ダウンロード処理を実装する。
+   - `gh auth token` を `execFileSync('gh', ['auth', 'token'], ...)` で取得する。
+   - `fetch(url, { headers: { Authorization: 'Bearer ...', Accept: 'image/png,image/jpeg,image/gif,image/webp' } })` を使う。
+   - `response.ok` を検証する。
+   - `Content-Length` があれば上限超過を先に拒否する。
+   - `arrayBuffer()` 後にも実サイズを検証する。
+   - `Content-Type` と magic bytes が一致しない場合は拒否する。
+   - 一時ディレクトリは `ensureCurrentTmpDirExists()` 配下に private mode で作る。
+   - 成功後は `TaskAttachment` の `placeholder`, `tempPath`, `fileName` を返す。
+
+5. `takt add --pr` に配線する。
+   - `src/features/tasks/add/index.ts:181` の PR fetch 後に helper を呼ぶ。
+   - `src/features/tasks/add/index.ts:199` の `formatPrReviewAsTask(prReview)` を helper の `taskContent` に置き換える。
+   - `src/features/tasks/add/index.ts:213` の `saveTaskFile()` に `attachments` を渡す。
+   - 現在 `reviews.length === 0 && comments.length === 0` の場合に拒否している: `src/features/tasks/add/index.ts:194`
+   - この拒否条件は、画像 attachment が 0 の場合だけ維持する。PR body に画像だけがあるケースは task 作成できるようにする。
+   - `finally` で temp attachment を cleanup する。
+
+6. `takt --pr` に配線する。
+   - `src/app/cli/routing-inputs.ts:50` の `resolvePrInput()` 戻り値に `attachments` と `cleanupAttachments` を追加する。
+   - `src/app/cli/routing.ts:111` の呼び出しは `resolvedCwd` を渡す形に変更する。
+   - `src/app/cli/routing.ts:179` の `interactiveSeed` に `attachments` を追加する。
+   - conversation loop は `initialInput.attachments` を既に `createSessionImageAttachmentStore()` に渡している: `src/features/interactive/conversationLoop.ts:140`
+   - quiet mode も `initialInput.attachments` を受け取る: `src/features/interactive/quietMode.ts:61`
+   - dispatch 終了後に、既存 `cleanupInteractiveResultAttachments(result)` に加えて PR input attachments の cleanup を呼ぶ。
+
+7. pipeline `--pr` に配線する。
+   - `src/features/pipeline/steps.ts:18` の `TaskContent` に `attachments?: TaskAttachment[]` と cleanup 情報を追加する。
+   - `resolveTaskContent()` を async 化し、PR 経路で helper を呼ぶ。
+   - `src/features/pipeline/execute.ts:40` は `await resolveTaskContent(options)` に変更する。
+   - attachments がある場合:
+     - `prepareTaskSpecDirectory(projectCwd, task, attachments)` を呼ぶ。
+     - `generateExecutionReportDir(execCwd, task)` で report dir を確定する。
+     - `stageTaskSpecForExecution(projectCwd, execCwd, prepared.taskDirRelative, reportDirName)` を呼ぶ。
+     - `executeTask()` には `stagedSpec.taskPrompt` と同じ `reportDirName` を渡す。
+   - `cleanupPreparedTaskSpec()` と `cleanupStagedTaskSpec()` を `finally` で呼ぶ。
+   - attachments がない場合は既存の直接 task 文字列実行を維持する。
+
+8. テストを追加・更新する。
+   - 新規 helper test:
+     - Markdown image を抽出して placeholder に置換する。
+     - HTML img を抽出して placeholder に置換する。
+     - PR body / comments / reviews 全てを走査する。
+     - 同一 URL は重複 download せず同じ placeholder を使う。
+     - allowlist 外 URL は download しない。
+     - unsupported Content-Type を拒否する。
+     - magic bytes 不一致を拒否する。
+     - サイズ上限超過を拒否する。
+   - `addTask.test.ts`:
+     - `takt add --pr` で attachments が `order.md` に追記される。
+     - PR body に画像がある場合は comments/reviews が空でも保存できる。
+   - `cli-routing-pr-resolve.test.ts`:
+     - `takt --pr` の interactive seed に attachments が渡る。
+     - save_task / execute に PR attachments が流れる。
+     - cleanup が呼ばれる。
+   - pipeline 系 test:
+     - `--pipeline --pr` で attachment 付き task spec が作られ、run context の `attachments/` に配置される。
+   - `inlineImagePaste` 既存挙動:
+     - magic bytes 共通化後も PNG/JPEG/GIF/WebP 判定が維持される。
+
+### 到達経路・起動条件
+
+| 項目 | 内容 |
+|------|------|
+| 利用者が到達する入口 | `takt add --pr <number>`、`takt --pr <number>`、`takt --pipeline --pr <number> --workflow <workflow>` |
+| 更新が必要な呼び出し元・配線 | `src/features/tasks/add/index.ts`, `src/app/cli/routing-inputs.ts`, `src/app/cli/routing.ts`, `src/features/pipeline/steps.ts`, `src/features/pipeline/execute.ts` |
+| 起動条件 | PR データ内に allowlist 済み GitHub attachment URL があり、`gh` が認証済みで token 取得できること |
+| URL 条件 | GitHub attachment URL のみ。任意 external URL は対象外 |
+| 画像条件 | Content-Type と magic bytes が PNG/JPEG/GIF/WebP のいずれかで一致し、サイズ上限以内 |
+| 未対応項目 | なし。ただし GitLab MR attachment と任意外部画像 URL はスコープ外 |
+
+## 実装ガイドライン
+
+- `src/infra/git/format.ts` に GitHub 固有処理を入れない。ここは provider-neutral な整形層として維持する。
+- `src/infra/github/pr.ts` に task attachment 作成を入れない。PR 取得と attachment 変換は分離する。
+- 新規 PR attachment helper は `PrReviewData -> rewritten PrReviewData + TaskAttachment[] + cleanup` の責務に限定する。
+- 既存 attachment 保存は `src/features/tasks/attachments.ts:138` の `prepareTaskSpecDirectory()` を再利用する。
+- `order.md` の attachment section は `src/features/tasks/attachments.ts:26` の `buildTaskOrderContent()` に任せ、重複実装しない。
+- direct execution の attachment staging は `src/features/tasks/execute/selectAndExecute.ts:113` と `src/features/tasks/execute/taskSpecContext.ts:56` の既存パターンを参照する。
+- pipeline に新しい parameter を追加する場合、以下の配線漏れに注意する:
+  - `TaskContent`
+  - `resolveTaskContent()`
+  - `runPipeline()`
+  - `runWorkflow()` またはその前段の task prompt 準備
+  - cleanup の `finally`
+  - test mocks
+- `fetch` 対象 URL は必ず request 前に allowlist 検証する。
+- redirect 後の `response.url` も GitHub 管理 host か検証する。
+- download 失敗、Content-Type 不正、magic bytes 不一致、サイズ超過は明示エラーにする。黙って skip しない。
+- temp file は task spec へコピーされた後に cleanup できるよう、helper から cleanup 関数を返す。
+- TODO コメントで未対応を残さない。
+- 後方互換用の旧フロー分岐は追加しない。
+- 今回の変更で不要になったローカル helper があれば削除する。
+
+## スコープ外
+
+| 項目 | 除外理由 |
+|------|---------|
+| GitLab MR コメント内画像の取得 | 要求は GitHub PR コメント内画像であり、`gh` 認証を前提にしているため |
+| 任意外部 URL の画像取得 | 安全性制約で「外部 URL を無制限に取得しない」と指定されているため |
+| SVG/PDF/動画などの添付対応 | 対応形式は PNG/JPEG/GIF/WebP と明示されているため |
+| GitHub API 以外のブラウザ cookie 認証 | 認証済み `gh` 経由の取得が要求範囲であり、ブラウザセッション連携は不要 |
+| docs 更新 | 品質要件に明示されていないため。必要なら別タスクで扱う |
+
+## 確認事項
+
+なし。

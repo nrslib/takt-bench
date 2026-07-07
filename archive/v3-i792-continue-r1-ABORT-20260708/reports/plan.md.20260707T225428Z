@@ -1,0 +1,144 @@
+# タスク計画
+
+## 元の要求
+
+PR コメント内の画像をダウンロードして task attachments に配置する機能を実装してください。
+
+## 分析結果
+
+### 目的
+
+`add --pr`、`takt --pr`、pipeline の `--pr` 経路で、PR 本文・通常コメント・review thread/review コメント内の GitHub 添付画像を検出し、検証済みの画像だけを task attachment として保存・参照できるようにする。
+
+### 分解した要件
+
+| # | 要件 | 種別 | 備考 |
+|---|------|------|------|
+| 1 | PR 本文から画像 URL を抽出する | 明示 | Markdown image / HTML img |
+| 2 | 通常コメントから画像 URL を抽出する | 明示 | `comments[].body` |
+| 3 | review summary / review thread コメントから画像 URL を抽出する | 明示 | 現行 `PrReviewData.reviews[].body` を対象 |
+| 4 | GitHub attachment URL のみ取得対象にする | 明示 | 外部 URL を無制限に取得しない |
+| 5 | PNG を許可する | 明示 | Content-Type と magic bytes を検証 |
+| 6 | JPEG を許可する | 明示 | Content-Type と magic bytes を検証 |
+| 7 | GIF を許可する | 明示 | Content-Type と magic bytes を検証 |
+| 8 | WebP を許可する | 明示 | Content-Type と magic bytes を検証 |
+| 9 | Content-Type を検証する | 明示 | MIME が対応形式と一致すること |
+| 10 | magic bytes を検証する | 明示 | 実データが対応形式と一致すること |
+| 11 | サイズ上限を設ける | 明示 | 現行実装では 10MiB |
+| 12 | 認証済み `gh` を優先して private repo 画像に対応する | 明示 | `gh auth token` 利用 |
+| 13 | `TaskAttachment[]` として既存 attachment 保存経路に渡す | 明示 | `prepareTaskSpecDirectory()` を使う |
+| 14 | `.takt/tasks/<slug>/attachments/` に画像を配置する | 明示 | 既存 attachment 保存処理の責務 |
+| 15 | `order.md` に `## 添付画像` 形式で追記される | 明示 | 既存 `buildTaskOrderContent()` が担当 |
+| 16 | 元本文内の画像参照を `[Image #n]` に置換または補足する | 明示 | PR task formatter と二重整形しない |
+| 17 | pipeline の `--pr` 経路でも画像を参照できる | 明示 | 現状は未完了 |
+| 18 | 新規ロジックに単体テストを追加する | 明示 | 既存 Vitest に合わせる |
+| 19 | `npm run build` が成功する | 明示 | 実装後に検証 |
+| 20 | `npm run lint` が成功する | 明示 | 実装後に検証 |
+| 21 | `npm test` が成功する | 明示 | 実装後に検証 |
+
+### 参照資料の調査結果
+
+明示された参照先 `src/infra/github/pr.ts` は PR データ取得責務のモジュールであり、画像 attachment 生成を置く場所としては適切ではない。現在の差し戻し後コードでは、画像 URL 抽出・ダウンロード処理は `src/features/tasks/prReviewImageAttachments.ts` に分離済みで、`add --pr`、CLI routing、pipeline PR 解決から呼ばれている。
+
+現在の実装状況は以下。
+
+| 項目 | 状態 | 根拠 |
+|------|------|------|
+| URL 抽出・画像ダウンロード | 実装済み | `src/features/tasks/prReviewImageAttachments.ts:50`, `src/features/tasks/prReviewImageAttachments.ts:76`, `src/features/tasks/prReviewImageAttachments.ts:89` |
+| Content-Type / magic bytes / サイズ検証 | 実装済み | `src/shared/utils/imageData.ts:52`, `src/shared/utils/imageData.ts:73` |
+| `add --pr` への配線 | 実装済みだが整形に問題 | `src/features/tasks/add/index.ts:199`, `src/features/tasks/add/index.ts:203` |
+| `takt --pr` への配線 | 実装済みだが整形に問題 | `src/app/cli/routing-inputs.ts:71`, `src/app/cli/routing-inputs.ts:73` |
+| pipeline `--pr` の attachment 参照 | 未完了 | `src/features/pipeline/execute.ts:33`, `src/features/pipeline/execute.ts:52` で attachments を使っていない |
+| interactive execute path の重複回避 | 修正要 | `src/app/cli/routing.ts:269`, `src/app/cli/routing.ts:272` で PR attachments を二重追加し得る |
+
+### スコープ
+
+影響範囲は以下。
+
+- `src/features/tasks/prReviewImageAttachments.ts`
+- `src/shared/utils/imageData.ts`
+- `src/features/tasks/add/index.ts`
+- `src/app/cli/routing-inputs.ts`
+- `src/app/cli/routing.ts`
+- `src/features/pipeline/steps.ts`
+- `src/features/pipeline/execute.ts`
+- `src/features/tasks/attachments.ts`
+- `src/features/tasks/execute/taskSpecContext.ts`
+- `src/__tests__/prReviewImageAttachments.test.ts`
+- `src/__tests__/addTask.test.ts`
+- `src/__tests__/cli-routing-pr-resolve.test.ts`
+- `src/__tests__/pipelineExecution.test.ts`
+
+## Disputed Findings
+
+### F-0001
+
+- findingId: F-0001
+- reason: 現在のコードには PR コメント画像の URL 抽出とダウンロード処理が存在する。`src/infra/github/pr.ts` に実装しないのは、PR 取得と task attachment 生成を分離する設計判断として妥当。ただし pipeline staging、本文整形、重複 attachment の修正は残っている。
+- evidence:
+  - `src/features/tasks/prReviewImageAttachments.ts:50` Markdown / HTML img の URL 抽出
+  - `src/features/tasks/prReviewImageAttachments.ts:76` 画像ダウンロード関数
+  - `src/features/tasks/prReviewImageAttachments.ts:84` `gh auth token` による認証情報取得
+  - `src/features/tasks/prReviewImageAttachments.ts:89` 認証付き fetch
+  - `src/features/tasks/prReviewImageAttachments.ts:107` Content-Type 取得
+  - `src/features/tasks/prReviewImageAttachments.ts:110` サイズ検証
+  - `src/features/tasks/prReviewImageAttachments.ts:113` Content-Type / magic bytes 検証
+  - `src/features/tasks/add/index.ts:199` `add --pr` 経路への配線
+  - `src/app/cli/routing-inputs.ts:71` `takt --pr` 経路への配線
+  - `src/features/pipeline/steps.ts:163` pipeline PR 入力解決への配線
+
+### 検討したアプローチ
+
+| アプローチ | 採否 | 理由 |
+|-----------|------|------|
+| `src/infra/github/pr.ts` に画像ダウンロードを追加 | 不採用 | PR 取得責務に task attachment 生成と IO 検証が混ざる |
+| `features/tasks` に PR 画像 attachment 生成を置く | 採用 | 既存 attachment 保存経路に近く、PR 取得層と分離できる |
+| helper が整形済み task markdown を返す | 不採用 | `formatPrReviewAsTask()` と二重整形し、コメント重複の原因になる |
+| helper が書き換え済み `PrReviewData` と attachments を返す | 採用 | 既存 PR task formatter を一度だけ使える |
+| pipeline で attachments を無視して plain task を実行 | 不採用 | `--pr` pipeline で画像参照できない |
+| pipeline で task spec を prepare/stage して実行 | 採用 | 既存 `prepareTaskSpecDirectory()` / `stageTaskSpecForExecution()` と整合する |
+
+### 実装アプローチ
+
+1. `preparePrReviewImageAttachments()` の戻り値を、整形済み markdown ではなく、画像参照を書き換えた `PrReviewData` と `TaskAttachment[]` にする。
+2. `add --pr` と `takt --pr` は `formatPrReviewAsTask(rewrittenPrReview)` を一度だけ呼ぶ。
+3. `src/app/cli/routing.ts` の execute path で、初期 PR attachments を `result.attachments` に重ねて追加しない。
+4. pipeline 実行時に `TaskContent.attachments` がある場合、`prepareTaskSpecDirectory()` と `stageTaskSpecForExecution()` を使い、staged task prompt を `executeTask()` に渡す。
+5. pipeline の prepared/staged spec と PR 画像 temp dir は `finally` で必ず cleanup する。
+6. `isGitHubImageAttachmentUrl()` を最終 redirect URL にも厳密適用し、`https://github.com` 前方一致の広すぎる許可は避ける。
+7. 一時ディレクトリは固定 `.takt/tmp/image-attachments` ではなく、一意な `mkdtemp` 配下にする。
+8. ダウンロード途中で例外が出た場合も、部分的な temp ファイルを cleanup する。
+9. `TaskAttachment` に契約外の `sourceUrl` を混ぜない。必要なら内部型で保持し、返却時は `placeholder/tempPath/fileName` に絞る。
+10. `imageData.ts` の GIF magic bytes 判定は条件式を明確に括弧で分ける。
+
+### 到達経路・起動条件
+
+| 項目 | 内容 |
+|------|------|
+| 利用者が到達する入口 | `takt add --pr <number>`、`takt --pr <number>`、pipeline の `--pr` 入力 |
+| 更新が必要な呼び出し元・配線 | `tasks/add/index.ts`、`app/cli/routing-inputs.ts`、`app/cli/routing.ts`、`pipeline/steps.ts`、`pipeline/execute.ts` |
+| 起動条件 | PR 入力が指定され、PR 本文・コメント・review body に GitHub attachment URL が含まれること |
+| 未対応項目 | pipeline execution で attachments を stage していないため修正必須 |
+
+## 実装ガイドライン
+
+- 既存 attachment 保存は `src/features/tasks/attachments.ts:138` の `prepareTaskSpecDirectory()` と `src/features/tasks/execute/taskSpecContext.ts:56` の `stageTaskSpecForExecution()` を使う。
+- `PrReviewData` の取得責務は `src/infra/github/pr.ts` に残し、画像 attachment 生成は `features/tasks` 側に閉じる。
+- PR task markdown の生成は `formatPrReviewAsTask()` に集約し、コメント・レビュー本文を手動連結しない。
+- `runConversationLoop()` の初期 attachments が `result.attachments` に含まれる前提で、execute path では PR attachments を二重追加しない。
+- URL 抽出、URL allowlist、Content-Type、magic bytes、サイズ上限、cleanup 失敗無視は単体テストで固定する。
+- pipeline テストは `resolveTaskContent()` だけでなく、`execute.ts` が task spec を prepare/stage して実行 prompt に反映することを検証する。
+- Knowledge の構造制約に従い、PR 取得、画像取得、task spec 保存、pipeline 実行を 1 モジュールに混在させない。
+- 同じ汎用 fetch や copy 処理を呼び出し元へ散在させず、PR 画像 attachment 操作は名前付き関数に集約する。
+
+## スコープ外
+
+| 項目 | 除外理由 |
+|------|---------|
+| GitHub 以外の外部画像 URL 取得 | 安全性制約で GitHub attachment URL から始める指定 |
+| 画像以外の添付ファイル対応 | 対応形式が PNG/JPEG/GIF/WebP に限定されている |
+| `src/infra/github/pr.ts` へのダウンロード処理追加 | PR 取得責務を超えるため |
+
+## 確認事項
+
+なし。

@@ -1,0 +1,17 @@
+# アーキテクチャレビュー
+
+## 結果: APPROVE
+
+## サマリー
+PRコメント内の画像抽出・ダウンロードおよびTask Attachmentsへの統合機能が、設計原則およびレイヤー構造に従って適切に実装されています。Ledger上の指摘事項 (F-0001) も完全に解消されており、構造的な問題は見当たりません。
+
+## 再走査証跡
+- **構造・設計**: `src/features/tasks/prReviewImageAttachments.ts` に画像処理ロジックを凝集させ、`TaskAttachment` 型として切り出したことで適切な責務分離がなされていることを確認。
+- **コード品質**: `src/shared/utils/imageData.ts` において、Magic BytesによるMIMEタイプ検証と最大サイズ制限が厳格に実装されており、安全性への配慮を確認。
+- **呼び出しチェーン検証**: `resolvePrInput` (CLI入力解決) → `executeDefaultAction` (インタラクティブ) および `resolveTaskContent` (Pipeline) の各経路で、`attachments` および `cleanupAttachments` が漏れなく伝播し、最終的に `saveTaskFile` や `prepareTaskSpecDirectory` に到達していることを確認。
+- **副作用管理**: `cleanupAttachments` が、正常終了時だけでなく、ワークフローキャンセル時や例外発生時（`try...finally`）にも確実に実行され、一時ディレクトリが削除される経路であることを確認。
+
+## 検証証跡
+- ビルド: 未確認（quality-gateにて実施）
+- テスト: `addTask.test.ts`, `cli-routing-pr-resolve.test.ts`, `pipelineExecution.test.ts` にて、画像添付の保存、置換、およびクリーンアップの振る舞いが網羅的に検証されていることを確認。
+- 動作確認: 未確認

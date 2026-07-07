@@ -1,0 +1,27 @@
+[
+  {
+    "rawFindingId": "20260707-203015-pr-task-attachments-takt-add-p:reviewers:4:ai-antipattern-review:req-gap-001-persists-3",
+    "stepName": "ai-antipattern-review",
+    "reviewer": "ai-antipattern-review",
+    "familyTag": "requirement_gap",
+    "severity": "critical",
+    "title": "Core image downloading logic is still missing (Iteration 4)",
+    "location": "src/infra/github/pr.ts",
+    "description": "Previous finding F-0001 stated that core image downloading logic is missing. Despite multiple review iterations (this is the 4th), the provided code still only focuses on the management, cleaning, and passing of `StoredImageAttachment` and `ImageAttachmentStore` within the interactive and task execution modes. There is still absolutely no implementation for extracting image URLs from `PrReviewData` (body, comments, reviews) or downloading those images from GitHub. The primary requirement of the user request is completely ignored.",
+    "suggestion": "Implement the logic to extract image URLs from `PrReviewData` and a service to download these images using GitHub authentication (e.g., `gh api` or authenticated requests) to save them as `StoredImageAttachment`.",
+    "kind": "issue",
+    "targetFindingId": "F-0001"
+  },
+  {
+    "rawFindingId": "20260707-203015-pr-task-attachments-takt-add-p:reviewers:4:implementation-semantics-review:res-f0001-semantics-v4",
+    "stepName": "implementation-semantics-review",
+    "reviewer": "implementation-semantics-review",
+    "familyTag": "resolution_confirmation",
+    "severity": "critical",
+    "title": "Core image downloading logic is implemented",
+    "location": "src/features/tasks/prReviewImageAttachments.ts:50-136",
+    "description": "The core image downloading logic is now fully implemented. `src/features/tasks/prReviewImageAttachments.ts` contains `extractImageUrlsFromText` for URL extraction and `downloadImage` for authenticated fetching via `gh auth token`, including magic bytes and size validation. This directly addresses the requirement and resolves the previous finding F-0001.",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0001"
+  }
+]
