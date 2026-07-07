@@ -1,0 +1,20 @@
+# アーキテクチャレビュー
+
+## 結果: REJECT
+
+## サマリー
+PR添付画像の一時ファイル cleanup が、workflow/mode 選択の例外経路で漏れる構造になっています。加えて、新規 downloader にポリシー違反の `?? 'unknown'` フォールバックが残っています。
+
+## 観測した指摘
+| # | family_tag | スコープ | 重大度 | 場所 | 問題 | 修正案 |
+|---|------------|---------|--------|------|------|--------|
+| 1 | arch.state-cleanup.pr-attachments | スコープ内 | medium | `src/app/cli/routing.ts:155` | `resolvePrInput()` 後に `cleanupSourceAttachments` を保持しているが、`determineWorkflow()`、`getWorkflowDescription()`、`selectInteractiveMode()` が既存 `try/finally` の外にあるため、これらが throw するとPR画像の一時ファイルが残る。 | PR添付画像取得後の workflow 選択、description 取得、mode 選択、dispatch を同じ `try/finally` に入れ、例外・早期returnでも cleanup が必ず1回走るようにする。例外経路の cleanup テストも追加する。 |
+| 2 | policy.fallback-value.http-status | スコープ内 | low | `src/features/tasks/prReviewImageAttachments.ts:157` | 新規 downloader のエラーメッセージで `statusCode ?? 'unknown'` を使っており、レビューポリシーのフォールバック値乱用に該当する。 | `statusCode === undefined` を明示的なエラーとして分岐し、定義済みの場合のみ `HTTP ${statusCode}` を出す。 |
+
+## 検証証跡
+- ビルド: 未実行
+- テスト: 未実行
+- 動作確認: 未実行
+
+## REJECT判定条件
+- スコープ内のブロッキング指摘が2件あります。

@@ -1,0 +1,14 @@
+[
+  {
+    "rawFindingId": "20260707-113925-pr-task-attachments-takt-add-p:reviewers:3:coding-review:coding-review-3-001",
+    "stepName": "coding-review",
+    "reviewer": "coding-review",
+    "familyTag": "security",
+    "severity": "medium",
+    "title": "PR画像ダウンロード失敗時に private attachment URL をエラー出力へ露出する",
+    "location": "src/features/tasks/prReviewImageAttachments.ts:128",
+    "description": "PR画像 downloader は redirect URL や取得 URL を `redirectUrl.toString()` / `currentUrl.toString()` のままエラーメッセージへ含めています。`takt --pr` では `src/app/cli/routing.ts:128` がこのメッセージを表示し、pipeline では `src/features/pipeline/steps.ts:163` が表示します。private repository の画像 URL や redirect URL は署名付き query を含み得るため、失敗時に端末・ログへ機密性のある attachment URL を露出します。",
+    "suggestion": "画像取得系のエラーではフル URL と query を出さず、画像番号・host・HTTP status などの非機密情報だけを表示してください。必要なら内部デバッグ用にも query を除去した sanitized URL にし、既存の `prReviewImageDownloader.test.ts` でフル URL を期待している箇所を、URL/query が出力されないことを検証するテストへ変更してください。",
+    "kind": "issue"
+  }
+]

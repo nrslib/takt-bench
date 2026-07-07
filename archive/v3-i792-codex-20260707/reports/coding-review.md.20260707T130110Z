@@ -1,0 +1,20 @@
+# コーディングレビュー
+
+## 結果: REJECT
+
+## サマリー
+累積差分を再走査し、既存 resolved finding（F-0001〜F-0010）の再オープン条件は確認しませんでした。新規に、private repository 由来になり得る PR 画像 attachment URL を失敗時エラーへ露出する問題を確認したため REJECT です。
+
+## 観測した指摘
+| # | family_tag | 重大度 | 場所 | 問題 | 影響 | 修正案 |
+|---|------------|--------|------|------|------|--------|
+| 1 | security | Medium | `src/features/tasks/prReviewImageAttachments.ts:128` | `redirectUrl.toString()` / `currentUrl.toString()` / `urlValue` をエラーメッセージへそのまま含めている。`takt --pr` は `src/app/cli/routing.ts:128`、pipeline は `src/features/pipeline/steps.ts:163` でその内容を表示する。 | private repository の画像 URL や署名付き redirect URL が、取得失敗時に端末・ログへ露出する。 | 画像取得エラーではフル URL と query を出さず、画像番号・host・HTTP status など非機密情報だけを表示する。`prReviewImageDownloader.test.ts` もフル URL を期待せず、URL/query が出力されないことを検証する。 |
+
+## 検証証跡
+- 差分確認: Policy Source、累積差分、PR画像 downloader、`takt --pr` / pipeline のエラー伝播経路、追加テストを確認。
+- 再走査証跡: 状態整合性、契約全入口、外部連携、安全性、テスト証跡、F-0001〜F-0010 の再オープン条件を確認。
+- ビルド: `npm run build` 成功。
+- テスト: `npm run lint` 成功、`npm test` 成功。
+
+## REJECT判定条件
+- ブロッキング指摘が1件あります。

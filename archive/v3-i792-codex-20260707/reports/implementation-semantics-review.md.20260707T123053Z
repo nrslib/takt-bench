@@ -1,0 +1,18 @@
+# 実装意味論レビュー
+
+## 結果: REJECT
+
+## サマリー
+PR画像添付の一時ファイル cleanup が、例外経路の一部を覆っていません。private repository 由来の画像が一時ディレクトリに残り得るため、状態管理上のブロッキング問題です。
+
+## 観測した指摘
+| # | family_tag | 重大度 | 場所 | 問題 | 壊れる条件 | 修正案 |
+|---|------------|--------|------|------|-----------|--------|
+| 1 | implementation-semantics/state-cleanup | Medium | `src/app/cli/routing.ts:155` | `resolvePrInput()` 後に `cleanupSourceAttachments` を保持しているが、`determineWorkflow()`、`getWorkflowDescription()`、`selectInteractiveMode()` が `try/finally` の外で実行されるため、例外時に cleanup されない。 | PRコメント画像をダウンロード済みの状態で、workflow設定不正などにより workflow 決定・description取得・mode選択が例外を投げると、`takt-pr-images-*` 配下の画像一時ファイルが残る。 | PR画像添付取得後の処理全体を単一の `try/finally` で囲み、workflow決定から action dispatch までの全経路で `cleanupSourceAttachments?.()` が必ず実行されるようにする。 |
+
+## 検証証跡
+- 差分確認: PR画像 attachment 配線が追加された `src/app/cli/routing.ts`、`src/app/cli/routing-inputs.ts`、`src/features/tasks/prReviewImageAttachments.ts`、pipeline/add 経路の累積差分を確認。
+- 判定根拠の実在確認: `src/app/cli/routing.ts:155` 付近で `determineWorkflow()` が cleanup 用 `try/finally` より前に実行され、cleanup は cancel 分岐と後段 finally に分散していることを実コードで確認。
+
+## REJECT判定条件
+- ブロッキング指摘が1件あるため REJECT。

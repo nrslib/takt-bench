@@ -1,0 +1,8 @@
+# 実装意味論レビュー
+
+## 結果: APPROVE
+
+## サマリー
+実装意味論の観点でブロッキング指摘はありません。前回の PR 画像一時ファイル cleanup 漏れは、workflow/mode 選択から dispatch までを同じ `try/finally` に入れる修正で解消されています。
+
+再走査証跡: Knowledge の「データ構造の意味選択」「導出値の単一情報源」「命名と意味の整合」「境界での fail-fast」「内部状態の参照漏れ」を、累積差分の `routing.ts`、`prReviewImageAttachments.ts`、`add/index.ts`、pipeline 配線、画像 MIME utility に対して再確認しました。F-0001 / F-0002 / F-0004 / F-0010 は実コード上で解消を確認済みです。

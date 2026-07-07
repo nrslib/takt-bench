@@ -1,0 +1,29 @@
+# AI生成コードレビュー
+
+## 結果: REJECT
+
+## サマリー
+PR本文のみの画像が `takt add --pr` で保存されない要件漏れと、外部取得境界・無関係差分のスコープクリープを確認したため REJECT です。
+
+## 検証した項目
+| 観点 | 結果 | 備考 |
+|------|------|------|
+| 仮定の妥当性 | ❌ | PR本文も対象という要件を既存の「レビューコメント必須」条件で欠落させている |
+| API/ライブラリの実在 | ✅ | 追加 API の幻覚は確認していない |
+| コンテキスト適合 | ❌ | 外部URL取得境界の検証がリダイレクト後に適用されていない |
+| スコープ | ❌ | `.takt/config.yaml` と `package-lock.json` に要求外の差分がある |
+
+## 観測した指摘
+| # | family_tag | カテゴリ | 重大度 | 場所 | 問題 | 修正案 |
+|---|------------|---------|--------|------|------|--------|
+| 1 | missing-edge-case | 要件漏れ | medium | `src/features/tasks/add/index.ts:195` | `reviews` と `comments` が空だと return するため、PR本文に画像があっても `preparePrReviewTaskWithImageAttachments()` が呼ばれず attachment 化されない。 | PR本文もタスク化対象として扱い、本文画像のみの PR でも保存できるようにする。対応テストも追加する。 |
+| 2 | unvalidated-assumption | 外部境界検証不足 | medium | `src/features/tasks/prReviewImageAttachments.ts:125` | 初回URLはGitHub attachmentに制限しているが、リダイレクト先は HTTPS であれば任意ホストへ取得できる。 | リダイレクト後URLも許可リストで検証し、許可外ホストは失敗させる。 |
+| 3 | scope-creep | 要求外設定変更 | medium | `.takt/config.yaml:8` | 画像 attachment 実装と無関係に、品質ゲート削除と provider routing 追加が含まれている。 | 今回の機能に不要な `.takt/config.yaml` 差分を戻す。 |
+| 4 | scope-creep | 要求外 lockfile 変更 | low | `package-lock.json:2157` | `package.json` 差分なしで optional dependency の `libc` 条件などが削除されている。 | `package-lock.json` の不要差分を戻す。 |
+
+## 再走査証跡
+- Policy の `##` セクション全体を、要件固定・外部境界・スコープクリープ・未使用/デッドコード・フォールバック観点で照合した。
+- Knowledge の構造・境界解決・セキュリティ・呼び出しチェーン・仕様準拠・変更スコープ観点を差分と照合した。
+
+## REJECT判定条件
+- ブロッキング指摘が1件以上あるため REJECT。

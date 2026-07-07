@@ -1,0 +1,50 @@
+[
+  {
+    "rawFindingId": "20260707-113925-pr-task-attachments-takt-add-p:reviewers:4:arch-review:arch-review-4-resolved-F0011",
+    "stepName": "arch-review",
+    "reviewer": "arch-review",
+    "familyTag": "security",
+    "severity": "medium",
+    "title": "PR画像ダウンロード失敗時の private attachment URL 露出は解消済み",
+    "location": "src/features/tasks/prReviewImageAttachments.ts:97",
+    "description": "`describeUnsupportedAttachmentUrl()` は不正URLを format エラー、許可外URLを host のみで表現している。`resolveRedirectUrl()` の拒否は `src/features/tasks/prReviewImageAttachments.ts:139` で redirect host のみ、HTTP status 欠落/非200は `src/features/tasks/prReviewImageAttachments.ts:153` と `src/features/tasks/prReviewImageAttachments.ts:180` で host/status のみを出しており、エラー文へ `currentUrl.toString()` / `redirectUrl.toString()` を含める経路は残っていない。`src/__tests__/prReviewImageDownloader.test.ts:144` と `src/__tests__/prReviewImageDownloader.test.ts:162` で token・path・redirect query が漏れないことを検証し、`npm test -- src/__tests__/prReviewImageDownloader.test.ts` は 1 file / 4 tests passed。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0011"
+  },
+  {
+    "rawFindingId": "20260707-113925-pr-task-attachments-takt-add-p:reviewers:4:ai-antipattern-review:ai-antipattern-review-4-resolve-f0011",
+    "stepName": "ai-antipattern-review",
+    "reviewer": "ai-antipattern-review",
+    "familyTag": "unvalidated-assumption",
+    "severity": "medium",
+    "title": "PR画像ダウンロード失敗時の private attachment URL 露出が解消された",
+    "location": "src/features/tasks/prReviewImageAttachments.ts:153",
+    "description": "解消確認: `src/features/tasks/prReviewImageAttachments.ts:153`, `160`, `180` の取得失敗エラーは host/status のみを出す文言になり、`currentUrl.toString()` はエラー出力に残っていない。redirect 拒否も `src/features/tasks/prReviewImageAttachments.ts:139` で host のみを出す。`src/__tests__/prReviewImageDownloader.test.ts:144-180` で source URL、redirect URL、token、path が error.message に含まれないことを検証している。`npm run build`、`npm run lint`、`npm test` は exit 0。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0011"
+  },
+  {
+    "rawFindingId": "20260707-113925-pr-task-attachments-takt-add-p:reviewers:4:coding-review:coding-review-4-001",
+    "stepName": "coding-review",
+    "reviewer": "coding-review",
+    "familyTag": "security",
+    "severity": "medium",
+    "title": "PR画像ダウンロード失敗時の private attachment URL 露出が解消されている",
+    "location": "src/features/tasks/prReviewImageAttachments.ts:136",
+    "description": "F-0011 の受入条件を再確認しました。現在の実装は redirect HTTPS エラーで protocol のみを出し、許可外 redirect は `Unsupported PR image attachment redirect host: ${redirectUrl.hostname}`、HTTP status 欠落/非200/Location欠落は `currentUrl.hostname` のみを出す形になっており、`currentUrl.toString()` や `redirectUrl.toString()` をエラーメッセージへ含めていません（src/features/tasks/prReviewImageAttachments.ts:136,139,153,160,180）。追加テストでも署名付き source/redirect URL と secret token が error.message に含まれないことを確認しています（src/__tests__/prReviewImageDownloader.test.ts:144,162）。`npm run build`、`npm run lint`、`npm test` は成功しました。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0011"
+  },
+  {
+    "rawFindingId": "20260707-113925-pr-task-attachments-takt-add-p:reviewers:4:implementation-semantics-review:raw-implementation-semantics-4-resolve-f0011",
+    "stepName": "implementation-semantics-review",
+    "reviewer": "implementation-semantics-review",
+    "familyTag": "security",
+    "severity": "medium",
+    "title": "PR画像ダウンロード失敗時の private attachment URL 露出は解消済み",
+    "location": "src/features/tasks/prReviewImageAttachments.ts:138",
+    "description": "`resolveRedirectUrl()` は許可外 redirect 時に `Unsupported PR image attachment redirect host: ${redirectUrl.hostname}` のみを投げ、`fetchImageData()` も status 欠落・Location 欠落・非200で `currentUrl.hostname` のみを含めています。`src/__tests__/prReviewImageDownloader.test.ts:144` と `src/__tests__/prReviewImageDownloader.test.ts:162` で query を含む source/redirect URL がエラー本文に含まれないことも検証されています。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0011"
+  }
+]

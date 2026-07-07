@@ -1,0 +1,22 @@
+# コーディングレビュー
+
+## 結果: REJECT
+
+## サマリー
+PR画像添付の主要経路に未対応ケースが残っており、さらに不要な workflow/config/lockfile 変更で `npm test` が失敗しています。ブロッキング指摘があるため差し戻しです。
+
+## 観測した指摘
+| # | family_tag | 重大度 | 場所 | 問題 | 影響 | 修正案 |
+|---|------------|--------|------|------|------|--------|
+| 1 | pr_body_image_attachments.add_pr_guard | Medium | `src/features/tasks/add/index.ts:195` | `takt add --pr` が comments/reviews なしで即 return するため、PR本文だけに画像がある場合に `preparePrReviewTaskWithImageAttachments()` へ到達しない | 要件の「PR本文内の画像URLを検出して attachments に配置」を満たせない | 早期終了条件をPR本文画像にも対応させるか、画像抽出後にコメントなし判定を行う。PR本文画像のみのテストを追加する |
+| 2 | workflow_override.test_regression | High | `.takt/workflows/takt-default-for-local-llm.yaml:277` | 未追跡の project-local workflow が builtin workflow を上書きし、英語設定でも日本語条件を返している | `npm test` が `src/__tests__/for-local-llm-replan-wiring.test.ts:56` で失敗する | `.takt/workflows/takt-default-for-local-llm.yaml` を差分から除外するか、言語別 workflow 契約を壊さない形に修正する |
+| 3 | unrelated_repo_metadata.scope_creep | Medium | `.takt/config.yaml:7` | 画像添付機能と無関係に quality gate 削除、provider routing 追加、`package-lock.json` の optional native package 制約削除が入っている | 今回要件外のワークフロー品質・依存解決契約を変更する | `.takt/config.yaml` と `package-lock.json` の不要変更を差分から外す |
+
+## 検証証跡
+- 差分確認: `git status --short`、`git diff --stat`、対象実装・テスト・workflow/config/lockfile を確認
+- ビルド: `npm run build` 成功
+- Lint: `npm run lint` 成功
+- テスト: `npm test` 失敗。`for-local-llm-replan-wiring.test.ts:56` で英語条件の期待に対し日本語条件が返った
+
+## REJECT判定条件
+- ブロッキング指摘が3件あるため REJECT

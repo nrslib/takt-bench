@@ -1,0 +1,41 @@
+# Merge Readiness Review
+
+## 結果: REJECT
+
+## サマリー
+実装・テスト自体は主要要件を満たし、F-0001〜F-0010 の再オープン根拠も確認できませんでした。ただし `--pr` のユーザー向け契約が拡張されたにもかかわらず、CLI reference / README に PR 画像添付の対象・制限・失敗条件が未記載で、保守者と利用者が新挙動を追跡できないため REJECT です。
+
+## 保守前提のマージ品質チェック
+| # | 観点 | 状態 | 根拠（ファイル:行 / テスト / 実行証跡） | コメント |
+|---|------|------|---------------------------------------|----------|
+| 1 | 要求充足 | 充足 | `src/features/tasks/prReviewImageAttachments.ts:267`, `src/features/tasks/add/index.ts:200`, `src/features/pipeline/steps.ts:149` | PR本文・通常コメント・review thread から画像参照を置換し attachment として渡す経路を確認 |
+| 2 | 既存契約・既存フローへの影響 | 問題あり | `docs/cli-reference.md:16`, `docs/cli-reference.ja.md:16` | `--pr` 契約拡張に対する利用者向け説明が不足 |
+| 3 | テスト・検証 | 十分 | `npm run build`, `npm run lint`, `npm test` 成功 | 要求された検証コマンドは成功 |
+| 4 | 要求外変更・スコープクリープ | 問題なし | `git diff -- .takt/config.yaml package-lock.json --exit-code`, `.takt/workflows` 空 | F-0005/F-0006/F-0008/F-0009 の再発なし |
+| 5 | 保守可能性・将来変更容易性 | 問題あり | `docs/cli-reference.md:238`, `docs/cli-reference.ja.md:237` | 既存 docs は exec 画像添付のみで、PR画像添付の制約を追跡できない |
+| 6 | 明白なセキュリティ・データ保護・運用リスク | 問題なし | `src/features/tasks/prReviewImageAttachments.ts:85`, `:125`, `:236` | GitHub attachment URL 制限、redirect 制限、Content-Type/magic bytes 検証を確認 |
+
+## 横断監査証跡
+| # | 変更カテゴリ | 抽出した項目 | 確認した検索語・ファイル | 判定 | コメント |
+|---|--------------|--------------|--------------------------|------|----------|
+| 1 | helper / 出力契約 | `preparePrReviewTaskWithImageAttachments`, `[Image #N]`, `## 添付画像` | `preparePrReviewTaskWithImageAttachments`, `TaskAttachment`, `添付画像` / `src/features/tasks/prReviewImageAttachments.ts`, `src/features/tasks/attachments.ts`, tests | 問題なし | 保存・実行経路への接続は確認 |
+| 2 | entrypoint | `takt add --pr`, `takt --pr`, pipeline `--pr` | `resolvePrInput`, `addTask`, `resolveTaskContent`, `runWorkflow` | 問題なし | CLI / add / pipeline で attachment が渡る |
+| 3 | ユーザー向け契約 | `--pr` 画像取得、GitHub URL限定、10MiB、MIME検証、失敗条件 | `--pr`, `image attachment`, `Content-Type`, `Image #` / docs, README | 問題あり | docs は exec 画像添付のみで PR 経路が未記載 |
+
+## 要求照合
+| # | 要求（タスクから抽出） | 状態 | 根拠（ファイル:行） | コメント |
+|---|-------------------|------|-------------------|----------|
+| 1 | PR本文・通常コメント・review thread コメント内の画像 URL を検出 | 充足 | `src/features/tasks/prReviewImageAttachments.ts:313` | `body/comments/reviews` を置換対象にしている |
+| 2 | PNG/JPEG/GIF/WebP、Content-Type と magic bytes、サイズ上限 | 充足 | `src/shared/utils/imageMime.ts:1`, `:49`, `src/features/tasks/prReviewImageAttachments.ts:111` | 検証ロジックとテストあり |
+| 3 | `takt add --pr` と pipeline `--pr` で attachment 参照可能 | 充足 | `src/features/tasks/add/index.ts:215`, `src/features/pipeline/steps.ts:262` | 保存・staging 経路あり |
+| 4 | 利用者向け契約の追跡可能性 | 未充足 | `docs/cli-reference.md:16`, `docs/cli-reference.ja.md:16` | 追加挙動・制限・失敗条件が docs にない |
+
+## 観測した指摘
+| # | family_tag | カテゴリ | 重大度 | 場所 | 問題 | 修正案 |
+|---|------------|---------|--------|------|------|--------|
+| 1 | maintainability-readiness.pr-image-doc-contract | 保守困難化 | medium | `docs/cli-reference.md:16`, `docs/cli-reference.ja.md:16` | `--pr` が PR コメント内画像を取得・保存する新しい CLI/ファイル出力契約を持つが、docs には対象記法、GitHub attachment URL 限定、対応形式、10MiB、Content-Type/magic bytes 検証、private repo の `gh` 認証、`order.md` の `## 添付画像` 出力例、失敗条件が未記載 | `docs/cli-reference.md` / `.ja.md` に `--pr` 画像添付の挙動と制限を追記し、必要に応じて README の画像添付節にも PR 経路を追加する |
+
+## 検証証跡
+- ビルド: `npm run build` 成功
+- テスト: `npm run lint` 成功、`npm test` 成功（全 shard exit 0）
+- 動作確認: 実コード・差分・テストを再読し、F-0001〜F-0010 は再オープン根拠なしと確認。

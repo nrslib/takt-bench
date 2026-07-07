@@ -1,0 +1,16 @@
+ M docs/cli-reference.ja.md
+ M docs/cli-reference.md
+ M src/__tests__/addTask.test.ts
+ M src/__tests__/cli-routing-pr-resolve.test.ts
+ M src/__tests__/pipelineExecution.test.ts
+ M src/app/cli/routing-inputs.ts
+ M src/app/cli/routing.ts
+ M src/features/interactive/inlineImagePaste.ts
+ M src/features/pipeline/execute.ts
+ M src/features/pipeline/steps.ts
+ M src/features/tasks/add/index.ts
+?? src/__tests__/imageMime.test.ts
+?? src/__tests__/prReviewImageAttachments.test.ts
+?? src/__tests__/prReviewImageDownloader.test.ts
+?? src/features/tasks/prReviewImageAttachments.ts
+?? src/shared/utils/imageMime.ts
