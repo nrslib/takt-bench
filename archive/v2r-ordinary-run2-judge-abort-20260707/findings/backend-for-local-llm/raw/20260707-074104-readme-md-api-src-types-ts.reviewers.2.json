@@ -1,0 +1,87 @@
+[
+  {
+    "rawFindingId": "20260707-074104-readme-md-api-src-types-ts:reviewers:2:arch-review:finding-001-persists",
+    "stepName": "arch-review",
+    "reviewer": "arch-review",
+    "familyTag": "public-api-exposure",
+    "severity": "high",
+    "title": "インフラ実装クラスのパブリック API 露出",
+    "location": "src/index.ts:28, 334",
+    "description": "`InMemoryTaskRepository` クラスが `src/index.ts` で定義され、そのまま export されている。これはインフラ層の実装詳細をパブリック API からエクスポートしており、Knowledge の「パブリック API の公開範囲」にある「インフラ層の関数がパブリック API からエクスポートされている」という REJECT 基準に該当する。利用者は `TaskRepository` インターフェースを通じて対話すべきである。前回レビューで指摘されたが、修正されずに残っている。",
+    "suggestion": "`InMemoryTaskRepository` の定義を別ファイル（例: `src/infrastructure/InMemoryTaskRepository.ts`）に移動し、`src/index.ts` では `TaskService` のみを公開するか、DI 容器等を通じて提供するように変更する。",
+    "kind": "issue",
+    "targetFindingId": "F-0001"
+  },
+  {
+    "rawFindingId": "20260707-074104-readme-md-api-src-types-ts:reviewers:2:arch-review:res-002",
+    "stepName": "arch-review",
+    "reviewer": "arch-review",
+    "familyTag": "redundant-check",
+    "severity": "low",
+    "title": "保存後の冗長な存在確認チェックの解消確認",
+    "location": "src/index.ts:160, 209, 240, 259, 277",
+    "description": "TaskServiceの各更新メソッドにおいて、repo.save() 直後の repo.findById() による再取得とエラーチェックが削除され、構築したタスクオブジェクトを直接返却する実装に変更されたことを確認。 (src/index.ts:160, 209, 240, 259, 277)",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0002"
+  },
+  {
+    "rawFindingId": "20260707-074104-readme-md-api-src-types-ts:reviewers:2:arch-review:res-003",
+    "stepName": "arch-review",
+    "reviewer": "arch-review",
+    "familyTag": "unnecessary-date-creation",
+    "severity": "medium",
+    "title": "不必要な Date オブジェクトの再生成の解消確認",
+    "location": "src/index.ts:154, 155, 205, 236, 255, 273",
+    "description": "TaskServiceの各メソッドにおいて、不必要な `new Date(now.getTime())` が `now` そのものへの置換、または `cloneTask` による適切なコピー管理に変更されたことを確認。 (src/index.ts:154, 155, 205, 236, 255, 273)",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0003"
+  },
+  {
+    "rawFindingId": "20260707-074104-readme-md-api-src-types-ts:reviewers:2:ai-antipattern-review:confirm-F-0002",
+    "stepName": "ai-antipattern-review",
+    "reviewer": "ai-antipattern-review",
+    "familyTag": "dead-code",
+    "severity": "low",
+    "title": "保存後の冗長な存在確認チェックの解消確認",
+    "location": "src/index.ts:160, 209, 240, 259, 277",
+    "description": "src/index.ts:160, 209, 240, 259, 277 — repo.save() 直後の findById() による再取得とエラーチェックが削除され、構築したタスクオブジェクトを直接返却する実装に変更されていることを確認。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0002"
+  },
+  {
+    "rawFindingId": "20260707-074104-readme-md-api-src-types-ts:reviewers:2:coding-review:res-1",
+    "stepName": "coding-review",
+    "reviewer": "coding-review",
+    "familyTag": "coding-standard",
+    "severity": "medium",
+    "title": "不必要な Date オブジェクトの再生成の解消確認",
+    "location": "src/index.ts:154",
+    "description": "`src/index.ts:154-155` および `L205`, `L236`, `L255`, `L273` において、`createdAt: now, updatedAt: now` と修正されており、不必要な `new Date(now.getTime())` が排除されていることを確認。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0003"
+  },
+  {
+    "rawFindingId": "20260707-074104-readme-md-api-src-types-ts:reviewers:2:implementation-semantics-review:res-f0002",
+    "stepName": "implementation-semantics-review",
+    "reviewer": "implementation-semantics-review",
+    "familyTag": "redundant-check",
+    "severity": "low",
+    "title": "保存後の冗長な存在確認チェックが解消されたことを確認",
+    "location": "src/index.ts:160, 209, 240, 259, 277",
+    "description": "TaskService の各メソッドにおいて、`repo.save()` 直後の `repo.findById()` による再取得とエラーチェックが削除され、構築したタスクオブジェクトを直接返却する実装に変更されたことを確認しました。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0002"
+  },
+  {
+    "rawFindingId": "20260707-074104-readme-md-api-src-types-ts:reviewers:2:implementation-semantics-review:res-f0003",
+    "stepName": "implementation-semantics-review",
+    "reviewer": "implementation-semantics-review",
+    "familyTag": "date-object-creation",
+    "severity": "medium",
+    "title": "不必要な Date オブジェクトの再生成が解消されたことを確認",
+    "location": "src/index.ts:154-155, 205, 236, 255, 273",
+    "description": "`createdAt: new Date(now.getTime())` 等の冗長な生成が修正され、`createdAt: now` のように直接割り当てられる実装に変更されたことを確認しました。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0003"
+  }
+]

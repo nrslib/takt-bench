@@ -1,0 +1,86 @@
+[
+  {
+    "rawFindingId": "20260707-074104-readme-md-api-src-types-ts:reviewers:6:arch-review:res-005",
+    "stepName": "arch-review",
+    "reviewer": "arch-review",
+    "familyTag": "public-api-exposure",
+    "severity": "high",
+    "title": "インフラ実装クラスのパブリック API 露出の解消確認 (F-0004)",
+    "location": "src/index.ts:303, src/infrastructure/InMemoryTaskRepository.ts:35",
+    "description": "`InMemoryTaskRepository` が `src/index.ts` の export から完全に削除されたことを確認。これにより、インフラ層の実装詳細がパブリック API から隠蔽され、Knowledge の「パブリック API の公開範囲」基準および Ledger の F-0004 / F-0005 の要求を満たした。 (src/index.ts:303, src/infrastructure/InMemoryTaskRepository.ts:35)",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0004"
+  },
+  {
+    "rawFindingId": "20260707-074104-readme-md-api-src-types-ts:reviewers:6:arch-review:res-006",
+    "stepName": "arch-review",
+    "reviewer": "arch-review",
+    "familyTag": "public-api-exposure",
+    "severity": "high",
+    "title": "インフラ実装クラスのパブリック API 露出の解消確認 (F-0005)",
+    "location": "src/index.ts:303, src/infrastructure/InMemoryTaskRepository.ts:35",
+    "description": "`InMemoryTaskRepository` が `src/index.ts` の export から完全に削除されたことを確認。これにより、インフラ層の実装詳細がパブリック API から隠蔽され、Knowledge の「パブリック API の公開範囲」基準および Ledger の F-0004 / F-0005 の要求を満たした。 (src/index.ts:303, src/infrastructure/InMemoryTaskRepository.ts:35)",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0005"
+  },
+  {
+    "rawFindingId": "20260707-074104-readme-md-api-src-types-ts:reviewers:6:ai-antipattern-review:confirm-F-0001-final-2",
+    "stepName": "ai-antipattern-review",
+    "reviewer": "ai-antipattern-review",
+    "familyTag": "infrastructure-leak",
+    "severity": "high",
+    "title": "インフラ実装クラスのパブリック API 露出の解消確認",
+    "location": "src/index.ts:25",
+    "description": "src/index.ts において `InMemoryTaskRepository` の export が削除されており、実装詳細が適切に隠蔽されていることを確認。これにより F-0001, F-0004, F-0005 が解消された。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0001"
+  },
+  {
+    "rawFindingId": "20260707-074104-readme-md-api-src-types-ts:reviewers:6:coding-review:res-4",
+    "stepName": "coding-review",
+    "reviewer": "coding-review",
+    "familyTag": "arch-standard",
+    "severity": "high",
+    "title": "インフラ実装クラスのパブリック API 露出の解消確認 (F-0004)",
+    "location": "src/index.ts:25",
+    "description": "`src/index.ts:25` において `export { InMemoryTaskRepository }` が削除されており、インフラ実装クラスがパブリック API から完全に隠蔽されたことを確認。これにより、`TaskRepository` インターフェースを介した利用が強制され、アーキテクチャ上の制約が満たされた。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0004"
+  },
+  {
+    "rawFindingId": "20260707-074104-readme-md-api-src-types-ts:reviewers:6:coding-review:res-5",
+    "stepName": "coding-review",
+    "reviewer": "coding-review",
+    "familyTag": "arch-standard",
+    "severity": "high",
+    "title": "インフラ実装クラスのパブリック API 露出の解消確認 (F-0005)",
+    "location": "src/index.ts:25",
+    "description": "`src/index.ts:25` において `export { InMemoryTaskRepository }` が削除されており、インフラ実装クラスがパブリック API から完全に隠蔽されたことを確認。これにより、`TaskRepository` インターフェースを介した利用が強制され、アーキテクチャ上の制約が満たされた。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0005"
+  },
+  {
+    "rawFindingId": "20260707-074104-readme-md-api-src-types-ts:reviewers:6:implementation-semantics-review:res-f0004-0005",
+    "stepName": "implementation-semantics-review",
+    "reviewer": "implementation-semantics-review",
+    "familyTag": "infrastructure-leak",
+    "severity": "high",
+    "title": "インフラ実装クラスのパブリック API 露出が解消されたことを確認",
+    "location": "src/index.ts:25",
+    "description": "`src/index.ts:25` から `export { InMemoryTaskRepository }` が削除され、インフラ実装詳細がパブリック API に露出していないことを確認しました。これにより F-0004 および F-0005 が解消されています。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0004"
+  },
+  {
+    "rawFindingId": "20260707-074104-readme-md-api-src-types-ts:reviewers:6:implementation-semantics-review:res-f0005-sync",
+    "stepName": "implementation-semantics-review",
+    "reviewer": "implementation-semantics-review",
+    "familyTag": "infrastructure-leak",
+    "severity": "high",
+    "title": "インフラ実装クラスのパブリック API 露出が解消されたことを確認",
+    "location": "src/index.ts:25",
+    "description": "`src/index.ts:25` から `export { InMemoryTaskRepository }` が削除されたことを確認しました。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0005"
+  }
+]

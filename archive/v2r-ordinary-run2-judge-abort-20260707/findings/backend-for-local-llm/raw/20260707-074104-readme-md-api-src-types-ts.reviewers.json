@@ -1,0 +1,38 @@
+[
+  {
+    "rawFindingId": "20260707-074104-readme-md-api-src-types-ts:reviewers:1:arch-review:finding-001",
+    "stepName": "arch-review",
+    "reviewer": "arch-review",
+    "familyTag": "public-api-exposure",
+    "severity": "high",
+    "title": "インフラ実装クラスのパブリック API 露出",
+    "location": "src/index.ts:28, 354",
+    "description": "`InMemoryTaskRepository` クラスが `src/index.ts` で定義され、そのまま export されている。これはインフラ層の実装詳細をパブリック API からエクスポートしており、Knowledge の「パブリック API の公開範囲」にある「インフラ層の関数がパブリック API からエクスポートされている」という REJECT 基準に該当する。利用者は `TaskRepository` インターフェースを通じて対話すべきである。",
+    "suggestion": "`InMemoryTaskRepository` の定義を別ファイル（例: `src/infrastructure/InMemoryTaskRepository.ts`）に移動し、`src/index.ts` では `TaskService` のみを公開するか、DI 容器等を通じて提供するように変更する。",
+    "kind": "issue"
+  },
+  {
+    "rawFindingId": "20260707-074104-readme-md-api-src-types-ts:reviewers:1:ai-antipattern-review:finding-redundant-save-check",
+    "stepName": "ai-antipattern-review",
+    "reviewer": "ai-antipattern-review",
+    "familyTag": "dead-code",
+    "severity": "low",
+    "title": "保存後の冗長な存在確認チェック",
+    "location": "src/index.ts:159-163, 210-214, 246-250, 270-274, 293-297",
+    "description": "TaskServiceの各更新メソッド（createTask, updateTask, changeStatus, assign, unassign）において、repo.save() 後に repo.findById() を呼び出して保存結果を再取得し、存在しない場合にエラーをスローする実装になっている。InMemoryTaskRepository は同期的に動作し、save() は必ず成功するため、この再取得とチェックは到達不能なコードであり、冗長である。",
+    "suggestion": "repo.save() 直後の findById() による再取得とエラーチェックを削除し、構築したタスクオブジェクトを直接返却するように修正してください。",
+    "kind": "issue"
+  },
+  {
+    "rawFindingId": "20260707-074104-readme-md-api-src-types-ts:reviewers:1:coding-review:issue-1",
+    "stepName": "coding-review",
+    "reviewer": "coding-review",
+    "familyTag": "coding-standard",
+    "severity": "medium",
+    "title": "不必要な Date オブジェクトの再生成",
+    "location": "src/index.ts:152",
+    "description": "`createdAt: new Date(now.getTime())` のように、既に Date オブジェクトである `now` の時間を取得して新しい Date オブジェクトを生成していますが、これは不要です。`now` をそのまま利用するか、不変性を担保したい場合は `new Date(now)` と簡潔に記述できます。",
+    "suggestion": "`createdAt: now, updatedAt: now` とするか、コピーが必要な場合は `new Date(now)` としてください（同様に L153, L205, L241, L265, L288 にも存在します）。",
+    "kind": "issue"
+  }
+]

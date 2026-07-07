@@ -1,0 +1,61 @@
+{
+  "version": 1,
+  "runId": "20260707-074104-readme-md-api-src-types-ts",
+  "stepName": "reviewers",
+  "retryCount": 1,
+  "ledgerUpdated": true,
+  "finalErrors": [],
+  "attempts": [
+    {
+      "attempt": 1,
+      "managerOutput": {
+        "matches": [],
+        "newFindings": [
+          {
+            "rawFindingIds": [
+              "20260707-074104-readme-md-api-src-types-ts:reviewers:5:implementation-semantics-review:issue-infra-export-regression"
+            ],
+            "title": "インフラ実装クラスのパブリック API 露出（リグレッション）",
+            "severity": "high"
+          }
+        ],
+        "resolvedFindings": [
+          {
+            "findingId": "F-0001",
+            "rawFindingIds": [
+              "20260707-074104-readme-md-api-src-types-ts:reviewers:5:arch-review:res-004",
+              "20260707-074104-readme-md-api-src-types-ts:reviewers:5:ai-antipattern-review:confirm-F-0001",
+              "20260707-074104-readme-md-api-src-types-ts:reviewers:5:coding-review:res-3"
+            ],
+            "evidence": "current raw findings に kind=resolution_confirmation かつ targetFindingId=F-0001 の確認があり、少なくとも arch-review:res-004 は既存 F-0001 と同じ public-api-exposure familyTag で `src/index.ts` から `InMemoryTaskRepository` export が削除されたと確認している。"
+          }
+        ],
+        "reopenedFindings": [],
+        "conflicts": [
+          {
+            "findingIds": [
+              "F-0001"
+            ],
+            "rawFindingIds": [
+              "20260707-074104-readme-md-api-src-types-ts:reviewers:5:arch-review:res-004",
+              "20260707-074104-readme-md-api-src-types-ts:reviewers:5:ai-antipattern-review:confirm-F-0001",
+              "20260707-074104-readme-md-api-src-types-ts:reviewers:5:coding-review:res-3",
+              "20260707-074104-readme-md-api-src-types-ts:reviewers:5:implementation-semantics-review:issue-infra-export-regression"
+            ],
+            "description": "3件の resolution_confirmation は F-0001 の解消を確認している一方、implementation-semantics-review は同じ `src/index.ts:25` のインフラ実装クラス export が残っているとして issue を報告しており、同一実体の状態について矛盾している。"
+          }
+        ],
+        "resolvedConflicts": [],
+        "waivedFindings": [],
+        "disputeNotes": []
+      },
+      "validationErrors": [
+        "Raw finding id \"20260707-074104-readme-md-api-src-types-ts:reviewers:5:arch-review:res-004\" appears in multiple manager decisions: resolvedFindings[0] and conflicts[0]",
+        "Raw finding id \"20260707-074104-readme-md-api-src-types-ts:reviewers:5:ai-antipattern-review:confirm-F-0001\" appears in multiple manager decisions: resolvedFindings[0] and conflicts[0]",
+        "Raw finding id \"20260707-074104-readme-md-api-src-types-ts:reviewers:5:coding-review:res-3\" appears in multiple manager decisions: resolvedFindings[0] and conflicts[0]",
+        "Raw finding id \"20260707-074104-readme-md-api-src-types-ts:reviewers:5:implementation-semantics-review:issue-infra-export-regression\" appears in multiple manager decisions: newFindings[0] and conflicts[0]",
+        "Finding id \"F-0001\" appears in multiple manager decisions: resolvedFindings[0] and conflicts[0]"
+      ]
+    }
+  ]
+}

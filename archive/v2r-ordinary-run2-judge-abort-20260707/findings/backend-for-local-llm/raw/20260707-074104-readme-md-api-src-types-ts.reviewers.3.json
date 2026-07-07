@@ -1,0 +1,50 @@
+[
+  {
+    "rawFindingId": "20260707-074104-readme-md-api-src-types-ts:reviewers:3:arch-review:res-001",
+    "stepName": "arch-review",
+    "reviewer": "arch-review",
+    "familyTag": "public-api-exposure",
+    "severity": "high",
+    "title": "インフラ実装クラスのパブリック API 露出の解消確認",
+    "location": "src/index.ts:304, src/infrastructure/InMemoryTaskRepository.ts:35",
+    "description": "`InMemoryTaskRepository` は `src/infrastructure/InMemoryTaskRepository.ts` に移動され、`src/index.ts` の export から削除されたことを確認。これにより、インフラ層の実装詳細がパブリック API から隠蔽され、Knowledge の「パブリック API の公開範囲」基準に準拠した。 (src/index.ts:304, src/infrastructure/InMemoryTaskRepository.ts:35)",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0001"
+  },
+  {
+    "rawFindingId": "20260707-074104-readme-md-api-src-types-ts:reviewers:3:ai-antipattern-review:confirm-F-0001",
+    "stepName": "ai-antipattern-review",
+    "reviewer": "ai-antipattern-review",
+    "familyTag": "infrastructure-leak",
+    "severity": "high",
+    "title": "インフラ実装クラスのパブリック API 露出の解消確認",
+    "location": "src/index.ts:25, 304",
+    "description": "src/index.ts:25 — `InMemoryTaskRepository` が `./infrastructure/InMemoryTaskRepository.js` から import されており、`src/index.ts` 内で定義され export されていた前回までの状態から改善されていることを確認。パブリック API からの実装詳細の露出が解消された。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0001"
+  },
+  {
+    "rawFindingId": "20260707-074104-readme-md-api-src-types-ts:reviewers:3:coding-review:res-2",
+    "stepName": "coding-review",
+    "reviewer": "coding-review",
+    "familyTag": "arch-standard",
+    "severity": "high",
+    "title": "インフラ実装クラスのパブリック API 露出の解消確認",
+    "location": "src/index.ts:25, 304",
+    "description": "`src/index.ts:25` において、`InMemoryTaskRepository` が `src/infrastructure/InMemoryTaskRepository.js` からインポートされ、`src/index.ts` の export リスト（L304）から除外されていることを確認。これにより、インフラ実装クラスがパブリック API から露出せず、`TaskRepository` インターフェースを介した利用が強制されるようになり、要件が満たされた。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0001"
+  },
+  {
+    "rawFindingId": "20260707-074104-readme-md-api-src-types-ts:reviewers:3:implementation-semantics-review:res-f0001",
+    "stepName": "implementation-semantics-review",
+    "reviewer": "implementation-semantics-review",
+    "familyTag": "infrastructure-leak",
+    "severity": "high",
+    "title": "インフラ実装クラスのパブリック API 露出が解消されたことを確認",
+    "location": "src/index.ts:25, 304",
+    "description": "`InMemoryTaskRepository` の定義が `src/index.ts` から削除され、`./infrastructure/InMemoryTaskRepository.js` からインポートされる形式に変更されたことを確認しました。また、ファイル末尾の `export { TaskService };` により、`InMemoryTaskRepository` がパブリック API としてエクスポートされていないことを確認しました。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0001"
+  }
+]

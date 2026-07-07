@@ -1,0 +1,403 @@
+{
+  "version": 1,
+  "workflowName": "backend-for-local-llm-refresh",
+  "nextId": 6,
+  "updatedAt": "2026-07-07T08:56:38.406Z",
+  "findings": [
+    {
+      "id": "F-0001",
+      "status": "resolved",
+      "lifecycle": "resolved",
+      "severity": "high",
+      "title": "インフラ実装クラスのパブリック API 露出",
+      "location": "src/index.ts:25",
+      "description": "`InMemoryTaskRepository` が `src/index.ts:25` から re-export されている。これは Knowledge の「パブリック API の公開範囲」にある「インフラ層の関数がパブリック API からエクスポートされている」という REJECT 基準に完全に該当する。一度は別ファイルに移動して隠蔽されたが、今回の変更で再びパブリック API に露出した。これは明らかな設計上の後退（リグレッション）である。",
+      "suggestion": "`src/index.ts` から `InMemoryTaskRepository` の export を削除し、インフラ実装を非公開にする。テストが必要な場合は、テストコードから `src/infrastructure/InMemoryTaskRepository.ts` を直接 import する（既にそのように修正されているはずである）。",
+      "reviewers": [
+        "arch-review"
+      ],
+      "rawFindingIds": [
+        "20260707-074104-readme-md-api-src-types-ts:reviewers:1:arch-review:finding-001",
+        "20260707-074104-readme-md-api-src-types-ts:reviewers:2:arch-review:finding-001-persists",
+        "20260707-074104-readme-md-api-src-types-ts:reviewers:4:arch-review:finding-001-regression"
+      ],
+      "firstSeen": {
+        "runId": "20260707-074104-readme-md-api-src-types-ts",
+        "stepName": "arch-review",
+        "timestamp": "2026-07-07T07:57:37.770Z"
+      },
+      "lastSeen": {
+        "runId": "20260707-074104-readme-md-api-src-types-ts",
+        "stepName": "reviewers",
+        "timestamp": "2026-07-07T08:33:06.232Z"
+      },
+      "resolvedAt": "2026-07-07T08:56:38.406Z",
+      "resolvedEvidence": "current raw findings に kind=resolution_confirmation かつ targetFindingId=F-0001 の確認が複数あり、F-0001 の対象である src/index.ts からの InMemoryTaskRepository 公開 API 露出が削除されたことを確認している。",
+      "reopenedEvidence": "既存 F-0001 は lifecycle=resolved だが、current raw finding が targetFindingId=F-0001、familyTag=public-api-exposure、location=src/index.ts:25 で同じ InMemoryTaskRepository の public API 露出を issue として報告しているため再発と判断。",
+      "disputes": [
+        {
+          "reason": "coder はスコープ外として修正不要と申告しているが、直前ステップ応答に F-0001 の妥当な file:line 証跡を伴う明示的な waiver 根拠がなく、current raw findings でも同一問題が継続報告されているため waiver 不承認。",
+          "evidence": "ledger: src/index.ts:28, 354; current raw: src/index.ts:28, 334",
+          "recordedAt": {
+            "runId": "20260707-074104-readme-md-api-src-types-ts",
+            "stepName": "reviewers",
+            "timestamp": "2026-07-07T08:03:54.934Z"
+          }
+        }
+      ]
+    },
+    {
+      "id": "F-0002",
+      "status": "resolved",
+      "lifecycle": "resolved",
+      "severity": "low",
+      "title": "保存後の冗長な存在確認チェック",
+      "location": "src/index.ts:159-163, 210-214, 246-250, 270-274, 293-297",
+      "description": "TaskServiceの各更新メソッド（createTask, updateTask, changeStatus, assign, unassign）において、repo.save() 後に repo.findById() を呼び出して保存結果を再取得し、存在しない場合にエラーをスローする実装になっている。InMemoryTaskRepository は同期的に動作し、save() は必ず成功するため、この再取得とチェックは到達不能なコードであり、冗長である。",
+      "suggestion": "repo.save() 直後の findById() による再取得とエラーチェックを削除し、構築したタスクオブジェクトを直接返却するように修正してください。",
+      "reviewers": [
+        "ai-antipattern-review"
+      ],
+      "rawFindingIds": [
+        "20260707-074104-readme-md-api-src-types-ts:reviewers:1:ai-antipattern-review:finding-redundant-save-check"
+      ],
+      "firstSeen": {
+        "runId": "20260707-074104-readme-md-api-src-types-ts",
+        "stepName": "ai-antipattern-review",
+        "timestamp": "2026-07-07T07:57:37.770Z"
+      },
+      "lastSeen": {
+        "runId": "20260707-074104-readme-md-api-src-types-ts",
+        "stepName": "reviewers",
+        "timestamp": "2026-07-07T07:57:37.770Z"
+      },
+      "resolvedAt": "2026-07-07T08:03:54.934Z",
+      "resolvedEvidence": "current raw findings に kind=resolution_confirmation かつ targetFindingId=F-0002 の確認があり、repo.save() 後の findById() 再取得とエラーチェック削除を確認している。"
+    },
+    {
+      "id": "F-0003",
+      "status": "resolved",
+      "lifecycle": "resolved",
+      "severity": "medium",
+      "title": "不必要な Date オブジェクトの再生成",
+      "location": "src/index.ts:152",
+      "description": "`createdAt: new Date(now.getTime())` のように、既に Date オブジェクトである `now` の時間を取得して新しい Date オブジェクトを生成していますが、これは不要です。`now` をそのまま利用するか、不変性を担保したい場合は `new Date(now)` と簡潔に記述できます。",
+      "suggestion": "`createdAt: now, updatedAt: now` とするか、コピーが必要な場合は `new Date(now)` としてください（同様に L153, L205, L241, L265, L288 にも存在します）。",
+      "reviewers": [
+        "coding-review"
+      ],
+      "rawFindingIds": [
+        "20260707-074104-readme-md-api-src-types-ts:reviewers:1:coding-review:issue-1"
+      ],
+      "firstSeen": {
+        "runId": "20260707-074104-readme-md-api-src-types-ts",
+        "stepName": "coding-review",
+        "timestamp": "2026-07-07T07:57:37.770Z"
+      },
+      "lastSeen": {
+        "runId": "20260707-074104-readme-md-api-src-types-ts",
+        "stepName": "reviewers",
+        "timestamp": "2026-07-07T07:57:37.770Z"
+      },
+      "resolvedAt": "2026-07-07T08:03:54.934Z",
+      "resolvedEvidence": "current raw findings に kind=resolution_confirmation かつ targetFindingId=F-0003 の確認があり、new Date(now.getTime()) の冗長な Date 再生成が削除されたことを確認している。"
+    },
+    {
+      "id": "F-0004",
+      "status": "open",
+      "lifecycle": "new",
+      "severity": "high",
+      "title": "インフラ実装クラスのパブリック API 露出（リグレッション）",
+      "location": "src/index.ts:25",
+      "description": "`InMemoryTaskRepository` が `src/index.ts` で `export` されている。前回レビューでこの問題は解消され、`src/index.ts` では `TaskService` のみを公開する構成になっていたが、今回の変更で再びパブリック API としてエクスポートされており、リグレッションが発生している。これは「内部実装のパブリック API エクスポート」という REJECT 基準に該当する。",
+      "suggestion": "`src/index.ts` から `export { InMemoryTaskRepository }` を削除し、利用者が実装詳細に依存せず `TaskRepository` インターフェースを通じて利用する構成に戻してください。",
+      "reviewers": [
+        "coding-review"
+      ],
+      "rawFindingIds": [
+        "20260707-074104-readme-md-api-src-types-ts:reviewers:4:coding-review:issue-1"
+      ],
+      "firstSeen": {
+        "runId": "20260707-074104-readme-md-api-src-types-ts",
+        "stepName": "coding-review",
+        "timestamp": "2026-07-07T08:33:06.232Z"
+      },
+      "lastSeen": {
+        "runId": "20260707-074104-readme-md-api-src-types-ts",
+        "stepName": "reviewers",
+        "timestamp": "2026-07-07T08:33:06.232Z"
+      }
+    },
+    {
+      "id": "F-0005",
+      "status": "open",
+      "lifecycle": "new",
+      "severity": "high",
+      "title": "インフラ実装クラスのパブリック API 露出（リグレッション）",
+      "location": "src/index.ts:25",
+      "description": "`InMemoryTaskRepository` が `src/index.ts:25` から `export` されており、インフラ層の実装詳細がパブリック API に露出しています。これは Ledger ID `F-0001` および `F-0004` で指摘されている問題のリグレッションであり、「内部実装のパブリック API エクスポート」という REJECT 基準に該当します。",
+      "suggestion": "`src/index.ts` から `export { InMemoryTaskRepository }` を削除し、利用者が `TaskRepository` インターフェースを通じてのみリポジトリを利用できる構成に戻してください。",
+      "reviewers": [
+        "implementation-semantics-review"
+      ],
+      "rawFindingIds": [
+        "20260707-074104-readme-md-api-src-types-ts:reviewers:5:implementation-semantics-review:issue-infra-export-regression"
+      ],
+      "firstSeen": {
+        "runId": "20260707-074104-readme-md-api-src-types-ts",
+        "stepName": "implementation-semantics-review",
+        "timestamp": "2026-07-07T08:56:38.406Z"
+      },
+      "lastSeen": {
+        "runId": "20260707-074104-readme-md-api-src-types-ts",
+        "stepName": "reviewers",
+        "timestamp": "2026-07-07T08:56:38.406Z"
+      }
+    }
+  ],
+  "rawFindings": [
+    {
+      "rawFindingId": "20260707-074104-readme-md-api-src-types-ts:reviewers:1:arch-review:finding-001",
+      "stepName": "arch-review",
+      "reviewer": "arch-review",
+      "familyTag": "public-api-exposure",
+      "severity": "high",
+      "title": "インフラ実装クラスのパブリック API 露出",
+      "location": "src/index.ts:28, 354",
+      "description": "`InMemoryTaskRepository` クラスが `src/index.ts` で定義され、そのまま export されている。これはインフラ層の実装詳細をパブリック API からエクスポートしており、Knowledge の「パブリック API の公開範囲」にある「インフラ層の関数がパブリック API からエクスポートされている」という REJECT 基準に該当する。利用者は `TaskRepository` インターフェースを通じて対話すべきである。",
+      "suggestion": "`InMemoryTaskRepository` の定義を別ファイル（例: `src/infrastructure/InMemoryTaskRepository.ts`）に移動し、`src/index.ts` では `TaskService` のみを公開するか、DI 容器等を通じて提供するように変更する。",
+      "kind": "issue"
+    },
+    {
+      "rawFindingId": "20260707-074104-readme-md-api-src-types-ts:reviewers:1:ai-antipattern-review:finding-redundant-save-check",
+      "stepName": "ai-antipattern-review",
+      "reviewer": "ai-antipattern-review",
+      "familyTag": "dead-code",
+      "severity": "low",
+      "title": "保存後の冗長な存在確認チェック",
+      "location": "src/index.ts:159-163, 210-214, 246-250, 270-274, 293-297",
+      "description": "TaskServiceの各更新メソッド（createTask, updateTask, changeStatus, assign, unassign）において、repo.save() 後に repo.findById() を呼び出して保存結果を再取得し、存在しない場合にエラーをスローする実装になっている。InMemoryTaskRepository は同期的に動作し、save() は必ず成功するため、この再取得とチェックは到達不能なコードであり、冗長である。",
+      "suggestion": "repo.save() 直後の findById() による再取得とエラーチェックを削除し、構築したタスクオブジェクトを直接返却するように修正してください。",
+      "kind": "issue"
+    },
+    {
+      "rawFindingId": "20260707-074104-readme-md-api-src-types-ts:reviewers:1:coding-review:issue-1",
+      "stepName": "coding-review",
+      "reviewer": "coding-review",
+      "familyTag": "coding-standard",
+      "severity": "medium",
+      "title": "不必要な Date オブジェクトの再生成",
+      "location": "src/index.ts:152",
+      "description": "`createdAt: new Date(now.getTime())` のように、既に Date オブジェクトである `now` の時間を取得して新しい Date オブジェクトを生成していますが、これは不要です。`now` をそのまま利用するか、不変性を担保したい場合は `new Date(now)` と簡潔に記述できます。",
+      "suggestion": "`createdAt: now, updatedAt: now` とするか、コピーが必要な場合は `new Date(now)` としてください（同様に L153, L205, L241, L265, L288 にも存在します）。",
+      "kind": "issue"
+    },
+    {
+      "rawFindingId": "20260707-074104-readme-md-api-src-types-ts:reviewers:2:arch-review:finding-001-persists",
+      "stepName": "arch-review",
+      "reviewer": "arch-review",
+      "familyTag": "public-api-exposure",
+      "severity": "high",
+      "title": "インフラ実装クラスのパブリック API 露出",
+      "location": "src/index.ts:28, 334",
+      "description": "`InMemoryTaskRepository` クラスが `src/index.ts` で定義され、そのまま export されている。これはインフラ層の実装詳細をパブリック API からエクスポートしており、Knowledge の「パブリック API の公開範囲」にある「インフラ層の関数がパブリック API からエクスポートされている」という REJECT 基準に該当する。利用者は `TaskRepository` インターフェースを通じて対話すべきである。前回レビューで指摘されたが、修正されずに残っている。",
+      "suggestion": "`InMemoryTaskRepository` の定義を別ファイル（例: `src/infrastructure/InMemoryTaskRepository.ts`）に移動し、`src/index.ts` では `TaskService` のみを公開するか、DI 容器等を通じて提供するように変更する。",
+      "kind": "issue",
+      "targetFindingId": "F-0001"
+    },
+    {
+      "rawFindingId": "20260707-074104-readme-md-api-src-types-ts:reviewers:2:arch-review:res-002",
+      "stepName": "arch-review",
+      "reviewer": "arch-review",
+      "familyTag": "redundant-check",
+      "severity": "low",
+      "title": "保存後の冗長な存在確認チェックの解消確認",
+      "location": "src/index.ts:160, 209, 240, 259, 277",
+      "description": "TaskServiceの各更新メソッドにおいて、repo.save() 直後の repo.findById() による再取得とエラーチェックが削除され、構築したタスクオブジェクトを直接返却する実装に変更されたことを確認。 (src/index.ts:160, 209, 240, 259, 277)",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0002"
+    },
+    {
+      "rawFindingId": "20260707-074104-readme-md-api-src-types-ts:reviewers:2:arch-review:res-003",
+      "stepName": "arch-review",
+      "reviewer": "arch-review",
+      "familyTag": "unnecessary-date-creation",
+      "severity": "medium",
+      "title": "不必要な Date オブジェクトの再生成の解消確認",
+      "location": "src/index.ts:154, 155, 205, 236, 255, 273",
+      "description": "TaskServiceの各メソッドにおいて、不必要な `new Date(now.getTime())` が `now` そのものへの置換、または `cloneTask` による適切なコピー管理に変更されたことを確認。 (src/index.ts:154, 155, 205, 236, 255, 273)",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0003"
+    },
+    {
+      "rawFindingId": "20260707-074104-readme-md-api-src-types-ts:reviewers:2:ai-antipattern-review:confirm-F-0002",
+      "stepName": "ai-antipattern-review",
+      "reviewer": "ai-antipattern-review",
+      "familyTag": "dead-code",
+      "severity": "low",
+      "title": "保存後の冗長な存在確認チェックの解消確認",
+      "location": "src/index.ts:160, 209, 240, 259, 277",
+      "description": "src/index.ts:160, 209, 240, 259, 277 — repo.save() 直後の findById() による再取得とエラーチェックが削除され、構築したタスクオブジェクトを直接返却する実装に変更されていることを確認。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0002"
+    },
+    {
+      "rawFindingId": "20260707-074104-readme-md-api-src-types-ts:reviewers:2:coding-review:res-1",
+      "stepName": "coding-review",
+      "reviewer": "coding-review",
+      "familyTag": "coding-standard",
+      "severity": "medium",
+      "title": "不必要な Date オブジェクトの再生成の解消確認",
+      "location": "src/index.ts:154",
+      "description": "`src/index.ts:154-155` および `L205`, `L236`, `L255`, `L273` において、`createdAt: now, updatedAt: now` と修正されており、不必要な `new Date(now.getTime())` が排除されていることを確認。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0003"
+    },
+    {
+      "rawFindingId": "20260707-074104-readme-md-api-src-types-ts:reviewers:2:implementation-semantics-review:res-f0002",
+      "stepName": "implementation-semantics-review",
+      "reviewer": "implementation-semantics-review",
+      "familyTag": "redundant-check",
+      "severity": "low",
+      "title": "保存後の冗長な存在確認チェックが解消されたことを確認",
+      "location": "src/index.ts:160, 209, 240, 259, 277",
+      "description": "TaskService の各メソッドにおいて、`repo.save()` 直後の `repo.findById()` による再取得とエラーチェックが削除され、構築したタスクオブジェクトを直接返却する実装に変更されたことを確認しました。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0002"
+    },
+    {
+      "rawFindingId": "20260707-074104-readme-md-api-src-types-ts:reviewers:2:implementation-semantics-review:res-f0003",
+      "stepName": "implementation-semantics-review",
+      "reviewer": "implementation-semantics-review",
+      "familyTag": "date-object-creation",
+      "severity": "medium",
+      "title": "不必要な Date オブジェクトの再生成が解消されたことを確認",
+      "location": "src/index.ts:154-155, 205, 236, 255, 273",
+      "description": "`createdAt: new Date(now.getTime())` 等の冗長な生成が修正され、`createdAt: now` のように直接割り当てられる実装に変更されたことを確認しました。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0003"
+    },
+    {
+      "rawFindingId": "20260707-074104-readme-md-api-src-types-ts:reviewers:3:arch-review:res-001",
+      "stepName": "arch-review",
+      "reviewer": "arch-review",
+      "familyTag": "public-api-exposure",
+      "severity": "high",
+      "title": "インフラ実装クラスのパブリック API 露出の解消確認",
+      "location": "src/index.ts:304, src/infrastructure/InMemoryTaskRepository.ts:35",
+      "description": "`InMemoryTaskRepository` は `src/infrastructure/InMemoryTaskRepository.ts` に移動され、`src/index.ts` の export から削除されたことを確認。これにより、インフラ層の実装詳細がパブリック API から隠蔽され、Knowledge の「パブリック API の公開範囲」基準に準拠した。 (src/index.ts:304, src/infrastructure/InMemoryTaskRepository.ts:35)",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0001"
+    },
+    {
+      "rawFindingId": "20260707-074104-readme-md-api-src-types-ts:reviewers:3:ai-antipattern-review:confirm-F-0001",
+      "stepName": "ai-antipattern-review",
+      "reviewer": "ai-antipattern-review",
+      "familyTag": "infrastructure-leak",
+      "severity": "high",
+      "title": "インフラ実装クラスのパブリック API 露出の解消確認",
+      "location": "src/index.ts:25, 304",
+      "description": "src/index.ts:25 — `InMemoryTaskRepository` が `./infrastructure/InMemoryTaskRepository.js` から import されており、`src/index.ts` 内で定義され export されていた前回までの状態から改善されていることを確認。パブリック API からの実装詳細の露出が解消された。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0001"
+    },
+    {
+      "rawFindingId": "20260707-074104-readme-md-api-src-types-ts:reviewers:3:coding-review:res-2",
+      "stepName": "coding-review",
+      "reviewer": "coding-review",
+      "familyTag": "arch-standard",
+      "severity": "high",
+      "title": "インフラ実装クラスのパブリック API 露出の解消確認",
+      "location": "src/index.ts:25, 304",
+      "description": "`src/index.ts:25` において、`InMemoryTaskRepository` が `src/infrastructure/InMemoryTaskRepository.js` からインポートされ、`src/index.ts` の export リスト（L304）から除外されていることを確認。これにより、インフラ実装クラスがパブリック API から露出せず、`TaskRepository` インターフェースを介した利用が強制されるようになり、要件が満たされた。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0001"
+    },
+    {
+      "rawFindingId": "20260707-074104-readme-md-api-src-types-ts:reviewers:3:implementation-semantics-review:res-f0001",
+      "stepName": "implementation-semantics-review",
+      "reviewer": "implementation-semantics-review",
+      "familyTag": "infrastructure-leak",
+      "severity": "high",
+      "title": "インフラ実装クラスのパブリック API 露出が解消されたことを確認",
+      "location": "src/index.ts:25, 304",
+      "description": "`InMemoryTaskRepository` の定義が `src/index.ts` から削除され、`./infrastructure/InMemoryTaskRepository.js` からインポートされる形式に変更されたことを確認しました。また、ファイル末尾の `export { TaskService };` により、`InMemoryTaskRepository` がパブリック API としてエクスポートされていないことを確認しました。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0001"
+    },
+    {
+      "rawFindingId": "20260707-074104-readme-md-api-src-types-ts:reviewers:4:arch-review:finding-001-regression",
+      "stepName": "arch-review",
+      "reviewer": "arch-review",
+      "familyTag": "public-api-exposure",
+      "severity": "critical",
+      "title": "インフラ実装クラスのパブリック API 露出（再発）",
+      "location": "src/index.ts:25",
+      "description": "`InMemoryTaskRepository` が `src/index.ts:25` から re-export されている。これは Knowledge の「パブリック API の公開範囲」にある「インフラ層の関数がパブリック API からエクスポートされている」という REJECT 基準に完全に該当する。一度は別ファイルに移動して隠蔽されたが、今回の変更で再びパブリック API に露出した。これは明らかな設計上の後退（リグレッション）である。",
+      "suggestion": "`src/index.ts` から `InMemoryTaskRepository` の export を削除し、インフラ実装を非公開にする。テストが必要な場合は、テストコードから `src/infrastructure/InMemoryTaskRepository.ts` を直接 import する（既にそのように修正されているはずである）。",
+      "kind": "issue",
+      "targetFindingId": "F-0001"
+    },
+    {
+      "rawFindingId": "20260707-074104-readme-md-api-src-types-ts:reviewers:4:coding-review:issue-1",
+      "stepName": "coding-review",
+      "reviewer": "coding-review",
+      "familyTag": "arch-standard",
+      "severity": "high",
+      "title": "インフラ実装クラスのパブリック API 露出（リグレッション）",
+      "location": "src/index.ts:25",
+      "description": "`InMemoryTaskRepository` が `src/index.ts` で `export` されている。前回レビューでこの問題は解消され、`src/index.ts` では `TaskService` のみを公開する構成になっていたが、今回の変更で再びパブリック API としてエクスポートされており、リグレッションが発生している。これは「内部実装のパブリック API エクスポート」という REJECT 基準に該当する。",
+      "suggestion": "`src/index.ts` から `export { InMemoryTaskRepository }` を削除し、利用者が実装詳細に依存せず `TaskRepository` インターフェースを通じて利用する構成に戻してください。",
+      "kind": "issue"
+    },
+    {
+      "rawFindingId": "20260707-074104-readme-md-api-src-types-ts:reviewers:5:arch-review:res-004",
+      "stepName": "arch-review",
+      "reviewer": "arch-review",
+      "familyTag": "public-api-exposure",
+      "severity": "high",
+      "title": "インフラ実装クラスのパブリック API 露出の完全解消確認",
+      "location": "src/index.ts:303, src/infrastructure/InMemoryTaskRepository.ts:35",
+      "description": "`InMemoryTaskRepository` が `src/index.ts` の export から完全に削除されたことを確認。これにより、インフラ層の実装詳細がパブリック API から隠蔽され、Knowledge の「パブリック API の公開範囲」基準および Ledger の F-0001 / F-0004 の要求を満たした。 (src/index.ts:303, src/infrastructure/InMemoryTaskRepository.ts:35)",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0001"
+    },
+    {
+      "rawFindingId": "20260707-074104-readme-md-api-src-types-ts:reviewers:5:ai-antipattern-review:confirm-F-0001",
+      "stepName": "ai-antipattern-review",
+      "reviewer": "ai-antipattern-review",
+      "familyTag": "infrastructure-leak",
+      "severity": "high",
+      "title": "インフラ実装クラスのパブリック API 露出の解消確認",
+      "location": "src/index.ts:25",
+      "description": "src/index.ts:25 において `InMemoryTaskRepository` の export が削除されており、パブリック API からの実装詳細の露出が解消されていることを確認。これにより F-0001 および F-0004 が解消された。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0001"
+    },
+    {
+      "rawFindingId": "20260707-074104-readme-md-api-src-types-ts:reviewers:5:coding-review:res-3",
+      "stepName": "coding-review",
+      "reviewer": "coding-review",
+      "familyTag": "arch-standard",
+      "severity": "high",
+      "title": "インフラ実装クラスのパブリック API 露出の解消確認",
+      "location": "src/index.ts:25",
+      "description": "`src/index.ts:25` において `export { InMemoryTaskRepository }` が削除されており、インフラ実装クラスがパブリック API から完全に隠蔽されたことを確認。これにより、`TaskRepository` インターフェースを介した利用が強制され、アーキテクチャ上の制約が満たされた。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0001"
+    },
+    {
+      "rawFindingId": "20260707-074104-readme-md-api-src-types-ts:reviewers:5:implementation-semantics-review:issue-infra-export-regression",
+      "stepName": "implementation-semantics-review",
+      "reviewer": "implementation-semantics-review",
+      "familyTag": "infrastructure-leak",
+      "severity": "high",
+      "title": "インフラ実装クラスのパブリック API 露出（リグレッション）",
+      "location": "src/index.ts:25",
+      "description": "`InMemoryTaskRepository` が `src/index.ts:25` から `export` されており、インフラ層の実装詳細がパブリック API に露出しています。これは Ledger ID `F-0001` および `F-0004` で指摘されている問題のリグレッションであり、「内部実装のパブリック API エクスポート」という REJECT 基準に該当します。",
+      "suggestion": "`src/index.ts` から `export { InMemoryTaskRepository }` を削除し、利用者が `TaskRepository` インターフェースを通じてのみリポジトリを利用できる構成に戻してください。",
+      "kind": "issue"
+    }
+  ],
+  "conflicts": []
+}

@@ -1,0 +1,50 @@
+[
+  {
+    "rawFindingId": "20260707-074104-readme-md-api-src-types-ts:reviewers:5:arch-review:res-004",
+    "stepName": "arch-review",
+    "reviewer": "arch-review",
+    "familyTag": "public-api-exposure",
+    "severity": "high",
+    "title": "インフラ実装クラスのパブリック API 露出の完全解消確認",
+    "location": "src/index.ts:303, src/infrastructure/InMemoryTaskRepository.ts:35",
+    "description": "`InMemoryTaskRepository` が `src/index.ts` の export から完全に削除されたことを確認。これにより、インフラ層の実装詳細がパブリック API から隠蔽され、Knowledge の「パブリック API の公開範囲」基準および Ledger の F-0001 / F-0004 の要求を満たした。 (src/index.ts:303, src/infrastructure/InMemoryTaskRepository.ts:35)",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0001"
+  },
+  {
+    "rawFindingId": "20260707-074104-readme-md-api-src-types-ts:reviewers:5:ai-antipattern-review:confirm-F-0001",
+    "stepName": "ai-antipattern-review",
+    "reviewer": "ai-antipattern-review",
+    "familyTag": "infrastructure-leak",
+    "severity": "high",
+    "title": "インフラ実装クラスのパブリック API 露出の解消確認",
+    "location": "src/index.ts:25",
+    "description": "src/index.ts:25 において `InMemoryTaskRepository` の export が削除されており、パブリック API からの実装詳細の露出が解消されていることを確認。これにより F-0001 および F-0004 が解消された。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0001"
+  },
+  {
+    "rawFindingId": "20260707-074104-readme-md-api-src-types-ts:reviewers:5:coding-review:res-3",
+    "stepName": "coding-review",
+    "reviewer": "coding-review",
+    "familyTag": "arch-standard",
+    "severity": "high",
+    "title": "インフラ実装クラスのパブリック API 露出の解消確認",
+    "location": "src/index.ts:25",
+    "description": "`src/index.ts:25` において `export { InMemoryTaskRepository }` が削除されており、インフラ実装クラスがパブリック API から完全に隠蔽されたことを確認。これにより、`TaskRepository` インターフェースを介した利用が強制され、アーキテクチャ上の制約が満たされた。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0001"
+  },
+  {
+    "rawFindingId": "20260707-074104-readme-md-api-src-types-ts:reviewers:5:implementation-semantics-review:issue-infra-export-regression",
+    "stepName": "implementation-semantics-review",
+    "reviewer": "implementation-semantics-review",
+    "familyTag": "infrastructure-leak",
+    "severity": "high",
+    "title": "インフラ実装クラスのパブリック API 露出（リグレッション）",
+    "location": "src/index.ts:25",
+    "description": "`InMemoryTaskRepository` が `src/index.ts:25` から `export` されており、インフラ層の実装詳細がパブリック API に露出しています。これは Ledger ID `F-0001` および `F-0004` で指摘されている問題のリグレッションであり、「内部実装のパブリック API エクスポート」という REJECT 基準に該当します。",
+    "suggestion": "`src/index.ts` から `export { InMemoryTaskRepository }` を削除し、利用者が `TaskRepository` インターフェースを通じてのみリポジトリを利用できる構成に戻してください。",
+    "kind": "issue"
+  }
+]

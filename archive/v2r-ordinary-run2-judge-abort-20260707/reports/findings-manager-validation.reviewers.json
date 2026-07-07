@@ -1,0 +1,101 @@
+{
+  "version": 1,
+  "runId": "20260707-074104-readme-md-api-src-types-ts",
+  "stepName": "reviewers",
+  "retryCount": 1,
+  "ledgerUpdated": false,
+  "finalErrors": [
+    "Cannot match raw findings with different familyTag values: \"public-api-exposure\" and \"infrastructure-leak\" (matches[0], finding \"F-0001\")",
+    "Resolution confirmation \"20260707-074104-readme-md-api-src-types-ts:reviewers:6:ai-antipattern-review:confirm-F-0001-final-2\" cannot be cited as issue evidence in matches[0]",
+    "Cannot match finding \"F-0001\" because it is not open"
+  ],
+  "attempts": [
+    {
+      "attempt": 1,
+      "managerOutput": {
+        "matches": [],
+        "newFindings": [],
+        "resolvedFindings": [
+          {
+            "findingId": "F-0001",
+            "rawFindingIds": [
+              "20260707-074104-readme-md-api-src-types-ts:reviewers:6:ai-antipattern-review:confirm-F-0001-final-2"
+            ],
+            "evidence": "kind=resolution_confirmation が targetFindingId=F-0001 を明示しており、src/index.ts:25 の InMemoryTaskRepository export 削除を解消確認として報告している。"
+          },
+          {
+            "findingId": "F-0004",
+            "rawFindingIds": [
+              "20260707-074104-readme-md-api-src-types-ts:reviewers:6:arch-review:res-005",
+              "20260707-074104-readme-md-api-src-types-ts:reviewers:6:coding-review:res-4",
+              "20260707-074104-readme-md-api-src-types-ts:reviewers:6:implementation-semantics-review:res-f0004-0005"
+            ],
+            "evidence": "複数の kind=resolution_confirmation が targetFindingId=F-0004 を明示しており、同じ src/index.ts の InMemoryTaskRepository public export 解消を確認している。"
+          },
+          {
+            "findingId": "F-0005",
+            "rawFindingIds": [
+              "20260707-074104-readme-md-api-src-types-ts:reviewers:6:arch-review:res-006",
+              "20260707-074104-readme-md-api-src-types-ts:reviewers:6:coding-review:res-5",
+              "20260707-074104-readme-md-api-src-types-ts:reviewers:6:implementation-semantics-review:res-f0005-sync"
+            ],
+            "evidence": "複数の kind=resolution_confirmation が targetFindingId=F-0005 を明示しており、同じ src/index.ts の InMemoryTaskRepository public export 解消を確認している。"
+          }
+        ],
+        "reopenedFindings": [],
+        "conflicts": [],
+        "resolvedConflicts": [],
+        "waivedFindings": [],
+        "disputeNotes": []
+      },
+      "validationErrors": [
+        "Cannot resolve finding \"F-0001\" because it is not open"
+      ]
+    },
+    {
+      "attempt": 2,
+      "managerOutput": {
+        "matches": [
+          {
+            "findingId": "F-0001",
+            "rawFindingIds": [
+              "20260707-074104-readme-md-api-src-types-ts:reviewers:6:ai-antipattern-review:confirm-F-0001-final-2"
+            ],
+            "evidence": "raw finding は kind=resolution_confirmation かつ targetFindingId=F-0001 だが、前版 ledger で F-0001 は既に resolved のため、追加の解消遷移は行わず既存 finding への対応づけに留める。"
+          }
+        ],
+        "newFindings": [],
+        "resolvedFindings": [
+          {
+            "findingId": "F-0004",
+            "rawFindingIds": [
+              "20260707-074104-readme-md-api-src-types-ts:reviewers:6:arch-review:res-005",
+              "20260707-074104-readme-md-api-src-types-ts:reviewers:6:coding-review:res-4",
+              "20260707-074104-readme-md-api-src-types-ts:reviewers:6:implementation-semantics-review:res-f0004-0005"
+            ],
+            "evidence": "前版 ledger で F-0004 は open。各 raw finding は kind=resolution_confirmation かつ targetFindingId=F-0004 を明示しており、src/index.ts から InMemoryTaskRepository の public export が削除された同一問題の解消確認である。"
+          },
+          {
+            "findingId": "F-0005",
+            "rawFindingIds": [
+              "20260707-074104-readme-md-api-src-types-ts:reviewers:6:arch-review:res-006",
+              "20260707-074104-readme-md-api-src-types-ts:reviewers:6:coding-review:res-5",
+              "20260707-074104-readme-md-api-src-types-ts:reviewers:6:implementation-semantics-review:res-f0005-sync"
+            ],
+            "evidence": "前版 ledger で F-0005 は open。各 raw finding は kind=resolution_confirmation かつ targetFindingId=F-0005 を明示しており、src/index.ts から InMemoryTaskRepository の public export が削除された同一問題の解消確認である。"
+          }
+        ],
+        "reopenedFindings": [],
+        "conflicts": [],
+        "resolvedConflicts": [],
+        "waivedFindings": [],
+        "disputeNotes": []
+      },
+      "validationErrors": [
+        "Cannot match raw findings with different familyTag values: \"public-api-exposure\" and \"infrastructure-leak\" (matches[0], finding \"F-0001\")",
+        "Resolution confirmation \"20260707-074104-readme-md-api-src-types-ts:reviewers:6:ai-antipattern-review:confirm-F-0001-final-2\" cannot be cited as issue evidence in matches[0]",
+        "Cannot match finding \"F-0001\" because it is not open"
+      ]
+    }
+  ]
+}
