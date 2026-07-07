@@ -1,0 +1,50 @@
+[
+  {
+    "rawFindingId": "20260707-040935-readme-md-api-src-types-ts:reviewers:7:arch-review:arch-review-res-001",
+    "stepName": "arch-review",
+    "reviewer": "arch-review",
+    "familyTag": "design-violation",
+    "severity": "high",
+    "title": "サービス層での Date 直接生成の解消確認",
+    "location": "src/service.ts:64, 65, 103, 141, 159, 176",
+    "description": "src/service.ts において、`new Date(now.getTime())` がすべて `this.clock.clone(now)` に置換されており、README.md のアーキテクチャ要件（new Date() の直接使用禁止）が遵守されていることを確認した。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0001"
+  },
+  {
+    "rawFindingId": "20260707-040935-readme-md-api-src-types-ts:reviewers:7:ai-antipattern-review:res-f0001-clock-clone",
+    "stepName": "ai-antipattern-review",
+    "reviewer": "ai-antipattern-review",
+    "familyTag": "logic-error",
+    "severity": "high",
+    "title": "サービス層での Date 直接生成の解消確認",
+    "location": "src/service.ts:64, 65, 103, 141, 159, 176",
+    "description": "src/service.ts:64, 65, 103, 141, 159, 176 において、`this.clock.clone(now)` が使用されており、直接的な `new Date()` の生成が排除されていることを確認した。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0001"
+  },
+  {
+    "rawFindingId": "20260707-040935-readme-md-api-src-types-ts:reviewers:7:coding-review:res-0001",
+    "stepName": "coding-review",
+    "reviewer": "coding-review",
+    "familyTag": "architecture",
+    "severity": "high",
+    "title": "サービス層での Date 直接生成が解消されたことを確認",
+    "location": "src/service.ts:64, 65, 103, 141, 159, 176",
+    "description": "src/service.ts において、`new Date()` による直接生成が `this.clock.clone(now)` に置き換えられており、アーキテクチャ要件に準拠していることを確認した。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0001"
+  },
+  {
+    "rawFindingId": "20260707-040935-readme-md-api-src-types-ts:reviewers:7:implementation-semantics-review:resolution-F0001",
+    "stepName": "implementation-semantics-review",
+    "reviewer": "implementation-semantics-review",
+    "familyTag": "architecture-violation",
+    "severity": "high",
+    "title": "サービス層での Date 直接生成の解消確認",
+    "location": "src/service.ts:64, 65, 103, 141, 159, 176",
+    "description": "src/service.ts:64, 65, 103, 141, 159, 176 で this.clock.clone(now) を使用して Date オブジェクトを生成しており、README.md のアーキテクチャ要件（サービス・リポジトリ内で new Date() を直接使わない）および Clock インターフェース経由での制御が正しく適用されています。これにより F-0001 は解消されました。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0001"
+  }
+]

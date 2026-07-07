@@ -1,0 +1,14 @@
+[
+  {
+    "rawFindingId": "20260707-040935-readme-md-api-src-types-ts:reviewers:14:arch-review:RF-0002",
+    "stepName": "arch-review",
+    "reviewer": "arch-review",
+    "familyTag": "resolution-confirmation",
+    "severity": "low",
+    "title": "F-0002: src/clock.ts の空ファイル問題が解消したことを確認",
+    "location": "src/clock.ts:3",
+    "description": "`src/clock.ts:3` で `SystemClock` クラスが実装されており、空ファイルではなくなっている。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0002"
+  }
+]

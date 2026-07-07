@@ -1,0 +1,14 @@
+[
+  {
+    "rawFindingId": "20260707-040935-readme-md-api-src-types-ts:reviewers:6:arch-review:arch-review-001",
+    "stepName": "arch-review",
+    "reviewer": "arch-review",
+    "familyTag": "design-violation",
+    "severity": "high",
+    "title": "サービス層における Date 对象的直接使用",
+    "location": "src/service.ts:64, 65, 103, 141, 159, 176",
+    "description": "README.md のアーキテクチャ要件（「サービス・リポジトリ内で new Date() を直接使わない」）に反し、`new Date(now.getTime())` による直接的な Date オブジェクトの生成が行われている。Clock インターフェースを介したクローン操作または境界ヘルパーによる処理に移行すべきである。",
+    "suggestion": "Clock インターフェースに `clone(date: Date): Date` メソッドを追加し、サービス層では `this.clock.clone(now)` を使用するように変更してください。",
+    "kind": "issue"
+  }
+]

@@ -1,0 +1,187 @@
+{
+  "version": 1,
+  "workflowName": "backend-for-local-llm-refresh",
+  "nextId": 3,
+  "updatedAt": "2026-07-07T07:35:53.746Z",
+  "findings": [
+    {
+      "id": "F-0001",
+      "status": "resolved",
+      "lifecycle": "resolved",
+      "severity": "high",
+      "title": "サービス層での Date 直接生成がアーキテクチャ要件に反する",
+      "location": "src/service.ts:64, 65, 103, 141, 159, 176",
+      "description": "README.md のアーキテクチャ要件（「サービス・リポジトリ内で new Date() を直接使わない」）に反し、`new Date(now.getTime())` による直接的な Date オブジェクトの生成が行われている。Clock インターフェースを介したクローン操作または境界ヘルパーによる処理に移行すべきである。",
+      "suggestion": "Clock インターフェースに `clone(date: Date): Date` メソッドを追加し、サービス層では `this.clock.clone(now)` を使用するように変更してください。",
+      "reviewers": [
+        "arch-review"
+      ],
+      "rawFindingIds": [
+        "20260707-040935-readme-md-api-src-types-ts:reviewers:6:arch-review:arch-review-001"
+      ],
+      "firstSeen": {
+        "runId": "20260707-040935-readme-md-api-src-types-ts",
+        "stepName": "arch-review",
+        "timestamp": "2026-07-07T05:24:08.756Z"
+      },
+      "lastSeen": {
+        "runId": "20260707-040935-readme-md-api-src-types-ts",
+        "stepName": "reviewers",
+        "timestamp": "2026-07-07T05:24:08.756Z"
+      },
+      "resolvedAt": "2026-07-07T05:47:38.442Z",
+      "resolvedEvidence": "4件すべてが kind=resolution_confirmation で targetFindingId=F-0001 を明示しており、既存台帳の location と同じ src/service.ts:64, 65, 103, 141, 159, 176 における Date 直接生成の解消確認であるため。"
+    },
+    {
+      "id": "F-0002",
+      "status": "resolved",
+      "lifecycle": "resolved",
+      "severity": "medium",
+      "title": "src/clock.ts が空ファイルになっている",
+      "location": "src/clock.ts:1",
+      "description": "`src/clock.ts` is an empty file, which should contain the `SystemClock` implementation as expected by the project structure and potentially needed for default setups, although `TaskService` correctly relies on the `Clock` interface via dependency injection.",
+      "suggestion": "Implement `SystemClock` in `src/clock.ts` as it was previously present or is expected by the architecture.",
+      "reviewers": [
+        "coding-review"
+      ],
+      "rawFindingIds": [
+        "20260707-040935-readme-md-api-src-types-ts:reviewers:12:coding-review:F-0002"
+      ],
+      "firstSeen": {
+        "runId": "20260707-040935-readme-md-api-src-types-ts",
+        "stepName": "coding-review",
+        "timestamp": "2026-07-07T07:02:58.458Z"
+      },
+      "lastSeen": {
+        "runId": "20260707-040935-readme-md-api-src-types-ts",
+        "stepName": "reviewers",
+        "timestamp": "2026-07-07T07:02:58.458Z"
+      },
+      "resolvedAt": "2026-07-07T07:11:55.148Z",
+      "resolvedEvidence": "現在の raw findings に F-0002 を targetFindingId とする kind=resolution_confirmation が複数あり、いずれも src/clock.ts に SystemClock 実装が存在して空ファイル問題が解消したことを確認しているため。"
+    }
+  ],
+  "rawFindings": [
+    {
+      "rawFindingId": "20260707-040935-readme-md-api-src-types-ts:reviewers:6:arch-review:arch-review-001",
+      "stepName": "arch-review",
+      "reviewer": "arch-review",
+      "familyTag": "design-violation",
+      "severity": "high",
+      "title": "サービス層における Date 对象的直接使用",
+      "location": "src/service.ts:64, 65, 103, 141, 159, 176",
+      "description": "README.md のアーキテクチャ要件（「サービス・リポジトリ内で new Date() を直接使わない」）に反し、`new Date(now.getTime())` による直接的な Date オブジェクトの生成が行われている。Clock インターフェースを介したクローン操作または境界ヘルパーによる処理に移行すべきである。",
+      "suggestion": "Clock インターフェースに `clone(date: Date): Date` メソッドを追加し、サービス層では `this.clock.clone(now)` を使用するように変更してください。",
+      "kind": "issue"
+    },
+    {
+      "rawFindingId": "20260707-040935-readme-md-api-src-types-ts:reviewers:7:arch-review:arch-review-res-001",
+      "stepName": "arch-review",
+      "reviewer": "arch-review",
+      "familyTag": "design-violation",
+      "severity": "high",
+      "title": "サービス層での Date 直接生成の解消確認",
+      "location": "src/service.ts:64, 65, 103, 141, 159, 176",
+      "description": "src/service.ts において、`new Date(now.getTime())` がすべて `this.clock.clone(now)` に置換されており、README.md のアーキテクチャ要件（new Date() の直接使用禁止）が遵守されていることを確認した。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0001"
+    },
+    {
+      "rawFindingId": "20260707-040935-readme-md-api-src-types-ts:reviewers:7:ai-antipattern-review:res-f0001-clock-clone",
+      "stepName": "ai-antipattern-review",
+      "reviewer": "ai-antipattern-review",
+      "familyTag": "logic-error",
+      "severity": "high",
+      "title": "サービス層での Date 直接生成の解消確認",
+      "location": "src/service.ts:64, 65, 103, 141, 159, 176",
+      "description": "src/service.ts:64, 65, 103, 141, 159, 176 において、`this.clock.clone(now)` が使用されており、直接的な `new Date()` の生成が排除されていることを確認した。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0001"
+    },
+    {
+      "rawFindingId": "20260707-040935-readme-md-api-src-types-ts:reviewers:7:coding-review:res-0001",
+      "stepName": "coding-review",
+      "reviewer": "coding-review",
+      "familyTag": "architecture",
+      "severity": "high",
+      "title": "サービス層での Date 直接生成が解消されたことを確認",
+      "location": "src/service.ts:64, 65, 103, 141, 159, 176",
+      "description": "src/service.ts において、`new Date()` による直接生成が `this.clock.clone(now)` に置き換えられており、アーキテクチャ要件に準拠していることを確認した。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0001"
+    },
+    {
+      "rawFindingId": "20260707-040935-readme-md-api-src-types-ts:reviewers:7:implementation-semantics-review:resolution-F0001",
+      "stepName": "implementation-semantics-review",
+      "reviewer": "implementation-semantics-review",
+      "familyTag": "architecture-violation",
+      "severity": "high",
+      "title": "サービス層での Date 直接生成の解消確認",
+      "location": "src/service.ts:64, 65, 103, 141, 159, 176",
+      "description": "src/service.ts:64, 65, 103, 141, 159, 176 で this.clock.clone(now) を使用して Date オブジェクトを生成しており、README.md のアーキテクチャ要件（サービス・リポジトリ内で new Date() を直接使わない）および Clock インターフェース経由での制御が正しく適用されています。これにより F-0001 は解消されました。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0001"
+    },
+    {
+      "rawFindingId": "20260707-040935-readme-md-api-src-types-ts:reviewers:12:coding-review:F-0002",
+      "stepName": "coding-review",
+      "reviewer": "coding-review",
+      "familyTag": "bug",
+      "severity": "medium",
+      "title": "src/clock.ts is empty",
+      "location": "src/clock.ts:1",
+      "description": "`src/clock.ts` is an empty file, which should contain the `SystemClock` implementation as expected by the project structure and potentially needed for default setups, although `TaskService` correctly relies on the `Clock` interface via dependency injection.",
+      "suggestion": "Implement `SystemClock` in `src/clock.ts` as it was previously present or is expected by the architecture.",
+      "kind": "issue"
+    },
+    {
+      "rawFindingId": "20260707-040935-readme-md-api-src-types-ts:reviewers:13:arch-review:RF-0001",
+      "stepName": "arch-review",
+      "reviewer": "arch-review",
+      "familyTag": "resolution-confirmation",
+      "severity": "low",
+      "title": "F-0002: src/clock.ts の空ファイル問題が解消したことを確認",
+      "location": "src/clock.ts:3",
+      "description": "`src/clock.ts:3` で `SystemClock` クラスが実装されており、空ファイルではなくなっている。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0002"
+    },
+    {
+      "rawFindingId": "20260707-040935-readme-md-api-src-types-ts:reviewers:13:ai-antipattern-review:rf-20260707-001",
+      "stepName": "ai-antipattern-review",
+      "reviewer": "ai-antipattern-review",
+      "familyTag": "logic-error",
+      "severity": "medium",
+      "title": "src/clock.ts の実装確認",
+      "location": "src/clock.ts:3-11",
+      "description": "src/clock.ts に `SystemClock` クラスが正しく実装されており、空ファイルではないことを確認した。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0002"
+    },
+    {
+      "rawFindingId": "20260707-040935-readme-md-api-src-types-ts:reviewers:13:coding-review:RES-0001",
+      "stepName": "coding-review",
+      "reviewer": "coding-review",
+      "familyTag": "bug",
+      "severity": "medium",
+      "title": "src/clock.ts implementation restored",
+      "location": "src/clock.ts:3-11",
+      "description": "`src/clock.ts` now contains the `SystemClock` implementation.",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0002"
+    },
+    {
+      "rawFindingId": "20260707-040935-readme-md-api-src-types-ts:reviewers:13:implementation-semantics-review:R-0001",
+      "stepName": "implementation-semantics-review",
+      "reviewer": "implementation-semantics-review",
+      "familyTag": "coding-review",
+      "severity": "medium",
+      "title": "src/clock.ts が空ファイルになっている件の解消確認",
+      "location": "src/clock.ts:3-11",
+      "description": "src/clock.ts は空ファイルではなく、SystemClock クラスが正しく実装されていることを確認した。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0002"
+    }
+  ],
+  "conflicts": []
+}

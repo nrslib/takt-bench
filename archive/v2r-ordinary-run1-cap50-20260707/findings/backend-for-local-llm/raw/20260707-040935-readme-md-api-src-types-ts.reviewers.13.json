@@ -1,0 +1,50 @@
+[
+  {
+    "rawFindingId": "20260707-040935-readme-md-api-src-types-ts:reviewers:13:arch-review:RF-0001",
+    "stepName": "arch-review",
+    "reviewer": "arch-review",
+    "familyTag": "resolution-confirmation",
+    "severity": "low",
+    "title": "F-0002: src/clock.ts の空ファイル問題が解消したことを確認",
+    "location": "src/clock.ts:3",
+    "description": "`src/clock.ts:3` で `SystemClock` クラスが実装されており、空ファイルではなくなっている。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0002"
+  },
+  {
+    "rawFindingId": "20260707-040935-readme-md-api-src-types-ts:reviewers:13:ai-antipattern-review:rf-20260707-001",
+    "stepName": "ai-antipattern-review",
+    "reviewer": "ai-antipattern-review",
+    "familyTag": "logic-error",
+    "severity": "medium",
+    "title": "src/clock.ts の実装確認",
+    "location": "src/clock.ts:3-11",
+    "description": "src/clock.ts に `SystemClock` クラスが正しく実装されており、空ファイルではないことを確認した。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0002"
+  },
+  {
+    "rawFindingId": "20260707-040935-readme-md-api-src-types-ts:reviewers:13:coding-review:RES-0001",
+    "stepName": "coding-review",
+    "reviewer": "coding-review",
+    "familyTag": "bug",
+    "severity": "medium",
+    "title": "src/clock.ts implementation restored",
+    "location": "src/clock.ts:3-11",
+    "description": "`src/clock.ts` now contains the `SystemClock` implementation.",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0002"
+  },
+  {
+    "rawFindingId": "20260707-040935-readme-md-api-src-types-ts:reviewers:13:implementation-semantics-review:R-0001",
+    "stepName": "implementation-semantics-review",
+    "reviewer": "implementation-semantics-review",
+    "familyTag": "coding-review",
+    "severity": "medium",
+    "title": "src/clock.ts が空ファイルになっている件の解消確認",
+    "location": "src/clock.ts:3-11",
+    "description": "src/clock.ts は空ファイルではなく、SystemClock クラスが正しく実装されていることを確認した。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0002"
+  }
+]

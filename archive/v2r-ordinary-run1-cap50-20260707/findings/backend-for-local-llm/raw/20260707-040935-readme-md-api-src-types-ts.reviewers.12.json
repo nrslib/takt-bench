@@ -1,0 +1,14 @@
+[
+  {
+    "rawFindingId": "20260707-040935-readme-md-api-src-types-ts:reviewers:12:coding-review:F-0002",
+    "stepName": "coding-review",
+    "reviewer": "coding-review",
+    "familyTag": "bug",
+    "severity": "medium",
+    "title": "src/clock.ts is empty",
+    "location": "src/clock.ts:1",
+    "description": "`src/clock.ts` is an empty file, which should contain the `SystemClock` implementation as expected by the project structure and potentially needed for default setups, although `TaskService` correctly relies on the `Clock` interface via dependency injection.",
+    "suggestion": "Implement `SystemClock` in `src/clock.ts` as it was previously present or is expected by the architecture.",
+    "kind": "issue"
+  }
+]
