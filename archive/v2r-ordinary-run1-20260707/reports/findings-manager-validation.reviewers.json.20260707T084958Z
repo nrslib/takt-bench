@@ -1,0 +1,78 @@
+{
+  "version": 1,
+  "runId": "20260707-074023-readme-md-api-src-types-ts",
+  "stepName": "reviewers",
+  "retryCount": 1,
+  "ledgerUpdated": false,
+  "finalErrors": [
+    "Resolution confirmation \"20260707-074023-readme-md-api-src-types-ts:reviewers:3:ai-antipattern-review:res-004\" cannot be cited as issue evidence in matches[0]",
+    "Cannot match finding \"F-0003\" because it is not open"
+  ],
+  "attempts": [
+    {
+      "attempt": 1,
+      "managerOutput": {
+        "matches": [],
+        "newFindings": [
+          {
+            "rawFindingIds": [
+              "20260707-074023-readme-md-api-src-types-ts:reviewers:3:arch-review:arch-review-002"
+            ],
+            "title": "createTask における dueDate の null 処理不備",
+            "severity": "critical"
+          }
+        ],
+        "resolvedFindings": [
+          {
+            "findingId": "F-0003",
+            "rawFindingIds": [
+              "20260707-074023-readme-md-api-src-types-ts:reviewers:3:ai-antipattern-review:res-004"
+            ],
+            "evidence": "resolution_confirmation が targetFindingId=F-0003 を明示し、同じ ai-antipattern:contract-mismatch の dueDate null/undefined 区別不全について src/service.ts:76-79 の修正確認を報告している"
+          }
+        ],
+        "reopenedFindings": [],
+        "conflicts": [],
+        "resolvedConflicts": [],
+        "waivedFindings": [],
+        "disputeNotes": []
+      },
+      "validationErrors": [
+        "Cannot resolve finding \"F-0003\" because it is not open"
+      ]
+    },
+    {
+      "attempt": 2,
+      "managerOutput": {
+        "matches": [
+          {
+            "findingId": "F-0003",
+            "rawFindingIds": [
+              "20260707-074023-readme-md-api-src-types-ts:reviewers:3:ai-antipattern-review:res-004"
+            ],
+            "evidence": "raw finding は resolution_confirmation として targetFindingId=F-0003 を明示しており、同じ dueDate null/undefined 区別不全の解消状態を src/service.ts:76-79 で確認している。F-0003 は既に resolved のため追加の resolved 遷移は行わず、既存 finding への対応づけのみ行う"
+          }
+        ],
+        "newFindings": [
+          {
+            "rawFindingIds": [
+              "20260707-074023-readme-md-api-src-types-ts:reviewers:3:arch-review:arch-review-002"
+            ],
+            "title": "createTask における dueDate の null 処理不備",
+            "severity": "critical"
+          }
+        ],
+        "resolvedFindings": [],
+        "reopenedFindings": [],
+        "conflicts": [],
+        "resolvedConflicts": [],
+        "waivedFindings": [],
+        "disputeNotes": []
+      },
+      "validationErrors": [
+        "Resolution confirmation \"20260707-074023-readme-md-api-src-types-ts:reviewers:3:ai-antipattern-review:res-004\" cannot be cited as issue evidence in matches[0]",
+        "Cannot match finding \"F-0003\" because it is not open"
+      ]
+    }
+  ]
+}

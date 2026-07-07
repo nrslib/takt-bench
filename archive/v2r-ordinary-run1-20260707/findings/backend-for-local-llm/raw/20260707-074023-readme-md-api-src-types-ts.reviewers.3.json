@@ -1,0 +1,26 @@
+[
+  {
+    "rawFindingId": "20260707-074023-readme-md-api-src-types-ts:reviewers:3:arch-review:arch-review-002",
+    "stepName": "arch-review",
+    "reviewer": "arch-review",
+    "familyTag": "contract-violation",
+    "severity": "critical",
+    "title": "createTask における dueDate の null 処理不備",
+    "location": "src/service.ts:37",
+    "description": "src/service.ts:37 で、normalized.dueDate が null の場合に undefined を設定している。これは README の仕様「null で期限を解除」に反しており、正しくは null として保存すべきである。また、src/types.ts:20 で TaskRecord.dueDate が Date | null | undefined と拡張されているため、null を保持することが可能であり、現状の実装は不完全な解消となっている。",
+    "suggestion": "normalized.dueDate が null の場合もそのまま null として保存するように修正してください。",
+    "kind": "issue"
+  },
+  {
+    "rawFindingId": "20260707-074023-readme-md-api-src-types-ts:reviewers:3:ai-antipattern-review:res-004",
+    "stepName": "ai-antipattern-review",
+    "reviewer": "ai-antipattern-review",
+    "familyTag": "ai-antipattern:contract-mismatch",
+    "severity": "critical",
+    "title": "dueDate更新におけるnull/undefinedの区別不全の完全解消確認",
+    "location": "src/service.ts:76-79",
+    "description": "src/service.ts:76-79 において、normalized.dueDate が null の場合に updated.dueDate に null を設定せず、単に undefined の場合にのみ既存値を保持し、それ以外（null 含む）をそのまま代入している。\n具体的に、src/service.ts:76-79 は以下の通り：\n```typescript\n    if (normalized.dueDate !== undefined) {\n      updated.dueDate = normalized.dueDate;\n    }\n```\nここで `normalized.dueDate` が `null` の場合、`updated.dueDate` に `null` が代入される。\nこれは README.md の仕様「null で期限を解除」および `TaskRecord` の型定義 `dueDate: Date | null | undefined` と整合しており、正しく実装されている。\n前回 (Iteration 6) では `updated.dueDate = undefined` としていたため不整合があったが、現在は修正されており、仕様通りに `null` (解除) と `undefined` (変更なし) が区別されていることを確認した。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0003"
+  }
+]

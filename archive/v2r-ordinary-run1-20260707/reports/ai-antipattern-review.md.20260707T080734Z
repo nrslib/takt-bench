@@ -1,0 +1,24 @@
+# AI生成コードレビュー
+
+## 結果: REJECT
+
+## サマリー
+公開API入力オブジェクトの直接変更による副作用、dueDate更新におけるnull/undefinedの区別不全と型不整合、およびバリデーションロジックの重複が検出されました。
+
+## 検証した項目
+| 観点 | 結果 | 備考 |
+|------|------|------|
+| 仮定の妥当性 | ✅ | - |
+| API/ライブラリの実在 | ✅ | - |
+| コンテキスト適合 | ⚠️ | 入力オブジェクトのミューテーションあり |
+| スコープ | ⚠️ | 仕様上の dueDate 挙動の不整合あり |
+
+## 観測した指摘
+| # | family_tag | カテゴリ | 重大度 | 場所 | 問題 | 修正案 |
+|---|------------|---------|--------|------|------|--------|
+| 1 | ai-antipattern:mutation | 副作用 | high | `src/service.ts:236` | `UpdateTaskInput` を直接 `trim()` して上書きしている | 正規化後の値を別変数に格納して返却する |
+| 2 | ai-antipattern:contract-mismatch | 契約不整合 | critical | `src/service.ts:73` | `dueDate` の null(解除)と undefined(変更なし)が区別されず、型定義とも不整合 | `TaskRecord` の型を調整し、null と undefined を正しく区別して保存する |
+| 3 | ai-antipattern:dry-violation | 重複実装 | medium | `src/service.ts:182,224` | `create` と `update` でバリデーションロジックが重複 | 共通のバリデーション関数を抽出し集約する |
+
+## REJECT判定条件
+- ブロッキング指摘が3件あるため REJECT

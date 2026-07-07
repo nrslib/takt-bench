@@ -1,0 +1,14 @@
+[
+  {
+    "rawFindingId": "20260707-074023-readme-md-api-src-types-ts:reviewers:4:arch-review:arch-review-002",
+    "stepName": "arch-review",
+    "reviewer": "arch-review",
+    "familyTag": "contract-violation",
+    "severity": "critical",
+    "title": "createTask における dueDate の null 処理不備",
+    "location": "src/service.ts:37",
+    "description": "src/service.ts:37 で、normalized.dueDate が null の場合に undefined を設定している。これは README の仕様「null で期限を解除」に反しており、正しくは null として保存すべきである。また、src/types.ts:20 で TaskRecord.dueDate が Date | null | undefined と拡張されているため、null を保持することが可能であり、現状の実装は不完全な解消となっている。",
+    "suggestion": "normalized.dueDate === null ? undefined : normalized.dueDate の三項演算子を削除し、そのまま normalized.dueDate を割り当てるように修正してください。",
+    "kind": "issue"
+  }
+]

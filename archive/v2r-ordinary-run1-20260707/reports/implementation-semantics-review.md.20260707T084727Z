@@ -1,0 +1,18 @@
+# 実装意味論レビュー
+
+## 結果: REJECT
+
+## サマリー
+累積差分を再走査した結果、`createTask` における `dueDate` の処理において、仕様上の `null`（期限解除）を `undefined` に変換して保存する不備が依然として残っています。
+
+## 観測した指摘
+| # | family_tag | 重大度 | 場所 | 問題 | 壊れる条件 | 修正案 |
+|---|------------|--------|------|------|-----------|--------|
+| 1 | type-mismatch | Critical | `src/service.ts:37` | `normalized.dueDate` が `null` の場合に `undefined` を設定している。仕様の「null で期限を解除」に反し、`TaskRecord` 型が `null` を許容しているため、正しくは `null` のまま保存すべきである。 | `createTask` に `dueDate: null` を指定して呼び出した際、保存されるタスクの `dueDate` が `undefined` となり、意味論的に「解除」ではなく「未設定」として扱われる。 | 三項演算子を削除し、`dueDate: normalized.dueDate` と直接割り当てる。 |
+
+## 検証証跡
+- 差分確認: `src/service.ts` の `createTask` メソッド内の `dueDate` 割り当て処理を再確認。
+- 判定根拠の実在確認: `src/service.ts:37` において `dueDate: normalized.dueDate === null ? undefined : normalized.dueDate` という実装であることを確認。
+
+## REJECT判定条件
+- ブロッキング指摘（F-0006 相当）が1件あるため REJECT。

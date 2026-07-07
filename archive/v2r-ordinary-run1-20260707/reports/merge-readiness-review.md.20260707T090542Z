@@ -1,0 +1,38 @@
+# Merge Readiness Review
+
+## 結果: REJECT
+
+## サマリー
+F-0003 の受入条件である `dueDate: null` の保存契約が満たされていません。現行実装は `null` を `undefined` に変換しており、対応テストもその誤った実結果を期待しています。
+
+## 保守前提のマージ品質チェック
+| # | 観点 | 状態 | 根拠（ファイル:行 / テスト / 実行証跡） | コメント |
+|---|------|------|---------------------------------------|----------|
+| 1 | 要求充足 | 未充足 | `src/service.ts:76-77`, `tests/update-transitions.test.ts:92` | `dueDate: null` が `null` として保存されない |
+| 2 | 既存契約・既存フローへの影響 | 問題あり | `findings-ledger.json` F-0003, `src/service.ts:76-77` | resolved 判定の元受入条件に戻すと未解消 |
+| 3 | テスト・検証 | 不足 | `tests/update-transitions.test.ts:92` | `toBeUndefined()` が現在の不適合挙動を固定している |
+| 4 | 要求外変更・スコープクリープ | 問題なし | `src/index.ts:6-8`, `src/types.ts:20` | 公開入口の re-export と型拡張自体は F-0003 対応範囲 |
+| 5 | 保守可能性・将来変更容易性 | 問題あり | `src/service.ts:10` | 未使用 import `Priority` が残存 |
+| 6 | 明白なセキュリティ・データ保護・運用リスク | 問題なし | `src/repository.ts:7-21`, `src/task-record.ts:3-16` | 防御的コピー経路は確認済み |
+
+## 横断監査証跡
+| # | 変更カテゴリ | 抽出した項目 | 確認した検索語・ファイル | 判定 | コメント |
+|---|--------------|--------------|--------------------------|------|----------|
+| 1 | 型 / 出力契約 | `TaskRecord.dueDate`, `UpdateTaskInput.dueDate` | `dueDate: null`, `normalized.dueDate`, `toBeUndefined()` / `src/service.ts`, `tests/update-transitions.test.ts`, `findings-ledger.json` | 問題あり | `null` 入力が `undefined` 保存になる |
+| 2 | entrypoint | `InMemoryTaskRepository`, `TaskService` | `TaskService`, `InMemoryTaskRepository` / `src/index.ts`, `tests/helpers.ts` | 問題なし | `src/index.ts` から import 可能 |
+| 3 | helper | `cloneTaskRecord`, `normalizeCreateInput`, `normalizeUpdateInput` | `cloneTaskRecord`, `normalizeUpdateInput` / `src/task-record.ts`, `src/validator.ts` | 問題なし | 防御的コピーと正規化分離は確認済み |
+| 4 | import / 型名 | `Priority` | `\bPriority\b` / `src/service.ts`, `src/types.ts`, `tests`, `README.md` | 問題あり | `src/service.ts:10` のみ未使用 import |
+
+## 観測した指摘
+| # | family_tag | カテゴリ | 重大度 | 場所 | 問題 | 修正案 |
+|---|------------|---------|--------|------|------|--------|
+| 1 | contract-readiness | 契約破壊 | high | `src/service.ts:76-77`, `tests/update-transitions.test.ts:92` | F-0003 は「`null` の場合は `null` として保存し、`undefined` の場合のみ既存値保持」を期待しているが、現行実装は `updated.dueDate = undefined` に変換し、テストも `toBeUndefined()` を期待している | `dueDate: null` では `updated.dueDate = null` を保存し、該当テストを `toBeNull()` に変更する |
+| 2 | maintainability-readiness | 保守困難化 | low | `src/service.ts:10` | `Priority` が import されているが `src/service.ts` 内で使用されていない | `Priority` import を削除する |
+
+## 検証証跡
+- ビルド: `npm run typecheck` を実行し成功
+- テスト: `npm test` を実行し 5 files / 80 tests 成功
+- 動作確認: `npm test -- --run tests/update-transitions.test.ts -t "dueDate: null"` は現行期待値では成功。ただし期待値が F-0003 の受入条件と不一致
+
+## REJECT判定条件
+- マージを止めるべき観測指摘が2件あるため REJECT。

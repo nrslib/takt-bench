@@ -1,0 +1,38 @@
+# Merge Readiness Review
+
+## 結果: REJECT
+
+## サマリー
+前回の `as any`、未使用 import、空分岐は解消されていますが、`listTasks` のソート契約が壊れています。README は `priority → dueDate → createdAt → id` を要求していますが、現行 `compareTasks` は `createdAt` 比較を行わず、期限未設定同士の比較も不安定です。
+
+## 保守前提のマージ品質チェック
+| # | 観点 | 状態 | 根拠（ファイル:行 / テスト / 実行証跡） | コメント |
+|---|------|------|---------------------------------------|----------|
+| 1 | 要求充足 | 未充足 | `README.md:51-52`, `src/service.ts:209-236` | `createdAt` 昇順が comparator から欠落 |
+| 2 | 既存契約・既存フローへの影響 | 問題あり | `src/service.ts:217-228` | `null` / `undefined` の期限未設定タスク同士で `createdAt → id` へ進まない |
+| 3 | テスト・検証 | 不足 | `tests/query.test.ts:194-202`, `npm test`: 5 files / 81 tests 成功 | 既存テストは ID 順と createdAt 順が一致するため回帰を検出できない |
+| 4 | 要求外変更・スコープクリープ | 問題なし | `src/index.ts:6-8`, `src/types.ts:20`, `src/types.ts:29` | 公開入口と `dueDate` 型変更は F-0003/F-0006 対応範囲 |
+| 5 | 保守可能性・将来変更容易性 | 問題あり | `src/service.ts:209-236` | sort 条件が README と乖離し、期限未設定の分岐も重複している |
+| 6 | 明白なセキュリティ・データ保護・運用リスク | 問題なし | `src/repository.ts:7-21`, `src/task-record.ts:3-16` | 防御的コピー経路は確認済み |
+
+## 横断監査証跡
+| # | 変更カテゴリ | 抽出した項目 | 確認した検索語・ファイル | 判定 | コメント |
+|---|--------------|--------------|--------------------------|------|----------|
+| 1 | 型 / 出力契約 | `TaskRecord.dueDate`, `CreateTaskInput.dueDate`, `UpdateTaskInput.dueDate` | `dueDate?:`, `dueDate: null`, `toBeNull()` / `src/types.ts`, `src/service.ts`, `tests/*` | 問題なし | `null` 保存契約は確認済み |
+| 2 | sort helper | `compareTasks` | `createdAt`, `localeCompare`, `dueDate === undefined`, `dueDate === null` / `README.md`, `src/service.ts`, `tests/query.test.ts` | 問題あり | `createdAt` 比較が実装に存在しない |
+| 3 | 型安全性 | `any` | `\bas any\b`, `\bany\b` / `src`, `tests` | 問題なし | `as any` は検出なし |
+| 4 | import / 型名 | `Priority` | `\bPriority\b` / `src/service.ts`, `src/types.ts` | 問題なし | service 側の未使用 import は解消済み |
+
+## 観測した指摘
+| # | family_tag | カテゴリ | 重大度 | 場所 | 問題 | 修正案 |
+|---|------------|---------|--------|------|------|--------|
+| 1 | contract-readiness | 要求未充足 | high | `src/service.ts:209-236` | README の `priority → dueDate → createdAt → id` 順に対し、現行 comparator は `dueDate` 後に直接 `id.localeCompare` へ進み、`createdAt` を比較しない。また両方 `null` なら `0`、両方 `undefined` なら `1` を返すため、期限未設定同士でも契約通りに並ばない | `null` / `undefined` を「期限未設定」として同一 bucket に寄せ、`dueDate` 比較後は必ず `createdAt.getTime()`、最後に `id.localeCompare` を適用する |
+| 2 | test-readiness | テスト不足 | medium | `tests/query.test.ts:194-202` | `createdAt 昇順` テストは `task-1 → task-2` で ID 順と createdAt 順が同じため、createdAt 比較欠落を検出できない | ID 順と createdAt 順が逆になる fixture を使い、`createdAt` が優先されることを検証する。期限未設定同士の `createdAt → id` テストも追加する |
+
+## 検証証跡
+- ビルド: `npm run typecheck` を実行し成功
+- テスト: `npm test` を実行し 5 files / 81 tests 成功
+- 動作確認: `rg` で `createdAtDiff` / `createdAt.getTime` が `src/service.ts` に存在せず、`compareTasks` が `id.localeCompare` へ直接進むことを確認
+
+## REJECT判定条件
+- マージを止めるべき観測指摘が2件あるため REJECT。

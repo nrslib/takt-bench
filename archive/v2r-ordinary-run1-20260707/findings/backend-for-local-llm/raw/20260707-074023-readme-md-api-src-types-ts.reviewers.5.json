@@ -1,0 +1,38 @@
+[
+  {
+    "rawFindingId": "20260707-074023-readme-md-api-src-types-ts:reviewers:5:arch-review:res-arch-006",
+    "stepName": "arch-review",
+    "reviewer": "arch-review",
+    "familyTag": "contract-violation",
+    "severity": "critical",
+    "title": "createTask における dueDate の null 処理不備の解消確認",
+    "location": "src/service.ts:37",
+    "description": "src/service.ts:37 で `dueDate: normalized.dueDate` と修正されており、`null` が `undefined` に変換されずにそのまま保存されるようになった。これにより README の仕様「null で期限を解除」および `TaskRecord.dueDate` の型定義 `Date | null | undefined` に準拠している。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0006"
+  },
+  {
+    "rawFindingId": "20260707-074023-readme-md-api-src-types-ts:reviewers:5:ai-antipattern-review:res-005",
+    "stepName": "ai-antipattern-review",
+    "reviewer": "ai-antipattern-review",
+    "familyTag": "ai-antipattern:contract-mismatch",
+    "severity": "critical",
+    "title": "createTask における dueDate の null 処理不備の解消確認",
+    "location": "src/service.ts:37",
+    "description": "src/service.ts:37 において、`dueDate: normalized.dueDate` とされており、`normalizeCreateInput` (src/validator.ts:73) が返す `validateDueDate` の結果（Date | null | undefined）がそのまま代入されている。これにより、`normalized.dueDate` が `null` の場合に正しく `null` として保存され、README の仕様「null で期限を解除」に準拠していることが確認できた。前回 (Iteration 6) で指摘されていた三項演算子による undefined への変換が削除されており、不整合が完全に解消されている。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0006"
+  },
+  {
+    "rawFindingId": "20260707-074023-readme-md-api-src-types-ts:reviewers:5:coding-review:res-006",
+    "stepName": "coding-review",
+    "reviewer": "coding-review",
+    "familyTag": "arch-review",
+    "severity": "critical",
+    "title": "createTask における dueDate の null 処理不備の解消",
+    "location": "src/service.ts:37",
+    "description": "src/service.ts:37 で `dueDate: normalized.dueDate` となり、三項演算子による undefined への変換が削除された。これにより、validator から返却された null がそのまま保存されるようになり、仕様および型定義と整合した。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0006"
+  }
+]

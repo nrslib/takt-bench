@@ -1,0 +1,26 @@
+[
+  {
+    "rawFindingId": "20260707-074023-readme-md-api-src-types-ts:reviewers:6:arch-review:res-arch-007",
+    "stepName": "arch-review",
+    "reviewer": "arch-review",
+    "familyTag": "contract-violation",
+    "severity": "critical",
+    "title": "createTask における dueDate の null 処理不備の解消確認",
+    "location": "src/service.ts:37",
+    "description": "src/service.ts:37 で `dueDate: normalized.dueDate` と修正されており、三項演算子による null -> undefined 変換が排除された。これにより、正規化結果の null がそのまま保持され、README 仕様および TaskRecord の型定義に準拠している。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0006"
+  },
+  {
+    "rawFindingId": "20260707-074023-readme-md-api-src-types-ts:reviewers:6:implementation-semantics-review:res-0006",
+    "stepName": "implementation-semantics-review",
+    "reviewer": "implementation-semantics-review",
+    "familyTag": "type-mismatch",
+    "severity": "critical",
+    "title": "createTask における dueDate の null 処理不備の解消確認",
+    "location": "src/service.ts:37",
+    "description": "src/service.ts:37 で `dueDate: normalized.dueDate` となり、`src/validator.ts:73` の `validateDueDate` が返す `Date | null | undefined` がそのまま保存されるようになった。これにより、`null` (期限解除) が正しく保持されるようになったことを確認。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0006"
+  }
+]

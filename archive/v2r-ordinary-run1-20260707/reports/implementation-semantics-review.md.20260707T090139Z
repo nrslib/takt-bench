@@ -1,0 +1,14 @@
+# 実装意味論レビュー
+
+## 結果: APPROVE
+
+## サマリー
+累積差分を再走査し、`createTask` における `dueDate` の `null` 処理不備（F-0006）が適切に解消されたことを確認しました。その他のデータ構造選択、導出値管理、参照保護、fail-fast処理についても意味論的な不備はなく、承認します。
+
+## 検証証跡
+- 差分確認: `src/service.ts`, `src/validator.ts`, `src/types.ts`, `src/task-record.ts`, `src/repository.ts` の累積差分を再走査。
+- 判定根拠の実在確認:
+    - `src/service.ts:37`: `dueDate: normalized.dueDate` となり、`null` を含む正規化後の値がそのまま保持される実装を確認。
+    - `src/validator.ts:30-41`: `validateDueDate` が `null` を適切に返却し、`null` 時にバリデーションをスキップする挙動を確認。
+    - `src/repository.ts:5`: `Map` による動的キー管理を確認。
+    - `src/task-record.ts:14`: `Date` の `null`/`undefined` を考慮した防衛的コピーを確認。

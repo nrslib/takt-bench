@@ -1,0 +1,39 @@
+# Merge Readiness Review
+
+## 結果: REJECT
+
+## サマリー
+`dueDate` の `null` 保存契約は満たされていますが、前回指摘した `as any`、未使用 import、空分岐が現在の実コードにも残っています。ポリシー上、`any` 型の使用と未使用コードは REJECT 条件です。
+
+## 保守前提のマージ品質チェック
+| # | 観点 | 状態 | 根拠（ファイル:行 / テスト / 実行証跡） | コメント |
+|---|------|------|---------------------------------------|----------|
+| 1 | 要求充足 | 充足 | `src/service.ts:37`, `src/service.ts:76-77`, `tests/update-transitions.test.ts:62` | `dueDate: null` は `null` として保存される |
+| 2 | 既存契約・既存フローへの影響 | 問題あり | `tests/create-task.test.ts:145`, `tests/validation.test.ts:118` | `any` により型契約を迂回している |
+| 3 | テスト・検証 | 不足 | `npm test`: 5 files / 81 tests 成功 | テストは通るが `as any` が REJECT 条件 |
+| 4 | 要求外変更・スコープクリープ | 問題なし | `src/index.ts:6-8` | 公開入口は `types`, `InMemoryTaskRepository`, `TaskService` のみ |
+| 5 | 保守可能性・将来変更容易性 | 問題あり | `src/service.ts:10`, `src/service.ts:218` | 未使用 import と空の `if` 分岐が残存 |
+| 6 | 明白なセキュリティ・データ保護・運用リスク | 問題なし | `src/repository.ts:7-21`, `src/task-record.ts:3-16` | 防御的コピー経路は確認済み |
+
+## 横断監査証跡
+| # | 変更カテゴリ | 抽出した項目 | 確認した検索語・ファイル | 判定 | コメント |
+|---|--------------|--------------|--------------------------|------|----------|
+| 1 | 型 / 出力契約 | `TaskRecord.dueDate`, `UpdateTaskInput.dueDate` | `dueDate: null`, `normalized.dueDate`, `toBeNull()` / `src/service.ts`, `tests/update-transitions.test.ts`, `tests/validation.test.ts` | 問題なし | F-0003/F-0006 の主契約は解消済み |
+| 2 | 型安全性 | `as any` | `\bas any\b` / `tests/create-task.test.ts:145`, `tests/validation.test.ts:118` | 問題あり | `any` 使用は REJECT 条件 |
+| 3 | import / 型名 | `Priority` | `\bPriority\b` / `src/service.ts:10`, `src/types.ts:8-35` | 問題あり | `src/service.ts` では import のみで未使用 |
+| 4 | helper / sort | `compareTasks` | `if ((a.dueDate`, `src/service.ts:218` | 問題あり | 空ブロックを持つ不要分岐がある |
+
+## 観測した指摘
+| # | family_tag | カテゴリ | 重大度 | 場所 | 問題 | 修正案 |
+|---|------------|---------|--------|------|------|--------|
+| 1 | type-safety-readiness | 保守困難化 | high | `tests/create-task.test.ts:145`, `tests/validation.test.ts:118` | `dueDate: null as any` により型契約を迂回している。ポリシーの `any` 型使用禁止に該当する | `any` を使わず、公開型で表現できる入力に限定するか、境界入力として `unknown` から明示的に変換する |
+| 2 | maintainability-readiness | 保守困難化 | medium | `src/service.ts:10` | `Priority` が未使用 import として残っている | `Priority` import を削除する |
+| 3 | maintainability-readiness | 保守困難化 | medium | `src/service.ts:218` | `compareTasks` に空の `if` 分岐があり、不要な条件分岐として保守性を下げている | 空ブロックを持たない比較ロジックに整理する |
+
+## 検証証跡
+- ビルド: `npm run typecheck` を実行し成功
+- テスト: `npm test` を実行し 5 files / 81 tests 成功
+- 動作確認: `dueDate: null` は `src/service.ts:76-77` と `tests/update-transitions.test.ts:62` で `null` 保存を確認
+
+## REJECT判定条件
+- マージを止めるべき観測指摘が3件あるため REJECT。

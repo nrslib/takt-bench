@@ -1,0 +1,78 @@
+{
+  "version": 1,
+  "runId": "20260707-074023-readme-md-api-src-types-ts",
+  "stepName": "reviewers",
+  "retryCount": 1,
+  "ledgerUpdated": false,
+  "finalErrors": [
+    "Cannot match raw findings with different familyTag values: \"contract-violation\" and \"type-mismatch\" (matches[1], finding \"F-0006\")",
+    "Resolution confirmation \"20260707-074023-readme-md-api-src-types-ts:reviewers:6:arch-review:res-arch-007\" cannot be cited as issue evidence in matches[0]",
+    "Resolution confirmation \"20260707-074023-readme-md-api-src-types-ts:reviewers:6:implementation-semantics-review:res-0006\" cannot be cited as issue evidence in matches[1]",
+    "Cannot match finding \"F-0006\" because it is not open",
+    "Cannot match finding \"F-0006\" because it is not open",
+    "Finding id \"F-0006\" appears in multiple manager decisions: matches[0] and matches[1]"
+  ],
+  "attempts": [
+    {
+      "attempt": 1,
+      "managerOutput": {
+        "matches": [],
+        "newFindings": [],
+        "resolvedFindings": [
+          {
+            "findingId": "F-0006",
+            "rawFindingIds": [
+              "20260707-074023-readme-md-api-src-types-ts:reviewers:6:arch-review:res-arch-007",
+              "20260707-074023-readme-md-api-src-types-ts:reviewers:6:implementation-semantics-review:res-0006"
+            ],
+            "evidence": "いずれも kind=resolution_confirmation で targetFindingId が F-0006 を指しており、location も src/service.ts:37 の createTask dueDate null 処理不備を対象としているため。"
+          }
+        ],
+        "reopenedFindings": [],
+        "conflicts": [],
+        "resolvedConflicts": [],
+        "waivedFindings": [],
+        "disputeNotes": []
+      },
+      "validationErrors": [
+        "Cannot resolve finding \"F-0006\" because it is not open"
+      ]
+    },
+    {
+      "attempt": 2,
+      "managerOutput": {
+        "matches": [
+          {
+            "findingId": "F-0006",
+            "rawFindingIds": [
+              "20260707-074023-readme-md-api-src-types-ts:reviewers:6:arch-review:res-arch-007"
+            ],
+            "evidence": "kind=resolution_confirmation で targetFindingId が F-0006 を指しているが、前版 ledger で F-0006 は既に resolved のため追加の解消遷移は行わず、同一 resolved finding への確認として対応づける。familyTag も F-0006 の contract-violation と一致する。"
+          },
+          {
+            "findingId": "F-0006",
+            "rawFindingIds": [
+              "20260707-074023-readme-md-api-src-types-ts:reviewers:6:implementation-semantics-review:res-0006"
+            ],
+            "evidence": "kind=resolution_confirmation で targetFindingId が F-0006 を指しているが、前版 ledger で F-0006 は既に resolved のため追加の解消遷移は行わず、同一 resolved finding への確認として対応づける。familyTag は異なるため raw finding 同士は同一グループに統合しない。"
+          }
+        ],
+        "newFindings": [],
+        "resolvedFindings": [],
+        "reopenedFindings": [],
+        "conflicts": [],
+        "resolvedConflicts": [],
+        "waivedFindings": [],
+        "disputeNotes": []
+      },
+      "validationErrors": [
+        "Cannot match raw findings with different familyTag values: \"contract-violation\" and \"type-mismatch\" (matches[1], finding \"F-0006\")",
+        "Resolution confirmation \"20260707-074023-readme-md-api-src-types-ts:reviewers:6:arch-review:res-arch-007\" cannot be cited as issue evidence in matches[0]",
+        "Resolution confirmation \"20260707-074023-readme-md-api-src-types-ts:reviewers:6:implementation-semantics-review:res-0006\" cannot be cited as issue evidence in matches[1]",
+        "Cannot match finding \"F-0006\" because it is not open",
+        "Cannot match finding \"F-0006\" because it is not open",
+        "Finding id \"F-0006\" appears in multiple manager decisions: matches[0] and matches[1]"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,62 @@
+[
+  {
+    "rawFindingId": "20260707-074023-readme-md-api-src-types-ts:reviewers:1:arch-review:arch-review-001",
+    "stepName": "arch-review",
+    "reviewer": "arch-review",
+    "familyTag": "file-too-large",
+    "severity": "low",
+    "title": "ファイル行数超過による分割推奨",
+    "location": "src/service.ts:1",
+    "description": "src/service.ts の行数が 328 行であり、アーキテクチャ知識の「ファイル分割」基準（1ファイル300行超でWarning、分割を提案）に該当する。現状、TaskService クラスにバリデーション、正規化、ビジネスロジック、ソートロジックがすべて集約されており、責務が肥大化している。",
+    "suggestion": "正規化ロジック（normalizeCreateInput, normalizeUpdateInput, normalizeTags）を専用の Validator または Normalizer クラス/モジュールに抽出することを検討してください。",
+    "kind": "issue"
+  },
+  {
+    "rawFindingId": "20260707-074023-readme-md-api-src-types-ts:reviewers:1:ai-antipattern-review:new-finding-001",
+    "stepName": "ai-antipattern-review",
+    "reviewer": "ai-antipattern-review",
+    "familyTag": "ai-antipattern:mutation",
+    "severity": "high",
+    "title": "公開API入力オブジェクトの直接変更（副作用）",
+    "location": "src/service.ts:236",
+    "description": "src/service.ts:236 で input.description を直接 trim して上書きしている。UpdateTaskInput は公開APIの型であり、これを直接変更することは、呼び出し側が渡したオブジェクトの状態を意図せず変更させる副作用となる。ポリシーの「オブジェクト/配列の直接変更」に抵触する。",
+    "suggestion": "input.description を直接変更せず、正規化後の値を別の変数に格納して返却するように修正してください。",
+    "kind": "issue"
+  },
+  {
+    "rawFindingId": "20260707-074023-readme-md-api-src-types-ts:reviewers:1:ai-antipattern-review:new-finding-002",
+    "stepName": "ai-antipattern-review",
+    "reviewer": "ai-antipattern-review",
+    "familyTag": "ai-antipattern:contract-mismatch",
+    "severity": "critical",
+    "title": "dueDate 更新における null/undefined の区別不全と型不整合",
+    "location": "src/service.ts:73",
+    "description": "src/service.ts:64-74 で updateTask の更新内容を構築しているが、dueDate の処理において normalized.dueDate が null の場合に undefined を設定している。 README.md の仕様「dueDate は Date で更新・null で解除・undefined で変更なし」に準拠させるには、null の場合は null として保存し、undefined の場合にのみ既存値を保持すべきである。現在の実装では null と undefined が区別されず、どちらも結果的に undefined（解除）となるか、既存値保持にならない可能性がある。また、TaskRecord 型の dueDate は Date | undefined であるため、null を保持できない。型定義 src/types.ts:20 に dueDate: Date | undefined とあり、null が許容されていない。仕様と型の不整合がある。",
+    "suggestion": "1. TaskRecord 型の dueDate を Date | null | undefined にするか、仕様に合わせて null 扱いを定義する。 2. updateTask の更新ロジックで、null (解除) と undefined (変更なし) を正しく区別してリポジトリに保存するように修正してください。",
+    "kind": "issue"
+  },
+  {
+    "rawFindingId": "20260707-074023-readme-md-api-src-types-ts:reviewers:1:ai-antipattern-review:new-finding-003",
+    "stepName": "ai-antipattern-review",
+    "reviewer": "ai-antipattern-review",
+    "familyTag": "ai-antipattern:dry-violation",
+    "severity": "medium",
+    "title": "バリデーションロジックの重複実装（DRY違反）",
+    "location": "src/service.ts:182,224",
+    "description": "src/service.ts:182-222 (normalizeCreateInput) と 224-254 (normalizeUpdateInput) で、タイトルや期限のバリデーションロジックが重複している。README.md のアーキテクチャ要件「検証ロジックは一箇所に集約し、create / update で重複実装しない」に違反している。",
+    "suggestion": "共通のバリデーション関数を抽出して、create と update の両方から利用するようにしてください。",
+    "kind": "issue"
+  },
+  {
+    "rawFindingId": "20260707-074023-readme-md-api-src-types-ts:reviewers:1:coding-review:finding-001",
+    "stepName": "coding-review",
+    "reviewer": "coding-review",
+    "familyTag": "side-effect",
+    "severity": "medium",
+    "title": "Input オブジェクトの破壊的変更",
+    "location": "src/service.ts:236",
+    "description": "src/service.ts の 236 行目で、UpdateTaskInput のプロパティである description を直接 trim して書き換えている。これは、呼び出し元に渡された input オブジェクトを破壊的に変更することを意味し、意図しない副作用を招く可能性がある。normalizeUpdateInput の戻り値で正規化した値を返すべきである。",
+    "suggestion": "input.description を直接変更せず、戻り値のオブジェクトで正規化した値を指定するように修正する。",
+    "kind": "issue"
+  }
+]

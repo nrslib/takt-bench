@@ -1,0 +1,27 @@
+# アーキテクチャレビュー
+
+## 結果: REJECT
+
+## サマリー
+`updateTask` における `dueDate` の `null`/`undefined` 区別問題は解消されましたが、`createTask` において `normalized.dueDate === null` を `undefined` に変換して保存する不備が残っており、仕様に反しています。
+
+## 確認した観点
+- [x] 構造・設計
+- [x] コード品質
+- [x] 変更スコープ
+- [x] テストカバレッジ
+- [x] デッドコード
+- [x] 呼び出しチェーン検証
+
+## 観測した指摘
+| # | family_tag | スコープ | 重大度 | 場所 | 問題 | 修正案 |
+|---|------------|---------|--------|------|------|--------|
+| 1 | contract-violation | スコープ内 | critical | `src/service.ts:37` | `createTask` にて、正規化後の `dueDate` が `null` の場合に `undefined` として保存している。これは README の仕様「null で期限を解除」に反しており、`TaskRecord` の型が `Date \| null \| undefined` である以上、`null` をそのまま保持すべきである。 | `normalized.dueDate === null ? undefined : normalized.dueDate` の三項演算子を削除し、そのまま `normalized.dueDate` を割り当てるように修正してください。 |
+
+## 検証証跡
+- ビルド: `src/types.ts` および `src/service.ts` の型定義を確認。`TaskRecord.dueDate` は `Date \| null \| undefined` となっており、`null` の保持が可能であることを確認。
+- テスト: 未確認（本レビューはソースコードの静的解析に基づく）。
+- 動作確認: `src/service.ts:37` の実装が、`S-0003` で解消されたはずの `null` 保持要件を `createTask` 側で破壊していることを確認。
+
+## REJECT判定条件
+- スコープ内のブロッキング指摘が1件以上あるため REJECT。
