@@ -10,7 +10,7 @@
 # codex に直接固定してある（bench.yaml の loop_monitors 参照）。
 workflow: bench
 task_file: task.md
-repetitions: 1
+repetitions: 3
 
 combos:
   - id: codex-all
