@@ -1,0 +1,180 @@
+diff --git a/.takt/config.yaml b/.takt/config.yaml
+index bf4b6382..e086d810 100644
+--- a/.takt/config.yaml
++++ b/.takt/config.yaml
+@@ -8,33 +8,19 @@ workflow_overrides:
+         - "Run `npm run build` and verify the build succeeds"
+         - "Run `npm run lint` and verify lint passes"
+         - "Run `npm test` and verify unit tests pass"
+-        - "Run `npm run test:it` and verify integration tests pass"
+-        - "Run `npm run test:e2e:mock` and verify full mock E2E tests pass"
+     fix:
+       quality_gates:
+         - "Run `npm run build` and verify the build succeeds"
+         - "Run `npm run lint` and verify lint passes"
+         - "Run `npm test` and verify unit tests pass"
+-        - "Run `npm run test:it` and verify integration tests pass"
+-        - "Run `npm run test:e2e:mock` and verify full mock E2E tests pass"
+-    ai_fix:
+-      quality_gates:
+-        - "Run `npm run build` and verify the build succeeds"
+-        - "Run `npm run lint` and verify lint passes"
+-        - "Run `npm test` and verify unit tests pass"
+-        - "Run `npm run test:it` and verify integration tests pass"
+-        - "Run `npm run test:e2e:mock` and verify full mock E2E tests pass"
+-    ai-antipattern-fix:
+-      quality_gates:
+-        - "Run `npm run build` and verify the build succeeds"
+-        - "Run `npm run lint` and verify lint passes"
+-        - "Run `npm test` and verify unit tests pass"
+-        - "Run `npm run test:it` and verify integration tests pass"
+-        - "Run `npm run test:e2e:mock` and verify full mock E2E tests pass"
+-    fix_supervisor:
+-      quality_gates:
+-        - "Run `npm run build` and verify the build succeeds"
+-        - "Run `npm run lint` and verify lint passes"
+-        - "Run `npm test` and verify unit tests pass"
+-        - "Run `npm run test:it` and verify integration tests pass"
+-        - "Run `npm run test:e2e:mock` and verify full mock E2E tests pass"
++
++provider_routing:
++  tags:
++    plan: { provider: codex, model: gpt-5.5 }
++    test-planning: { provider: codex, model: gpt-5.5 }
++    coding: { provider: opencode, model: ollama-cloud/qwen3-coder-next }
++    review: { provider: opencode, model: ollama-cloud/gemma4:31b }
++    final-gate: { provider: codex, model: gpt-5.5 }
++
++persona_providers:
++  findings-manager: { provider: codex, model: gpt-5.5 }
+diff --git a/src/features/pipeline/execute.ts b/src/features/pipeline/execute.ts
+index 8a641629..340df95d 100644
+--- a/src/features/pipeline/execute.ts
++++ b/src/features/pipeline/execute.ts
+@@ -1,6 +1,7 @@
+ import { resolveConfigValues } from '../../infra/config/index.js';
+ import { info, error, status, blankLine } from '../../shared/ui/index.js';
+ import { createLogger, getErrorMessage, getSlackWebhookUrl, sendSlackNotification, buildSlackRunSummary, generateRunId } from '../../shared/utils/index.js';
++import { generateExecutionReportDir } from '../../core/workflow/run/run-slug.js';
+ import type { SlackTaskDetail } from '../../shared/utils/index.js';
+ import type { PipelineExecutionOptions } from '../tasks/index.js';
+ import {
+@@ -19,6 +20,8 @@ import {
+ } from './steps.js';
+ import { submitPullRequest } from './prSubmission.js';
+ import { sanitizeTerminalText } from '../../shared/utils/text.js';
++import { prepareTaskSpecDirectory, cleanupPreparedTaskSpec } from '../tasks/attachments.js';
++import { stageTaskSpecForExecution, type StagedTaskSpec } from '../tasks/execute/taskSpecContext.js';
+ 
+ export type { PipelineExecutionOptions };
+ 
+@@ -56,7 +59,15 @@ async function runPipeline(options: PipelineExecutionOptions): Promise<PipelineO
+   }
+ 
+   log.info('Pipeline workflow execution starting', { workflow, branch: context.branch, skipGit, issueNumber: options.issueNumber });
+-  const workflowOk = await runWorkflow(cwd, workflow, taskContent.task, context.execCwd, options, context);
++  let taskPrompt = taskContent.task;
++  if (taskContent.attachments && taskContent.attachments.length > 0) {
++    const preparedSpec = prepareTaskSpecDirectory(cwd, taskContent.task, taskContent.attachments);
++    const reportDirName = generateExecutionReportDir(cwd, taskContent.task);
++    const stagedSpec = stageTaskSpecForExecution(cwd, context.execCwd, preparedSpec.taskDirRelative, reportDirName);
++    taskPrompt = stagedSpec.taskPrompt;
++    cleanupPreparedTaskSpec(preparedSpec.taskDir);
++  }
++  const workflowOk = await runWorkflow(cwd, workflow, taskPrompt, context.execCwd, options, context);
+   if (!workflowOk) return { exitCode: EXIT_WORKFLOW_FAILED, result: buildResult({ branch: context.branch }) };
+ 
+   if (!skipGit && context.branch) {
+diff --git a/src/features/pipeline/steps.ts b/src/features/pipeline/steps.ts
+index ceb701ed..be1ead5a 100644
+--- a/src/features/pipeline/steps.ts
++++ b/src/features/pipeline/steps.ts
+@@ -3,8 +3,9 @@ import {
+   formatIssueAsTask,
+   formatPrReviewAsTask,
+   getGitProvider,
++  type Issue,
+ } from '../../infra/git/index.js';
+-import type { Issue } from '../../infra/git/index.js';
++import { resolvePrReviewImageAttachments } from '../../infra/github/prReviewImageAttachments.js';
+ import { resolveConfigValue } from '../../infra/config/index.js';
+ import { stageAndCommit, resolveBaseBranch, resolveBaseBranchName, pushBranch, checkoutBranch, getCurrentBranch } from '../../infra/task/index.js';
+ import { executeTask, confirmAndCreateWorktree, type ExecuteTaskOptions, type TaskExecutionOptions, type PipelineExecutionOptions } from '../tasks/index.js';
+@@ -14,12 +15,14 @@ import { getErrorMessage } from '../../shared/utils/index.js';
+ import type { PipelineConfig } from '../../core/models/index.js';
+ import { sanitizeTerminalText } from '../../shared/utils/text.js';
+ import { expandPipelineTemplate } from './templateExpander.js';
++import type { TaskAttachment } from '../tasks/attachments.js';
+ 
+ export interface TaskContent {
+   task: string;
+   issue?: Issue;
+   prBranch?: string;
+   prBaseBranch?: string;
++  attachments?: TaskAttachment[];
+ }
+ 
+ export interface GitExecutionContext {
+@@ -151,12 +154,14 @@ export function resolveTaskContent(options: PipelineExecutionOptions): TaskConte
+       (provider) => provider.fetchPrReviewComments(options.prNumber!, cwd),
+     );
+     if (!prReview) return undefined;
+-    const task = formatPrReviewAsTask(prReview);
++    const processed = resolvePrReviewImageAttachments(prReview, cwd);
++    const task = formatPrReviewAsTask(processed.prReview);
+     success(`PR #${options.prNumber} fetched: "${sanitizeTerminalText(prReview.title)}"`);
+     return {
+       task,
+-      prBranch: prReview.headRefName,
+-      prBaseBranch: prReview.baseRefName,
++      prBranch: processed.prReview.headRefName,
++      prBaseBranch: processed.prReview.baseRefName,
++      attachments: processed.attachments,
+     };
+   }
+   if (options.issueNumber) {
+diff --git a/src/features/tasks/add/index.ts b/src/features/tasks/add/index.ts
+index 726d3101..8e92b15d 100644
+--- a/src/features/tasks/add/index.ts
++++ b/src/features/tasks/add/index.ts
+@@ -16,6 +16,7 @@ import { isIssueReference, resolveIssueTask, parseIssueNumbers, formatPrReviewAs
+ import type { PrReviewData } from '../../../infra/git/index.js';
+ import { extractTitle, createIssueFromTask, createIssueFromTaskResult } from '../../../infra/task/issueTask.js';
+ import { displayTaskCreationResult, promptWorktreeSettings, type WorktreeSettings } from './worktree-settings.js';
++import { resolvePrReviewImageAttachments } from '../../../infra/github/prReviewImageAttachments.js';
+ import {
+   createIssueAndEnqueueTask,
+   formatIssueEnqueueFailure,
+@@ -191,12 +192,14 @@ export async function addTask(
+       return;
+     }
+ 
+-    if (prReview.reviews.length === 0 && prReview.comments.length === 0) {
++    const processed = resolvePrReviewImageAttachments(prReview, cwd);
++    
++    if (processed.prReview.reviews.length === 0 && processed.prReview.comments.length === 0 && processed.attachments.length === 0) {
+       error(`PR #${prNumber} has no review comments`);
+       return;
+     }
+ 
+-    const taskContent = formatPrReviewAsTask(prReview);
++    const taskContent = formatPrReviewAsTask(processed.prReview);
+     const workflow = await determineWorkflow(cwd, opts?.workflow);
+     if (workflow === null) {
+       info('Cancelled.');
+@@ -205,12 +208,12 @@ export async function addTask(
+ 
+     const settings = {
+       worktree: true,
+-      branch: prReview.headRefName,
+-      baseBranch: prReview.baseRefName,
++      branch: processed.prReview.headRefName,
++      baseBranch: processed.prReview.baseRefName,
+       autoPr: false,
+       shouldPublishBranchToOrigin: true,
+     };
+-    const created = await saveTaskFile(cwd, taskContent, { workflow, ...settings, prNumber });
++    const created = await saveTaskFile(cwd, taskContent, { workflow, ...settings, prNumber, attachments: processed.attachments });
+     displayTaskCreationResult(created, settings, workflow);
+     return;
+   }
