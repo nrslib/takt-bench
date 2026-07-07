@@ -1,0 +1,20 @@
+# AI生成コードレビュー
+
+## 結果: APPROVE
+
+## サマリー
+F-0010 と F-0011 は実コードで解消を確認済みで、新規の AI 生成コード特有のブロッキング指摘はありません。
+
+## 検証した項目
+| 観点 | 結果 | 備考 |
+|------|------|------|
+| 仮定の妥当性 | ✅ | `--pr` help と PR 画像添付契約の整合を確認 |
+| API/ライブラリの実在 | ✅ | 追加・変更 API の実在と呼び出し経路を確認 |
+| コンテキスト適合 | ✅ | provider 境界、CLI help、既存テスト規約に整合 |
+| スコープ | ✅ | 修正は F-0010/F-0011 の対象範囲内 |
+
+## 観測した指摘
+なし。F-0010 は `src/app/cli/program.ts:44` と `src/__tests__/provider-contract-docs.test.ts:28-31`、F-0011 は `src/infra/github/prReviewImageAttachments.ts:87-119,223-241,317-324` で解消を確認しました。
+
+## 再走査証跡
+Policy 全 `##` セクション、arch-review / implementation-semantics Knowledge 全 `##` セクションを、今回差分の CLI help・PR 画像 resolver・provider/保存経路に照合しました。

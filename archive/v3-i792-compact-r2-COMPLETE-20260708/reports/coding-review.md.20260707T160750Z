@@ -1,0 +1,20 @@
+# コーディングレビュー
+
+## 結果: REJECT
+
+## サマリー
+PR コメント画像 attachment 実装自体は主要経路へ配線されていますが、未追跡 workflow により `npm test` が失敗しています。また、画像ダウンロードのサイズ上限が読み込み後検証になっており、大きなレスポンスをメモリへ読み切るリスクがあります。
+
+## 観測した指摘
+| # | family_tag | 重大度 | 場所 | 問題 | 影響 | 修正案 |
+|---|------------|--------|------|------|------|--------|
+| 1 | test_failure_untracked_workflow_override | Medium | `.takt/workflows/takt-default-for-local-llm.yaml:31` | 未追跡の `.takt/workflows/takt-default-for-local-llm.yaml` が builtin workflow を上書きし、英語ケースでも日本語 condition を返しています。 | `npm test` が `src/__tests__/for-local-llm-replan-wiring.test.ts:56` で失敗し、品質要件を満たしていません。 | 不要なら未追跡 workflow を変更セットから除外してください。必要なら英語/日本語の解決契約を既存 builtin と同じ形に揃えてください。 |
+| 2 | security_unbounded_image_download | Medium | `src/features/tasks/prReviewImageAttachments.ts:87` | `Content-Length` が無い、または不正な場合、`response.arrayBuffer()` で全体を読み込んだ後にサイズ検証しています。 | 10MiB 上限を超える画像でメモリを過剰消費し、タスク要件の「サイズ上限」をダウンロード中に強制できません。 | ストリーム読み込みで累積サイズを監視し、`maxBytes` 超過時点で中断してください。Content-Length なしの上限超過テストも追加してください。 |
+
+## 検証証跡
+- 差分確認: `git status --short`、`git diff --stat`、対象実装・テスト・policy を確認
+- ビルド: `npm run build` 成功
+- テスト: `npm run lint` 成功、`npm test` 失敗（上記 #1）
+
+## REJECT判定条件
+- ブロッキング指摘が2件あります。

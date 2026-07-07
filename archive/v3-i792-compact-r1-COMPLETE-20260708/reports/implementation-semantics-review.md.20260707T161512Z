@@ -1,0 +1,9 @@
+# 実装意味論レビュー
+
+## 結果: APPROVE
+
+## サマリー
+実装意味論の観点では新規ブロッキング指摘はありません。F-0001/F-0003/F-0008 の cleanup 経路、F-0002/F-0005/F-0006/F-0007 の attachment namespace / placeholder 解決は、現在コードで解消を確認しました。
+
+## 再走査証跡
+Knowledge の「データ構造の意味選択」「導出値の単一情報源」「命名と意味の整合」「境界での fail-fast」「内部状態の参照漏れ」を累積差分へ再適用しました。根拠箇所は `src/app/cli/routing.ts:148-299`, `src/app/cli/routing.ts:184-189`, `src/features/interactive/conversationLoop.ts:140`, `src/features/interactive/quietMode.ts:61`, `src/features/interactive/imageAttachments.ts:135-147` です。

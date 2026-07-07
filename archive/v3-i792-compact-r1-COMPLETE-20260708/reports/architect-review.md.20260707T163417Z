@@ -1,0 +1,23 @@
+# アーキテクチャレビュー
+
+## 結果: REJECT
+
+## サマリー
+F-0009 は `README.md` / `docs/README.ja.md` / `docs/cli-reference.md` / `docs/cli-reference.ja.md` の更新で解消済みと確認しました。ただし、同じ利用者向け契約が実行時ヘルプへ反映されておらず、新規 resolver にはポリシー違反の配列直接変更が残っています。
+
+## 観測した指摘
+| # | family_tag | スコープ | 重大度 | 場所 | 問題 | 修正案 |
+|---|------------|---------|--------|------|------|--------|
+| 1 | pr_image_attachments.cli_help_contract_missing | スコープ内 | medium | `src/app/cli/program.ts:44` | docs の `--pr` 説明は PR コメント画像取得を含む契約に更新済みだが、実際の `takt --help` を生成する option description は従来の「review comments and fix」のまま。利用者向け出力経路の契約更新漏れ。 | `--pr` の CLI help 文言を docs と同じ契約に更新し、必要なら help 出力テストも更新する。 |
+| 2 | arch.code_quality.direct_array_mutation | スコープ内 | medium | `src/infra/github/prReviewImageAttachments.ts:93` | 新規 resolver が `references.push()` / `references.sort()` / `chunks.push()` / `attachments.push()` を使用している。Policy/Knowledge の「配列・オブジェクトの直接変更は REJECT」に該当する。 | `map`/`filter`/不変更新で配列生成へ寄せる。局所ミューテーションを許容するならポリシー側に明示的な例外を追加する。 |
+
+## 再走査証跡
+Policy 全章（原則、スコープ判定、REJECT/Warning/APPROVE、仕様完全性、契約全入口、副作用、前回指摘追跡）と Knowledge 全章（構造・設計、境界、コード品質、仕様準拠、呼び出しチェーン、変更スコープ）を累積差分へ照合しました。
+
+## 検証証跡
+- ビルド: 未確認
+- テスト: 未確認
+- 動作確認: docs と該当コードの静的確認のみ実施
+
+## REJECT判定条件
+- スコープ内のブロッキング指摘が2件あります。

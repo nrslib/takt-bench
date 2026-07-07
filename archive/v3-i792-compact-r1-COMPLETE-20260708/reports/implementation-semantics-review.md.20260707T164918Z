@@ -1,0 +1,6 @@
+# 実装意味論レビュー
+
+## 結果: APPROVE
+
+## サマリー
+実装意味論の観点では新規ブロッキング指摘はありません。F-0010 は `src/app/cli/program.ts:44`、F-0011 は `src/infra/github/prReviewImageAttachments.ts:84-119` / `:223-241` / `:317-325` で解消を確認しました。

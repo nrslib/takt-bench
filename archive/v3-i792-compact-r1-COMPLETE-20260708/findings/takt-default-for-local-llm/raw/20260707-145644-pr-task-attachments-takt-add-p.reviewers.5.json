@@ -1,0 +1,13 @@
+[
+  {
+    "rawFindingId": "20260707-145644-pr-task-attachments-takt-add-p:reviewers:5:coding-review:R5-ISSUE-001",
+    "stepName": "coding-review",
+    "reviewer": "coding-review",
+    "familyTag": "process_gap",
+    "severity": "low",
+    "title": "レビュー再開後の再検証が未実施",
+    "description": "コンテキスト圧縮後、現行コード・差分・テスト結果をこの応答直前に再読/再実行できていません。判断ルールは根拠ファイル・コマンド出力を判断直前に再確認することを要求しているため、APPROVE/REJECT の実コード判定を確定できません。",
+    "suggestion": "次フェーズで対象ファイルと差分を再読し、必要なビルド・lint・テスト結果を再確認してから最終判定してください。",
+    "kind": "issue"
+  }
+]

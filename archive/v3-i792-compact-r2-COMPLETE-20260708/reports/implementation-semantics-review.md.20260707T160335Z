@@ -1,0 +1,19 @@
+# 実装意味論レビュー
+
+## 結果: REJECT
+
+## サマリー
+PR画像 attachment 実装は主要経路に配線されていますが、サイズ上限が実読み込み境界として効いていない箇所と、対話経路の例外時 cleanup 漏れがあります。どちらも外部入力・一時状態の境界契約に関わるため差し戻しです。
+
+## 観測した指摘
+| # | family_tag | 重大度 | 場所 | 問題 | 壊れる条件 | 修正案 |
+|---|------------|--------|------|------|-----------|--------|
+| 1 | implementation-semantics.boundary-size-limit | High | `src/features/tasks/prReviewImageAttachments.ts:87` | `defaultDownloadImage()` が `response.arrayBuffer()` でレスポンス全体を読み込んでから `image.body.length` を検証しており、10MiB上限が読み込み境界として機能していない。 | GitHub attachment URL が `Content-Length` を返さない、または実体より小さい値を返す場合、上限超過の本文を全量メモリに読み込んだ後でしか失敗しない。 | `response.body` をストリームで読み、累積バイト数が `options.maxBytes` を超えた時点で中断してエラーにする。`Content-Length` は早期拒否の補助に留める。 |
+| 2 | implementation-semantics.cleanup-state | Medium | `src/app/cli/routing.ts:148` | `resolvePrInput()` 成功後に作られた PR画像一時ファイルの cleanup が、`resolveConfigValues()` / `determineWorkflow()` / `getWorkflowDescription()` の例外経路で呼ばれない。 | PR画像の取得に成功した後、設定不正や workflow 読み込み失敗で対話開始前に例外が発生すると、一時ディレクトリが残る。 | `cleanupSourceAttachments` 設定後の処理全体を `try/finally` に入れ、workflow解決・モード選択・dispatchのどの例外経路でも一度だけ cleanup する。 |
+
+## 検証証跡
+- 差分確認: PR画像抽出、task input builder、`takt add --pr`、`takt --pr`、pipeline `--pr` の累積差分を確認。
+- 判定根拠の実在確認: `src/features/tasks/prReviewImageAttachments.ts:87` の `response.arrayBuffer()` と、`src/app/cli/routing.ts:148` 以降が cleanup 用 `try/finally` の外側にあることを実コードで確認。
+
+## REJECT判定条件
+- ブロッキング指摘が2件あります。

@@ -1,0 +1,29 @@
+ M README.md
+ M docs/README.ja.md
+ M docs/cli-reference.ja.md
+ M docs/cli-reference.md
+ M src/__tests__/addTask.test.ts
+ M src/__tests__/cli-routing-pr-resolve.test.ts
+ M src/__tests__/enqueueService.test.ts
+ M src/__tests__/for-local-llm-replan-wiring.test.ts
+ M src/__tests__/git-cwd-propagation.test.ts
+ M src/__tests__/git-factory.test.ts
+ M src/__tests__/github-provider.test.ts
+ M src/__tests__/gitlab-provider.test.ts
+ M src/__tests__/pipelineExecution.test.ts
+ M src/__tests__/provider-contract-docs.test.ts
+ M src/app/cli/program.ts
+ M src/app/cli/routing-inputs.ts
+ M src/app/cli/routing.ts
+ M src/features/interactive/inlineImagePaste.ts
+ M src/features/pipeline/execute.ts
+ M src/features/pipeline/steps.ts
+ M src/features/tasks/add/index.ts
+ M src/infra/git/types.ts
+ M src/infra/github/GitHubProvider.ts
+ M src/infra/gitlab/GitLabProvider.ts
+?? .takt/workflows/
+?? src/__tests__/github-pr-review-image-attachments.test.ts
+?? src/__tests__/imageData.test.ts
+?? src/infra/github/prReviewImageAttachments.ts
+?? src/shared/utils/imageData.ts

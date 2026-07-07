@@ -1,0 +1,98 @@
+[
+  {
+    "rawFindingId": "20260707-145644-pr-task-attachments-takt-add-p:reviewers:1:arch-review:arch-raw-1",
+    "stepName": "arch-review",
+    "reviewer": "arch-review",
+    "familyTag": "arch.state.cleanup.pr_source_attachments",
+    "severity": "medium",
+    "title": "PR画像添付の一時ディレクトリが対話開始前のキャンセル/例外で掃除されない",
+    "location": "src/app/cli/routing.ts:154",
+    "description": "`resolvePrInput()` が PR 画像添付を取得して `cleanupSourceAttachments` を保持した後、cleanup は `dispatchConversationAction()` 周辺の finally でしか実行されません。`determineWorkflow()` のキャンセル、`selectInteractiveMode()` のキャンセル、または `interactiveMode()`/`quietMode()`/`personaMode()` が例外を投げる経路は line 249 の try/finally に入らないため、`resolvePrReviewImageAttachments()` が作成した一時 attachment ディレクトリが残ります。Policy の「状態整合性」「副作用と状態遷移の確認」に反します。",
+    "suggestion": "PR source attachment を取得した直後から `executeDefaultAction()` の該当フロー全体を try/finally で包み、workflow 選択キャンセル、mode 選択キャンセル、interactive mode 例外、dispatch 例外の全経路で `cleanupSourceAttachments` を一度だけ実行してください。",
+    "kind": "issue"
+  },
+  {
+    "rawFindingId": "20260707-145644-pr-task-attachments-takt-add-p:reviewers:1:arch-review:arch-raw-2",
+    "stepName": "arch-review",
+    "reviewer": "arch-review",
+    "familyTag": "arch.contract.image_attachment_placeholder_merge",
+    "severity": "high",
+    "title": "PR由来画像と対話中に追加した画像の placeholder/fileName 契約が衝突する",
+    "location": "src/app/cli/routing.ts:183",
+    "description": "PR 由来の画像添付は `sourceAttachments` として保持されますが、`interactiveSeed` には `attachments` が渡されていません。そのため interactive 側の attachment store は PR 画像を知らないまま `image-1.png` / `[Image #1]` から採番を開始します。その後 line 250-254 の `mergeAttachments()` が PR 由来添付と interactive 結果添付を単純連結するため、両方に画像があると同じ placeholder と fileName が並びます。下流の `promoteTaskAttachments()` は同名 destination を拒否し、`resolveReferencedImageAttachments()` も duplicate placeholder をエラーにするため、通常 `takt --pr` 経路で画像参照契約が壊れます。",
+    "suggestion": "PR 由来 attachments を `interactiveSeed.attachments` として渡し、interactive store の採番起点に含めてください。そのうえで最終引き渡しは単純連結ではなく、1つの正規化済み attachment list に統一してください。別案として merge 時に placeholder/fileName を再採番し、本文中の参照も同時に更新してください。",
+    "kind": "issue"
+  },
+  {
+    "rawFindingId": "20260707-145644-pr-task-attachments-takt-add-p:reviewers:1:ai-antipattern-review:raw-ai-001",
+    "stepName": "ai-antipattern-review",
+    "reviewer": "ai-antipattern-review",
+    "familyTag": "ai-antipattern.side-effect-cleanup-gap",
+    "severity": "medium",
+    "title": "PR画像の一時ファイルがキャンセル経路で cleanup されない",
+    "location": "src/app/cli/routing.ts:154",
+    "description": "`resolvePrInput()` は PR 画像をダウンロードして `cleanupSourceAttachments` を返しますが、その後の `determineWorkflow()` キャンセルや `selectInteractiveMode()` キャンセルは `try/finally` の外側で `return` するため、ダウンロード済み一時画像が削除されません。PR画像は外部取得した副作用であり、正常・失敗・中断経路での片付けが必要です。",
+    "suggestion": "PR 画像取得後の処理全体を `try/finally` で囲み、workflow 選択キャンセル、interactive mode 選択キャンセル、interactive 実行例外でも `cleanupSourceAttachments?.()` が必ず実行される構造にしてください。",
+    "kind": "issue"
+  },
+  {
+    "rawFindingId": "20260707-145644-pr-task-attachments-takt-add-p:reviewers:1:ai-antipattern-review:raw-ai-002",
+    "stepName": "ai-antipattern-review",
+    "reviewer": "ai-antipattern-review",
+    "familyTag": "ai-antipattern.provider-boundary-leak",
+    "severity": "medium",
+    "title": "汎用 PR 経路が GitHub 専用 resolver に直接依存している",
+    "location": "src/features/pipeline/steps.ts:14",
+    "description": "`getGitProvider()` は GitHub/GitLab の抽象を返す設計ですが、汎用の `takt add --pr` / pipeline PR 経路から `../../infra/github/prReviewImageAttachments.js` を直接 import しています。同じ漏洩は `src/features/tasks/add/index.ts:17` と `src/app/cli/routing-inputs.ts:4` にもあります。これにより GitLab provider の MR 取得後でも GitHub 専用 URL 判定・`gh auth token` 前提の処理が汎用層へ露出し、provider 境界の契約が崩れています。",
+    "suggestion": "画像添付解決を Git provider 境界へ寄せ、GitHub provider は GitHub attachment resolver、GitLab provider は no-op または GitLab 用 resolver を返す形にしてください。少なくとも汎用 feature/app 層から `infra/github/*` を直接参照しない構造にしてください。",
+    "kind": "issue"
+  },
+  {
+    "rawFindingId": "20260707-145644-pr-task-attachments-takt-add-p:reviewers:1:coding-review:R1",
+    "stepName": "coding-review",
+    "reviewer": "coding-review",
+    "familyTag": "pr_image_attachments.interactive_seed_missing",
+    "severity": "medium",
+    "title": "takt --pr の対話中に PR 画像プレースホルダーが画像として解決されない",
+    "location": "src/app/cli/routing.ts:183",
+    "description": "PR コメント画像を resolvePrInput() で sourceAttachments として取得している一方、interactiveSeed には userMessage/sourceContext だけを渡しており attachments を含めていません。runConversationLoop は initialInput?.attachments から attachmentStore を作り、AI 呼び出し直前にその store で [Image #N] を解決します。そのため takt --pr の assistant/quiet/persona 経路では、sourceContext 内の [Image #1] は本文に出ても、対話・要約 AI 呼び出しには画像が渡らず、要求された --pr 経路での画像参照が成立しません。",
+    "suggestion": "PR 由来の sourceAttachments を interactiveSeed.attachments に渡してください。そのうえで、対話結果が初期添付を所有する設計に合わせ、後段の保存・実行に渡す attachments が二重にならないようにしてください。",
+    "kind": "issue"
+  },
+  {
+    "rawFindingId": "20260707-145644-pr-task-attachments-takt-add-p:reviewers:1:coding-review:R2",
+    "stepName": "coding-review",
+    "reviewer": "coding-review",
+    "familyTag": "pr_image_attachments.attachment_collision",
+    "severity": "medium",
+    "title": "PR 画像と対話中の追加画像を結合すると image-1 が衝突する",
+    "location": "src/app/cli/routing.ts:250",
+    "description": "mergeAttachments() は sourceAttachments と result.attachments を単純連結しています。PR コメントに画像がある場合 sourceAttachments は [Image #1]/image-1.png から始まり、現在の対話用 attachmentStore は PR 添付で初期化されていないため、ユーザーが対話中に画像を貼ると result.attachments も [Image #1]/image-1.png から始まります。この配列を saveTaskFromInteractive() や selectAndExecuteTask() に渡すと、promoteTaskAttachments() が同じ attachments/image-1.png 宛先を2回作ろうとして `Task attachment destination already exists` で失敗し、保存・実行できません。",
+    "suggestion": "PR 由来添付を対話 attachmentStore の initialAttachments として渡して採番を継続させるか、mergeAttachments() で placeholder/fileName を重複しないよう再採番してください。初期添付を result.attachments に含める場合は sourceAttachments との重複連結も避けてください。",
+    "kind": "issue"
+  },
+  {
+    "rawFindingId": "20260707-145644-pr-task-attachments-takt-add-p:reviewers:1:implementation-semantics-review:impl-sem-raw-1",
+    "stepName": "implementation-semantics-review",
+    "reviewer": "implementation-semantics-review",
+    "familyTag": "implementation-semantics/attachment-namespace",
+    "severity": "high",
+    "title": "PR画像添付が interactive の添付名前空間に入っていない",
+    "location": "src/app/cli/routing.ts:183",
+    "description": "`--pr` の sourceContext には `resolvePrInput()` 後の `[Image #1]` 参照が入る一方、`interactiveSeed` には `sourceAttachments` が渡されていません。`runConversationLoop()` / `quietMode()` は `initialInput?.attachments` から添付ストアを初期化するため、AI 呼び出し時に PR 画像の `[Image #1]` は添付実体へ解決されません。また、その状態でユーザーが interactive 中に画像を貼ると、`createImageAttachmentStore()` は空配列から `image-1.*` / `[Image #1]` を再発行し、`mergeAttachments()` が PR 画像と貼付画像を単純連結します。結果として同じ placeholder/fileName を持つ添付が並び、`promoteTaskAttachments()` の保存時に `attachments/image-1.*` が衝突して実行・保存できません。",
+    "suggestion": "PR由来の `sourceAttachments` を `InteractiveSeedInput.attachments` として渡し、interactive 結果に初期添付が含まれる前提で `mergeAttachments()` を重複連結しない形に正規化してください。少なくとも placeholder/fileName の名前空間が単一になるよう、初期添付の件数をもとに追加画像を採番させてください。",
+    "kind": "issue"
+  },
+  {
+    "rawFindingId": "20260707-145644-pr-task-attachments-takt-add-p:reviewers:1:implementation-semantics-review:impl-sem-raw-2",
+    "stepName": "implementation-semantics-review",
+    "reviewer": "implementation-semantics-review",
+    "familyTag": "implementation-semantics/state-cleanup",
+    "severity": "medium",
+    "title": "PR画像ダウンロード後のキャンセル経路で一時添付が解放されない",
+    "location": "src/app/cli/routing.ts:154",
+    "description": "`resolvePrInput()` が PR 画像を一時ディレクトリへ保存し `cleanupAttachments` を返した後、`determineWorkflow()` のキャンセル return と `selectInteractiveMode()` のキャンセル return は、`cleanupSourceAttachments?.()` を呼ぶ `finally` ブロックより前にあります。PR コメントに画像がある状態で workflow 選択または interactive mode 選択をキャンセルすると、作成済みの `takt/pr-attachments/.../attachments` 一時ファイルが残ります。これは副作用を伴う状態の中断経路で解放が漏れる状態不整合です。",
+    "suggestion": "`cleanupSourceAttachments` が設定された後の workflow 選択、mode 選択、interactive 実行、dispatch までを同じ `try/finally` に入れるか、各早期 return の直前で必ず cleanup を実行してください。",
+    "kind": "issue"
+  }
+]

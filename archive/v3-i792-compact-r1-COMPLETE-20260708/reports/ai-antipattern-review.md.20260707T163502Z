@@ -1,0 +1,20 @@
+# AI生成コードレビュー
+
+## 結果: APPROVE
+
+## サマリー
+F-0009 はドキュメント更新により解消済みで、新規の AI 生成コード特有のブロッキング指摘はありません。
+
+## 検証した項目
+| 観点 | 結果 | 備考 |
+|------|------|------|
+| 仮定の妥当性 | ✅ | F-0009 の受入条件を docs/README/CLI reference で確認 |
+| API/ライブラリの実在 | ✅ | `gh` 認証・GitHub/GitLab provider 境界の記述と実装が整合 |
+| コンテキスト適合 | ✅ | `--pr` 契約が英日ドキュメントへ反映済み |
+| スコープ | ✅ | ドキュメント修正は PR 画像添付の利用者向け契約に限定 |
+
+## 観測した指摘
+なし。F-0009 は `docs/cli-reference.md:16,257-269`、`docs/cli-reference.ja.md:16,256-268`、`README.md:241,249`、`docs/README.ja.md:244,252` で解消を確認しました。
+
+## 再走査証跡
+Policy の全 `##` セクション、Knowledge の arch-review / implementation-semantics 各 `##` セクションを、今回差分の docs と PR 画像添付経路に照合しました。

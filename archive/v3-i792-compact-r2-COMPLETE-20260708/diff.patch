@@ -1,0 +1,1242 @@
+diff --git a/src/__tests__/addTask.test.ts b/src/__tests__/addTask.test.ts
+index ed549653..ea232f56 100644
+--- a/src/__tests__/addTask.test.ts
++++ b/src/__tests__/addTask.test.ts
+@@ -68,6 +68,7 @@ const mockParseIssueNumbers = vi.fn((args: string[]) => {
+   return numbers;
+ });
+ const mockFormatPrReviewAsTask = vi.fn();
++const mockBuildPrReviewTaskInput = vi.fn();
+ 
+ vi.mock('../infra/git/index.js', () => ({
+   getGitProvider: () => ({
+@@ -81,6 +82,10 @@ vi.mock('../infra/git/index.js', () => ({
+   formatPrReviewAsTask: (...args: unknown[]) => mockFormatPrReviewAsTask(...args),
+ }));
+ 
++vi.mock('../features/tasks/prReviewTaskInput.js', () => ({
++  buildPrReviewTaskInput: (...args: unknown[]) => mockBuildPrReviewTaskInput(...args),
++}));
++
+ import { interactiveMode } from '../features/interactive/index.js';
+ import { promptInput, confirm } from '../shared/prompt/index.js';
+ import { error, info } from '../shared/ui/index.js';
+@@ -124,6 +129,18 @@ function createMockPrReview(overrides: Partial<PrReviewData & { baseRefName?: st
+   } as PrReviewData;
+ }
+ 
++function createTempImageAttachment(root: string) {
++  const sourceDir = path.join(root, 'resolved-pr-images');
++  const tempPath = path.join(sourceDir, 'image-1.png');
++  fs.mkdirSync(sourceDir, { recursive: true });
++  fs.writeFileSync(tempPath, Buffer.from([0x89, 0x50, 0x4e, 0x47]));
++  return {
++    placeholder: '[Image #1]',
++    tempPath,
++    fileName: 'image-1.png',
++  };
++}
++
+ beforeEach(() => {
+   vi.clearAllMocks();
+   testDir = fs.mkdtempSync(path.join(tmpdir(), 'takt-test-'));
+@@ -132,6 +149,13 @@ beforeEach(() => {
+   mockGetCurrentBranch.mockReturnValue('main');
+   mockBranchExists.mockReturnValue(true);
+   mockCheckCliStatus.mockReturnValue({ available: true });
++  mockBuildPrReviewTaskInput.mockImplementation((prReview: PrReviewData) => ({
++    taskContent: mockFormatPrReviewAsTask(prReview),
++    prBranch: prReview.headRefName,
++    prBaseBranch: prReview.baseRefName,
++    attachments: [],
++    cleanupAttachments: vi.fn(),
++  }));
+ });
+ 
+ afterEach(() => {
+@@ -269,6 +293,7 @@ describe('addTask', () => {
+       mockFetchPrReviewComments.mock.invocationCallOrder[0],
+     );
+     expect(mockFetchPrReviewComments).toHaveBeenCalledWith(456, testDir);
++    expect(mockBuildPrReviewTaskInput).toHaveBeenCalledWith(prReview, testDir);
+     expect(mockFormatPrReviewAsTask).toHaveBeenCalledWith(prReview);
+     expect(mockIsIssueReference).not.toHaveBeenCalled();
+     expect(mockParseIssueNumbers).not.toHaveBeenCalled();
+@@ -288,6 +313,43 @@ describe('addTask', () => {
+     expect(readOrderContent(testDir, task.task_dir)).toContain(formattedTask);
+   });
+ 
++  it('should save PR image attachments and allow image-only PR body when adding with --pr', async () => {
++    const prReview = createMockPrReview({
++      body: 'Reference [Image #1]',
++      comments: [],
++      reviews: [],
++    });
++    const attachment = createTempImageAttachment(testDir);
++    const cleanupAttachments = vi.fn();
++    mockFetchPrReviewComments.mockReturnValue(prReview);
++    mockBuildPrReviewTaskInput.mockResolvedValue({
++      taskContent: '## PR #456 Review Comments: Fix auth bug\n\nReference [Image #1]',
++      prBranch: 'feature/fix-auth-bug',
++      prBaseBranch: 'main',
++      attachments: [attachment],
++      cleanupAttachments,
++    });
++
++    await addTaskWithPrOption(testDir, 'placeholder', 456);
++
++    expect(mockBuildPrReviewTaskInput).toHaveBeenCalledWith(prReview, testDir);
++    expect(mockDetermineWorkflow).toHaveBeenCalledTimes(1);
++    const task = loadTasks(testDir).tasks[0]!;
++    expect(task.source).toBe('pr_review');
++    expect(task.pr_number).toBe(456);
++    expect(task.branch).toBe('feature/fix-auth-bug');
++    expect(task.base_branch).toBe('main');
++    const taskDir = path.join(testDir, String(task.task_dir));
++    const orderContent = fs.readFileSync(path.join(taskDir, 'order.md'), 'utf-8');
++    expect(orderContent).toContain('Reference [Image #1]');
++    expect(orderContent).toContain('## 添付画像');
++    expect(orderContent).toContain('- [Image #1]: `attachments/image-1.png`');
++    expect(fs.readFileSync(path.join(taskDir, 'attachments', 'image-1.png'))).toEqual(
++      fs.readFileSync(attachment.tempPath),
++    );
++    expect(cleanupAttachments).toHaveBeenCalledTimes(1);
++  });
++
+   it('should store PR base_ref as base_branch when adding with --pr', async () => {
+     const prReview = createMockPrReview({ baseRefName: 'release/main' });
+     const formattedTask = '## PR #456 Review Comments: Fix auth bug';
+@@ -303,15 +365,24 @@ describe('addTask', () => {
+ 
+   it('should not create a PR task when PR has no review comments', async () => {
+     const prReview = createMockPrReview({ comments: [], reviews: [] });
++    const cleanupAttachments = vi.fn();
+     mockFetchPrReviewComments.mockReturnValue(prReview);
++    mockBuildPrReviewTaskInput.mockResolvedValue({
++      taskContent: '## PR #456 Review Comments: Fix auth bug',
++      prBranch: 'feature/fix-auth-bug',
++      prBaseBranch: undefined,
++      attachments: [],
++      cleanupAttachments,
++    });
+ 
+     await addTaskWithPrOption(testDir, 'placeholder', 456);
+ 
+     expect(mockCheckCliStatus).toHaveBeenCalled();
+     expect(mockFetchPrReviewComments).toHaveBeenCalledWith(456, testDir);
+-    expect(mockFormatPrReviewAsTask).not.toHaveBeenCalled();
++    expect(mockBuildPrReviewTaskInput).toHaveBeenCalledWith(prReview, testDir);
+     expect(mockDetermineWorkflow).not.toHaveBeenCalled();
+     expect(mockError).toHaveBeenCalled();
++    expect(cleanupAttachments).toHaveBeenCalledTimes(1);
+     expect(fs.existsSync(path.join(testDir, '.takt', 'tasks.yaml'))).toBe(false);
+   });
+ 
+@@ -322,6 +393,7 @@ describe('addTask', () => {
+ 
+     expect(mockCheckCliStatus).toHaveBeenCalled();
+     expect(mockFetchPrReviewComments).toHaveBeenCalledWith(456, testDir);
++    expect(mockBuildPrReviewTaskInput).not.toHaveBeenCalled();
+     expect(mockFormatPrReviewAsTask).not.toHaveBeenCalled();
+     expect(mockDetermineWorkflow).not.toHaveBeenCalled();
+     expect(mockError).toHaveBeenCalledWith(expect.stringContaining('network timeout'));
+@@ -334,6 +406,7 @@ describe('addTask', () => {
+     await addTaskWithPrOption(testDir, 'placeholder', 456);
+ 
+     expect(mockFetchPrReviewComments).not.toHaveBeenCalled();
++    expect(mockBuildPrReviewTaskInput).not.toHaveBeenCalled();
+     expect(mockFormatPrReviewAsTask).not.toHaveBeenCalled();
+     expect(mockDetermineWorkflow).not.toHaveBeenCalled();
+     expect(mockError).toHaveBeenCalled();
+@@ -354,6 +427,7 @@ describe('addTask', () => {
+     expect(mockResolveIssueTask).not.toHaveBeenCalled();
+     expect(mockCheckCliStatus).toHaveBeenCalled();
+     expect(mockFetchPrReviewComments).toHaveBeenCalledWith(456, testDir);
++    expect(mockBuildPrReviewTaskInput).toHaveBeenCalledWith(prReview, testDir);
+     expect(mockFormatPrReviewAsTask).toHaveBeenCalledWith(prReview);
+     const task = loadTasks(testDir).tasks[0]!;
+     expect(task.content).toBeUndefined();
+@@ -380,6 +454,7 @@ describe('addTask', () => {
+ 
+     expect(mockCheckCliStatus).toHaveBeenCalled();
+     expect(mockFetchPrReviewComments).toHaveBeenCalledWith(456, testDir);
++    expect(mockBuildPrReviewTaskInput).toHaveBeenCalledWith(prReview, testDir);
+     expect(mockFormatPrReviewAsTask).toHaveBeenCalledWith(prReview);
+     expect(mockDetermineWorkflow).toHaveBeenCalledTimes(1);
+     expect(fs.existsSync(path.join(testDir, '.takt', 'tasks.yaml'))).toBe(false);
+diff --git a/src/__tests__/cli-routing-pr-resolve.test.ts b/src/__tests__/cli-routing-pr-resolve.test.ts
+index 4c1cddff..f80ce1c1 100644
+--- a/src/__tests__/cli-routing-pr-resolve.test.ts
++++ b/src/__tests__/cli-routing-pr-resolve.test.ts
+@@ -23,6 +23,7 @@ const {
+   mockCheckCliStatus,
+   mockFetchIssue,
+   mockFetchPrReviewComments,
++  mockBuildPrReviewTaskInput,
+   mockGetWorkflowDescription,
+   mockResolveConfigValues,
+   mockResolveAssistantConfigLayers,
+@@ -32,6 +33,7 @@ const {
+   mockCheckCliStatus: vi.fn(),
+   mockFetchIssue: vi.fn(),
+   mockFetchPrReviewComments: vi.fn(),
++  mockBuildPrReviewTaskInput: vi.fn(),
+   mockGetWorkflowDescription: vi.fn(() => ({ name: 'default', description: 'test workflow', workflowStructure: '', stepPreviews: [] })),
+   mockResolveConfigValues: vi.fn(() => ({ language: 'en', interactivePreviewSteps: 3, provider: 'claude' })),
+   mockResolveAssistantConfigLayers: vi.fn(() => ({ local: {}, global: {} })),
+@@ -53,6 +55,10 @@ vi.mock('../infra/git/index.js', () => ({
+     `## PR #${pr.number} Review Comments: ${pr.title}`),
+ }));
+ 
++vi.mock('../features/tasks/prReviewTaskInput.js', () => ({
++  buildPrReviewTaskInput: (...args: unknown[]) => mockBuildPrReviewTaskInput(...args),
++}));
++
+ vi.mock('../features/tasks/index.js', () => ({
+   selectAndExecuteTask: vi.fn(),
+   determineWorkflow: vi.fn(),
+@@ -191,6 +197,13 @@ beforeEach(() => {
+   mockResolveAssistantConfigLayers.mockReturnValue({ local: {}, global: {} });
+   mockLoadPersonaSessionsFn.mockReturnValue({});
+   mockResolveAgentOverrides.mockReturnValue(undefined);
++  mockBuildPrReviewTaskInput.mockImplementation((prReview: PrReviewData) => ({
++    taskContent: `## PR #${prReview.number} Review Comments: ${prReview.title}`,
++    prBranch: prReview.headRefName,
++    prBaseBranch: prReview.baseRefName,
++    attachments: [],
++    cleanupAttachments: vi.fn(),
++  }));
+ });
+ 
+ describe('interactive image attachment routing', () => {
+@@ -297,7 +310,8 @@ describe('PR resolution in routing', () => {
+       await executeDefaultAction();
+ 
+       // Then
+-      expect(mockFetchPrReviewComments).toHaveBeenCalledWith(456, undefined);
++      expect(mockFetchPrReviewComments).toHaveBeenCalledWith(456, '/test/cwd');
++      expect(mockBuildPrReviewTaskInput).toHaveBeenCalledWith(prReview, '/test/cwd');
+       expect(mockInteractiveMode).toHaveBeenCalledWith(
+         '/test/cwd',
+         {
+@@ -310,6 +324,118 @@ describe('PR resolution in routing', () => {
+       );
+     });
+ 
++    it('should pass resolved PR image attachments to interactive seed and cleanup them after handling', async () => {
++      mockOpts.pr = 456;
++      const prReview = createMockPrReview({
++        body: 'Reference [Image #1]',
++        comments: [],
++        reviews: [],
++      });
++      const cleanupAttachments = vi.fn();
++      mockCheckCliStatus.mockReturnValue({ available: true });
++      mockFetchPrReviewComments.mockReturnValue(prReview);
++      mockBuildPrReviewTaskInput.mockResolvedValue({
++        taskContent: '## PR #456 Review Comments: Fix auth bug\n\nReference [Image #1]',
++        prBranch: 'fix/auth-bug',
++        prBaseBranch: 'main',
++        attachments: [testAttachment],
++        cleanupAttachments,
++      });
++
++      await executeDefaultAction();
++
++      expect(mockInteractiveMode).toHaveBeenCalledWith(
++        '/test/cwd',
++        {
++          sourceContext: '## PR #456 Review Comments: Fix auth bug\n\nReference [Image #1]',
++          attachments: [testAttachment],
++        },
++        expect.anything(),
++        undefined,
++        undefined,
++        { excludeActions: ['create_issue'] },
++      );
++      expect(mockSelectAndExecuteTask).toHaveBeenCalledWith(
++        '/test/cwd',
++        'summarized task',
++        expect.objectContaining({
++          traceTaskContext: expect.objectContaining({
++            source: 'pr_review',
++            prNumber: 456,
++            branch: 'fix/auth-bug',
++            baseBranch: 'main',
++          }),
++        }),
++        undefined,
++      );
++      expect(cleanupAttachments).toHaveBeenCalledTimes(1);
++    });
++
++    it('should cleanup resolved PR image attachments when workflow preview generation throws', async () => {
++      mockOpts.pr = 456;
++      const prReview = createMockPrReview({
++        body: 'Reference [Image #1]',
++        comments: [],
++        reviews: [],
++      });
++      const cleanupAttachments = vi.fn();
++      mockCheckCliStatus.mockReturnValue({ available: true });
++      mockFetchPrReviewComments.mockReturnValue(prReview);
++      mockBuildPrReviewTaskInput.mockResolvedValue({
++        taskContent: '## PR #456 Review Comments: Fix auth bug\n\nReference [Image #1]',
++        prBranch: 'fix/auth-bug',
++        prBaseBranch: 'main',
++        attachments: [testAttachment],
++        cleanupAttachments,
++      });
++      mockGetWorkflowDescription.mockImplementationOnce(() => {
++        throw new Error('preview failed');
++      });
++
++      await expect(executeDefaultAction()).rejects.toThrow('preview failed');
++
++      expect(mockInteractiveMode).not.toHaveBeenCalled();
++      expect(cleanupAttachments).toHaveBeenCalledTimes(1);
++    });
++
++    it('should cleanup resolved PR image attachments when interactive execute task fails', async () => {
++      mockOpts.pr = 456;
++      const prReview = createMockPrReview({
++        body: 'Reference [Image #1]',
++        comments: [],
++        reviews: [],
++      });
++      const cleanupAttachments = vi.fn();
++      mockCheckCliStatus.mockReturnValue({ available: true });
++      mockFetchPrReviewComments.mockReturnValue(prReview);
++      mockBuildPrReviewTaskInput.mockResolvedValue({
++        taskContent: '## PR #456 Review Comments: Fix auth bug\n\nReference [Image #1]',
++        prBranch: 'fix/auth-bug',
++        prBaseBranch: 'main',
++        attachments: [testAttachment],
++        cleanupAttachments,
++      });
++      mockSelectAndExecuteTask.mockRejectedValueOnce(new Error('Task failed'));
++
++      await expect(executeDefaultAction()).rejects.toThrow('Task failed');
++
++      expect(mockSelectAndExecuteTask).toHaveBeenCalledWith(
++        '/test/cwd',
++        'summarized task',
++        expect.objectContaining({
++          exitOnFailure: false,
++          traceTaskContext: expect.objectContaining({
++            source: 'pr_review',
++            prNumber: 456,
++            branch: 'fix/auth-bug',
++            baseBranch: 'main',
++          }),
++        }),
++        undefined,
++      );
++      expect(cleanupAttachments).toHaveBeenCalledTimes(1);
++    });
++
+     it('should pass PR base branch as baseBranch when interactive save_task is selected', async () => {
+       // Given
+       mockOpts.pr = 456;
+diff --git a/src/__tests__/pipelineExecution.test.ts b/src/__tests__/pipelineExecution.test.ts
+index f38ea8b9..9e34d0ff 100644
+--- a/src/__tests__/pipelineExecution.test.ts
++++ b/src/__tests__/pipelineExecution.test.ts
+@@ -1,5 +1,10 @@
+-import { describe, it, expect, vi, beforeEach } from 'vitest';
+-import { info, error, success, status } from '../shared/ui/index.js';
++import { describe, it, expect, vi, beforeEach } from 'vitest';
++import * as fs from 'node:fs';
++import * as path from 'node:path';
++import { tmpdir } from 'node:os';
++import { info, error, success, status } from '../shared/ui/index.js';
++import type { PrReviewData } from '../infra/git/index.js';
++import type { TaskAttachment } from '../features/tasks/attachments.js';
+ 
+ const mockFetchIssue = vi.fn();
+ const mockCheckGhCli = vi.fn().mockReturnValue({ available: true });
+@@ -20,6 +25,7 @@ const mockFetchPrReviewComments = vi.fn();
+ const mockFormatPrReviewAsTask = vi.fn((pr: { number: number; title: string }) =>
+   `## PR #${pr.number} Review Comments: ${pr.title}`
+ );
++const mockBuildPrReviewTaskInput = vi.fn();
+ 
+ vi.mock('../infra/git/index.js', () => ({
+   getGitProvider: () => ({
+@@ -37,6 +43,10 @@ vi.mock('../infra/git/index.js', () => ({
+   formatPrReviewAsTask: (...args: unknown[]) => mockFormatPrReviewAsTask(...args),
+   createPullRequestSafely: (...args: unknown[]) => mockCreatePullRequestSafely(...args),
+ }));
++
++vi.mock('../features/tasks/prReviewTaskInput.js', () => ({
++  buildPrReviewTaskInput: (...args: unknown[]) => mockBuildPrReviewTaskInput(...args),
++}));
+ 
+ vi.mock('../infra/task/git.js', async (importOriginal) => ({
+   ...(await importOriginal<Record<string, unknown>>()),
+@@ -94,12 +104,28 @@ vi.mock('../shared/utils/index.js', async (importOriginal) => ({
+ }));
+ 
+ const { executePipeline } = await import('../features/pipeline/index.js');
+-const mockInfo = vi.mocked(info);
+-const mockError = vi.mocked(error);
+-const mockSuccess = vi.mocked(success);
+-const mockStatus = vi.mocked(status);
+-
+-describe('executePipeline', () => {
++const mockInfo = vi.mocked(info);
++const mockError = vi.mocked(error);
++const mockSuccess = vi.mocked(success);
++const mockStatus = vi.mocked(status);
++
++function createTempDir(prefix: string): string {
++  return fs.mkdtempSync(path.join(tmpdir(), prefix));
++}
++
++function createTempImageAttachment(root: string): TaskAttachment {
++  const sourceDir = path.join(root, 'resolved-pr-images');
++  const tempPath = path.join(sourceDir, 'image-1.png');
++  fs.mkdirSync(sourceDir, { recursive: true });
++  fs.writeFileSync(tempPath, Buffer.from([0x89, 0x50, 0x4e, 0x47]));
++  return {
++    placeholder: '[Image #1]',
++    tempPath,
++    fileName: 'image-1.png',
++  };
++}
++
++describe('executePipeline', () => {
+   beforeEach(() => {
+     vi.clearAllMocks();
+     mockBuildTaktManagedPrOptions.mockImplementation((body: string) => ({
+@@ -120,6 +146,13 @@ describe('executePipeline', () => {
+     mockGetCurrentBranch.mockReturnValue('current/branch');
+     mockResolveConfigValues.mockReturnValue({ pipeline: undefined });
+     mockResolveConfigValue.mockReturnValue(undefined);
++    mockBuildPrReviewTaskInput.mockImplementation((prReview: PrReviewData) => ({
++      taskContent: mockFormatPrReviewAsTask(prReview),
++      prBranch: prReview.headRefName,
++      prBaseBranch: prReview.baseRefName,
++      attachments: [],
++      cleanupAttachments: vi.fn(),
++    }));
+   });
+ 
+   it('should return exit code 2 when neither --issue nor --task is specified', async () => {
+@@ -291,7 +324,7 @@ describe('executePipeline', () => {
+     expect(mockStatus).toHaveBeenCalledWith('Branch', 'feature\\t');
+   });
+ 
+-  it('should sanitize PR titles, branch names, and worktree paths in terminal output', async () => {
++  it('should sanitize PR titles, branch names, and worktree paths in terminal output', async () => {
+     mockFetchPrReviewComments.mockReturnValueOnce({
+       number: 12,
+       title: 'PR\x1b[31m\n',
+@@ -316,11 +349,89 @@ describe('executePipeline', () => {
+     });
+ 
+     expect(exitCode).toBe(0);
+-    expect(mockSuccess).toHaveBeenCalledWith('PR #12 fetched: "PR\\n"');
+-    expect(mockSuccess).toHaveBeenCalledWith('Worktree created: /tmp/worktree\\tpath');
+-  });
+-
+-  it('passes provider/model overrides to task execution', async () => {
++    expect(mockSuccess).toHaveBeenCalledWith('PR #12 fetched: "PR\\n"');
++    expect(mockSuccess).toHaveBeenCalledWith('Worktree created: /tmp/worktree\\tpath');
++  });
++
++  it('should stage PR image attachments into run context for pipeline --pr execution', async () => {
++    const projectCwd = createTempDir('takt-pipeline-pr-project-');
++    const execCwd = createTempDir('takt-pipeline-pr-exec-');
++    try {
++      const attachment = createTempImageAttachment(projectCwd);
++      const cleanupAttachments = vi.fn();
++      const prReview: PrReviewData = {
++        number: 12,
++        title: 'PR with images',
++        body: 'Reference [Image #1]',
++        url: 'https://github.com/org/repo/pull/12',
++        headRefName: 'feature/pr-images',
++        baseRefName: 'main',
++        comments: [],
++        reviews: [],
++        files: ['src/app.ts'],
++      };
++      mockFetchPrReviewComments.mockReturnValueOnce(prReview);
++      mockBuildPrReviewTaskInput.mockResolvedValueOnce({
++        taskContent: '## PR #12 Review Comments: PR with images\n\nReference [Image #1]',
++        prBranch: 'feature/pr-images',
++        prBaseBranch: 'main',
++        attachments: [attachment],
++        cleanupAttachments,
++      });
++      mockConfirmAndCreateWorktree.mockResolvedValueOnce({
++        execCwd,
++        isWorktree: true,
++        branch: 'feature/pr-images',
++        baseBranch: 'main',
++      });
++      mockExecuteTask.mockResolvedValueOnce(true);
++
++      const exitCode = await executePipeline({
++        prNumber: 12,
++        workflow: 'default',
++        autoPr: false,
++        createWorktree: true,
++        cwd: projectCwd,
++      });
++
++      expect(exitCode).toBe(0);
++      expect(mockBuildPrReviewTaskInput).toHaveBeenCalledWith(prReview, projectCwd);
++      const executeArg = mockExecuteTask.mock.calls[0]?.[0] as {
++        task: string;
++        reportDirName?: string;
++        cwd: string;
++        projectCwd: string;
++        traceTaskContext?: { prNumber?: number; branch?: string; baseBranch?: string };
++      };
++      expect(executeArg.cwd).toBe(execCwd);
++      expect(executeArg.projectCwd).toBe(projectCwd);
++      expect(executeArg.task).toContain('Primary spec: `.takt/runs/');
++      expect(executeArg.task).not.toBe('## PR #12 Review Comments: PR with images\n\nReference [Image #1]');
++      expect(executeArg.reportDirName).toBeTypeOf('string');
++      if (!executeArg.reportDirName) {
++        throw new Error('reportDirName was not passed to executeTask');
++      }
++      expect(executeArg.traceTaskContext).toEqual(expect.objectContaining({
++        prNumber: 12,
++        branch: 'feature/pr-images',
++        baseBranch: 'main',
++      }));
++      const stagedTaskDir = path.join(execCwd, '.takt', 'runs', executeArg.reportDirName, 'context', 'task');
++      const stagedOrder = fs.readFileSync(path.join(stagedTaskDir, 'order.md'), 'utf-8');
++      expect(stagedOrder).toContain('Reference [Image #1]');
++      expect(stagedOrder).toContain('- [Image #1]: `.takt/runs/');
++      expect(stagedOrder).toContain('/context/task/attachments/image-1.png`');
++      expect(fs.readFileSync(path.join(stagedTaskDir, 'attachments', 'image-1.png'))).toEqual(
++        fs.readFileSync(attachment.tempPath),
++      );
++      expect(cleanupAttachments).toHaveBeenCalledTimes(1);
++    } finally {
++      fs.rmSync(projectCwd, { recursive: true, force: true });
++      fs.rmSync(execCwd, { recursive: true, force: true });
++    }
++  });
++
++  it('passes provider/model overrides to task execution', async () => {
+     mockExecuteTask.mockResolvedValueOnce(true);
+ 
+     const exitCode = await executePipeline({
+diff --git a/src/app/cli/routing-inputs.ts b/src/app/cli/routing-inputs.ts
+index ef06f674..1adf9b63 100644
+--- a/src/app/cli/routing-inputs.ts
++++ b/src/app/cli/routing-inputs.ts
+@@ -1,6 +1,8 @@
+ import { withProgress } from '../../shared/ui/index.js';
+-import { formatIssueAsTask, parseIssueNumbers, formatPrReviewAsTask, getGitProvider } from '../../infra/git/index.js';
++import { formatIssueAsTask, parseIssueNumbers, getGitProvider } from '../../infra/git/index.js';
+ import type { PrReviewData } from '../../infra/git/index.js';
++import type { TaskAttachment } from '../../features/tasks/attachments.js';
++import { buildPrReviewTaskInput } from '../../features/tasks/prReviewTaskInput.js';
+ import { isDirectTask } from './helpers.js';
+ 
+ export async function resolveIssueInput(
+@@ -50,7 +52,13 @@ export async function resolveIssueInput(
+ export async function resolvePrInput(
+   prNumber: number,
+   cwd?: string,
+-): Promise<{ initialInput: string; prBranch: string; baseBranch?: string }> {
++): Promise<{
++  initialInput: string;
++  prBranch: string;
++  baseBranch?: string;
++  attachments: TaskAttachment[];
++  cleanupAttachments: () => void;
++}> {
+   const provider = getGitProvider();
+   const cliStatus = provider.checkCliStatus(cwd);
+   if (!cliStatus.available) {
+@@ -62,10 +70,13 @@ export async function resolvePrInput(
+     (pr: PrReviewData) => `PR fetched: #${pr.number} ${pr.title}`,
+     async () => provider.fetchPrReviewComments(prNumber, cwd),
+   );
++  const taskInput = await buildPrReviewTaskInput(prReview, cwd);
+ 
+   return {
+-    initialInput: formatPrReviewAsTask(prReview),
+-    prBranch: prReview.headRefName,
+-    baseBranch: prReview.baseRefName,
++    initialInput: taskInput.taskContent,
++    prBranch: taskInput.prBranch,
++    baseBranch: taskInput.prBaseBranch,
++    attachments: taskInput.attachments,
++    cleanupAttachments: taskInput.cleanupAttachments,
+   };
+ }
+diff --git a/src/app/cli/routing.ts b/src/app/cli/routing.ts
+index 6115d521..889611df 100644
+--- a/src/app/cli/routing.ts
++++ b/src/app/cli/routing.ts
+@@ -104,15 +104,19 @@ export async function executeDefaultAction(task?: string): Promise<void> {
+   let sourceContext: string | undefined;
+   let prBranch: string | undefined;
+   let prBaseBranch: string | undefined;
++  let sourceAttachments: NonNullable<Awaited<ReturnType<typeof resolvePrInput>>['attachments']> | undefined;
++  let cleanupSourceAttachments: (() => void) | undefined;
+   let sourceIssueNumber: number | undefined;
+ 
+   if (prNumber) {
+     try {
+-      const prResult = await resolvePrInput(prNumber);
++      const prResult = await resolvePrInput(prNumber, resolvedCwd);
+       directTask = undefined;
+       sourceContext = prResult.initialInput;
+       prBranch = prResult.prBranch;
+       prBaseBranch = prResult.baseBranch;
++      sourceAttachments = prResult.attachments;
++      cleanupSourceAttachments = prResult.cleanupAttachments;
+       selectOptions.traceTaskContext = {
+         source: 'pr_review',
+         prNumber,
+@@ -141,152 +145,167 @@ export async function executeDefaultAction(task?: string): Promise<void> {
+     }
+   }
+ 
+-  const globalConfig = resolveConfigValues(
+-    resolvedCwd,
+-    ['language', 'interactivePreviewSteps'],
+-  );
+-  const lang = resolveLanguage(globalConfig.language);
+-
+-  const workflowId = await determineWorkflow(resolvedCwd, selectOptions.workflow);
+-  if (workflowId === null) {
+-    info(getLabel('interactive.ui.cancelled', lang));
+-    return;
+-  }
++  try {
++    const globalConfig = resolveConfigValues(
++      resolvedCwd,
++      ['language', 'interactivePreviewSteps'],
++    );
++    const lang = resolveLanguage(globalConfig.language);
+ 
+-  const previewCount = globalConfig.interactivePreviewSteps;
+-  const workflowDesc = getWorkflowDescription(workflowId, resolvedCwd, previewCount);
++    const workflowId = await determineWorkflow(resolvedCwd, selectOptions.workflow);
++    if (workflowId === null) {
++      info(getLabel('interactive.ui.cancelled', lang));
++      return;
++    }
+ 
+-  const availableInteractiveModes = sourceContext && !directTask
+-    ? INTERACTIVE_MODES.filter((mode) => mode !== 'passthrough')
+-    : INTERACTIVE_MODES;
+-  const selectedMode = await selectInteractiveMode(
+-    lang,
+-    workflowDesc.interactiveMode,
+-    availableInteractiveModes,
+-  );
+-  if (selectedMode === null) {
+-    info(getLabel('interactive.ui.cancelled', lang));
+-    return;
+-  }
++    const previewCount = globalConfig.interactivePreviewSteps;
++    const workflowDesc = getWorkflowDescription(workflowId, resolvedCwd, previewCount);
+ 
+-  const workflowContext = {
+-    name: workflowDesc.name,
+-    description: workflowDesc.description,
+-    workflowStructure: workflowDesc.workflowStructure,
+-    stepPreviews: workflowDesc.stepPreviews,
+-    taskHistory: loadTaskHistory(resolvedCwd, lang),
+-  };
+-  const interactiveSeed = directTask || sourceContext
+-    ? {
+-      ...(directTask ? { userMessage: directTask } : {}),
+-      ...(sourceContext ? { sourceContext } : {}),
++    const availableInteractiveModes = sourceContext && !directTask
++      ? INTERACTIVE_MODES.filter((mode) => mode !== 'passthrough')
++      : INTERACTIVE_MODES;
++    const selectedMode = await selectInteractiveMode(
++      lang,
++      workflowDesc.interactiveMode,
++      availableInteractiveModes,
++    );
++    if (selectedMode === null) {
++      info(getLabel('interactive.ui.cancelled', lang));
++      return;
+     }
+-    : undefined;
+-  let result: InteractiveModeResult;
+ 
+-  switch (selectedMode) {
+-    case 'assistant': {
+-      let selectedSessionId: string | undefined;
+-      if (opts.continue === true) {
+-        const { provider: providerType } = resolveAssistantProviderModelFromConfig(
+-          resolveAssistantConfigLayers(resolvedCwd),
+-          {
+-            provider: agentOverrides?.provider,
+-            model: agentOverrides?.model,
+-          },
+-        );
+-        if (!providerType) {
+-          throw new Error('Provider is not configured.');
+-        }
+-        const savedSessions = loadPersonaSessions(resolvedCwd, providerType);
+-        const savedSessionId = resolvePersonaSessionId(savedSessions, 'interactive', providerType);
+-        if (savedSessionId) {
+-          selectedSessionId = savedSessionId;
+-        } else {
+-          info(getLabel('interactive.continueNoSession', lang));
+-        }
++    const workflowContext = {
++      name: workflowDesc.name,
++      description: workflowDesc.description,
++      workflowStructure: workflowDesc.workflowStructure,
++      stepPreviews: workflowDesc.stepPreviews,
++      taskHistory: loadTaskHistory(resolvedCwd, lang),
++    };
++    const interactiveSeed = directTask || sourceContext
++      ? {
++        ...(directTask ? { userMessage: directTask } : {}),
++        ...(sourceContext ? { sourceContext } : {}),
++        ...(sourceAttachments && sourceAttachments.length > 0 ? { attachments: sourceAttachments } : {}),
+       }
+-      const interactiveOpts = prBranch ? { excludeActions: ['create_issue'] as const } : undefined;
+-      const assistantModeOptions = {
+-        ...interactiveOpts,
+-        ...(agentOverrides?.provider ? { provider: agentOverrides.provider } : {}),
+-        ...(agentOverrides?.model ? { model: agentOverrides.model } : {}),
+-      };
+-      result = await interactiveMode(
+-        resolvedCwd,
+-        interactiveSeed,
+-        workflowContext,
+-        selectedSessionId,
+-        undefined,
+-        Object.keys(assistantModeOptions).length > 0 ? assistantModeOptions : undefined,
+-      );
+-      break;
+-    }
++      : undefined;
++    let result: InteractiveModeResult | undefined;
++
++    try {
++      switch (selectedMode) {
++        case 'assistant': {
++          let selectedSessionId: string | undefined;
++          if (opts.continue === true) {
++            const { provider: providerType } = resolveAssistantProviderModelFromConfig(
++              resolveAssistantConfigLayers(resolvedCwd),
++              {
++                provider: agentOverrides?.provider,
++                model: agentOverrides?.model,
++              },
++            );
++            if (!providerType) {
++              throw new Error('Provider is not configured.');
++            }
++            const savedSessions = loadPersonaSessions(resolvedCwd, providerType);
++            const savedSessionId = resolvePersonaSessionId(savedSessions, 'interactive', providerType);
++            if (savedSessionId) {
++              selectedSessionId = savedSessionId;
++            } else {
++              info(getLabel('interactive.continueNoSession', lang));
++            }
++          }
++          const interactiveOpts = prBranch ? { excludeActions: ['create_issue'] as const } : undefined;
++          const assistantModeOptions = {
++            ...interactiveOpts,
++            ...(agentOverrides?.provider ? { provider: agentOverrides.provider } : {}),
++            ...(agentOverrides?.model ? { model: agentOverrides.model } : {}),
++          };
++          result = await interactiveMode(
++            resolvedCwd,
++            interactiveSeed,
++            workflowContext,
++            selectedSessionId,
++            undefined,
++            Object.keys(assistantModeOptions).length > 0 ? assistantModeOptions : undefined,
++          );
++          break;
++        }
+ 
+-    case 'passthrough':
+-      result = await passthroughMode(lang, directTask);
+-      break;
++        case 'passthrough':
++          result = await passthroughMode(lang, directTask);
++          break;
+ 
+-    case 'quiet':
+-      result = await quietMode(resolvedCwd, interactiveSeed, workflowContext);
+-      break;
++        case 'quiet':
++          result = await quietMode(resolvedCwd, interactiveSeed, workflowContext);
++          break;
+ 
+-    case 'persona': {
+-      if (!workflowDesc.firstStep) {
+-        info(getLabel('interactive.ui.personaFallback', lang));
+-        result = await interactiveMode(resolvedCwd, interactiveSeed, workflowContext);
+-      } else {
+-        result = await personaMode(resolvedCwd, workflowDesc.firstStep, interactiveSeed, workflowContext);
++        case 'persona': {
++          if (!workflowDesc.firstStep) {
++            info(getLabel('interactive.ui.personaFallback', lang));
++            result = await interactiveMode(resolvedCwd, interactiveSeed, workflowContext);
++          } else {
++            result = await personaMode(resolvedCwd, workflowDesc.firstStep, interactiveSeed, workflowContext);
++          }
++          break;
++        }
+       }
+-      break;
+-    }
+-  }
+ 
+-  try {
+-    await dispatchConversationAction(result, {
+-      execute: async ({ task: confirmedTask }) => {
+-        if (prBranch) {
+-          info(`Fetching and checking out PR branch: ${prBranch}`);
+-          checkoutBranch(resolvedCwd, prBranch);
+-          success(`Checked out PR branch: ${prBranch}`);
+-        }
+-        selectOptions.interactiveUserInput = true;
+-        selectOptions.workflow = workflowId;
+-        selectOptions.interactiveMetadata = { confirmed: true, task: confirmedTask };
+-        selectOptions.skipTaskList = true;
+-        if (result.attachments) {
+-          selectOptions.attachments = result.attachments;
+-        }
+-        await selectAndExecuteTask(resolvedCwd, confirmedTask, selectOptions, agentOverrides);
+-      },
+-      create_issue: async ({ task: confirmedTask }) => {
+-        const labels = await promptLabelSelection(lang);
+-        await createIssueAndSaveTask(resolvedCwd, confirmedTask, workflowId, {
+-          confirmAtEndMessage: 'Add this issue to tasks?',
+-          labels,
+-          ...(result.attachments ? { attachments: result.attachments } : {}),
+-        });
+-      },
+-      save_task: async ({ task: confirmedTask }) => {
+-        const presetSettings = prBranch
+-          ? {
+-            worktree: true as const,
+-            branch: prBranch,
+-            autoPr: true,
+-            ...(prBaseBranch ? { baseBranch: prBaseBranch } : {}),
++      if (!result) {
++        throw new Error(`Unsupported interactive mode: ${selectedMode}`);
++      }
++      const conversationResult = result;
++
++      await dispatchConversationAction(conversationResult, {
++        execute: async ({ task: confirmedTask }) => {
++          if (prBranch) {
++            info(`Fetching and checking out PR branch: ${prBranch}`);
++            checkoutBranch(resolvedCwd, prBranch);
++            success(`Checked out PR branch: ${prBranch}`);
+           }
+-          : undefined;
+-        await saveTaskFromInteractive(resolvedCwd, confirmedTask, workflowId, {
+-          presetSettings,
+-          ...(prNumber !== undefined ? { prNumber } : {}),
+-          ...(sourceIssueNumber !== undefined ? { issue: sourceIssueNumber } : {}),
+-          ...(result.attachments ? { attachments: result.attachments } : {}),
+-        });
+-      },
+-      cancel: () => undefined,
+-    });
++          selectOptions.interactiveUserInput = true;
++          selectOptions.workflow = workflowId;
++          selectOptions.interactiveMetadata = { confirmed: true, task: confirmedTask };
++          selectOptions.skipTaskList = true;
++          if (prNumber !== undefined) {
++            selectOptions.exitOnFailure = false;
++          }
++          if (conversationResult.attachments) {
++            selectOptions.attachments = conversationResult.attachments;
++          }
++          await selectAndExecuteTask(resolvedCwd, confirmedTask, selectOptions, agentOverrides);
++        },
++        create_issue: async ({ task: confirmedTask }) => {
++          const labels = await promptLabelSelection(lang);
++          await createIssueAndSaveTask(resolvedCwd, confirmedTask, workflowId, {
++            confirmAtEndMessage: 'Add this issue to tasks?',
++            labels,
++            ...(conversationResult.attachments ? { attachments: conversationResult.attachments } : {}),
++          });
++        },
++        save_task: async ({ task: confirmedTask }) => {
++          const presetSettings = prBranch
++            ? {
++              worktree: true as const,
++              branch: prBranch,
++              autoPr: true,
++              ...(prBaseBranch ? { baseBranch: prBaseBranch } : {}),
++            }
++            : undefined;
++          await saveTaskFromInteractive(resolvedCwd, confirmedTask, workflowId, {
++            presetSettings,
++            ...(prNumber !== undefined ? { prNumber } : {}),
++            ...(sourceIssueNumber !== undefined ? { issue: sourceIssueNumber } : {}),
++            ...(conversationResult.attachments ? { attachments: conversationResult.attachments } : {}),
++          });
++        },
++        cancel: () => undefined,
++      });
++    } finally {
++      if (result) {
++        cleanupInteractiveResultAttachments(result);
++      }
++    }
+   } finally {
+-    cleanupInteractiveResultAttachments(result);
++    cleanupSourceAttachments?.();
+   }
+ }
+ 
+diff --git a/src/features/pipeline/execute.ts b/src/features/pipeline/execute.ts
+index 8a641629..16e46e93 100644
+--- a/src/features/pipeline/execute.ts
++++ b/src/features/pipeline/execute.ts
+@@ -37,55 +37,69 @@ async function runPipeline(options: PipelineExecutionOptions): Promise<PipelineO
+     success: false, workflow, issueNumber: options.issueNumber, ...overrides,
+   });
+ 
+-  const taskContent = resolveTaskContent(options);
++  const taskContent = await resolveTaskContent(options);
+   if (!taskContent) return { exitCode: EXIT_ISSUE_FETCH_FAILED, result: buildResult() };
+ 
+-  let context: ExecutionContext;
+   try {
+-    context = await resolveExecutionContext(
++    let context: ExecutionContext;
++    try {
++      context = await resolveExecutionContext(
++        cwd,
++        taskContent.task,
++        options,
++        pipelineConfig,
++        taskContent.prBranch,
++        taskContent.prBaseBranch,
++      );
++    } catch (err) {
++      error(`Failed to prepare execution environment: ${getErrorMessage(err)}`);
++      return { exitCode: EXIT_GIT_OPERATION_FAILED, result: buildResult() };
++    }
++
++    log.info('Pipeline workflow execution starting', { workflow, branch: context.branch, skipGit, issueNumber: options.issueNumber });
++    const workflowOk = await runWorkflow(
+       cwd,
++      workflow,
+       taskContent.task,
++      context.execCwd,
+       options,
+-      pipelineConfig,
+-      taskContent.prBranch,
+-      taskContent.prBaseBranch,
++      context,
++      taskContent.attachments,
+     );
+-  } catch (err) {
+-    error(`Failed to prepare execution environment: ${getErrorMessage(err)}`);
+-    return { exitCode: EXIT_GIT_OPERATION_FAILED, result: buildResult() };
+-  }
++    if (!workflowOk) return { exitCode: EXIT_WORKFLOW_FAILED, result: buildResult({ branch: context.branch }) };
+ 
+-  log.info('Pipeline workflow execution starting', { workflow, branch: context.branch, skipGit, issueNumber: options.issueNumber });
+-  const workflowOk = await runWorkflow(cwd, workflow, taskContent.task, context.execCwd, options, context);
+-  if (!workflowOk) return { exitCode: EXIT_WORKFLOW_FAILED, result: buildResult({ branch: context.branch }) };
++    if (!skipGit && context.branch) {
++      const commitMessage = buildCommitMessage(pipelineConfig, taskContent.issue, options.task);
++      if (!commitAndPush(context.execCwd, cwd, context.branch, commitMessage, context.isWorktree)) {
++        return { exitCode: EXIT_GIT_OPERATION_FAILED, result: buildResult({ branch: context.branch }) };
++      }
++    }
+ 
+-  if (!skipGit && context.branch) {
+-    const commitMessage = buildCommitMessage(pipelineConfig, taskContent.issue, options.task);
+-    if (!commitAndPush(context.execCwd, cwd, context.branch, commitMessage, context.isWorktree)) {
+-      return { exitCode: EXIT_GIT_OPERATION_FAILED, result: buildResult({ branch: context.branch }) };
++    let prUrl: string | undefined;
++    if (autoPr && !skipGit && context.branch) {
++      prUrl = submitPullRequest(cwd, context.branch, context.baseBranch, taskContent, workflow, pipelineConfig, options);
++      if (!prUrl) return { exitCode: EXIT_PR_CREATION_FAILED, result: buildResult({ branch: context.branch }) };
++    } else if (autoPr && skipGit) {
++      info('--auto-pr is ignored when --skip-git is specified (no push was performed)');
+     }
+-  }
+ 
+-  let prUrl: string | undefined;
+-  if (autoPr && !skipGit && context.branch) {
+-    prUrl = submitPullRequest(cwd, context.branch, context.baseBranch, taskContent, workflow, pipelineConfig, options);
+-    if (!prUrl) return { exitCode: EXIT_PR_CREATION_FAILED, result: buildResult({ branch: context.branch }) };
+-  } else if (autoPr && skipGit) {
+-    info('--auto-pr is ignored when --skip-git is specified (no push was performed)');
++    blankLine();
++    const safeWorkflow = sanitizeTerminalText(workflow);
++    const issueStatus = taskContent.issue
++      ? `#${taskContent.issue.number} "${sanitizeTerminalText(taskContent.issue.title)}"`
++      : 'N/A';
++    const branchStatus = context.branch ? sanitizeTerminalText(context.branch) : '(current)';
++    status('Issue', issueStatus);
++    status('Branch', branchStatus);
++    status('Workflow', safeWorkflow);
++    status('Result', 'Success', 'green');
++
++    return { exitCode: 0, result: buildResult({ success: true, branch: context.branch, prUrl }) };
++  } finally {
++    if (taskContent.cleanupAttachments) {
++      taskContent.cleanupAttachments();
++    }
+   }
+-
+-  blankLine();
+-  const safeWorkflow = sanitizeTerminalText(workflow);
+-  const issueStatus = taskContent.issue
+-    ? `#${taskContent.issue.number} "${sanitizeTerminalText(taskContent.issue.title)}"`
+-    : 'N/A';
+-  const branchStatus = context.branch ? sanitizeTerminalText(context.branch) : '(current)';
+-  status('Issue', issueStatus);
+-  status('Branch', branchStatus);
+-  status('Workflow', safeWorkflow);
+-  status('Result', 'Success', 'green');
+-
+-  return { exitCode: 0, result: buildResult({ success: true, branch: context.branch, prUrl }) };
+ }
+ export async function executePipeline(options: PipelineExecutionOptions): Promise<number> {
+   const startTime = Date.now();
+diff --git a/src/features/pipeline/steps.ts b/src/features/pipeline/steps.ts
+index ceb701ed..aa71c8b9 100644
+--- a/src/features/pipeline/steps.ts
++++ b/src/features/pipeline/steps.ts
+@@ -1,25 +1,30 @@
+ import { execFileSync } from 'node:child_process';
+ import {
+   formatIssueAsTask,
+-  formatPrReviewAsTask,
+   getGitProvider,
+ } from '../../infra/git/index.js';
+ import type { Issue } from '../../infra/git/index.js';
+ import { resolveConfigValue } from '../../infra/config/index.js';
+ import { stageAndCommit, resolveBaseBranch, resolveBaseBranchName, pushBranch, checkoutBranch, getCurrentBranch } from '../../infra/task/index.js';
+ import { executeTask, confirmAndCreateWorktree, type ExecuteTaskOptions, type TaskExecutionOptions, type PipelineExecutionOptions } from '../tasks/index.js';
++import { prepareTaskSpecDirectory, cleanupPreparedTaskSpec, type TaskAttachment } from '../tasks/attachments.js';
++import { stageTaskSpecForExecution } from '../tasks/execute/taskSpecContext.js';
+ import { info, error, success } from '../../shared/ui/index.js';
+ import { statusLine } from '../../shared/ui/StatusLine.js';
+ import { getErrorMessage } from '../../shared/utils/index.js';
+ import type { PipelineConfig } from '../../core/models/index.js';
+ import { sanitizeTerminalText } from '../../shared/utils/text.js';
+ import { expandPipelineTemplate } from './templateExpander.js';
++import { buildPrReviewTaskInput } from '../tasks/prReviewTaskInput.js';
++import { generateExecutionReportDir } from '../../core/workflow/run/run-slug.js';
+ 
+ export interface TaskContent {
+   task: string;
+   issue?: Issue;
+   prBranch?: string;
+   prBaseBranch?: string;
++  attachments?: TaskAttachment[];
++  cleanupAttachments?: () => void;
+ }
+ 
+ export interface GitExecutionContext {
+@@ -141,7 +146,7 @@ function fetchVcsResource<T>(
+   }
+ }
+ 
+-export function resolveTaskContent(options: PipelineExecutionOptions): TaskContent | undefined {
++export async function resolveTaskContent(options: PipelineExecutionOptions): Promise<TaskContent | undefined> {
+   const { cwd } = options;
+   if (options.prNumber) {
+     info(`Fetching PR #${options.prNumber} review comments...`);
+@@ -151,13 +156,20 @@ export function resolveTaskContent(options: PipelineExecutionOptions): TaskConte
+       (provider) => provider.fetchPrReviewComments(options.prNumber!, cwd),
+     );
+     if (!prReview) return undefined;
+-    const task = formatPrReviewAsTask(prReview);
+-    success(`PR #${options.prNumber} fetched: "${sanitizeTerminalText(prReview.title)}"`);
+-    return {
+-      task,
+-      prBranch: prReview.headRefName,
+-      prBaseBranch: prReview.baseRefName,
+-    };
++    try {
++      const taskInput = await buildPrReviewTaskInput(prReview, cwd);
++      success(`PR #${options.prNumber} fetched: "${sanitizeTerminalText(prReview.title)}"`);
++      return {
++        task: taskInput.taskContent,
++        prBranch: taskInput.prBranch,
++        prBaseBranch: taskInput.prBaseBranch,
++        attachments: taskInput.attachments,
++        cleanupAttachments: taskInput.cleanupAttachments,
++      };
++    } catch (err) {
++      error(`Failed to prepare PR #${options.prNumber} task: ${getErrorMessage(err)}`);
++      return undefined;
++    }
+   }
+   if (options.issueNumber) {
+     info(`Fetching issue #${options.issueNumber}...`);
+@@ -233,6 +245,7 @@ export async function runWorkflow(
+   execCwd: string,
+   options: Pick<PipelineExecutionOptions, 'provider' | 'model' | 'issueNumber' | 'prNumber'>,
+   context: ExecutionContext,
++  attachments?: readonly TaskAttachment[],
+ ): Promise<boolean> {
+   const safeWorkflow = sanitizeTerminalText(workflow);
+   info(`Running workflow: ${safeWorkflow}`);
+@@ -240,27 +253,44 @@ export async function runWorkflow(
+     ? { provider: options.provider, model: options.model }
+     : undefined;
+ 
+-  statusLine.start('Running...');
+-  let taskSuccess: boolean;
++  let preparedSpec: ReturnType<typeof prepareTaskSpecDirectory> | undefined;
++  let reportDirName: string | undefined;
+   try {
+-    taskSuccess = await executeTask({
+-      task,
+-      cwd: execCwd,
+-      workflowIdentifier: workflow,
+-      projectCwd,
+-      agentOverrides,
+-      traceTaskContext: buildPipelineTraceTaskContext(options, context),
+-    });
+-  } finally {
+-    statusLine.stop();
+-  }
++    preparedSpec = attachments && attachments.length > 0
++      ? prepareTaskSpecDirectory(projectCwd, task, attachments)
++      : undefined;
++    reportDirName = preparedSpec ? generateExecutionReportDir(execCwd, task) : undefined;
++    const stagedSpec = preparedSpec && reportDirName
++      ? stageTaskSpecForExecution(projectCwd, execCwd, preparedSpec.taskDirRelative, reportDirName)
++      : undefined;
+ 
+-  if (!taskSuccess) {
+-    error(`Workflow '${safeWorkflow}' failed`);
+-    return false;
++    statusLine.start('Running...');
++    let taskSuccess: boolean;
++    try {
++      taskSuccess = await executeTask({
++        task: stagedSpec?.taskPrompt ?? task,
++        cwd: execCwd,
++        workflowIdentifier: workflow,
++        projectCwd,
++        agentOverrides,
++        ...(reportDirName ? { reportDirName } : {}),
++        traceTaskContext: buildPipelineTraceTaskContext(options, context),
++      });
++    } finally {
++      statusLine.stop();
++    }
++
++    if (!taskSuccess) {
++      error(`Workflow '${safeWorkflow}' failed`);
++      return false;
++    }
++    success(`Workflow '${safeWorkflow}' completed`);
++    return true;
++  } finally {
++    if (preparedSpec) {
++      cleanupPreparedTaskSpec(preparedSpec.taskDir);
++    }
+   }
+-  success(`Workflow '${safeWorkflow}' completed`);
+-  return true;
+ }
+ 
+ function buildPipelineTraceTaskContext(
+diff --git a/src/features/tasks/add/index.ts b/src/features/tasks/add/index.ts
+index 726d3101..24b29774 100644
+--- a/src/features/tasks/add/index.ts
++++ b/src/features/tasks/add/index.ts
+@@ -12,7 +12,7 @@ import type { Language } from '../../../core/models/types.js';
+ import { saveEnqueuedTaskFile } from '../../../infra/task/enqueuedTaskFile.js';
+ import { determineWorkflow } from '../execute/selectAndExecute.js';
+ import { createLogger, getErrorMessage } from '../../../shared/utils/index.js';
+-import { isIssueReference, resolveIssueTask, parseIssueNumbers, formatPrReviewAsTask, getGitProvider } from '../../../infra/git/index.js';
++import { isIssueReference, resolveIssueTask, parseIssueNumbers, getGitProvider } from '../../../infra/git/index.js';
+ import type { PrReviewData } from '../../../infra/git/index.js';
+ import { extractTitle, createIssueFromTask, createIssueFromTaskResult } from '../../../infra/task/issueTask.js';
+ import { displayTaskCreationResult, promptWorktreeSettings, type WorktreeSettings } from './worktree-settings.js';
+@@ -28,6 +28,7 @@ import {
+   prepareTaskSpecDirectory,
+   type TaskAttachment,
+ } from '../attachments.js';
++import { buildPrReviewTaskInput } from '../prReviewTaskInput.js';
+ export { extractTitle, createIssueFromTask, createIssueFromTaskResult };
+ 
+ const log = createLogger('add-task');
+@@ -191,27 +192,47 @@ export async function addTask(
+       return;
+     }
+ 
+-    if (prReview.reviews.length === 0 && prReview.comments.length === 0) {
+-      error(`PR #${prNumber} has no review comments`);
++    let prTaskInput: Awaited<ReturnType<typeof buildPrReviewTaskInput>>;
++    try {
++      prTaskInput = await buildPrReviewTaskInput(prReview, cwd);
++    } catch (e) {
++      const msg = getErrorMessage(e);
++      error(`Failed to prepare PR review task #${prNumber}: ${msg}`);
+       return;
+     }
+ 
+-    const taskContent = formatPrReviewAsTask(prReview);
+-    const workflow = await determineWorkflow(cwd, opts?.workflow);
+-    if (workflow === null) {
+-      info('Cancelled.');
+-      return;
+-    }
++    try {
++      if (prReview.reviews.length === 0 && prReview.comments.length === 0 && prTaskInput.attachments.length === 0) {
++        error(`PR #${prNumber} has no review comments`);
++        return;
++      }
+ 
+-    const settings = {
+-      worktree: true,
+-      branch: prReview.headRefName,
+-      baseBranch: prReview.baseRefName,
+-      autoPr: false,
+-      shouldPublishBranchToOrigin: true,
+-    };
+-    const created = await saveTaskFile(cwd, taskContent, { workflow, ...settings, prNumber });
+-    displayTaskCreationResult(created, settings, workflow);
++      const workflow = await determineWorkflow(cwd, opts?.workflow);
++      if (workflow === null) {
++        info('Cancelled.');
++        return;
++      }
++
++      const settings = {
++        worktree: true,
++        branch: prTaskInput.prBranch,
++        baseBranch: prTaskInput.prBaseBranch,
++        autoPr: false,
++        shouldPublishBranchToOrigin: true,
++      };
++      const attachments = prTaskInput.attachments.length > 0
++        ? { attachments: prTaskInput.attachments }
++        : {};
++      const created = await saveTaskFile(cwd, prTaskInput.taskContent, {
++        workflow,
++        ...settings,
++        prNumber,
++        ...attachments,
++      });
++      displayTaskCreationResult(created, settings, workflow);
++    } finally {
++      prTaskInput.cleanupAttachments();
++    }
+     return;
+   }
+ 

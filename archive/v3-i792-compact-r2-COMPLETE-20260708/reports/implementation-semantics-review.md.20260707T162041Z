@@ -1,0 +1,17 @@
+# 実装意味論レビュー
+
+## 結果: APPROVE
+
+## サマリー
+実装意味論の範囲では、前回指摘したサイズ上限の読み込み境界と PR 画像一時ファイル cleanup 漏れは解消済みです。累積差分をデータ構造、単一情報源、命名整合、fail-fast、内部参照漏れの各観点で再走査し、新規のブロッキング指摘はありません。
+
+## 再走査証跡
+- データ構造の意味選択: `resolvedByUrl` は `Map`、`tempDirs` は `Set` で、外部 URL を未遮断の `Record` キーとして扱う箇所は確認されませんでした。
+- 導出値の単一情報源: attachment 番号は `resolvedByUrl.size + 1` から導出され、別カウンタとの並行管理は確認されませんでした。
+- 命名と意味の整合: `prBranch` / `prBaseBranch` / `attachments` / `cleanupAttachments` は実際に保持・伝播する値と一致していました。
+- 境界での fail-fast: `readResponseBodyWithLimit()` がストリーム読み込み中に `maxBytes` 超過で中断し、Content-Type / magic bytes 検証も維持されています。
+- 内部状態の参照漏れ: PR review data は本文置換時に clone され、元 `PrReviewData` を直接変更していないことを確認しました。
+
+## 解消確認
+- `F-0002` / `F-0003` / `F-0007` / `F-0008`: `src/features/tasks/prReviewImageAttachments.ts:87` と `:95-121` で、`arrayBuffer()` ではなくストリーム上限チェックに変更されていることを確認。
+- `F-0004` / `F-0009`: `src/app/cli/routing.ts:148-306` で、PR attachment 解決後の処理全体が `try/finally` に入り、`cleanupSourceAttachments?.()` が例外経路でも呼ばれることを確認。

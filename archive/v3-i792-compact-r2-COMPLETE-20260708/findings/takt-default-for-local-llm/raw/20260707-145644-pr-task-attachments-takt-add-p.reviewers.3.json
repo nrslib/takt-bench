@@ -1,0 +1,50 @@
+[
+  {
+    "rawFindingId": "20260707-145644-pr-task-attachments-takt-add-p:reviewers:3:arch-review:arch-review-3-confirm-0010",
+    "stepName": "arch-review",
+    "reviewer": "arch-review",
+    "familyTag": "state-cleanup/process-exit-bypasses-pr-attachment-finally",
+    "severity": "medium",
+    "title": "takt --pr 実行失敗時 cleanup 迂回の解消を確認",
+    "location": "src/app/cli/routing.ts:268",
+    "description": "`src/app/cli/routing.ts:268-274` で PR 由来の execute action に `selectOptions.exitOnFailure = false` を設定してから `selectAndExecuteTask()` を呼ぶようになっている。`src/features/tasks/execute/selectAndExecute.ts:192-196` は `exitOnFailure === false` の場合に `process.exit(1)` ではなく `throw new Error('Task failed')` へ戻すため、`src/app/cli/routing.ts:307-308` の `cleanupSourceAttachments?.()` に到達できる。`src/__tests__/cli-routing-pr-resolve.test.ts:401-436` で実行失敗時に `exitOnFailure: false` が渡り、cleanup が1回呼ばれることを確認した。対象テスト、PR画像attachment単体テスト、`npm run lint`、`npm test` は成功した。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0010"
+  },
+  {
+    "rawFindingId": "20260707-145644-pr-task-attachments-takt-add-p:reviewers:3:ai-antipattern-review:ai-antipattern-round3-resolve-f0010",
+    "stepName": "ai-antipattern-review",
+    "reviewer": "ai-antipattern-review",
+    "familyTag": "missing-edge-case",
+    "severity": "medium",
+    "title": "takt --pr 実行失敗時に process.exit が PR 画像一時 cleanup を迂回する問題は解消済み",
+    "location": "src/app/cli/routing.ts:268",
+    "description": "`src/app/cli/routing.ts:268-274` で PR 由来の interactive execute 経路に `selectOptions.exitOnFailure = false` を設定してから `selectAndExecuteTask()` を呼ぶため、`src/features/tasks/execute/selectAndExecute.ts:192-196` の `process.exit(1)` 分岐を避けて例外として戻り、`src/app/cli/routing.ts:302-308` の cleanup `finally` に到達できることを確認した。`src/__tests__/cli-routing-pr-resolve.test.ts:401-436` で task failure 時に `exitOnFailure: false` が渡され、PR画像 attachment cleanup が1回呼ばれることも検証されている。確認コマンドは `npm run build`、`npm run lint`、`npm test -- --run src/__tests__/cli-routing-pr-resolve.test.ts src/__tests__/prReviewImageAttachments.test.ts src/__tests__/prReviewTaskInput.test.ts`、`npm test` で、いずれも成功した。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0010"
+  },
+  {
+    "rawFindingId": "20260707-145644-pr-task-attachments-takt-add-p:reviewers:3:coding-review:coding-review-3-001",
+    "stepName": "coding-review",
+    "reviewer": "coding-review",
+    "familyTag": "cleanup_process_exit_pr_image_temp_files",
+    "severity": "medium",
+    "title": "takt --pr 実行失敗時の PR 画像一時 cleanup 迂回が解消されている",
+    "location": "src/app/cli/routing.ts:268",
+    "description": "`src/app/cli/routing.ts:268-270` で PR 経路の execute 時に `selectOptions.exitOnFailure = false` を設定しており、`src/features/tasks/execute/selectAndExecute.ts:192-194` の `exitOnFailure === false` 分岐により `process.exit(1)` ではなく例外として戻るため、`src/app/cli/routing.ts:305-307` の `cleanupSourceAttachments?.()` を含む finally に到達できることを確認した。`src/__tests__/cli-routing-pr-resolve.test.ts:403-440` でも interactive execute 失敗時に `exitOnFailure: false` が渡され、`cleanupAttachments` が1回呼ばれることを検証している。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0010"
+  },
+  {
+    "rawFindingId": "20260707-145644-pr-task-attachments-takt-add-p:reviewers:3:implementation-semantics-review:semantics-confirm-001",
+    "stepName": "implementation-semantics-review",
+    "reviewer": "implementation-semantics-review",
+    "familyTag": "implementation-semantics.cleanup-state",
+    "severity": "medium",
+    "title": "takt --pr 実行失敗時の PR 画像一時 cleanup 経路を確認",
+    "location": "src/app/cli/routing.ts:269",
+    "description": "`src/app/cli/routing.ts:268-274` で PR 番号がある execute action の場合に `selectOptions.exitOnFailure = false` を設定してから `selectAndExecuteTask()` を呼ぶことを確認しました。`src/features/tasks/execute/selectAndExecute.ts:192-196` では `exitOnFailure === false` の場合に `process.exit(1)` ではなく `throw new Error('Task failed')` になり、`src/app/cli/routing.ts:307-308` の外側 `finally` で `cleanupSourceAttachments?.()` に到達できます。`src/__tests__/cli-routing-pr-resolve.test.ts:401-436` でも interactive execute 失敗時に `exitOnFailure: false` が渡され、cleanup が1回呼ばれることを確認しています。累積差分の再走査では、動的キーは `Map`/`Set` で扱われ、attachment 番号は `resolvedByUrl.size + 1` から導出され、PR review data は clone されており、実装意味論観点の新規ブロッキング問題は確認されませんでした。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0010"
+  }
+]

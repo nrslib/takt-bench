@@ -1,0 +1,110 @@
+[
+  {
+    "rawFindingId": "20260707-145644-pr-task-attachments-takt-add-p:reviewers:1:arch-review:arch-raw-1",
+    "stepName": "arch-review",
+    "reviewer": "arch-review",
+    "familyTag": "arch:test-contract-workflow-shadowing",
+    "severity": "high",
+    "title": "プロジェクトローカル workflow が builtin を上書きし、英語設定の契約を壊している",
+    "location": ".takt/workflows/takt-default-for-local-llm.yaml:283",
+    "description": "未追跡の `.takt/workflows/takt-default-for-local-llm.yaml` が日本語条件だけを持つ workflow として存在し、`npm test` で `src/__tests__/for-local-llm-replan-wiring.test.ts:56` が失敗した。`loadWorkflow(name, process.cwd())` がこのプロジェクトローカル workflow を読み、language が `en` の場合も `修正を進められない、または人間の判断が必要` を返している。品質要件の `npm test` 成功を満たさず、workflow 読み込み契約の入口を意図せず変更している。",
+    "suggestion": "このタスクで不要な `.takt/workflows/takt-default-for-local-llm.yaml` を差分から除外する。意図して追加するなら、builtin と同じ言語切替契約を満たす構造にし、`for-local-llm-replan-wiring.test.ts` が ja/en 両方で通ることを確認する。",
+    "kind": "issue"
+  },
+  {
+    "rawFindingId": "20260707-145644-pr-task-attachments-takt-add-p:reviewers:1:arch-review:arch-raw-2",
+    "stepName": "arch-review",
+    "reviewer": "arch-review",
+    "familyTag": "arch:external-boundary-size-contract",
+    "severity": "high",
+    "title": "画像取得のサイズ上限が HTTP 読み込み境界で enforce されていない",
+    "location": "src/features/tasks/prReviewImageAttachments.ts:87",
+    "description": "`defaultDownloadImage()` は `Content-Length` が上限超過の場合だけ事前拒否し、その後 `await response.arrayBuffer()` でレスポンス全体をメモリへ読み込んでいる。`Content-Length` が無い、または小さく偽装されたレスポンスでは、`validateDownloadedImage()` の上限チェックに到達する前に上限超過データを全量確保する。PRコメント由来 URL という外部入力境界でサイズ上限を設ける要件に対して、契約が下流検証に漏れている。",
+    "suggestion": "`defaultDownloadImage()` をストリーミング読み込みに変更し、チャンクごとに累積 byte 数を `options.maxBytes` と比較して超過時点で中断・reject する。`Content-Length` は補助的な早期拒否に留め、ヘッダ欠落時でも同じ上限契約を境界で保証するテストを追加する。",
+    "kind": "issue"
+  },
+  {
+    "rawFindingId": "20260707-145644-pr-task-attachments-takt-add-p:reviewers:1:ai-antipattern-review:ai-antipattern-raw-1",
+    "stepName": "ai-antipattern-review",
+    "reviewer": "ai-antipattern-review",
+    "familyTag": "ai-antipattern/size-limit-not-enforced-at-download-boundary",
+    "severity": "high",
+    "title": "Content-Lengthなしの画像を上限前に全読み込みしている",
+    "location": "src/features/tasks/prReviewImageAttachments.ts:87",
+    "description": "defaultDownloadImage() は Content-Length が上限超過の場合だけ事前拒否しますが、Content-Length がない、または不正値の場合は response.arrayBuffer() でレスポンス全体をメモリへ読み込んだ後に validateDownloadedImage() でサイズ確認します。タスク要件はサイズ上限を設けること、Policy は外部副作用と境界値の検証を要求しているため、GitHub attachment URL であっても上限超過レスポンスを境界で止められない実装は不十分です。追加テストも downloadImage の注入戻り値を検証しており、本番の fetch 読み込み経路で上限を超えたストリームが途中停止されることを確認していません。",
+    "suggestion": "defaultDownloadImage() は ReadableStream をチャンク単位で読み、累積サイズが maxBytes を超えた時点で abort/error にしてください。Content-Length が欠落または不正な場合もストリーム読み込み中の累積上限で拒否し、その本番経路を fetch mock でテストしてください。",
+    "kind": "issue"
+  },
+  {
+    "rawFindingId": "20260707-145644-pr-task-attachments-takt-add-p:reviewers:1:ai-antipattern-review:ai-antipattern-raw-2",
+    "stepName": "ai-antipattern-review",
+    "reviewer": "ai-antipattern-review",
+    "familyTag": "state-cleanup/incomplete-pr-attachment-finally",
+    "severity": "medium",
+    "title": "takt --pr の一時添付 cleanup が一部例外経路を覆っていない",
+    "location": "src/app/cli/routing.ts:154",
+    "description": "resolvePrInput() が成功すると cleanupSourceAttachments が設定されますが、その後の determineWorkflow(), getWorkflowDescription(), selectInteractiveMode() は final cleanup の try/finally に入る前に実行されています。getWorkflowDescription() は workflow 読み込みや persona preview 解決を行うため例外を投げ得ます。ここで失敗すると PR 画像用の一時ディレクトリが cleanupSourceAttachments() で削除されません。実装計画でも一時ファイル cleanup は成功時だけでなく失敗時にも行うとされており、外部取得後の状態遷移として漏れがあります。",
+    "suggestion": "PR attachment 解決後の処理全体を cleanupSourceAttachments の try/finally で囲み、キャンセル、workflow 解決失敗、preview 生成失敗、mode 選択失敗、dispatch 失敗の全経路で一度だけ cleanup されるようにしてください。対応する例外経路の単体テストも追加してください。",
+    "kind": "issue"
+  },
+  {
+    "rawFindingId": "20260707-145644-pr-task-attachments-takt-add-p:reviewers:1:ai-antipattern-review:ai-antipattern-raw-3",
+    "stepName": "ai-antipattern-review",
+    "reviewer": "ai-antipattern-review",
+    "familyTag": "quality-gate/untracked-workflow-shadows-builtin",
+    "severity": "high",
+    "title": "未追跡 workflow が builtin をシャドーして npm test が失敗している",
+    "location": ".takt/workflows/takt-default-for-local-llm.yaml:1",
+    "description": "現在の作業ツリーには未追跡の .takt/workflows/takt-default-for-local-llm.yaml が存在し、loadWorkflow(name, process.cwd()) が builtin の英語 workflow ではなくこの日本語 workflow を読みます。その結果、npm test は src/__tests__/for-local-llm-replan-wiring.test.ts:56 で英語条件を期待するケースが日本語条件を受け取り失敗しました。ユーザー要求の品質要件は npm test の成功なので、この状態のまま完了扱いにできません。",
+    "suggestion": "タスク成果物に不要な .takt/workflows/takt-default-for-local-llm.yaml を作業ツリーから除外するか、テスト実行時にプロジェクトローカル workflow が builtin 検証をシャドーしないよう隔離してください。そのうえで npm test を再実行し成功を確認してください。",
+    "kind": "issue"
+  },
+  {
+    "rawFindingId": "20260707-145644-pr-task-attachments-takt-add-p:reviewers:1:coding-review:coding-review-raw-1",
+    "stepName": "coding-review",
+    "reviewer": "coding-review",
+    "familyTag": "test_failure_untracked_workflow_override",
+    "severity": "medium",
+    "title": "未追跡 workflow がテスト対象を上書きして npm test を失敗させている",
+    "location": ".takt/workflows/takt-default-for-local-llm.yaml:31",
+    "description": "`git status --short` で `.takt/workflows/` が未追跡として存在し、このローカル workflow が `loadWorkflow(name, process.cwd())` で builtin より優先されます。実際に `npm test` は `src/__tests__/for-local-llm-replan-wiring.test.ts:56` で、英語ケースでも `.takt/workflows/takt-default-for-local-llm.yaml:31` の日本語 condition が返り、期待値 `Cannot proceed with fixes, or human judgment is required` と一致せず失敗しました。品質要件の `npm test` 成功を満たしていません。",
+    "suggestion": "この変更セットに不要な `.takt/workflows/takt-default-for-local-llm.yaml` を含めないでください。必要なファイルなら、英語/日本語の解決契約を既存 builtin と同じ形に揃え、`npm test` が通る状態にしてください。",
+    "kind": "issue"
+  },
+  {
+    "rawFindingId": "20260707-145644-pr-task-attachments-takt-add-p:reviewers:1:coding-review:coding-review-raw-2",
+    "stepName": "coding-review",
+    "reviewer": "coding-review",
+    "familyTag": "security_unbounded_image_download",
+    "severity": "medium",
+    "title": "Content-Length が無い画像を上限超過まで読み切ってしまう",
+    "location": "src/features/tasks/prReviewImageAttachments.ts:87",
+    "description": "`defaultDownloadImage()` は `Content-Length` が上限超過なら 83 行目で拒否しますが、ヘッダーが無い、または実サイズより小さい場合は 87 行目の `await response.arrayBuffer()` でレスポンス全体をメモリに読み込んだ後、151-157 行目で初めて `body.length` を検証します。タスク要件はサイズ上限を設けることなので、上限は保存前だけでなくダウンロード中にも強制される必要があります。現在の実装では大きな GitHub attachment でメモリを過剰消費します。",
+    "suggestion": "`response.body.getReader()` などでストリーム読み込みし、累積サイズが `maxBytes` を超えた時点で中断してエラーにしてください。`Content-Length` 有無の両方、実体が上限超過するケースの単体テストも追加してください。",
+    "kind": "issue"
+  },
+  {
+    "rawFindingId": "20260707-145644-pr-task-attachments-takt-add-p:reviewers:1:implementation-semantics-review:semantics-001",
+    "stepName": "implementation-semantics-review",
+    "reviewer": "implementation-semantics-review",
+    "familyTag": "implementation-semantics.boundary-size-limit",
+    "severity": "high",
+    "title": "サイズ上限が読み込み境界として効いていない",
+    "location": "src/features/tasks/prReviewImageAttachments.ts:87",
+    "description": "`defaultDownloadImage()` は `Content-Length` が上限超過の場合だけ取得前に拒否しますが、その後は `await response.arrayBuffer()` でレスポンス全体を読み込んでから `image.body.length` を検証しています。GitHub attachment URL が `Content-Length` を返さない、または実体より小さい値を返す条件では、10MiB上限を超える本文を全量メモリに読み込んだ後でしか失敗できず、「サイズ上限を設ける」「無制限に取得しない」という境界契約が成立しません。",
+    "suggestion": "`response.body` をストリームで読み、累積バイト数が `options.maxBytes` を超えた時点で読み込みを中断してエラーにしてください。`Content-Length` は早期拒否の補助に留め、実読み込み側でも上限を越えて保持しない実装にしてください。",
+    "kind": "issue"
+  },
+  {
+    "rawFindingId": "20260707-145644-pr-task-attachments-takt-add-p:reviewers:1:implementation-semantics-review:semantics-002",
+    "stepName": "implementation-semantics-review",
+    "reviewer": "implementation-semantics-review",
+    "familyTag": "implementation-semantics.cleanup-state",
+    "severity": "medium",
+    "title": "PR画像一時ファイルのcleanupが対話準備中の例外経路から漏れる",
+    "location": "src/app/cli/routing.ts:148",
+    "description": "`resolvePrInput()` が成功すると `sourceAttachments` と `cleanupSourceAttachments` が設定されますが、その後の `resolveConfigValues()`、`determineWorkflow()`、`getWorkflowDescription()` は `try/finally` の外で実行されています。これらが設定不正や workflow 読み込み失敗で例外を投げると、`cleanupSourceAttachments` が呼ばれず、`resolvePrInput()` で作成済みのPR画像一時ディレクトリが残ります。キャンセル経路では個別にcleanupしていますが、例外経路の状態遷移が揃っていません。",
+    "suggestion": "`cleanupSourceAttachments` が設定された後の処理全体を `try/finally` に入れ、workflow解決・モード選択・dispatchのどの例外経路でも一度だけcleanupされる構造にしてください。既存のキャンセルreturnも同じfinallyで処理できる形に寄せると状態管理が単純になります。",
+    "kind": "issue"
+  }
+]

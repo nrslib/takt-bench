@@ -1,0 +1,28 @@
+# AI生成コードレビュー
+
+## 結果: APPROVE
+
+## サマリー
+前回 open finding F-0001〜F-0008 は、実コード上すべて解消を確認しました。
+
+## 検証した項目
+| 観点 | 結果 | 備考 |
+|------|------|------|
+| 仮定の妥当性 | ✅ | PR 添付 cleanup、interactive 添付名前空間、provider 境界を再確認 |
+| API/ライブラリの実在 | ✅ | `GitProvider.resolvePrReviewImageAttachments()` の実装・呼び出しを確認 |
+| コンテキスト適合 | ✅ | 汎用 app/features 層から GitHub 専用 resolver の直接参照が消えていることを確認 |
+| スコープ | ✅ | 追加変更は前回指摘の修正範囲内 |
+
+## 観測した指摘
+| # | family_tag | カテゴリ | 重大度 | 場所 | 問題 | 修正案 |
+|---|------------|---------|--------|------|------|--------|
+
+## 解消確認
+- F-0001 / F-0003 / F-0008: `src/app/cli/routing.ts:148` と `src/app/cli/routing.ts:297` で、PR 添付取得後の workflow 選択、mode 選択、interactive 実行、dispatch 全体が `try/finally` に入り、`cleanupSourceAttachments?.()` が必ず実行されることを確認。
+- F-0002 / F-0005 / F-0006 / F-0007: `src/app/cli/routing.ts:184` で `sourceAttachments` が `interactiveSeed.attachments` に入り、`src/features/interactive/imageAttachments.ts:135` の初期添付つき store で採番・一覧化されることを確認。dispatch 側も `src/app/cli/routing.ts:263` で `result.attachments` のみを渡しており、二重連結はなし。
+- F-0004: `src/infra/git/types.ts:121` に provider 境界が追加され、`src/app/cli/routing-inputs.ts:73`、`src/features/pipeline/steps.ts:168`、`src/features/tasks/add/index.ts:200` は provider 経由に変更済み。`rg` で汎用 app/features 層から `infra/github/prReviewImageAttachments` への直接参照なし。
+
+## 再走査証跡
+- Policy Source: `context/policy/ai-antipattern-review.2.20260707T155626Z.md`
+- Knowledge Source: `context/knowledge/arch-review.2.20260707T155626Z.md`, `context/knowledge/implementation-semantics-revie.2.20260707T155626Z.md`
+- 照合章: 原則、スコープ判定、判定基準、振る舞い証跡の判定、ファクトチェック、判定ルール、レビューの基本手順、仮定の検証、もっともらしいが間違っている検出、コンテキスト適合性評価、インテグレーションパターンの一貫性、スコープクリープ検出、デッドコード検出、フォールバック・デフォルト引数の濫用検出、未使用コードの検出、構造・設計、境界での解決、呼び出しチェーン検証、境界での fail-fast。

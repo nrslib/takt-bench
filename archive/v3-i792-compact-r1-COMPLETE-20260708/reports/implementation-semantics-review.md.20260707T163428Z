@@ -1,0 +1,6 @@
+# 実装意味論レビュー
+
+## 結果: APPROVE
+
+## サマリー
+実装意味論の観点では新規ブロッキング指摘はありません。F-0009 は `docs/cli-reference.md:257`、`docs/cli-reference.ja.md:256`、`README.md:249`、`docs/README.ja.md:252` で PR 画像添付の利用者向け契約が反映されていることを確認しました。

@@ -1,0 +1,24 @@
+# AI生成コードレビュー
+
+## 結果: REJECT
+
+## サマリー
+PR画像添付の主要配線は実装されていますが、サイズ上限の境界 enforcement、一時ファイル cleanup、品質ゲート失敗が残っています。
+
+## 検証した項目
+| 観点 | 結果 | 備考 |
+|------|------|------|
+| 仮定の妥当性 | ❌ | サイズ上限がダウンロード境界で保証されていない |
+| API/ライブラリの実在 | ✅ | `fetch` / `gh auth token` / 既存 attachment API は実在 |
+| コンテキスト適合 | ❌ | `takt --pr` の cleanup 範囲が既存の副作用管理要件に不足 |
+| スコープ | ❌ | 未追跡 `.takt/workflows/` が `npm test` を失敗させている |
+
+## 観測した指摘
+| # | family_tag | カテゴリ | 重大度 | 場所 | 問題 | 修正案 |
+|---|------------|---------|--------|------|------|--------|
+| 1 | missing-edge-case | サイズ上限 | high | `src/features/tasks/prReviewImageAttachments.ts:87` | `defaultDownloadImage()` が `Content-Length` なし/不正値のレスポンスを `arrayBuffer()` で全読み込みしてからサイズ検証しており、10MiB上限をダウンロード境界で止められない | `ReadableStream` をチャンク単位で読み、累積サイズが `maxBytes` を超えた時点で abort/error にする。本番 `fetch` 経路のテストも追加する |
+| 2 | logic-error | cleanup漏れ | medium | `src/app/cli/routing.ts:154` | `resolvePrInput()` 成功後、`determineWorkflow()` / `getWorkflowDescription()` / `selectInteractiveMode()` が final cleanup の `try/finally` 外にあり、例外時に PR画像一時ファイルが削除されない | PR attachment 解決後の処理全体を `cleanupSourceAttachments` の `try/finally` で囲み、例外・キャンセル経路をテストする |
+| 3 | scope-creep | 品質ゲート失敗 | high | `.takt/workflows/takt-default-for-local-llm.yaml:1` | 未追跡 workflow が builtin をシャドーし、`npm test` が `src/__tests__/for-local-llm-replan-wiring.test.ts:56` で失敗している | 不要な `.takt/workflows/takt-default-for-local-llm.yaml` を作業ツリーから除外するか、テストで project-local workflow が builtin 検証をシャドーしないよう隔離し、`npm test` を再実行する |
+
+## REJECT判定条件
+- ブロッキング指摘が3件あるため REJECT。

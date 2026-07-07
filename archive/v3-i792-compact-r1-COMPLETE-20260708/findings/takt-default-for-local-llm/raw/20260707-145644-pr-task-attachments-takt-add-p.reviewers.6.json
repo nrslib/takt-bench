@@ -1,0 +1,50 @@
+[
+  {
+    "rawFindingId": "20260707-145644-pr-task-attachments-takt-add-p:reviewers:6:arch-review:arch-review-6-resolved-F-0012",
+    "stepName": "arch-review",
+    "reviewer": "arch-review",
+    "familyTag": "process_gap",
+    "severity": "low",
+    "title": "レビュー再開後の再検証を確認",
+    "location": "src/app/cli/program.ts:44",
+    "description": "判断直前に Policy/Knowledge 原本、findings-ledger.json、現行差分、対象コードを再読しました。git diff --check は終了コード0、src/app/cli/program.ts:44 は --pr help が PR comment images を含む文言に更新済み、src/infra/github/prReviewImageAttachments.ts:84-119/223-241/314-325 は配列直接変更が残っていないことを確認しました。直前 fix.5 の記録でも npm run build、npm run lint、npm test、npm run test:it、npm run test:e2e:mock が成功済みであることを再読しました。F-0012 の再検証不足は解消済みです。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0012"
+  },
+  {
+    "rawFindingId": "20260707-145644-pr-task-attachments-takt-add-p:reviewers:6:ai-antipattern-review:20260707-145644-pr-task-attachments-takt-add-p:reviewers:6:ai-antipattern-review:raw-ai6-resolve-f0012",
+    "stepName": "ai-antipattern-review",
+    "reviewer": "ai-antipattern-review",
+    "familyTag": "process_gap",
+    "severity": "low",
+    "title": "レビュー再開後の再検証が実施されていることを確認",
+    "location": "src/infra/github/prReviewImageAttachments.ts:84",
+    "description": "Policy/Knowledge 原本、findings-ledger.json、git status --short、git diff --stat、git diff --check、主要実装ファイルをこの応答直前に再読・再実行しました。src/infra/github/prReviewImageAttachments.ts:84-335、src/app/cli/routing.ts:100-304、src/features/tasks/add/index.ts:170-240、src/features/pipeline/steps.ts:149-300、src/features/pipeline/execute.ts:32-105、provider adapter、docs、主要テストを再確認し、PR画像添付契約の配線・cleanup・保存・pipeline staging に未確認のままの判断は残っていません。git diff --check は終了コード0で、fix.5 レポートでも npm run build / npm run lint / npm test / test:it / test:e2e:mock の成功証跡を再確認しました。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0012"
+  },
+  {
+    "rawFindingId": "20260707-145644-pr-task-attachments-takt-add-p:reviewers:6:coding-review:R6-CONF-F0012",
+    "stepName": "coding-review",
+    "reviewer": "coding-review",
+    "familyTag": "process_gap",
+    "severity": "low",
+    "title": "レビュー再開後の再検証を実施済み",
+    "location": "src/infra/github/prReviewImageAttachments.ts:84",
+    "description": "F-0012 の受入条件を再確認しました。Policy source `.takt/runs/20260707-145644-pr-task-attachments-takt-add-p/context/policy/coding-review.6.20260707T165901Z.md` を再読し、`git diff` と対象実装を再走査しました。`src/infra/github/prReviewImageAttachments.ts:84-335` で画像抽出、GitHub attachment URL 限定、Content-Type/magic bytes/サイズ検証、認証付き取得、一時ファイル cleanup を確認し、`src/app/cli/routing.ts:184-298`、`src/features/tasks/add/index.ts:198-237`、`src/features/pipeline/execute.ts:40-91`、`src/features/pipeline/steps.ts:149-289` で `takt --pr` / `takt add --pr` / pipeline `--pr` の attachment 伝播と cleanup を確認しました。`npm run build`、`npm run lint`、`npm test` はいずれも成功し、直前再検証未実施の process gap は解消済みです。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0012"
+  },
+  {
+    "rawFindingId": "20260707-145644-pr-task-attachments-takt-add-p:reviewers:6:implementation-semantics-review:impl-sem-r6-resolve-f0012",
+    "stepName": "implementation-semantics-review",
+    "reviewer": "implementation-semantics-review",
+    "familyTag": "process_gap",
+    "severity": "low",
+    "title": "レビュー再開後の再検証実施を確認",
+    "location": "src/infra/github/prReviewImageAttachments.ts:84",
+    "description": "この応答直前に Knowledge/Policy 原本、findings-ledger.json、git status、累積差分、主要実装ファイルを再読しました。具体的には、PR画像抽出・検証・添付生成を src/infra/github/prReviewImageAttachments.ts:84-335、通常 `takt --pr` の添付伝搬と cleanup を src/app/cli/routing.ts:111-299、pipeline `--pr` の添付 staging/cleanup を src/features/pipeline/steps.ts:149-301 と src/features/pipeline/execute.ts:40-91、`takt add --pr` の保存/cleanup を src/features/tasks/add/index.ts:198-235 で確認しました。関連テスト契約も .takt/runs/20260707-145644-pr-task-attachments-takt-add-p/reports/test-report.md:1-45 と src/__tests__/github-pr-review-image-attachments.test.ts:62-227 で再確認しており、元 finding の「現行コード・差分・テスト結果を判断直前に再確認できていない」状態は、この implementation-semantics-review の判定範囲では解消済みです。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0012"
+  }
+]

@@ -1,0 +1,37 @@
+# Merge Readiness Review
+
+## 結果: REJECT
+
+## サマリー
+PR 画像添付機能の主要実装、F-0001〜F-0011 の解消、`npm run build` / `npm run lint` / `npm test` の成功は確認済みです。ただし、変更差分に trailing whitespace が残っており `git diff --check` が失敗するため、現時点では merge-ready ではありません。
+
+## 保守前提のマージ品質チェック
+| # | 観点 | 状態 | 根拠（ファイル:行 / テスト / 実行証跡） | コメント |
+|---|------|------|---------------------------------------|----------|
+| 1 | 要求充足 | 充足 | `src/infra/github/prReviewImageAttachments.ts`, `src/app/cli/routing-inputs.ts`, `src/features/tasks/add/index.ts`, `src/features/pipeline/steps.ts` | PR 本文・通常コメント・review summary/thread コメントの画像抽出、保存、通常 `--pr` / `takt add --pr` / pipeline `--pr` への伝搬を確認 |
+| 2 | 既存契約・既存フローへの影響 | 問題なし | `src/infra/git/types.ts`, `src/infra/github/GitHubProvider.ts`, `src/infra/gitlab/GitLabProvider.ts` | provider 境界に resolver が追加され、GitLab は no-op として契約を維持 |
+| 3 | テスト・検証 | 十分 | `npm run build && npm run lint && npm test` 成功 | build、lint、unit test は成功 |
+| 4 | 要求外変更・スコープクリープ | 問題あり | `.takt/workflows/takt-default-for-local-llm.yaml` | 未追跡 workflow ファイルは今回機能とは独立して見えるが、最終ブロッカーは `git diff --check` 失敗 |
+| 5 | 保守可能性・将来変更容易性 | 問題あり | `src/__tests__/pipelineExecution.test.ts:28` / `git diff --check` | trailing whitespace が残っており、差分品質チェックに失敗 |
+| 6 | 明白なセキュリティ・データ保護・運用リスク | 問題なし | `src/infra/github/prReviewImageAttachments.ts` | GitHub attachment URL 限定、Content-Type / magic bytes / サイズ上限、認証 token 利用を確認 |
+
+## 横断監査証跡
+| # | 変更カテゴリ | 抽出した項目 | 確認した検索語・ファイル | 判定 | コメント |
+|---|--------------|--------------|--------------------------|------|----------|
+| 1 | provider adapter / 型契約 | `resolvePrReviewImageAttachments`, `PrReviewImageAttachmentResolution` | `resolvePrReviewImageAttachments` / `src/infra/git/types.ts`, `src/infra/github/GitHubProvider.ts`, `src/infra/gitlab/GitLabProvider.ts` | 問題なし | GitHub 実装と GitLab no-op が provider 境界に収まっている |
+| 2 | entrypoint / 保存経路 | `takt add --pr`, `takt --pr`, pipeline `--pr` | `attachments`, `cleanupAttachments`, `stageTaskSpecForExecution` / `src/app/cli/routing.ts`, `src/features/tasks/add/index.ts`, `src/features/pipeline/steps.ts` | 問題なし | 添付の保存・実行・cleanup 経路を確認 |
+| 3 | 出力契約 / documentation | `--pr` help と docs | `supported PR comment images`, `添付画像` / `src/app/cli/program.ts`, `docs/cli-reference.md`, `docs/cli-reference.ja.md` | 問題なし | F-0009 / F-0010 の受入条件を満たす |
+| 4 | 差分品質 | whitespace | `git diff --check` / `src/__tests__/pipelineExecution.test.ts:28` | 問題あり | trailing whitespace が残存 |
+
+## 観測した指摘
+| # | family_tag | カテゴリ | 重大度 | 場所 | 問題 | 修正案 |
+|---|------------|---------|--------|------|------|--------|
+| 1 | maintainability-readiness | 保守困難化 | medium | `src/__tests__/pipelineExecution.test.ts:28` | `git diff --check` が `trailing whitespace` を検出する。`sed -n '24,30l'` でも 28 行目が `\r$` として残っており、差分品質チェックに失敗している。 | 28 行目の余分な CR / trailing whitespace を削除し、`git diff --check` が成功することを確認する。 |
+
+## 検証証跡
+- ビルド: `npm run build` 成功
+- テスト: `npm run lint` 成功、`npm test` 成功
+- 動作確認: `git diff --check` 失敗（`src/__tests__/pipelineExecution.test.ts:28: trailing whitespace.`）
+
+## REJECT判定条件
+- マージを止めるべき観測指摘が1件あるため REJECT。

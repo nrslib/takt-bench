@@ -1,0 +1,1053 @@
+{
+  "version": 1,
+  "workflowName": "takt-default-for-local-llm",
+  "nextId": 13,
+  "updatedAt": "2026-07-07T17:03:58.713Z",
+  "findings": [
+    {
+      "id": "F-0001",
+      "status": "resolved",
+      "lifecycle": "resolved",
+      "severity": "medium",
+      "title": "PR画像添付の一時ディレクトリがキャンセル/例外経路で掃除されない",
+      "location": "src/app/cli/routing.ts:154",
+      "description": "`resolvePrInput()` が PR 画像添付を取得して `cleanupSourceAttachments` を保持した後、cleanup は `dispatchConversationAction()` 周辺の finally でしか実行されません。`determineWorkflow()` のキャンセル、`selectInteractiveMode()` のキャンセル、または `interactiveMode()`/`quietMode()`/`personaMode()` が例外を投げる経路は line 249 の try/finally に入らないため、`resolvePrReviewImageAttachments()` が作成した一時 attachment ディレクトリが残ります。Policy の「状態整合性」「副作用と状態遷移の確認」に反します。",
+      "suggestion": "PR source attachment を取得した直後から `executeDefaultAction()` の該当フロー全体を try/finally で包み、workflow 選択キャンセル、mode 選択キャンセル、interactive mode 例外、dispatch 例外の全経路で `cleanupSourceAttachments` を一度だけ実行してください。",
+      "reviewers": [
+        "arch-review"
+      ],
+      "rawFindingIds": [
+        "20260707-145644-pr-task-attachments-takt-add-p:reviewers:1:arch-review:arch-raw-1"
+      ],
+      "firstSeen": {
+        "runId": "20260707-145644-pr-task-attachments-takt-add-p",
+        "stepName": "arch-review",
+        "timestamp": "2026-07-07T15:35:23.260Z"
+      },
+      "lastSeen": {
+        "runId": "20260707-145644-pr-task-attachments-takt-add-p",
+        "stepName": "reviewers",
+        "timestamp": "2026-07-07T15:35:23.260Z"
+      },
+      "resolvedAt": "2026-07-07T16:04:49.511Z",
+      "resolvedEvidence": "current raw findings contain resolution_confirmation entries targeting F-0001, confirming the PR source attachment cleanup now covers workflow selection, mode selection, interactive execution, and dispatch via try/finally."
+    },
+    {
+      "id": "F-0002",
+      "status": "resolved",
+      "lifecycle": "resolved",
+      "severity": "high",
+      "title": "PR由来画像と対話中追加画像の placeholder/fileName 契約が衝突する",
+      "location": "src/app/cli/routing.ts:183",
+      "description": "PR 由来の画像添付は `sourceAttachments` として保持されますが、`interactiveSeed` には `attachments` が渡されていません。そのため interactive 側の attachment store は PR 画像を知らないまま `image-1.png` / `[Image #1]` から採番を開始します。その後 line 250-254 の `mergeAttachments()` が PR 由来添付と interactive 結果添付を単純連結するため、両方に画像があると同じ placeholder と fileName が並びます。下流の `promoteTaskAttachments()` は同名 destination を拒否し、`resolveReferencedImageAttachments()` も duplicate placeholder をエラーにするため、通常 `takt --pr` 経路で画像参照契約が壊れます。",
+      "suggestion": "PR 由来 attachments を `interactiveSeed.attachments` として渡し、interactive store の採番起点に含めてください。そのうえで最終引き渡しは単純連結ではなく、1つの正規化済み attachment list に統一してください。別案として merge 時に placeholder/fileName を再採番し、本文中の参照も同時に更新してください。",
+      "reviewers": [
+        "arch-review"
+      ],
+      "rawFindingIds": [
+        "20260707-145644-pr-task-attachments-takt-add-p:reviewers:1:arch-review:arch-raw-2"
+      ],
+      "firstSeen": {
+        "runId": "20260707-145644-pr-task-attachments-takt-add-p",
+        "stepName": "arch-review",
+        "timestamp": "2026-07-07T15:35:23.260Z"
+      },
+      "lastSeen": {
+        "runId": "20260707-145644-pr-task-attachments-takt-add-p",
+        "stepName": "reviewers",
+        "timestamp": "2026-07-07T15:35:23.260Z"
+      },
+      "resolvedAt": "2026-07-07T16:04:49.511Z",
+      "resolvedEvidence": "current raw findings contain resolution_confirmation entries targeting F-0002, confirming sourceAttachments are passed into interactiveSeed.attachments and only result.attachments is passed downstream."
+    },
+    {
+      "id": "F-0003",
+      "status": "resolved",
+      "lifecycle": "resolved",
+      "severity": "medium",
+      "title": "PR画像の一時ファイルがキャンセル経路で cleanup されない",
+      "location": "src/app/cli/routing.ts:154",
+      "description": "`resolvePrInput()` は PR 画像をダウンロードして `cleanupSourceAttachments` を返しますが、その後の `determineWorkflow()` キャンセルや `selectInteractiveMode()` キャンセルは `try/finally` の外側で `return` するため、ダウンロード済み一時画像が削除されません。PR画像は外部取得した副作用であり、正常・失敗・中断経路での片付けが必要です。",
+      "suggestion": "PR 画像取得後の処理全体を `try/finally` で囲み、workflow 選択キャンセル、interactive mode 選択キャンセル、interactive 実行例外でも `cleanupSourceAttachments?.()` が必ず実行される構造にしてください。",
+      "reviewers": [
+        "ai-antipattern-review"
+      ],
+      "rawFindingIds": [
+        "20260707-145644-pr-task-attachments-takt-add-p:reviewers:1:ai-antipattern-review:raw-ai-001"
+      ],
+      "firstSeen": {
+        "runId": "20260707-145644-pr-task-attachments-takt-add-p",
+        "stepName": "ai-antipattern-review",
+        "timestamp": "2026-07-07T15:35:23.260Z"
+      },
+      "lastSeen": {
+        "runId": "20260707-145644-pr-task-attachments-takt-add-p",
+        "stepName": "reviewers",
+        "timestamp": "2026-07-07T15:35:23.260Z"
+      },
+      "resolvedAt": "2026-07-07T16:04:49.511Z",
+      "resolvedEvidence": "current raw findings contain resolution_confirmation entries targeting F-0003, confirming cleanupSourceAttachments runs from the outer finally after PR image acquisition across cancellation and exception paths."
+    },
+    {
+      "id": "F-0004",
+      "status": "resolved",
+      "lifecycle": "resolved",
+      "severity": "medium",
+      "title": "汎用 PR 経路が GitHub 専用 resolver に直接依存している",
+      "location": "src/features/pipeline/steps.ts:14",
+      "description": "`getGitProvider()` は GitHub/GitLab の抽象を返す設計ですが、汎用の `takt add --pr` / pipeline PR 経路から `../../infra/github/prReviewImageAttachments.js` を直接 import しています。同じ漏洩は `src/features/tasks/add/index.ts:17` と `src/app/cli/routing-inputs.ts:4` にもあります。これにより GitLab provider の MR 取得後でも GitHub 専用 URL 判定・`gh auth token` 前提の処理が汎用層へ露出し、provider 境界の契約が崩れています。",
+      "suggestion": "画像添付解決を Git provider 境界へ寄せ、GitHub provider は GitHub attachment resolver、GitLab provider は no-op または GitLab 用 resolver を返す形にしてください。少なくとも汎用 feature/app 層から `infra/github/*` を直接参照しない構造にしてください。",
+      "reviewers": [
+        "ai-antipattern-review"
+      ],
+      "rawFindingIds": [
+        "20260707-145644-pr-task-attachments-takt-add-p:reviewers:1:ai-antipattern-review:raw-ai-002"
+      ],
+      "firstSeen": {
+        "runId": "20260707-145644-pr-task-attachments-takt-add-p",
+        "stepName": "ai-antipattern-review",
+        "timestamp": "2026-07-07T15:35:23.260Z"
+      },
+      "lastSeen": {
+        "runId": "20260707-145644-pr-task-attachments-takt-add-p",
+        "stepName": "reviewers",
+        "timestamp": "2026-07-07T15:35:23.260Z"
+      },
+      "resolvedAt": "2026-07-07T16:04:49.511Z",
+      "resolvedEvidence": "current raw findings contain resolution_confirmation entries targeting F-0004, confirming generic app/features PR paths call provider.resolvePrReviewImageAttachments and GitHub-specific resolver usage is contained in the GitHub provider."
+    },
+    {
+      "id": "F-0005",
+      "status": "resolved",
+      "lifecycle": "resolved",
+      "severity": "medium",
+      "title": "takt --pr の対話中に PR 画像プレースホルダーが画像として解決されない",
+      "location": "src/app/cli/routing.ts:183",
+      "description": "PR コメント画像を resolvePrInput() で sourceAttachments として取得している一方、interactiveSeed には userMessage/sourceContext だけを渡しており attachments を含めていません。runConversationLoop は initialInput?.attachments から attachmentStore を作り、AI 呼び出し直前にその store で [Image #N] を解決します。そのため takt --pr の assistant/quiet/persona 経路では、sourceContext 内の [Image #1] は本文に出ても、対話・要約 AI 呼び出しには画像が渡らず、要求された --pr 経路での画像参照が成立しません。",
+      "suggestion": "PR 由来の sourceAttachments を interactiveSeed.attachments に渡してください。そのうえで、対話結果が初期添付を所有する設計に合わせ、後段の保存・実行に渡す attachments が二重にならないようにしてください。",
+      "reviewers": [
+        "coding-review"
+      ],
+      "rawFindingIds": [
+        "20260707-145644-pr-task-attachments-takt-add-p:reviewers:1:coding-review:R1"
+      ],
+      "firstSeen": {
+        "runId": "20260707-145644-pr-task-attachments-takt-add-p",
+        "stepName": "coding-review",
+        "timestamp": "2026-07-07T15:35:23.260Z"
+      },
+      "lastSeen": {
+        "runId": "20260707-145644-pr-task-attachments-takt-add-p",
+        "stepName": "reviewers",
+        "timestamp": "2026-07-07T15:35:23.260Z"
+      },
+      "resolvedAt": "2026-07-07T16:04:49.511Z",
+      "resolvedEvidence": "current raw findings contain resolution_confirmation entries targeting F-0005, confirming PR sourceAttachments are included in interactiveSeed.attachments and available to conversationLoop/quietMode attachment resolution."
+    },
+    {
+      "id": "F-0006",
+      "status": "resolved",
+      "lifecycle": "resolved",
+      "severity": "medium",
+      "title": "PR 画像と対話中の追加画像を結合すると image-1 が衝突する",
+      "location": "src/app/cli/routing.ts:250",
+      "description": "mergeAttachments() は sourceAttachments と result.attachments を単純連結しています。PR コメントに画像がある場合 sourceAttachments は [Image #1]/image-1.png から始まり、現在の対話用 attachmentStore は PR 添付で初期化されていないため、ユーザーが対話中に画像を貼ると result.attachments も [Image #1]/image-1.png から始まります。この配列を saveTaskFromInteractive() や selectAndExecuteTask() に渡すと、promoteTaskAttachments() が同じ attachments/image-1.png 宛先を2回作ろうとして `Task attachment destination already exists` で失敗し、保存・実行できません。",
+      "suggestion": "PR 由来添付を対話 attachmentStore の initialAttachments として渡して採番を継続させるか、mergeAttachments() で placeholder/fileName を重複しないよう再採番してください。初期添付を result.attachments に含める場合は sourceAttachments との重複連結も避けてください。",
+      "reviewers": [
+        "coding-review"
+      ],
+      "rawFindingIds": [
+        "20260707-145644-pr-task-attachments-takt-add-p:reviewers:1:coding-review:R2"
+      ],
+      "firstSeen": {
+        "runId": "20260707-145644-pr-task-attachments-takt-add-p",
+        "stepName": "coding-review",
+        "timestamp": "2026-07-07T15:35:23.260Z"
+      },
+      "lastSeen": {
+        "runId": "20260707-145644-pr-task-attachments-takt-add-p",
+        "stepName": "reviewers",
+        "timestamp": "2026-07-07T15:35:23.260Z"
+      },
+      "resolvedAt": "2026-07-07T16:04:49.511Z",
+      "resolvedEvidence": "current raw findings contain resolution_confirmation entries targeting F-0006, confirming initial PR attachments seed the interactive attachment store and downstream handling no longer concatenates sourceAttachments with result.attachments."
+    },
+    {
+      "id": "F-0007",
+      "status": "resolved",
+      "lifecycle": "resolved",
+      "severity": "high",
+      "title": "PR画像添付が interactive の添付名前空間に入っていない",
+      "location": "src/app/cli/routing.ts:183",
+      "description": "`--pr` の sourceContext には `resolvePrInput()` 後の `[Image #1]` 参照が入る一方、`interactiveSeed` には `sourceAttachments` が渡されていません。`runConversationLoop()` / `quietMode()` は `initialInput?.attachments` から添付ストアを初期化するため、AI 呼び出し時に PR 画像の `[Image #1]` は添付実体へ解決されません。また、その状態でユーザーが interactive 中に画像を貼ると、`createImageAttachmentStore()` は空配列から `image-1.*` / `[Image #1]` を再発行し、`mergeAttachments()` が PR 画像と貼付画像を単純連結します。結果として同じ placeholder/fileName を持つ添付が並び、`promoteTaskAttachments()` の保存時に `attachments/image-1.*` が衝突して実行・保存できません。",
+      "suggestion": "PR由来の `sourceAttachments` を `InteractiveSeedInput.attachments` として渡し、interactive 結果に初期添付が含まれる前提で `mergeAttachments()` を重複連結しない形に正規化してください。少なくとも placeholder/fileName の名前空間が単一になるよう、初期添付の件数をもとに追加画像を採番させてください。",
+      "reviewers": [
+        "implementation-semantics-review"
+      ],
+      "rawFindingIds": [
+        "20260707-145644-pr-task-attachments-takt-add-p:reviewers:1:implementation-semantics-review:impl-sem-raw-1"
+      ],
+      "firstSeen": {
+        "runId": "20260707-145644-pr-task-attachments-takt-add-p",
+        "stepName": "implementation-semantics-review",
+        "timestamp": "2026-07-07T15:35:23.260Z"
+      },
+      "lastSeen": {
+        "runId": "20260707-145644-pr-task-attachments-takt-add-p",
+        "stepName": "reviewers",
+        "timestamp": "2026-07-07T15:35:23.260Z"
+      },
+      "resolvedAt": "2026-07-07T16:04:49.511Z",
+      "resolvedEvidence": "current raw findings contain resolution_confirmation entries targeting F-0007, confirming PR attachments enter the interactive attachment namespace and result.attachments is the single normalized list passed onward."
+    },
+    {
+      "id": "F-0008",
+      "status": "resolved",
+      "lifecycle": "resolved",
+      "severity": "medium",
+      "title": "PR画像ダウンロード後のキャンセル経路で一時添付が解放されない",
+      "location": "src/app/cli/routing.ts:154",
+      "description": "`resolvePrInput()` が PR 画像を一時ディレクトリへ保存し `cleanupAttachments` を返した後、`determineWorkflow()` のキャンセル return と `selectInteractiveMode()` のキャンセル return は、`cleanupSourceAttachments?.()` を呼ぶ `finally` ブロックより前にあります。PR コメントに画像がある状態で workflow 選択または interactive mode 選択をキャンセルすると、作成済みの `takt/pr-attachments/.../attachments` 一時ファイルが残ります。これは副作用を伴う状態の中断経路で解放が漏れる状態不整合です。",
+      "suggestion": "`cleanupSourceAttachments` が設定された後の workflow 選択、mode 選択、interactive 実行、dispatch までを同じ `try/finally` に入れるか、各早期 return の直前で必ず cleanup を実行してください。",
+      "reviewers": [
+        "implementation-semantics-review"
+      ],
+      "rawFindingIds": [
+        "20260707-145644-pr-task-attachments-takt-add-p:reviewers:1:implementation-semantics-review:impl-sem-raw-2"
+      ],
+      "firstSeen": {
+        "runId": "20260707-145644-pr-task-attachments-takt-add-p",
+        "stepName": "implementation-semantics-review",
+        "timestamp": "2026-07-07T15:35:23.260Z"
+      },
+      "lastSeen": {
+        "runId": "20260707-145644-pr-task-attachments-takt-add-p",
+        "stepName": "reviewers",
+        "timestamp": "2026-07-07T15:35:23.260Z"
+      },
+      "resolvedAt": "2026-07-07T16:04:49.511Z",
+      "resolvedEvidence": "current raw findings contain resolution_confirmation entries targeting F-0008, confirming PR image download cleanup is reached for workflow cancellation, mode cancellation, interactive exceptions, and dispatch paths."
+    },
+    {
+      "id": "F-0009",
+      "status": "resolved",
+      "lifecycle": "resolved",
+      "severity": "medium",
+      "title": "PR画像添付の利用者向け契約がドキュメントに反映されていない",
+      "location": "docs/cli-reference.md:16",
+      "description": "今回の差分は `takt add --pr` / `takt --pr` / pipeline `--pr` で GitHub PR コメント内画像を検出・認証付き取得・検証・添付保存する利用者向け挙動を追加していますが、docs/cli-reference.md:16 と docs/cli-reference.ja.md:16 の `--pr` 説明は従来どおりレビューコメント取得のみで、PR画像の自動添付、対応形式、サイズ上限、GitHub attachment URL 限定、GitLab provider の no-op、失敗条件が説明されていません。ポリシーの「仕様完全性」「利用者向け契約変更に対するドキュメント欠落」基準に該当します。",
+      "suggestion": "README.md / docs/README.ja.md / docs/cli-reference.md / docs/cli-reference.ja.md の `--pr` または image attachments 節に、PRコメント画像の自動取得対象、保存先/order.md 表示、対応形式とサイズ上限、GitHub attachment URL 限定、GitLab では添付なし、Content-Type/magic bytes/取得失敗時の扱いを追加してください。",
+      "reviewers": [
+        "coding-review"
+      ],
+      "rawFindingIds": [
+        "20260707-145644-pr-task-attachments-takt-add-p:reviewers:2:coding-review:R2-ISSUE-001"
+      ],
+      "firstSeen": {
+        "runId": "20260707-145644-pr-task-attachments-takt-add-p",
+        "stepName": "coding-review",
+        "timestamp": "2026-07-07T16:04:49.511Z"
+      },
+      "lastSeen": {
+        "runId": "20260707-145644-pr-task-attachments-takt-add-p",
+        "stepName": "reviewers",
+        "timestamp": "2026-07-07T16:04:49.511Z"
+      },
+      "resolvedAt": "2026-07-07T16:21:58.052Z",
+      "resolvedEvidence": "current raw findings contain resolution_confirmation entries targeting F-0009, confirming the PR image attachment user-facing documentation contract is now reflected in docs/cli-reference.md, docs/cli-reference.ja.md, README.md, and docs/README.ja.md."
+    },
+    {
+      "id": "F-0010",
+      "status": "resolved",
+      "lifecycle": "resolved",
+      "severity": "medium",
+      "title": "`--pr` の実行時ヘルプがPR画像添付契約を説明していない",
+      "location": "src/app/cli/program.ts:44",
+      "description": "docs/cli-reference.md:16 と docs/cli-reference.ja.md:16 は `--pr` が PR コメント画像を取得することを説明するよう更新されていますが、実際の CLI ヘルプを生成する src/app/cli/program.ts:44 は `PR number to fetch review comments and fix` のままです。`takt --help` は利用者向け契約の入口であり、今回追加された `takt --pr` の画像添付挙動が出力経路に反映されていません。Policy の「契約全入口」「仕様完全性」に反します。",
+      "suggestion": "src/app/cli/program.ts:44 の `--pr` option description を docs/cli-reference.md:16 と同じ契約に更新し、必要なら CLI help snapshot/出力検証も更新してください。",
+      "reviewers": [
+        "arch-review"
+      ],
+      "rawFindingIds": [
+        "20260707-145644-pr-task-attachments-takt-add-p:reviewers:3:arch-review:arch-review-3-issue-001"
+      ],
+      "firstSeen": {
+        "runId": "20260707-145644-pr-task-attachments-takt-add-p",
+        "stepName": "arch-review",
+        "timestamp": "2026-07-07T16:21:58.052Z"
+      },
+      "lastSeen": {
+        "runId": "20260707-145644-pr-task-attachments-takt-add-p",
+        "stepName": "reviewers",
+        "timestamp": "2026-07-07T16:21:58.052Z"
+      },
+      "resolvedAt": "2026-07-07T16:36:24.012Z",
+      "resolvedEvidence": "current raw findings contain resolution_confirmation entries targeting F-0010 at src/app/cli/program.ts:44, confirming the --pr help description now includes supported PR comment images."
+    },
+    {
+      "id": "F-0011",
+      "status": "resolved",
+      "lifecycle": "resolved",
+      "severity": "medium",
+      "title": "新規PR画像resolverが配列を直接変更している",
+      "location": "src/infra/github/prReviewImageAttachments.ts:93",
+      "description": "新規追加された src/infra/github/prReviewImageAttachments.ts では、extractPrReviewImageReferences() が references.push() と references.sort() を使い、readLimitedResponseBody() が chunks.push()、resolvePrReviewImageAttachments() が attachments.push() を使っています（代表: 93行、他: 104,111,231,311）。Policy/Knowledge のコード品質基準は配列・オブジェクトの直接変更を REJECT としており、新規ロジックで同基準に違反しています。",
+      "suggestion": "matchAll の結果を map/filter/toSorted 相当で新しい配列として生成し、ストリーム読み込みや逐次ダウンロードで蓄積が必要な箇所も `chunks = [...chunks, chunk]` のように不変更新へ寄せるか、局所ミューテーションを許容する設計上の例外をポリシー側で明文化してください。",
+      "reviewers": [
+        "arch-review"
+      ],
+      "rawFindingIds": [
+        "20260707-145644-pr-task-attachments-takt-add-p:reviewers:3:arch-review:arch-review-3-issue-002"
+      ],
+      "firstSeen": {
+        "runId": "20260707-145644-pr-task-attachments-takt-add-p",
+        "stepName": "arch-review",
+        "timestamp": "2026-07-07T16:21:58.052Z"
+      },
+      "lastSeen": {
+        "runId": "20260707-145644-pr-task-attachments-takt-add-p",
+        "stepName": "reviewers",
+        "timestamp": "2026-07-07T16:21:58.052Z"
+      },
+      "resolvedAt": "2026-07-07T16:36:24.012Z",
+      "resolvedEvidence": "current raw findings contain resolution_confirmation entries targeting F-0011 at src/infra/github/prReviewImageAttachments.ts, confirming the prior references.push/references.sort/chunks.push/attachments.push issue is removed."
+    },
+    {
+      "id": "F-0012",
+      "status": "resolved",
+      "lifecycle": "resolved",
+      "severity": "low",
+      "title": "レビュー再開後の再検証が未実施",
+      "description": "コンテキスト圧縮後、現行コード・差分・テスト結果をこの応答直前に再読/再実行できていません。判断ルールは根拠ファイル・コマンド出力を判断直前に再確認することを要求しているため、APPROVE/REJECT の実コード判定を確定できません。",
+      "suggestion": "次フェーズで対象ファイルと差分を再読し、必要なビルド・lint・テスト結果を再確認してから最終判定してください。",
+      "reviewers": [
+        "coding-review"
+      ],
+      "rawFindingIds": [
+        "20260707-145644-pr-task-attachments-takt-add-p:reviewers:5:coding-review:R5-ISSUE-001"
+      ],
+      "firstSeen": {
+        "runId": "20260707-145644-pr-task-attachments-takt-add-p",
+        "stepName": "coding-review",
+        "timestamp": "2026-07-07T16:52:46.444Z"
+      },
+      "lastSeen": {
+        "runId": "20260707-145644-pr-task-attachments-takt-add-p",
+        "stepName": "reviewers",
+        "timestamp": "2026-07-07T16:52:46.444Z"
+      },
+      "resolvedAt": "2026-07-07T17:03:58.713Z",
+      "resolvedEvidence": "既存 F-0012 は familyTag=process_gap の低 severity finding であり、今回 raw findings には F-0012 を targetFindingId とする kind=resolution_confirmation が4件ある。いずれも元指摘の「レビュー再開後の再検証未実施」に対し、判断直前の再読・差分確認・品質ゲート確認が実施済みであることを確認しているため解消扱い。"
+    }
+  ],
+  "rawFindings": [
+    {
+      "rawFindingId": "20260707-145644-pr-task-attachments-takt-add-p:reviewers:1:arch-review:arch-raw-1",
+      "stepName": "arch-review",
+      "reviewer": "arch-review",
+      "familyTag": "arch.state.cleanup.pr_source_attachments",
+      "severity": "medium",
+      "title": "PR画像添付の一時ディレクトリが対話開始前のキャンセル/例外で掃除されない",
+      "location": "src/app/cli/routing.ts:154",
+      "description": "`resolvePrInput()` が PR 画像添付を取得して `cleanupSourceAttachments` を保持した後、cleanup は `dispatchConversationAction()` 周辺の finally でしか実行されません。`determineWorkflow()` のキャンセル、`selectInteractiveMode()` のキャンセル、または `interactiveMode()`/`quietMode()`/`personaMode()` が例外を投げる経路は line 249 の try/finally に入らないため、`resolvePrReviewImageAttachments()` が作成した一時 attachment ディレクトリが残ります。Policy の「状態整合性」「副作用と状態遷移の確認」に反します。",
+      "suggestion": "PR source attachment を取得した直後から `executeDefaultAction()` の該当フロー全体を try/finally で包み、workflow 選択キャンセル、mode 選択キャンセル、interactive mode 例外、dispatch 例外の全経路で `cleanupSourceAttachments` を一度だけ実行してください。",
+      "kind": "issue"
+    },
+    {
+      "rawFindingId": "20260707-145644-pr-task-attachments-takt-add-p:reviewers:1:arch-review:arch-raw-2",
+      "stepName": "arch-review",
+      "reviewer": "arch-review",
+      "familyTag": "arch.contract.image_attachment_placeholder_merge",
+      "severity": "high",
+      "title": "PR由来画像と対話中に追加した画像の placeholder/fileName 契約が衝突する",
+      "location": "src/app/cli/routing.ts:183",
+      "description": "PR 由来の画像添付は `sourceAttachments` として保持されますが、`interactiveSeed` には `attachments` が渡されていません。そのため interactive 側の attachment store は PR 画像を知らないまま `image-1.png` / `[Image #1]` から採番を開始します。その後 line 250-254 の `mergeAttachments()` が PR 由来添付と interactive 結果添付を単純連結するため、両方に画像があると同じ placeholder と fileName が並びます。下流の `promoteTaskAttachments()` は同名 destination を拒否し、`resolveReferencedImageAttachments()` も duplicate placeholder をエラーにするため、通常 `takt --pr` 経路で画像参照契約が壊れます。",
+      "suggestion": "PR 由来 attachments を `interactiveSeed.attachments` として渡し、interactive store の採番起点に含めてください。そのうえで最終引き渡しは単純連結ではなく、1つの正規化済み attachment list に統一してください。別案として merge 時に placeholder/fileName を再採番し、本文中の参照も同時に更新してください。",
+      "kind": "issue"
+    },
+    {
+      "rawFindingId": "20260707-145644-pr-task-attachments-takt-add-p:reviewers:1:ai-antipattern-review:raw-ai-001",
+      "stepName": "ai-antipattern-review",
+      "reviewer": "ai-antipattern-review",
+      "familyTag": "ai-antipattern.side-effect-cleanup-gap",
+      "severity": "medium",
+      "title": "PR画像の一時ファイルがキャンセル経路で cleanup されない",
+      "location": "src/app/cli/routing.ts:154",
+      "description": "`resolvePrInput()` は PR 画像をダウンロードして `cleanupSourceAttachments` を返しますが、その後の `determineWorkflow()` キャンセルや `selectInteractiveMode()` キャンセルは `try/finally` の外側で `return` するため、ダウンロード済み一時画像が削除されません。PR画像は外部取得した副作用であり、正常・失敗・中断経路での片付けが必要です。",
+      "suggestion": "PR 画像取得後の処理全体を `try/finally` で囲み、workflow 選択キャンセル、interactive mode 選択キャンセル、interactive 実行例外でも `cleanupSourceAttachments?.()` が必ず実行される構造にしてください。",
+      "kind": "issue"
+    },
+    {
+      "rawFindingId": "20260707-145644-pr-task-attachments-takt-add-p:reviewers:1:ai-antipattern-review:raw-ai-002",
+      "stepName": "ai-antipattern-review",
+      "reviewer": "ai-antipattern-review",
+      "familyTag": "ai-antipattern.provider-boundary-leak",
+      "severity": "medium",
+      "title": "汎用 PR 経路が GitHub 専用 resolver に直接依存している",
+      "location": "src/features/pipeline/steps.ts:14",
+      "description": "`getGitProvider()` は GitHub/GitLab の抽象を返す設計ですが、汎用の `takt add --pr` / pipeline PR 経路から `../../infra/github/prReviewImageAttachments.js` を直接 import しています。同じ漏洩は `src/features/tasks/add/index.ts:17` と `src/app/cli/routing-inputs.ts:4` にもあります。これにより GitLab provider の MR 取得後でも GitHub 専用 URL 判定・`gh auth token` 前提の処理が汎用層へ露出し、provider 境界の契約が崩れています。",
+      "suggestion": "画像添付解決を Git provider 境界へ寄せ、GitHub provider は GitHub attachment resolver、GitLab provider は no-op または GitLab 用 resolver を返す形にしてください。少なくとも汎用 feature/app 層から `infra/github/*` を直接参照しない構造にしてください。",
+      "kind": "issue"
+    },
+    {
+      "rawFindingId": "20260707-145644-pr-task-attachments-takt-add-p:reviewers:1:coding-review:R1",
+      "stepName": "coding-review",
+      "reviewer": "coding-review",
+      "familyTag": "pr_image_attachments.interactive_seed_missing",
+      "severity": "medium",
+      "title": "takt --pr の対話中に PR 画像プレースホルダーが画像として解決されない",
+      "location": "src/app/cli/routing.ts:183",
+      "description": "PR コメント画像を resolvePrInput() で sourceAttachments として取得している一方、interactiveSeed には userMessage/sourceContext だけを渡しており attachments を含めていません。runConversationLoop は initialInput?.attachments から attachmentStore を作り、AI 呼び出し直前にその store で [Image #N] を解決します。そのため takt --pr の assistant/quiet/persona 経路では、sourceContext 内の [Image #1] は本文に出ても、対話・要約 AI 呼び出しには画像が渡らず、要求された --pr 経路での画像参照が成立しません。",
+      "suggestion": "PR 由来の sourceAttachments を interactiveSeed.attachments に渡してください。そのうえで、対話結果が初期添付を所有する設計に合わせ、後段の保存・実行に渡す attachments が二重にならないようにしてください。",
+      "kind": "issue"
+    },
+    {
+      "rawFindingId": "20260707-145644-pr-task-attachments-takt-add-p:reviewers:1:coding-review:R2",
+      "stepName": "coding-review",
+      "reviewer": "coding-review",
+      "familyTag": "pr_image_attachments.attachment_collision",
+      "severity": "medium",
+      "title": "PR 画像と対話中の追加画像を結合すると image-1 が衝突する",
+      "location": "src/app/cli/routing.ts:250",
+      "description": "mergeAttachments() は sourceAttachments と result.attachments を単純連結しています。PR コメントに画像がある場合 sourceAttachments は [Image #1]/image-1.png から始まり、現在の対話用 attachmentStore は PR 添付で初期化されていないため、ユーザーが対話中に画像を貼ると result.attachments も [Image #1]/image-1.png から始まります。この配列を saveTaskFromInteractive() や selectAndExecuteTask() に渡すと、promoteTaskAttachments() が同じ attachments/image-1.png 宛先を2回作ろうとして `Task attachment destination already exists` で失敗し、保存・実行できません。",
+      "suggestion": "PR 由来添付を対話 attachmentStore の initialAttachments として渡して採番を継続させるか、mergeAttachments() で placeholder/fileName を重複しないよう再採番してください。初期添付を result.attachments に含める場合は sourceAttachments との重複連結も避けてください。",
+      "kind": "issue"
+    },
+    {
+      "rawFindingId": "20260707-145644-pr-task-attachments-takt-add-p:reviewers:1:implementation-semantics-review:impl-sem-raw-1",
+      "stepName": "implementation-semantics-review",
+      "reviewer": "implementation-semantics-review",
+      "familyTag": "implementation-semantics/attachment-namespace",
+      "severity": "high",
+      "title": "PR画像添付が interactive の添付名前空間に入っていない",
+      "location": "src/app/cli/routing.ts:183",
+      "description": "`--pr` の sourceContext には `resolvePrInput()` 後の `[Image #1]` 参照が入る一方、`interactiveSeed` には `sourceAttachments` が渡されていません。`runConversationLoop()` / `quietMode()` は `initialInput?.attachments` から添付ストアを初期化するため、AI 呼び出し時に PR 画像の `[Image #1]` は添付実体へ解決されません。また、その状態でユーザーが interactive 中に画像を貼ると、`createImageAttachmentStore()` は空配列から `image-1.*` / `[Image #1]` を再発行し、`mergeAttachments()` が PR 画像と貼付画像を単純連結します。結果として同じ placeholder/fileName を持つ添付が並び、`promoteTaskAttachments()` の保存時に `attachments/image-1.*` が衝突して実行・保存できません。",
+      "suggestion": "PR由来の `sourceAttachments` を `InteractiveSeedInput.attachments` として渡し、interactive 結果に初期添付が含まれる前提で `mergeAttachments()` を重複連結しない形に正規化してください。少なくとも placeholder/fileName の名前空間が単一になるよう、初期添付の件数をもとに追加画像を採番させてください。",
+      "kind": "issue"
+    },
+    {
+      "rawFindingId": "20260707-145644-pr-task-attachments-takt-add-p:reviewers:1:implementation-semantics-review:impl-sem-raw-2",
+      "stepName": "implementation-semantics-review",
+      "reviewer": "implementation-semantics-review",
+      "familyTag": "implementation-semantics/state-cleanup",
+      "severity": "medium",
+      "title": "PR画像ダウンロード後のキャンセル経路で一時添付が解放されない",
+      "location": "src/app/cli/routing.ts:154",
+      "description": "`resolvePrInput()` が PR 画像を一時ディレクトリへ保存し `cleanupAttachments` を返した後、`determineWorkflow()` のキャンセル return と `selectInteractiveMode()` のキャンセル return は、`cleanupSourceAttachments?.()` を呼ぶ `finally` ブロックより前にあります。PR コメントに画像がある状態で workflow 選択または interactive mode 選択をキャンセルすると、作成済みの `takt/pr-attachments/.../attachments` 一時ファイルが残ります。これは副作用を伴う状態の中断経路で解放が漏れる状態不整合です。",
+      "suggestion": "`cleanupSourceAttachments` が設定された後の workflow 選択、mode 選択、interactive 実行、dispatch までを同じ `try/finally` に入れるか、各早期 return の直前で必ず cleanup を実行してください。",
+      "kind": "issue"
+    },
+    {
+      "rawFindingId": "20260707-145644-pr-task-attachments-takt-add-p:reviewers:2:arch-review:arch-review-2-resolved-F-0001",
+      "stepName": "arch-review",
+      "reviewer": "arch-review",
+      "familyTag": "arch.state.cleanup.pr_source_attachments",
+      "severity": "medium",
+      "title": "PR画像添付 cleanup 経路の解消確認",
+      "location": "src/app/cli/routing.ts:148",
+      "description": "`cleanupSourceAttachments` は `resolvePrInput()` 後に保持され、現在は `src/app/cli/routing.ts:148` からの try が workflow 選択、mode 選択、interactive 実行、dispatch を包み、`src/app/cli/routing.ts:297-299` の finally で必ず `cleanupSourceAttachments?.()` を実行する構造になっている。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0001"
+    },
+    {
+      "rawFindingId": "20260707-145644-pr-task-attachments-takt-add-p:reviewers:2:arch-review:arch-review-2-resolved-F-0002",
+      "stepName": "arch-review",
+      "reviewer": "arch-review",
+      "familyTag": "arch.contract.image_attachment_placeholder_merge",
+      "severity": "high",
+      "title": "PR画像と対話画像の placeholder/fileName 衝突の解消確認",
+      "location": "src/app/cli/routing.ts:184",
+      "description": "現在は `src/app/cli/routing.ts:184-189` で `sourceAttachments` を `interactiveSeed.attachments` に渡し、`src/features/interactive/imageAttachments.ts:135-144` の store が初期添付数から追加画像を採番する。後段も `src/app/cli/routing.ts:263-289` で `result.attachments` のみを渡しており、旧 `mergeAttachments()` の単純連結は存在しない。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0002"
+    },
+    {
+      "rawFindingId": "20260707-145644-pr-task-attachments-takt-add-p:reviewers:2:arch-review:arch-review-2-resolved-F-0003",
+      "stepName": "arch-review",
+      "reviewer": "arch-review",
+      "familyTag": "ai-antipattern.side-effect-cleanup-gap",
+      "severity": "medium",
+      "title": "PR画像一時ファイル cleanup 漏れの解消確認",
+      "location": "src/app/cli/routing.ts:297",
+      "description": "`src/app/cli/routing.ts:148-299` で PR 画像取得後の workflow 選択キャンセル、interactive mode 選択キャンセル、interactive 例外、dispatch 後の経路が同じ try/finally に入り、`cleanupSourceAttachments?.()` が finally で実行されることを確認した。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0003"
+    },
+    {
+      "rawFindingId": "20260707-145644-pr-task-attachments-takt-add-p:reviewers:2:arch-review:arch-review-2-resolved-F-0004",
+      "stepName": "arch-review",
+      "reviewer": "arch-review",
+      "familyTag": "ai-antipattern.provider-boundary-leak",
+      "severity": "medium",
+      "title": "汎用 PR 経路の GitHub 専用 resolver 依存の解消確認",
+      "location": "src/features/pipeline/steps.ts:168",
+      "description": "汎用経路は `src/app/cli/routing-inputs.ts:73`、`src/features/tasks/add/index.ts:200`、`src/features/pipeline/steps.ts:168` で `provider.resolvePrReviewImageAttachments()` を呼ぶ形に変わっている。GitHub 固有 resolver の import は `src/infra/github/GitHubProvider.ts:11` に閉じ、GitLab は `src/infra/gitlab/GitLabProvider.ts:35-43` で no-op 実装を返すため、汎用 app/features 層から `infra/github/prReviewImageAttachments` への直接依存は解消されている。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0004"
+    },
+    {
+      "rawFindingId": "20260707-145644-pr-task-attachments-takt-add-p:reviewers:2:arch-review:arch-review-2-resolved-F-0005",
+      "stepName": "arch-review",
+      "reviewer": "arch-review",
+      "familyTag": "pr_image_attachments.interactive_seed_missing",
+      "severity": "medium",
+      "title": "takt --pr の interactive seed 添付欠落の解消確認",
+      "location": "src/app/cli/routing.ts:188",
+      "description": "`src/app/cli/routing.ts:184-189` で `sourceAttachments` が `interactiveSeed.attachments` に含まれる。`src/features/interactive/conversationLoop.ts:140` と `src/features/interactive/quietMode.ts:61` は `initialInput?.attachments` から attachment store を作るため、PR 本文中の `[Image #N]` を対話中の画像添付として解決できる構造になっている。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0005"
+    },
+    {
+      "rawFindingId": "20260707-145644-pr-task-attachments-takt-add-p:reviewers:2:arch-review:arch-review-2-resolved-F-0006",
+      "stepName": "arch-review",
+      "reviewer": "arch-review",
+      "familyTag": "pr_image_attachments.attachment_collision",
+      "severity": "medium",
+      "title": "PR画像と対話中追加画像の image-1 衝突の解消確認",
+      "location": "src/features/interactive/imageAttachments.ts:143",
+      "description": "`src/app/cli/routing.ts:188` で PR 添付を initial attachments として渡し、`src/features/interactive/imageAttachments.ts:135-144` で追加画像の index が `attachments.length + 1` から決まるため、PR 画像が `[Image #1]` / `image-1.*` の場合、対話中の追加画像は次番号から採番される。後段も `src/app/cli/routing.ts:263-289` で `result.attachments` のみを渡すため、source と result の二重連結はない。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0006"
+    },
+    {
+      "rawFindingId": "20260707-145644-pr-task-attachments-takt-add-p:reviewers:2:arch-review:arch-review-2-resolved-F-0007",
+      "stepName": "arch-review",
+      "reviewer": "arch-review",
+      "familyTag": "implementation-semantics/attachment-namespace",
+      "severity": "high",
+      "title": "interactive 添付名前空間への PR 画像取り込みの解消確認",
+      "location": "src/app/cli/routing.ts:184",
+      "description": "`src/app/cli/routing.ts:184-189` で PR 由来 `sourceAttachments` を `InteractiveSeedInput.attachments` として渡し、`src/features/interactive/imageAttachments.ts:135-160` の単一 attachment store が初期添付と追加添付を同じ名前空間で管理する。保存・実行側は `src/app/cli/routing.ts:263-289` で `result.attachments` のみを渡すため、初期添付の重複連結も解消されている。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0007"
+    },
+    {
+      "rawFindingId": "20260707-145644-pr-task-attachments-takt-add-p:reviewers:2:arch-review:arch-review-2-resolved-F-0008",
+      "stepName": "arch-review",
+      "reviewer": "arch-review",
+      "familyTag": "implementation-semantics/state-cleanup",
+      "severity": "medium",
+      "title": "PR画像ダウンロード後キャンセル cleanup の解消確認",
+      "location": "src/app/cli/routing.ts:297",
+      "description": "`src/app/cli/routing.ts:148-299` の try/finally により、`determineWorkflow()` の null return、`selectInteractiveMode()` の null return、interactive 実行例外、dispatch 後の全経路で `cleanupSourceAttachments?.()` が実行される。再発防止テストも `src/__tests__/cli-routing-pr-resolve.test.ts:377-435` に追加されている。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0008"
+    },
+    {
+      "rawFindingId": "20260707-145644-pr-task-attachments-takt-add-p:reviewers:2:ai-antipattern-review:raw-ai2-resolve-001",
+      "stepName": "ai-antipattern-review",
+      "reviewer": "ai-antipattern-review",
+      "familyTag": "missing-edge-case",
+      "severity": "medium",
+      "title": "PR画像添付の一時ディレクトリがキャンセル/例外経路で掃除されない",
+      "location": "src/app/cli/routing.ts:148",
+      "description": "src/app/cli/routing.ts:148 から PR 添付取得後の workflow 選択、mode 選択、interactive 実行、dispatch が外側の try/finally 内に入り、src/app/cli/routing.ts:297-298 で `cleanupSourceAttachments?.()` が必ず実行されることを確認しました。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0001"
+    },
+    {
+      "rawFindingId": "20260707-145644-pr-task-attachments-takt-add-p:reviewers:2:ai-antipattern-review:raw-ai2-resolve-002",
+      "stepName": "ai-antipattern-review",
+      "reviewer": "ai-antipattern-review",
+      "familyTag": "logic-error",
+      "severity": "high",
+      "title": "PR由来画像と対話中追加画像の placeholder/fileName 契約が衝突する",
+      "location": "src/app/cli/routing.ts:184",
+      "description": "src/app/cli/routing.ts:184-189 で PR 由来の `sourceAttachments` が `interactiveSeed.attachments` に渡され、src/features/interactive/imageAttachments.ts:135-160 で初期添付を含む attachment store から採番・一覧化されます。後段も src/app/cli/routing.ts:263-264,273,289 で `result.attachments` のみを渡しており、旧 `mergeAttachments()` の単純連結は存在しないことを確認しました。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0002"
+    },
+    {
+      "rawFindingId": "20260707-145644-pr-task-attachments-takt-add-p:reviewers:2:ai-antipattern-review:raw-ai2-resolve-003",
+      "stepName": "ai-antipattern-review",
+      "reviewer": "ai-antipattern-review",
+      "familyTag": "missing-edge-case",
+      "severity": "medium",
+      "title": "PR画像の一時ファイルがキャンセル経路で cleanup されない",
+      "location": "src/app/cli/routing.ts:297",
+      "description": "src/app/cli/routing.ts:148-299 を再読し、`determineWorkflow()` キャンセル、`selectInteractiveMode()` キャンセル、interactive mode 例外、dispatch 後の各経路が `finally` の `cleanupSourceAttachments?.()` に到達する構造になっていることを確認しました。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0003"
+    },
+    {
+      "rawFindingId": "20260707-145644-pr-task-attachments-takt-add-p:reviewers:2:ai-antipattern-review:raw-ai2-resolve-004",
+      "stepName": "ai-antipattern-review",
+      "reviewer": "ai-antipattern-review",
+      "familyTag": "unvalidated-assumption",
+      "severity": "medium",
+      "title": "汎用 PR 経路が GitHub 専用 resolver に直接依存している",
+      "location": "src/infra/git/types.ts:121",
+      "description": "src/infra/git/types.ts:121-124 に `GitProvider.resolvePrReviewImageAttachments()` が追加され、src/app/cli/routing-inputs.ts:73、src/features/pipeline/steps.ts:168、src/features/tasks/add/index.ts:200 は provider 経由で呼び出しています。`rg` で src/app/src/features/src/core/src/shared/src/infra/git/src/infra/gitlab には `infra/github/prReviewImageAttachments` への直接参照がないことも確認しました。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0004"
+    },
+    {
+      "rawFindingId": "20260707-145644-pr-task-attachments-takt-add-p:reviewers:2:ai-antipattern-review:raw-ai2-resolve-005",
+      "stepName": "ai-antipattern-review",
+      "reviewer": "ai-antipattern-review",
+      "familyTag": "missing-edge-case",
+      "severity": "medium",
+      "title": "takt --pr の対話中に PR 画像プレースホルダーが画像として解決されない",
+      "location": "src/app/cli/routing.ts:188",
+      "description": "src/app/cli/routing.ts:184-189 で `sourceAttachments` が `interactiveSeed.attachments` に含まれ、src/features/interactive/conversationLoop.ts:140 と src/features/interactive/quietMode.ts:61 で `initialInput?.attachments` から attachment store が作られます。src/features/interactive/conversationLoop.ts:151-160 と src/features/interactive/quietMode.ts:101-114 で prompt 内の `[Image #N]` がその store から AI 呼び出しの image attachments に解決される経路を確認しました。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0005"
+    },
+    {
+      "rawFindingId": "20260707-145644-pr-task-attachments-takt-add-p:reviewers:2:ai-antipattern-review:raw-ai2-resolve-006",
+      "stepName": "ai-antipattern-review",
+      "reviewer": "ai-antipattern-review",
+      "familyTag": "logic-error",
+      "severity": "medium",
+      "title": "PR 画像と対話中の追加画像を結合すると image-1 が衝突する",
+      "location": "src/features/interactive/imageAttachments.ts:143",
+      "description": "src/app/cli/routing.ts:188 で PR 由来添付が initial attachments として渡され、src/features/interactive/imageAttachments.ts:135-145 で `attachments.length + 1` から追加画像を採番するため、対話中追加画像は PR 添付の後続番号になります。src/app/cli/routing.ts:263-264,273,289 は `result.attachments` のみを渡し、PR 添付との二重連結がないことを確認しました。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0006"
+    },
+    {
+      "rawFindingId": "20260707-145644-pr-task-attachments-takt-add-p:reviewers:2:ai-antipattern-review:raw-ai2-resolve-007",
+      "stepName": "ai-antipattern-review",
+      "reviewer": "ai-antipattern-review",
+      "familyTag": "logic-error",
+      "severity": "high",
+      "title": "PR画像添付が interactive の添付名前空間に入っていない",
+      "location": "src/app/cli/routing.ts:184",
+      "description": "src/app/cli/routing.ts:184-189 で interactive seed が `attachments: sourceAttachments` を含むようになり、src/features/interactive/imageAttachments.ts:117-123 で interactive result が初期添付を含む store の一覧を返すため、同一名前空間で保存・実行へ渡ることを確認しました。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0007"
+    },
+    {
+      "rawFindingId": "20260707-145644-pr-task-attachments-takt-add-p:reviewers:2:ai-antipattern-review:raw-ai2-resolve-008",
+      "stepName": "ai-antipattern-review",
+      "reviewer": "ai-antipattern-review",
+      "familyTag": "missing-edge-case",
+      "severity": "medium",
+      "title": "PR画像ダウンロード後のキャンセル経路で一時添付が解放されない",
+      "location": "src/app/cli/routing.ts:172",
+      "description": "src/app/cli/routing.ts:155-159 の workflow キャンセル、src/app/cli/routing.ts:172-175 の mode キャンセル、src/app/cli/routing.ts:221-245 の interactive 実行はすべて src/app/cli/routing.ts:148 の try 内にあり、src/app/cli/routing.ts:297-298 の cleanup に到達することを確認しました。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0008"
+    },
+    {
+      "rawFindingId": "20260707-145644-pr-task-attachments-takt-add-p:reviewers:2:coding-review:R2-CONF-F0001",
+      "stepName": "coding-review",
+      "reviewer": "coding-review",
+      "familyTag": "pr_image_attachments.cleanup_lifecycle",
+      "severity": "medium",
+      "title": "PR画像添付の一時ディレクトリがキャンセル/例外経路で掃除される",
+      "location": "src/app/cli/routing.ts:298",
+      "description": "src/app/cli/routing.ts:148 から workflow 選択、mode 選択、interactive 実行、dispatch までが外側の try/finally に入り、src/app/cli/routing.ts:298 で cleanupSourceAttachments?.() が実行されることを確認しました。src/__tests__/cli-routing-pr-resolve.test.ts:377、398、419 で workflow 選択キャンセル、interactive mode 選択キャンセル、interactive mode 例外の cleanup が検証されています。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0001"
+    },
+    {
+      "rawFindingId": "20260707-145644-pr-task-attachments-takt-add-p:reviewers:2:coding-review:R2-CONF-F0002",
+      "stepName": "coding-review",
+      "reviewer": "coding-review",
+      "familyTag": "pr_image_attachments.attachment_namespace",
+      "severity": "high",
+      "title": "PR由来画像と対話中追加画像の placeholder/fileName 衝突が解消されている",
+      "location": "src/app/cli/routing.ts:184",
+      "description": "src/app/cli/routing.ts:184-189 で sourceAttachments が interactiveSeed.attachments として渡され、src/app/cli/routing.ts:263-289 では result.attachments のみが保存・実行へ渡されており、前回の単純連結 mergeAttachments() は残っていません。src/__tests__/cli-routing-pr-resolve.test.ts:437 で PR 添付 [Image #1] と追加添付 [Image #2] が重複連結されないことを確認しています。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0002"
+    },
+    {
+      "rawFindingId": "20260707-145644-pr-task-attachments-takt-add-p:reviewers:2:coding-review:R2-CONF-F0003",
+      "stepName": "coding-review",
+      "reviewer": "coding-review",
+      "familyTag": "pr_image_attachments.cleanup_lifecycle",
+      "severity": "medium",
+      "title": "PR画像の一時ファイルがキャンセル経路で cleanup される",
+      "location": "src/app/cli/routing.ts:298",
+      "description": "src/app/cli/routing.ts:148-298 の try/finally により、resolvePrInput() 後の workflow 選択キャンセルと interactive mode 選択キャンセルでも cleanupSourceAttachments?.() が必ず実行されます。src/__tests__/cli-routing-pr-resolve.test.ts:377 と src/__tests__/cli-routing-pr-resolve.test.ts:398 で各キャンセル経路の cleanup 呼び出しを確認しています。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0003"
+    },
+    {
+      "rawFindingId": "20260707-145644-pr-task-attachments-takt-add-p:reviewers:2:coding-review:R2-CONF-F0004",
+      "stepName": "coding-review",
+      "reviewer": "coding-review",
+      "familyTag": "pr_image_attachments.provider_boundary",
+      "severity": "medium",
+      "title": "汎用 PR 経路の GitHub 専用 resolver 直接依存が解消されている",
+      "location": "src/infra/git/types.ts:121",
+      "description": "src/infra/git/types.ts:121-124 に GitProvider.resolvePrReviewImageAttachments() が追加され、src/infra/github/GitHubProvider.ts:35-39 は GitHub resolver へ委譲、src/infra/gitlab/GitLabProvider.ts:35-42 は no-op を返します。src/app/cli/routing-inputs.ts:73、src/features/tasks/add/index.ts:200、src/features/pipeline/steps.ts:168 は provider 経由で呼び出しており、rg で feature/app 層から infra/github/prReviewImageAttachments への直接 import が残っていないことを確認しました。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0004"
+    },
+    {
+      "rawFindingId": "20260707-145644-pr-task-attachments-takt-add-p:reviewers:2:coding-review:R2-CONF-F0005",
+      "stepName": "coding-review",
+      "reviewer": "coding-review",
+      "familyTag": "pr_image_attachments.interactive_seed_missing",
+      "severity": "medium",
+      "title": "takt --pr の対話中に PR 画像プレースホルダーが画像として解決される",
+      "location": "src/app/cli/routing.ts:188",
+      "description": "src/app/cli/routing.ts:184-189 で PR 由来 sourceAttachments が interactiveSeed.attachments に含まれ、runConversationLoop/quietMode の createSessionImageAttachmentStore(initialInput?.attachments) に渡る経路を確認しました。src/__tests__/cli-routing-pr-resolve.test.ts:328 で interactiveMode 呼び出しに sourceContext と attachments が渡ることが検証されています。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0005"
+    },
+    {
+      "rawFindingId": "20260707-145644-pr-task-attachments-takt-add-p:reviewers:2:coding-review:R2-CONF-F0006",
+      "stepName": "coding-review",
+      "reviewer": "coding-review",
+      "familyTag": "pr_image_attachments.attachment_collision",
+      "severity": "medium",
+      "title": "PR 画像と対話中の追加画像の image-1 衝突が解消されている",
+      "location": "src/app/cli/routing.ts:263",
+      "description": "src/app/cli/routing.ts:263-289 は result.attachments だけを下流へ渡し、sourceAttachments と result.attachments を連結する処理は現在の routing.ts に存在しません。src/features/interactive/imageAttachments.ts:135-155 では initialAttachments の長さを起点に追加画像を採番するため、PR 画像が初期添付に入ると追加画像は [Image #2]/image-2.* になります。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0006"
+    },
+    {
+      "rawFindingId": "20260707-145644-pr-task-attachments-takt-add-p:reviewers:2:coding-review:R2-CONF-F0007",
+      "stepName": "coding-review",
+      "reviewer": "coding-review",
+      "familyTag": "pr_image_attachments.interactive_namespace",
+      "severity": "high",
+      "title": "PR画像添付が interactive の添付名前空間に入っている",
+      "location": "src/app/cli/routing.ts:184",
+      "description": "src/app/cli/routing.ts:184-189 で sourceAttachments を interactiveSeed.attachments として渡し、src/features/interactive/imageAttachments.ts:135-155 が initialAttachments を含めた attachments.length + 1 で追加画像を採番します。src/__tests__/cli-routing-pr-resolve.test.ts:437-470 で PR 添付と対話中追加添付が [Image #1] / [Image #2] として同一リストで渡ることを確認しています。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0007"
+    },
+    {
+      "rawFindingId": "20260707-145644-pr-task-attachments-takt-add-p:reviewers:2:coding-review:R2-CONF-F0008",
+      "stepName": "coding-review",
+      "reviewer": "coding-review",
+      "familyTag": "pr_image_attachments.cleanup_lifecycle",
+      "severity": "medium",
+      "title": "PR画像ダウンロード後のキャンセル経路で一時添付が解放される",
+      "location": "src/app/cli/routing.ts:298",
+      "description": "src/app/cli/routing.ts:148-298 の外側 finally により、workflow 選択、mode 選択、interactive 実行、dispatch の各経路後に cleanupSourceAttachments?.() が実行されます。src/__tests__/cli-routing-pr-resolve.test.ts:377-435 で workflow キャンセル、mode キャンセル、interactive 例外時の cleanup を確認しています。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0008"
+    },
+    {
+      "rawFindingId": "20260707-145644-pr-task-attachments-takt-add-p:reviewers:2:coding-review:R2-ISSUE-001",
+      "stepName": "coding-review",
+      "reviewer": "coding-review",
+      "familyTag": "pr_image_attachments.docs_contract_missing",
+      "severity": "medium",
+      "title": "PR画像添付の利用者向け契約がドキュメントに反映されていない",
+      "location": "docs/cli-reference.md:16",
+      "description": "今回の差分は `takt add --pr` / `takt --pr` / pipeline `--pr` で GitHub PR コメント内画像を検出・認証付き取得・検証・添付保存する利用者向け挙動を追加していますが、docs/cli-reference.md:16 と docs/cli-reference.ja.md:16 の `--pr` 説明は従来どおりレビューコメント取得のみで、PR画像の自動添付、対応形式、サイズ上限、GitHub attachment URL 限定、GitLab provider の no-op、失敗条件が説明されていません。ポリシーの「仕様完全性」「利用者向け契約変更に対するドキュメント欠落」基準に該当します。",
+      "suggestion": "README.md / docs/README.ja.md / docs/cli-reference.md / docs/cli-reference.ja.md の `--pr` または image attachments 節に、PRコメント画像の自動取得対象、保存先/order.md 表示、対応形式とサイズ上限、GitHub attachment URL 限定、GitLab では添付なし、Content-Type/magic bytes/取得失敗時の扱いを追加してください。",
+      "kind": "issue"
+    },
+    {
+      "rawFindingId": "20260707-145644-pr-task-attachments-takt-add-p:reviewers:2:implementation-semantics-review:impl-sem-r2-resolve-f0001",
+      "stepName": "implementation-semantics-review",
+      "reviewer": "implementation-semantics-review",
+      "familyTag": "implementation-semantics/state-cleanup",
+      "severity": "medium",
+      "title": "PR画像添付の一時ディレクトリ cleanup 経路を確認",
+      "location": "src/app/cli/routing.ts:148",
+      "description": "現在の `executeDefaultAction()` では、`resolvePrInput()` から `cleanupSourceAttachments` を受け取った後の workflow 選択、mode 選択、interactive 実行、dispatch が `src/app/cli/routing.ts:148` の外側 try に入り、`src/app/cli/routing.ts:297-298` の finally で `cleanupSourceAttachments?.()` が実行されます。`src/app/cli/routing.ts:156-158` と `src/app/cli/routing.ts:172-174` のキャンセル return もこの finally の内側にあるため、元 finding のキャンセル/例外経路の漏れは解消済みです。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0001"
+    },
+    {
+      "rawFindingId": "20260707-145644-pr-task-attachments-takt-add-p:reviewers:2:implementation-semantics-review:impl-sem-r2-resolve-f0002",
+      "stepName": "implementation-semantics-review",
+      "reviewer": "implementation-semantics-review",
+      "familyTag": "implementation-semantics/attachment-namespace",
+      "severity": "high",
+      "title": "PR由来画像と対話中追加画像の名前空間統合を確認",
+      "location": "src/app/cli/routing.ts:184",
+      "description": "`src/app/cli/routing.ts:184-189` で `sourceAttachments` が `interactiveSeed.attachments` として渡され、`src/features/interactive/conversationLoop.ts:140` と `src/features/interactive/quietMode.ts:61` で attachment store の初期値になります。追加画像は `src/features/interactive/imageAttachments.ts:143-147` で既存 attachments の長さから採番され、後段は `src/app/cli/routing.ts:263-264` と `src/app/cli/routing.ts:273`、`src/app/cli/routing.ts:289` で `result.attachments` の単一リストだけを渡しています。元 finding の placeholder/fileName 衝突は解消済みです。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0002"
+    },
+    {
+      "rawFindingId": "20260707-145644-pr-task-attachments-takt-add-p:reviewers:2:implementation-semantics-review:impl-sem-r2-resolve-f0003",
+      "stepName": "implementation-semantics-review",
+      "reviewer": "implementation-semantics-review",
+      "familyTag": "implementation-semantics/state-cleanup",
+      "severity": "medium",
+      "title": "PR画像一時ファイルのキャンセル cleanup を確認",
+      "location": "src/app/cli/routing.ts:297",
+      "description": "`src/app/cli/routing.ts:148-299` の try/finally が PR 画像取得後の interactive フロー全体を覆っており、`determineWorkflow()` キャンセルの `src/app/cli/routing.ts:156-158`、`selectInteractiveMode()` キャンセルの `src/app/cli/routing.ts:172-174`、dispatch 後の経路すべてで `src/app/cli/routing.ts:298` の `cleanupSourceAttachments?.()` に到達します。元 finding の中断経路 cleanup 漏れは解消済みです。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0003"
+    },
+    {
+      "rawFindingId": "20260707-145644-pr-task-attachments-takt-add-p:reviewers:2:implementation-semantics-review:impl-sem-r2-resolve-f0005",
+      "stepName": "implementation-semantics-review",
+      "reviewer": "implementation-semantics-review",
+      "familyTag": "implementation-semantics/attachment-resolution",
+      "severity": "medium",
+      "title": "takt --pr 対話中の PR 画像プレースホルダー解決を確認",
+      "location": "src/app/cli/routing.ts:188",
+      "description": "`src/app/cli/routing.ts:188` で PR 由来 `sourceAttachments` が `interactiveSeed.attachments` に含まれ、`src/features/interactive/conversationLoop.ts:153` と `src/features/interactive/quietMode.ts:103` は `attachmentStore.listAttachments()` から `[Image #N]` を解決して AI 呼び出しへ渡します。sourceContext 内の PR 画像 placeholder が添付実体へ結び付かない問題は解消済みです。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0005"
+    },
+    {
+      "rawFindingId": "20260707-145644-pr-task-attachments-takt-add-p:reviewers:2:implementation-semantics-review:impl-sem-r2-resolve-f0006",
+      "stepName": "implementation-semantics-review",
+      "reviewer": "implementation-semantics-review",
+      "familyTag": "implementation-semantics/attachment-namespace",
+      "severity": "medium",
+      "title": "PR画像と対話中追加画像の image-1 衝突解消を確認",
+      "location": "src/features/interactive/imageAttachments.ts:143",
+      "description": "PR 由来 attachments は `src/app/cli/routing.ts:184-189` で interactive の初期 attachments になり、`src/features/interactive/imageAttachments.ts:135-147` で追加画像は初期 attachments 数を含む `attachments.length + 1` から採番されます。さらに以前の単純連結 `mergeAttachments()` は現在の `src/app/cli/routing.ts` に存在せず、保存・実行には `result.attachments` の単一リストのみが渡されます。元 finding の `image-1` 衝突は解消済みです。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0006"
+    },
+    {
+      "rawFindingId": "20260707-145644-pr-task-attachments-takt-add-p:reviewers:2:implementation-semantics-review:impl-sem-r2-resolve-f0007",
+      "stepName": "implementation-semantics-review",
+      "reviewer": "implementation-semantics-review",
+      "familyTag": "implementation-semantics/attachment-namespace",
+      "severity": "high",
+      "title": "PR画像添付が interactive 添付名前空間に入ることを確認",
+      "location": "src/app/cli/routing.ts:184",
+      "description": "`src/app/cli/routing.ts:184-189` で `sourceAttachments` が `InteractiveSeedInput.attachments` として渡され、`src/features/interactive/conversationLoop.ts:140` / `src/features/interactive/quietMode.ts:61` がそれを attachment store に取り込みます。`src/features/interactive/imageAttachments.ts:117-123` は初期添付を含む `listAttachments()` を `result.attachments` として返すため、後段の `src/app/cli/routing.ts:263-264`、`src/app/cli/routing.ts:273`、`src/app/cli/routing.ts:289` は単一の正規化済み attachment list を受け取ります。元 finding は解消済みです。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0007"
+    },
+    {
+      "rawFindingId": "20260707-145644-pr-task-attachments-takt-add-p:reviewers:2:implementation-semantics-review:impl-sem-r2-resolve-f0008",
+      "stepName": "implementation-semantics-review",
+      "reviewer": "implementation-semantics-review",
+      "familyTag": "implementation-semantics/state-cleanup",
+      "severity": "medium",
+      "title": "PR画像ダウンロード後のキャンセル経路 cleanup を確認",
+      "location": "src/app/cli/routing.ts:297",
+      "description": "`src/app/cli/routing.ts:148` から始まる try/finally により、PR 画像ダウンロード後の workflow 選択キャンセル、interactive mode 選択キャンセル、interactive 実行例外、dispatch 経路はすべて `src/app/cli/routing.ts:297-298` の `cleanupSourceAttachments?.()` に到達します。元 finding の一時添付解放漏れは解消済みです。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0008"
+    },
+    {
+      "rawFindingId": "20260707-145644-pr-task-attachments-takt-add-p:reviewers:3:arch-review:arch-review-3-resolved-F-0009",
+      "stepName": "arch-review",
+      "reviewer": "arch-review",
+      "familyTag": "pr_image_attachments.docs_contract_missing",
+      "severity": "medium",
+      "title": "PR画像添付の利用者向けドキュメント契約が反映されている",
+      "location": "docs/cli-reference.md:259",
+      "description": "F-0009 の受入条件を再確認しました。docs/cli-reference.md:259-269 と docs/cli-reference.ja.md:258-268 に、PR本文・通常コメント・review summary・review thread コメントからの画像検出、GitHub attachment URL の認証付き取得、[Image #N] 置換、.takt/tasks/<slug>/attachments/ 保存、order.md 添付セクション、PNG/JPEG/GIF/WebP、10 MiB 上限、GitHub URL 限定、Content-Type と magic bytes 検証、取得/検証/サイズ失敗時の PR 入力解決エラー、GitLab no-op が記載されています。README.md:241-249 と docs/README.ja.md:244-252 にも概要が追加されています。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0009"
+    },
+    {
+      "rawFindingId": "20260707-145644-pr-task-attachments-takt-add-p:reviewers:3:arch-review:arch-review-3-issue-001",
+      "stepName": "arch-review",
+      "reviewer": "arch-review",
+      "familyTag": "pr_image_attachments.cli_help_contract_missing",
+      "severity": "medium",
+      "title": "`--pr` の実行時ヘルプがPR画像添付契約を説明していない",
+      "location": "src/app/cli/program.ts:44",
+      "description": "docs/cli-reference.md:16 と docs/cli-reference.ja.md:16 は `--pr` が PR コメント画像を取得することを説明するよう更新されていますが、実際の CLI ヘルプを生成する src/app/cli/program.ts:44 は `PR number to fetch review comments and fix` のままです。`takt --help` は利用者向け契約の入口であり、今回追加された `takt --pr` の画像添付挙動が出力経路に反映されていません。Policy の「契約全入口」「仕様完全性」に反します。",
+      "suggestion": "src/app/cli/program.ts:44 の `--pr` option description を docs/cli-reference.md:16 と同じ契約に更新し、必要なら CLI help snapshot/出力検証も更新してください。",
+      "kind": "issue"
+    },
+    {
+      "rawFindingId": "20260707-145644-pr-task-attachments-takt-add-p:reviewers:3:arch-review:arch-review-3-issue-002",
+      "stepName": "arch-review",
+      "reviewer": "arch-review",
+      "familyTag": "arch.code_quality.direct_array_mutation",
+      "severity": "medium",
+      "title": "新規PR画像resolverが配列を直接変更している",
+      "location": "src/infra/github/prReviewImageAttachments.ts:93",
+      "description": "新規追加された src/infra/github/prReviewImageAttachments.ts では、extractPrReviewImageReferences() が references.push() と references.sort() を使い、readLimitedResponseBody() が chunks.push()、resolvePrReviewImageAttachments() が attachments.push() を使っています（代表: 93行、他: 104,111,231,311）。Policy/Knowledge のコード品質基準は配列・オブジェクトの直接変更を REJECT としており、新規ロジックで同基準に違反しています。",
+      "suggestion": "matchAll の結果を map/filter/toSorted 相当で新しい配列として生成し、ストリーム読み込みや逐次ダウンロードで蓄積が必要な箇所も `chunks = [...chunks, chunk]` のように不変更新へ寄せるか、局所ミューテーションを許容する設計上の例外をポリシー側で明文化してください。",
+      "kind": "issue"
+    },
+    {
+      "rawFindingId": "20260707-145644-pr-task-attachments-takt-add-p:reviewers:3:ai-antipattern-review:raw-ai3-resolve-f0009",
+      "stepName": "ai-antipattern-review",
+      "reviewer": "ai-antipattern-review",
+      "familyTag": "missing-edge-case",
+      "severity": "medium",
+      "title": "PR画像添付の利用者向け契約がドキュメントに反映されていない",
+      "location": "docs/cli-reference.md:16",
+      "description": "docs/cli-reference.md:16 と docs/cli-reference.md:257-269、docs/cli-reference.ja.md:16 と docs/cli-reference.ja.md:256-268、README.md:241 と README.md:249、docs/README.ja.md:244 と docs/README.ja.md:252 を再読し、takt --pr / takt add --pr / pipeline --pr の対象、PR本文・通常コメント・review summary・review thread コメント内画像、保存先 .takt/tasks/<slug>/attachments/ と order.md 表示、PNG/JPEG/GIF/WebP、10 MiB 上限、HTTPS github.com attachment URL 限定、GitLab MR provider の no-op、Content-Type と magic bytes 検証、認証・取得・検証・サイズ失敗時に PR 入力解決エラーになる契約が記載済みであることを確認しました。Policy の仕様完全性、契約全入口、元要件固定、ファクトチェック、および Knowledge の仕様準拠・呼び出しチェーン検証・境界での解決各章と照合し、F-0009 の受入条件を満たしています。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0009"
+    },
+    {
+      "rawFindingId": "20260707-145644-pr-task-attachments-takt-add-p:reviewers:3:coding-review:R3-CONF-F0009",
+      "stepName": "coding-review",
+      "reviewer": "coding-review",
+      "familyTag": "pr_image_attachments.docs_contract",
+      "severity": "medium",
+      "title": "PR画像添付の利用者向け契約がドキュメントに反映されている",
+      "location": "docs/cli-reference.md:259",
+      "description": "F-0009 の受入条件を再確認しました。docs/cli-reference.md:259-269 と docs/cli-reference.ja.md:258-268 に、対象入口（takt --pr / takt add --pr / pipeline --pr）、PR 本文・通常コメント・review summary・review thread コメント内画像、Markdown/HTML img 検出、認証済み gh credentials、[Image #N] 置換、.takt/tasks/<slug>/attachments/ 保存、order.md の添付画像形式、PNG/JPEG/GIF/WebP、10 MiB 上限、HTTPS github.com attachment URL 限定、外部 URL 非取得、Content-Type と magic bytes 検証、認証/取得/検証/Content-Length/上限失敗時のエラー、GitLab MR provider no-op が記載されています。README.md:249 と docs/README.ja.md:252 にも --pr 系入口の概要と主要制約が追記されています。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0009"
+    },
+    {
+      "rawFindingId": "20260707-145644-pr-task-attachments-takt-add-p:reviewers:3:implementation-semantics-review:impl-sem-r3-resolve-f0009",
+      "stepName": "implementation-semantics-review",
+      "reviewer": "implementation-semantics-review",
+      "familyTag": "pr_image_attachments.docs_contract_missing",
+      "severity": "medium",
+      "title": "PR画像添付の利用者向け契約ドキュメント反映を確認",
+      "location": "docs/cli-reference.md:257",
+      "description": "docs/cli-reference.md:257-269 と docs/cli-reference.ja.md:256-268 に、PR body / conversation comments / review summaries / review thread comments 内の Markdown/HTML 画像検出、認証済み gh による取得、[Image #N] 置換、.takt/tasks/<slug>/attachments/ 保存、order.md の添付画像表示、PNG/JPEG/GIF/WebP と 10 MiB 上限、GitHub attachment URL 限定、外部 URL 非取得、Content-Type/magic bytes 検証、取得・検証失敗時の停止、GitLab no-op が明記されています。README.md:249 と docs/README.ja.md:252 にも概要が追加され、元 finding のドキュメント欠落は解消済みです。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0009"
+    },
+    {
+      "rawFindingId": "20260707-145644-pr-task-attachments-takt-add-p:reviewers:4:arch-review:arch-review-4-resolved-F-0010",
+      "stepName": "arch-review",
+      "reviewer": "arch-review",
+      "familyTag": "pr_image_attachments.cli_help_contract_missing",
+      "severity": "medium",
+      "title": "`--pr` の実行時ヘルプがPR画像添付契約を説明している",
+      "location": "src/app/cli/program.ts:44",
+      "description": "src/app/cli/program.ts:44 を再読し、`--pr` の option description が `PR number to fetch review comments, supported PR comment images, and fix` に更新されていることを確認しました。src/__tests__/provider-contract-docs.test.ts:28-31 でも同じ文言を検証しており、元 finding の CLI help 出力経路への契約反映漏れは解消済みです。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0010"
+    },
+    {
+      "rawFindingId": "20260707-145644-pr-task-attachments-takt-add-p:reviewers:4:arch-review:arch-review-4-resolved-F-0011",
+      "stepName": "arch-review",
+      "reviewer": "arch-review",
+      "familyTag": "arch.code_quality.direct_array_mutation",
+      "severity": "medium",
+      "title": "新規PR画像resolverの配列直接変更が解消されている",
+      "location": "src/infra/github/prReviewImageAttachments.ts:87",
+      "description": "src/infra/github/prReviewImageAttachments.ts:87-119 は `Array.from` と reduce による新しい配列生成へ変更され、223-241 は `chunks = [...chunks, chunk]`、317-324 は `attachments = [...attachments, attachment]` になっています。`rg -n -- \"\\.push\\(|\\.sort\\(\" src/infra/github/prReviewImageAttachments.ts` は一致なしで、元 finding の `references.push()` / `references.sort()` / `chunks.push()` / `attachments.push()` は残っていません。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0011"
+    },
+    {
+      "rawFindingId": "20260707-145644-pr-task-attachments-takt-add-p:reviewers:4:ai-antipattern-review:raw-ai4-resolve-f0010",
+      "stepName": "ai-antipattern-review",
+      "reviewer": "ai-antipattern-review",
+      "familyTag": "missing-edge-case",
+      "severity": "medium",
+      "title": "`--pr` の実行時ヘルプがPR画像添付契約を説明していない",
+      "location": "src/app/cli/program.ts:44",
+      "description": "src/app/cli/program.ts:44 を再読し、`--pr` の Commander option description が `PR number to fetch review comments, supported PR comment images, and fix` に更新され、docs/cli-reference.md:16 の利用者向け契約と一致していることを確認しました。src/__tests__/provider-contract-docs.test.ts:28-31 でも `--pr` help description が PR image attachment behavior と揃うことを検証しています。Policy の契約全入口、仕様完全性、ファクトチェック、Knowledge の仕様準拠・呼び出しチェーン検証と照合し、F-0010 の受入条件を満たしています。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0010"
+    },
+    {
+      "rawFindingId": "20260707-145644-pr-task-attachments-takt-add-p:reviewers:4:ai-antipattern-review:raw-ai4-resolve-f0011",
+      "stepName": "ai-antipattern-review",
+      "reviewer": "ai-antipattern-review",
+      "familyTag": "logic-error",
+      "severity": "medium",
+      "title": "新規PR画像resolverが配列を直接変更している",
+      "location": "src/infra/github/prReviewImageAttachments.ts:87",
+      "description": "src/infra/github/prReviewImageAttachments.ts:87-119 では `matchAll` 結果を `Array.from` / `filter` / `reduce` で新しい配列として生成し、以前の `references.push()` と `references.sort()` が残っていないことを確認しました。src/infra/github/prReviewImageAttachments.ts:223-241 と 317-324 では `chunks = [...chunks, chunk]`、`attachments = [...attachments, attachment]` に置き換えられており、`rg` で同ファイル内に `.push(` / `.sort(` / `.splice(` が残っていないことも確認しました。Policy のオブジェクト/配列の直接変更禁止、コード品質、ファクトチェック、Knowledge の状態の直接変更検出基準と照合し、F-0011 の受入条件を満たしています。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0011"
+    },
+    {
+      "rawFindingId": "20260707-145644-pr-task-attachments-takt-add-p:reviewers:4:coding-review:R4-CONF-F0010",
+      "stepName": "coding-review",
+      "reviewer": "coding-review",
+      "familyTag": "pr_image_attachments.cli_help_contract",
+      "severity": "medium",
+      "title": "`--pr` の実行時ヘルプがPR画像添付契約を説明している",
+      "location": "src/app/cli/program.ts:44",
+      "description": "src/app/cli/program.ts:44 の `--pr` option description が `PR number to fetch review comments, supported PR comment images, and fix` に更新され、docs/cli-reference.md の契約と同じ PR コメント画像取得を説明しています。src/__tests__/provider-contract-docs.test.ts:28-31 でも CLI help の説明文が PR 画像添付挙動と一致することを検証しています。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0010"
+    },
+    {
+      "rawFindingId": "20260707-145644-pr-task-attachments-takt-add-p:reviewers:4:coding-review:R4-CONF-F0011",
+      "stepName": "coding-review",
+      "reviewer": "coding-review",
+      "familyTag": "pr_image_attachments.immutable_arrays",
+      "severity": "medium",
+      "title": "新規PR画像resolverの配列直接変更が解消されている",
+      "location": "src/infra/github/prReviewImageAttachments.ts:106",
+      "description": "src/infra/github/prReviewImageAttachments.ts:87-119 では参照抽出を `Array.from(...).filter(...)` と spread を返す reduce で構成し、旧 `references.push()` / `references.sort()` は残っていません。readLimitedResponseBody() は src/infra/github/prReviewImageAttachments.ts:223-239 で `chunks = [...chunks, chunk]`、resolvePrReviewImageAttachments() は src/infra/github/prReviewImageAttachments.ts:317-324 で `attachments = [...attachments, attachment]` を使っており、対象 finding の配列直接変更は解消されています。`rg -n \"\\.push\\(|\\.sort\\(\" src/infra/github/prReviewImageAttachments.ts` でも該当はありませんでした。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0011"
+    },
+    {
+      "rawFindingId": "20260707-145644-pr-task-attachments-takt-add-p:reviewers:4:implementation-semantics-review:impl-sem-r4-resolve-f0010",
+      "stepName": "implementation-semantics-review",
+      "reviewer": "implementation-semantics-review",
+      "familyTag": "pr_image_attachments.cli_help_contract_missing",
+      "severity": "medium",
+      "title": "`--pr` の実行時ヘルプがPR画像添付契約を説明していることを確認",
+      "location": "src/app/cli/program.ts:44",
+      "description": "src/app/cli/program.ts:44 の `--pr` option description が `PR number to fetch review comments, supported PR comment images, and fix` に更新されており、実行時ヘルプの入口でも PR コメント画像取得の契約が説明されています。元 finding の CLI help 契約欠落は解消済みです。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0010"
+    },
+    {
+      "rawFindingId": "20260707-145644-pr-task-attachments-takt-add-p:reviewers:4:implementation-semantics-review:impl-sem-r4-resolve-f0011",
+      "stepName": "implementation-semantics-review",
+      "reviewer": "implementation-semantics-review",
+      "familyTag": "arch.code_quality.direct_array_mutation",
+      "severity": "medium",
+      "title": "新規PR画像resolverの配列直接変更が除去されていることを確認",
+      "location": "src/infra/github/prReviewImageAttachments.ts:84",
+      "description": "src/infra/github/prReviewImageAttachments.ts:84-119 の抽出処理は `Array.from(...).filter(...)` と reduce による新規配列生成に更新され、同ファイル内に `.push(` / `.sort(` は存在しません。readLimitedResponseBody は src/infra/github/prReviewImageAttachments.ts:223-241 で `chunks = [...chunks, chunk]`、resolvePrReviewImageAttachments は src/infra/github/prReviewImageAttachments.ts:317-325 で `attachments = [...attachments, attachment]` を使っており、元 finding の配列直接変更は解消済みです。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0011"
+    },
+    {
+      "rawFindingId": "20260707-145644-pr-task-attachments-takt-add-p:reviewers:5:coding-review:R5-ISSUE-001",
+      "stepName": "coding-review",
+      "reviewer": "coding-review",
+      "familyTag": "process_gap",
+      "severity": "low",
+      "title": "レビュー再開後の再検証が未実施",
+      "description": "コンテキスト圧縮後、現行コード・差分・テスト結果をこの応答直前に再読/再実行できていません。判断ルールは根拠ファイル・コマンド出力を判断直前に再確認することを要求しているため、APPROVE/REJECT の実コード判定を確定できません。",
+      "suggestion": "次フェーズで対象ファイルと差分を再読し、必要なビルド・lint・テスト結果を再確認してから最終判定してください。",
+      "kind": "issue"
+    },
+    {
+      "rawFindingId": "20260707-145644-pr-task-attachments-takt-add-p:reviewers:6:arch-review:arch-review-6-resolved-F-0012",
+      "stepName": "arch-review",
+      "reviewer": "arch-review",
+      "familyTag": "process_gap",
+      "severity": "low",
+      "title": "レビュー再開後の再検証を確認",
+      "location": "src/app/cli/program.ts:44",
+      "description": "判断直前に Policy/Knowledge 原本、findings-ledger.json、現行差分、対象コードを再読しました。git diff --check は終了コード0、src/app/cli/program.ts:44 は --pr help が PR comment images を含む文言に更新済み、src/infra/github/prReviewImageAttachments.ts:84-119/223-241/314-325 は配列直接変更が残っていないことを確認しました。直前 fix.5 の記録でも npm run build、npm run lint、npm test、npm run test:it、npm run test:e2e:mock が成功済みであることを再読しました。F-0012 の再検証不足は解消済みです。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0012"
+    },
+    {
+      "rawFindingId": "20260707-145644-pr-task-attachments-takt-add-p:reviewers:6:ai-antipattern-review:20260707-145644-pr-task-attachments-takt-add-p:reviewers:6:ai-antipattern-review:raw-ai6-resolve-f0012",
+      "stepName": "ai-antipattern-review",
+      "reviewer": "ai-antipattern-review",
+      "familyTag": "process_gap",
+      "severity": "low",
+      "title": "レビュー再開後の再検証が実施されていることを確認",
+      "location": "src/infra/github/prReviewImageAttachments.ts:84",
+      "description": "Policy/Knowledge 原本、findings-ledger.json、git status --short、git diff --stat、git diff --check、主要実装ファイルをこの応答直前に再読・再実行しました。src/infra/github/prReviewImageAttachments.ts:84-335、src/app/cli/routing.ts:100-304、src/features/tasks/add/index.ts:170-240、src/features/pipeline/steps.ts:149-300、src/features/pipeline/execute.ts:32-105、provider adapter、docs、主要テストを再確認し、PR画像添付契約の配線・cleanup・保存・pipeline staging に未確認のままの判断は残っていません。git diff --check は終了コード0で、fix.5 レポートでも npm run build / npm run lint / npm test / test:it / test:e2e:mock の成功証跡を再確認しました。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0012"
+    },
+    {
+      "rawFindingId": "20260707-145644-pr-task-attachments-takt-add-p:reviewers:6:coding-review:R6-CONF-F0012",
+      "stepName": "coding-review",
+      "reviewer": "coding-review",
+      "familyTag": "process_gap",
+      "severity": "low",
+      "title": "レビュー再開後の再検証を実施済み",
+      "location": "src/infra/github/prReviewImageAttachments.ts:84",
+      "description": "F-0012 の受入条件を再確認しました。Policy source `.takt/runs/20260707-145644-pr-task-attachments-takt-add-p/context/policy/coding-review.6.20260707T165901Z.md` を再読し、`git diff` と対象実装を再走査しました。`src/infra/github/prReviewImageAttachments.ts:84-335` で画像抽出、GitHub attachment URL 限定、Content-Type/magic bytes/サイズ検証、認証付き取得、一時ファイル cleanup を確認し、`src/app/cli/routing.ts:184-298`、`src/features/tasks/add/index.ts:198-237`、`src/features/pipeline/execute.ts:40-91`、`src/features/pipeline/steps.ts:149-289` で `takt --pr` / `takt add --pr` / pipeline `--pr` の attachment 伝播と cleanup を確認しました。`npm run build`、`npm run lint`、`npm test` はいずれも成功し、直前再検証未実施の process gap は解消済みです。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0012"
+    },
+    {
+      "rawFindingId": "20260707-145644-pr-task-attachments-takt-add-p:reviewers:6:implementation-semantics-review:impl-sem-r6-resolve-f0012",
+      "stepName": "implementation-semantics-review",
+      "reviewer": "implementation-semantics-review",
+      "familyTag": "process_gap",
+      "severity": "low",
+      "title": "レビュー再開後の再検証実施を確認",
+      "location": "src/infra/github/prReviewImageAttachments.ts:84",
+      "description": "この応答直前に Knowledge/Policy 原本、findings-ledger.json、git status、累積差分、主要実装ファイルを再読しました。具体的には、PR画像抽出・検証・添付生成を src/infra/github/prReviewImageAttachments.ts:84-335、通常 `takt --pr` の添付伝搬と cleanup を src/app/cli/routing.ts:111-299、pipeline `--pr` の添付 staging/cleanup を src/features/pipeline/steps.ts:149-301 と src/features/pipeline/execute.ts:40-91、`takt add --pr` の保存/cleanup を src/features/tasks/add/index.ts:198-235 で確認しました。関連テスト契約も .takt/runs/20260707-145644-pr-task-attachments-takt-add-p/reports/test-report.md:1-45 と src/__tests__/github-pr-review-image-attachments.test.ts:62-227 で再確認しており、元 finding の「現行コード・差分・テスト結果を判断直前に再確認できていない」状態は、この implementation-semantics-review の判定範囲では解消済みです。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0012"
+    }
+  ],
+  "conflicts": []
+}

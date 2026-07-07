@@ -1,0 +1,8 @@
+# コーディングレビュー
+
+## 結果: APPROVE
+
+## サマリー
+F-0009 は `docs/cli-reference.md:259-269`、`docs/cli-reference.ja.md:258-268`、`README.md:249`、`docs/README.ja.md:252` で解消確認済みです。  
+新規のブロッキング指摘はありません。  
+`npm run build` / `npm run lint` は成功、関連テストと timeout した該当テストの単独再実行は成功しました。

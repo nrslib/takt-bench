@@ -1,0 +1,28 @@
+# アーキテクチャレビュー
+
+## 結果: REJECT
+
+## サマリー
+PR 画像添付の基本配線は追加されていますが、通常 `takt --pr` 経路で一時添付の cleanup 漏れと、PR 由来画像と対話中追加画像の placeholder/fileName 衝突が残っています。いずれも新規 attachment 契約の状態管理・呼び出しチェーン上の問題であり差し戻しです。
+
+## 確認した観点
+- [x] 構造・設計
+- [x] コード品質
+- [x] 変更スコープ
+- [x] テストカバレッジ
+- [x] デッドコード
+- [x] 呼び出しチェーン検証
+
+## 観測した指摘
+| # | family_tag | スコープ | 重大度 | 場所 | 問題 | 修正案 |
+|---|------------|---------|--------|------|------|--------|
+| 1 | arch.state.cleanup.pr_source_attachments | スコープ内 | medium | `src/app/cli/routing.ts:154` | `resolvePrInput()` が PR 画像添付を取得して `cleanupSourceAttachments` を保持した後、cleanup は `dispatchConversationAction()` 周辺の finally でしか実行されません。workflow 選択キャンセル、mode 選択キャンセル、interactive mode 例外では一時 attachment ディレクトリが残ります。 | PR source attachment 取得後の通常 `--pr` フロー全体を try/finally で包み、キャンセル・例外・dispatch 後の全経路で `cleanupSourceAttachments` を一度だけ実行してください。 |
+| 2 | arch.contract.image_attachment_placeholder_merge | スコープ内 | high | `src/app/cli/routing.ts:183` | PR 由来画像は `sourceAttachments` に保持されますが `interactiveSeed.attachments` に渡されません。そのため対話中に画像を追加すると interactive 側も `[Image #1]` / `image-1.png` から採番し、line 250 の単純連結で placeholder/fileName が衝突します。下流の attachment promotion または referenced attachment 解決で失敗します。 | PR 由来 attachments を interactive seed に渡して採番起点へ含め、最終引き渡しは正規化済みの単一 attachment list にしてください。別案として merge 時に再採番し、本文中の参照も同時に更新してください。 |
+
+## 検証証跡
+- ビルド: `npm run build` を実行し成功。
+- テスト: `npm test` を実行し、workflow/config 系テストの timeout で失敗。今回指摘とは別系統に見えるが、全体成功は未確認。
+- 動作確認: 実 CLI の手動動作確認は未実施。
+
+## REJECT判定条件
+- スコープ内のブロッキング指摘が2件あるため REJECT。

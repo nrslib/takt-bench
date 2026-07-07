@@ -1,0 +1,12 @@
+ M src/__tests__/addTask.test.ts
+ M src/__tests__/cli-routing-pr-resolve.test.ts
+ M src/__tests__/pipelineExecution.test.ts
+ M src/app/cli/routing-inputs.ts
+ M src/app/cli/routing.ts
+ M src/features/pipeline/execute.ts
+ M src/features/pipeline/steps.ts
+ M src/features/tasks/add/index.ts
+?? src/__tests__/prReviewImageAttachments.test.ts
+?? src/__tests__/prReviewTaskInput.test.ts
+?? src/features/tasks/prReviewImageAttachments.ts
+?? src/features/tasks/prReviewTaskInput.ts

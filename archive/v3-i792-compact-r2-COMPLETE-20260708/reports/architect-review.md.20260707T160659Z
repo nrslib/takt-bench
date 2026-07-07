@@ -1,0 +1,28 @@
+# アーキテクチャレビュー
+
+## 結果: REJECT
+
+## サマリー
+PR画像 attachment 配線自体は主要入口へ集約されていますが、外部画像取得境界のサイズ上限契約が不完全です。加えて未追跡の project-local workflow が builtin を上書きし、`npm test` が失敗しています。
+
+## 確認した観点
+- [x] 構造・設計
+- [x] コード品質
+- [x] 変更スコープ
+- [x] テストカバレッジ
+- [x] デッドコード
+- [x] 呼び出しチェーン検証
+
+## 観測した指摘
+| # | family_tag | スコープ | 重大度 | 場所 | 問題 | 修正案 |
+|---|------------|---------|--------|------|------|--------|
+| 1 | arch:test-contract-workflow-shadowing | スコープ内 | high | `.takt/workflows/takt-default-for-local-llm.yaml:283` | 未追跡の project-local workflow が builtin を上書きし、language が `en` の場合も日本語条件を返すため `src/__tests__/for-local-llm-replan-wiring.test.ts:56` が失敗している。 | このタスクで不要な `.takt/workflows/takt-default-for-local-llm.yaml` を差分から除外する。意図して追加するなら builtin と同じ言語切替契約を満たす。 |
+| 2 | arch:external-boundary-size-contract | スコープ内 | high | `src/features/tasks/prReviewImageAttachments.ts:87` | `defaultDownloadImage()` が `await response.arrayBuffer()` で全量をメモリへ読み込んだ後にサイズ検証しており、`Content-Length` 欠落・偽装時にサイズ上限を取得境界で enforce できない。 | ストリーミング読み込みに変更し、チャンクごとに累積 byte 数を `options.maxBytes` と比較して超過時点で中断・reject する。ヘッダ欠落時の上限検証テストも追加する。 |
+
+## 検証証跡
+- ビルド: `npm run build` 成功。
+- テスト: `npm run lint` 成功。`npm test` は `for-local-llm-replan-wiring.test.ts:56` で失敗。
+- 動作確認: 実CLIでの画像取得は未確認。コード・差分・単体テストを確認。
+
+## REJECT判定条件
+- スコープ内のブロッキング指摘が2件あるため REJECT。

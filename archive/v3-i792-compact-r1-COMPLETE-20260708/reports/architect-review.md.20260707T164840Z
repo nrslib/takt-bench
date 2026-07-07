@@ -1,0 +1,7 @@
+# アーキテクチャレビュー
+
+## 結果: APPROVE
+
+F-0010/F-0011 は現行コードで解消済みです。`src/app/cli/program.ts:44` の `--pr` help は PR コメント画像契約を含み、`src/infra/github/prReviewImageAttachments.ts` には `.push()` / `.sort()` が残っていません。
+
+再走査証跡: Policy/Knowledge 全章を累積差分へ再照合し、新規のスコープ内ブロッキング指摘は検出しませんでした。ビルド/テストはこのレポートフェーズでは未実行です。

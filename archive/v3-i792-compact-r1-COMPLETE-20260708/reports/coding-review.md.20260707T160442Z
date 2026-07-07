@@ -1,0 +1,20 @@
+# コーディングレビュー
+
+## 結果: REJECT
+
+## サマリー
+`takt --pr` の対話経路で、PR由来の画像添付が対話AIに渡らず、さらに対話中に追加した画像と `image-1.png` / `[Image #1]` が衝突する実装になっています。
+
+## 観測した指摘
+| # | family_tag | 重大度 | 場所 | 問題 | 影響 | 修正案 |
+|---|------------|--------|------|------|------|--------|
+| 1 | pr_image_attachments.interactive_seed_missing | Medium | `src/app/cli/routing.ts:183` | `resolvePrInput()` で取得した `sourceAttachments` を `interactiveSeed.attachments` に渡していない | `takt --pr` の assistant/quiet/persona 経路で、sourceContext 内の `[Image #1]` が画像として解決されず、AI 呼び出しに添付画像が渡らない | `interactiveSeed` に PR 由来 `attachments` を含め、初期添付として `runConversationLoop` の attachment store に渡す |
+| 2 | pr_image_attachments.attachment_collision | Medium | `src/app/cli/routing.ts:250` | `mergeAttachments()` が PR 由来添付と対話中の追加添付を単純連結している | PR画像が `[Image #1]/image-1.png`、対話中の貼付画像も `[Image #1]/image-1.png` になり、保存・実行時に `Task attachment destination already exists` で失敗する | 初期添付で採番を継続させるか、結合時に placeholder/fileName を再採番・重複排除する。初期添付を result 側に含める場合は二重連結も避ける |
+
+## 検証証跡
+- 差分確認: `routing.ts`、`routing-inputs.ts`、`prReviewImageAttachments.ts`、`attachments.ts`、`conversationLoop.ts`、関連テストを確認
+- ビルド: `npm run build` 成功
+- テスト: 新規関連テスト5ファイルは成功。`npm test` は `workflowLoader.test.ts` のタイムアウトで1回失敗し、該当単体の再実行は成功
+
+## REJECT判定条件
+- ブロッキング指摘が2件あります。

@@ -1,0 +1,24 @@
+# AI生成コードレビュー
+
+## 結果: REJECT
+
+## サマリー
+既存 finding のうちサイズ上限と workflow shadow は解消確認できたが、`takt --pr` の実行失敗時に `process.exit(1)` が cleanup `finally` を迂回する新たな未解消経路を確認した。
+
+## 検証した項目
+| 観点 | 結果 | 備考 |
+|------|------|------|
+| 仮定の妥当性 | ❌ | PR画像一時ファイル cleanup が全失敗経路で実行される前提が崩れている |
+| API/ライブラリの実在 | ✅ | `fetch`, `ReadableStream`, `Response.body.getReader()` の利用は実コード上確認済み |
+| コンテキスト適合 | ❌ | `selectAndExecuteTask()` の既存 exit 契約と新しい cleanup 契約が噛み合っていない |
+| スコープ | ✅ | PR画像 attachment の取得・保存・cleanup 経路に限定して確認 |
+
+## 観測した指摘
+| # | family_tag | カテゴリ | 重大度 | 場所 | 問題 | 修正案 |
+|---|------------|---------|--------|------|------|--------|
+| 1 | missing-edge-case | 失敗経路漏れ | medium | `src/app/cli/routing.ts:271` | `selectAndExecuteTask()` は失敗時に既定で `process.exit(1)` を呼ぶため、`routing.ts:304-306` の `cleanupSourceAttachments?.()` に到達できない。PR画像一時ディレクトリが実行失敗時に残る。 | `takt --pr` の interactive execute 経路では `exitOnFailure: false` を渡して例外として戻し、cleanup `finally` 実行後に exit code を反映する。失敗時 cleanup のテストも追加する。 |
+
+## 解消確認
+- F-0001/F-0005/F-0006: `.takt/workflows/` の shadow ファイルはなく、`npm test` 成功を確認。
+- F-0002/F-0003/F-0007/F-0008: `src/features/tasks/prReviewImageAttachments.ts:95-122` で stream 読み込み中の累積サイズ上限と中断処理を確認。
+- F-0004/F-0009: pre-dispatch 例外経路は改善されているが、上記 `process.exit(1)` 経路が残るため解消確認しない。

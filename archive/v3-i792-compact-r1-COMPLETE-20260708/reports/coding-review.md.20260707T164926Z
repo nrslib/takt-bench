@@ -1,0 +1,8 @@
+# コーディングレビュー
+
+## 結果: APPROVE
+
+## サマリー
+F-0010 は `src/app/cli/program.ts:44` と `src/__tests__/provider-contract-docs.test.ts:28-31` で解消確認済みです。  
+F-0011 は `src/infra/github/prReviewImageAttachments.ts:87-119,223-239,317-324` で解消確認済みです。  
+新規のブロッキング指摘はありません。`npm run build` / `npm run lint` / `npm test` は成功しました。

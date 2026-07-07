@@ -1,0 +1,20 @@
+# 実装意味論レビュー
+
+## 結果: REJECT
+
+## サマリー
+PR画像添付の意味的な名前空間とライフサイクル管理に不整合があります。`takt --pr` の interactive 経路で画像参照が添付実体に結び付かず、キャンセル経路では一時ファイルが残ります。
+
+## 観測した指摘
+| # | family_tag | 重大度 | 場所 | 問題 | 壊れる条件 | 修正案 |
+|---|------------|--------|------|------|-----------|--------|
+| 1 | implementation-semantics/attachment-namespace | High | `src/app/cli/routing.ts:183` | `interactiveSeed` に `sourceAttachments` が渡されず、PR本文内の `[Image #1]` が interactive の添付ストアに登録されない。さらに `mergeAttachments()` が PR 添付と interactive 添付を単純連結するため、双方が `image-1.*` / `[Image #1]` を持ち得る。 | PRコメントに画像があり、`takt --pr` の assistant/persona 経路でユーザーが追加画像を貼ると、保存時に `attachments/image-1.*` が衝突する。また、AI呼び出し時にはPR画像の placeholder が添付実体へ解決されない。 | PR由来の添付を `InteractiveSeedInput.attachments` として渡し、interactive 側の採番を既存添付数から開始させる。結果統合時は初期添付を二重連結しないよう正規化する。 |
+| 2 | implementation-semantics/state-cleanup | Medium | `src/app/cli/routing.ts:154` | `resolvePrInput()` が一時添付を作成した後、workflow 選択キャンセルや interactive mode 選択キャンセルの早期 return が `cleanupSourceAttachments?.()` の `finally` より前にある。 | PRコメントに画像がある状態で workflow 選択または interactive mode 選択をキャンセルすると、`takt/pr-attachments/.../attachments` の一時ファイルが残る。 | `cleanupSourceAttachments` 設定後の処理全体を `try/finally` で包むか、各早期 return の直前で cleanup を必ず実行する。 |
+
+## 検証証跡
+- 差分確認: `src/app/cli/routing.ts`、`src/features/interactive/conversationLoop.ts`、`src/features/interactive/imageAttachments.ts`、`src/features/tasks/attachments.ts`、`src/infra/github/prReviewImageAttachments.ts` の変更と周辺コードを確認。
+- 判定根拠の実在確認: `routing.ts:183` の seed 構築、`routing.ts:250` の添付連結、`conversationLoop.ts:140` の添付ストア初期化、`imageAttachments.ts:143` の採番、`attachments.ts:93` の保存先衝突条件を実コードで確認。
+- 再走査証跡: Knowledge の「データ構造の意味選択」「導出値の単一情報源」「命名と意味の整合」「境界での fail-fast」「内部状態の参照漏れ」を照合し、ブロッキング対象は上記2件と判定。
+
+## REJECT判定条件
+- ブロッキング指摘が2件あります。

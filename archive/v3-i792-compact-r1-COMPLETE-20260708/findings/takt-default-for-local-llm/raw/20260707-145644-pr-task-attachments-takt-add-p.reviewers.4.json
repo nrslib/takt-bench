@@ -1,0 +1,98 @@
+[
+  {
+    "rawFindingId": "20260707-145644-pr-task-attachments-takt-add-p:reviewers:4:arch-review:arch-review-4-resolved-F-0010",
+    "stepName": "arch-review",
+    "reviewer": "arch-review",
+    "familyTag": "pr_image_attachments.cli_help_contract_missing",
+    "severity": "medium",
+    "title": "`--pr` の実行時ヘルプがPR画像添付契約を説明している",
+    "location": "src/app/cli/program.ts:44",
+    "description": "src/app/cli/program.ts:44 を再読し、`--pr` の option description が `PR number to fetch review comments, supported PR comment images, and fix` に更新されていることを確認しました。src/__tests__/provider-contract-docs.test.ts:28-31 でも同じ文言を検証しており、元 finding の CLI help 出力経路への契約反映漏れは解消済みです。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0010"
+  },
+  {
+    "rawFindingId": "20260707-145644-pr-task-attachments-takt-add-p:reviewers:4:arch-review:arch-review-4-resolved-F-0011",
+    "stepName": "arch-review",
+    "reviewer": "arch-review",
+    "familyTag": "arch.code_quality.direct_array_mutation",
+    "severity": "medium",
+    "title": "新規PR画像resolverの配列直接変更が解消されている",
+    "location": "src/infra/github/prReviewImageAttachments.ts:87",
+    "description": "src/infra/github/prReviewImageAttachments.ts:87-119 は `Array.from` と reduce による新しい配列生成へ変更され、223-241 は `chunks = [...chunks, chunk]`、317-324 は `attachments = [...attachments, attachment]` になっています。`rg -n -- \"\\.push\\(|\\.sort\\(\" src/infra/github/prReviewImageAttachments.ts` は一致なしで、元 finding の `references.push()` / `references.sort()` / `chunks.push()` / `attachments.push()` は残っていません。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0011"
+  },
+  {
+    "rawFindingId": "20260707-145644-pr-task-attachments-takt-add-p:reviewers:4:ai-antipattern-review:raw-ai4-resolve-f0010",
+    "stepName": "ai-antipattern-review",
+    "reviewer": "ai-antipattern-review",
+    "familyTag": "missing-edge-case",
+    "severity": "medium",
+    "title": "`--pr` の実行時ヘルプがPR画像添付契約を説明していない",
+    "location": "src/app/cli/program.ts:44",
+    "description": "src/app/cli/program.ts:44 を再読し、`--pr` の Commander option description が `PR number to fetch review comments, supported PR comment images, and fix` に更新され、docs/cli-reference.md:16 の利用者向け契約と一致していることを確認しました。src/__tests__/provider-contract-docs.test.ts:28-31 でも `--pr` help description が PR image attachment behavior と揃うことを検証しています。Policy の契約全入口、仕様完全性、ファクトチェック、Knowledge の仕様準拠・呼び出しチェーン検証と照合し、F-0010 の受入条件を満たしています。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0010"
+  },
+  {
+    "rawFindingId": "20260707-145644-pr-task-attachments-takt-add-p:reviewers:4:ai-antipattern-review:raw-ai4-resolve-f0011",
+    "stepName": "ai-antipattern-review",
+    "reviewer": "ai-antipattern-review",
+    "familyTag": "logic-error",
+    "severity": "medium",
+    "title": "新規PR画像resolverが配列を直接変更している",
+    "location": "src/infra/github/prReviewImageAttachments.ts:87",
+    "description": "src/infra/github/prReviewImageAttachments.ts:87-119 では `matchAll` 結果を `Array.from` / `filter` / `reduce` で新しい配列として生成し、以前の `references.push()` と `references.sort()` が残っていないことを確認しました。src/infra/github/prReviewImageAttachments.ts:223-241 と 317-324 では `chunks = [...chunks, chunk]`、`attachments = [...attachments, attachment]` に置き換えられており、`rg` で同ファイル内に `.push(` / `.sort(` / `.splice(` が残っていないことも確認しました。Policy のオブジェクト/配列の直接変更禁止、コード品質、ファクトチェック、Knowledge の状態の直接変更検出基準と照合し、F-0011 の受入条件を満たしています。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0011"
+  },
+  {
+    "rawFindingId": "20260707-145644-pr-task-attachments-takt-add-p:reviewers:4:coding-review:R4-CONF-F0010",
+    "stepName": "coding-review",
+    "reviewer": "coding-review",
+    "familyTag": "pr_image_attachments.cli_help_contract",
+    "severity": "medium",
+    "title": "`--pr` の実行時ヘルプがPR画像添付契約を説明している",
+    "location": "src/app/cli/program.ts:44",
+    "description": "src/app/cli/program.ts:44 の `--pr` option description が `PR number to fetch review comments, supported PR comment images, and fix` に更新され、docs/cli-reference.md の契約と同じ PR コメント画像取得を説明しています。src/__tests__/provider-contract-docs.test.ts:28-31 でも CLI help の説明文が PR 画像添付挙動と一致することを検証しています。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0010"
+  },
+  {
+    "rawFindingId": "20260707-145644-pr-task-attachments-takt-add-p:reviewers:4:coding-review:R4-CONF-F0011",
+    "stepName": "coding-review",
+    "reviewer": "coding-review",
+    "familyTag": "pr_image_attachments.immutable_arrays",
+    "severity": "medium",
+    "title": "新規PR画像resolverの配列直接変更が解消されている",
+    "location": "src/infra/github/prReviewImageAttachments.ts:106",
+    "description": "src/infra/github/prReviewImageAttachments.ts:87-119 では参照抽出を `Array.from(...).filter(...)` と spread を返す reduce で構成し、旧 `references.push()` / `references.sort()` は残っていません。readLimitedResponseBody() は src/infra/github/prReviewImageAttachments.ts:223-239 で `chunks = [...chunks, chunk]`、resolvePrReviewImageAttachments() は src/infra/github/prReviewImageAttachments.ts:317-324 で `attachments = [...attachments, attachment]` を使っており、対象 finding の配列直接変更は解消されています。`rg -n \"\\.push\\(|\\.sort\\(\" src/infra/github/prReviewImageAttachments.ts` でも該当はありませんでした。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0011"
+  },
+  {
+    "rawFindingId": "20260707-145644-pr-task-attachments-takt-add-p:reviewers:4:implementation-semantics-review:impl-sem-r4-resolve-f0010",
+    "stepName": "implementation-semantics-review",
+    "reviewer": "implementation-semantics-review",
+    "familyTag": "pr_image_attachments.cli_help_contract_missing",
+    "severity": "medium",
+    "title": "`--pr` の実行時ヘルプがPR画像添付契約を説明していることを確認",
+    "location": "src/app/cli/program.ts:44",
+    "description": "src/app/cli/program.ts:44 の `--pr` option description が `PR number to fetch review comments, supported PR comment images, and fix` に更新されており、実行時ヘルプの入口でも PR コメント画像取得の契約が説明されています。元 finding の CLI help 契約欠落は解消済みです。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0010"
+  },
+  {
+    "rawFindingId": "20260707-145644-pr-task-attachments-takt-add-p:reviewers:4:implementation-semantics-review:impl-sem-r4-resolve-f0011",
+    "stepName": "implementation-semantics-review",
+    "reviewer": "implementation-semantics-review",
+    "familyTag": "arch.code_quality.direct_array_mutation",
+    "severity": "medium",
+    "title": "新規PR画像resolverの配列直接変更が除去されていることを確認",
+    "location": "src/infra/github/prReviewImageAttachments.ts:84",
+    "description": "src/infra/github/prReviewImageAttachments.ts:84-119 の抽出処理は `Array.from(...).filter(...)` と reduce による新規配列生成に更新され、同ファイル内に `.push(` / `.sort(` は存在しません。readLimitedResponseBody は src/infra/github/prReviewImageAttachments.ts:223-241 で `chunks = [...chunks, chunk]`、resolvePrReviewImageAttachments は src/infra/github/prReviewImageAttachments.ts:317-325 で `attachments = [...attachments, attachment]` を使っており、元 finding の配列直接変更は解消済みです。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0011"
+  }
+]

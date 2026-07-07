@@ -1,0 +1,35 @@
+# コーディングレビュー
+
+## 結果: REJECT
+
+## サマリー
+前回 open finding F-0001〜F-0008 は、現在の差分で解消されていることを確認しました。新たに、`--pr` の画像添付という利用者向け契約が CLI/README ドキュメントへ反映されていない点を検出しました。
+
+## 観測した指摘
+| # | family_tag | 重大度 | 場所 | 問題 | 影響 | 修正案 |
+|---|------------|--------|------|------|------|--------|
+| 1 | pr_image_attachments.docs_contract_missing | Medium | `docs/cli-reference.md:16` | `takt add --pr` / `takt --pr` / pipeline `--pr` で PR コメント画像を自動取得・検証・添付保存する利用者向け挙動が追加されたが、`--pr` 説明と image attachments 節に反映されていない | 対応形式、サイズ上限、GitHub attachment URL 限定、GitLab provider の no-op、取得・検証失敗時の扱いが利用者に伝わらず、仕様完全性を満たさない | `README.md`、`docs/README.ja.md`、`docs/cli-reference.md`、`docs/cli-reference.ja.md` に PR コメント画像の自動取得対象、保存先/order.md 表示、対応形式・サイズ上限、GitHub 限定、GitLab no-op、失敗条件を追記する |
+
+## 解消確認
+| finding | 状態 | 根拠 |
+|---|---|---|
+| F-0001 | 解消確認 | `src/app/cli/routing.ts:148-298` の外側 `try/finally` で `cleanupSourceAttachments?.()` が実行される |
+| F-0002 | 解消確認 | `src/app/cli/routing.ts:184-189` で `sourceAttachments` を `interactiveSeed.attachments` に渡し、単純連結を削除 |
+| F-0003 | 解消確認 | workflow 選択キャンセル、mode 選択キャンセル、interactive 例外の cleanup テストが追加済み |
+| F-0004 | 解消確認 | `GitProvider.resolvePrReviewImageAttachments()` に移し、GitHub は委譲、GitLab は no-op |
+| F-0005 | 解消確認 | PR 由来添付が interactive attachment store の初期添付として渡る |
+| F-0006 | 解消確認 | downstream へ `result.attachments` のみ渡し、PR 添付との二重結合なし |
+| F-0007 | 解消確認 | 追加画像は初期添付数を起点に `[Image #2]` 以降へ採番される |
+| F-0008 | 解消確認 | `src/__tests__/cli-routing-pr-resolve.test.ts` でキャンセル/例外 cleanup を確認 |
+
+## 検証証跡
+- 差分確認: PR画像 resolver、provider 境界、routing、add、pipeline、attachment staging、関連テストを再走査
+- ビルド: `npm run build` 成功
+- テスト: PR画像関連の単独テストは成功。`npm test` は workflow discovery 系のタイムアウトで失敗したが、該当テスト単独再実行は成功
+
+## 再走査証跡
+- Policy: 原則、状態整合性、契約全入口、契約一貫性、仕様完全性、副作用と状態遷移、前回指摘の追跡を照合
+- Knowledge: provider 境界、attachment 名前空間、保存・実行 staging、cleanup 所有権を入口別に確認
+
+## REJECT判定条件
+- ブロッキング指摘が1件あります。

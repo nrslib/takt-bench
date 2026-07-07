@@ -1,0 +1,23 @@
+# AI生成コードレビュー
+
+## 結果: REJECT
+
+## サマリー
+PR 画像添付の実装は主要経路に配線されていますが、キャンセル時の一時ファイル cleanup 漏れと、汎用 PR 経路への GitHub 専用 resolver 漏洩が残っています。
+
+## 検証した項目
+| 観点 | 結果 | 備考 |
+|------|------|------|
+| 仮定の妥当性 | ❌ | キャンセル経路で副作用が残らない前提が崩れている |
+| API/ライブラリの実在 | ✅ | `fetch` / `Response` / `gh auth token` 呼び出し自体の実在性問題は未検出 |
+| コンテキスト適合 | ❌ | `GitProvider` 抽象を使う汎用層が `infra/github/*` に直接依存している |
+| スコープ | ✅ | 主要な実装範囲は要件内 |
+
+## 観測した指摘
+| # | family_tag | カテゴリ | 重大度 | 場所 | 問題 | 修正案 |
+|---|------------|---------|--------|------|------|--------|
+| 1 | missing-edge-case | 副作用 cleanup 漏れ | medium | `src/app/cli/routing.ts:154` | `resolvePrInput()` で PR 画像をダウンロードした後、`determineWorkflow()` キャンセルや `selectInteractiveMode()` キャンセルが `try/finally` の外側で `return` するため、一時画像ファイルが削除されない | PR 画像取得後の処理全体を `try/finally` で囲み、workflow 選択キャンセル・interactive mode 選択キャンセル・interactive 実行例外でも `cleanupSourceAttachments?.()` を必ず実行する |
+| 2 | unvalidated-assumption | provider 境界漏洩 | medium | `src/features/pipeline/steps.ts:14` | `getGitProvider()` で GitHub/GitLab を抽象化している汎用 PR 経路が `../../infra/github/prReviewImageAttachments.js` を直接 import している。同じ漏洩は `src/features/tasks/add/index.ts:17` と `src/app/cli/routing-inputs.ts:4` にもある | 画像添付解決を `GitProvider` 境界へ寄せ、GitHub provider は GitHub attachment resolver、GitLab provider は no-op または GitLab 用 resolver を返す形にする。汎用 feature/app 層から `infra/github/*` を直接参照しない |
+
+## REJECT判定条件
+- ブロッキング指摘が2件あります。
