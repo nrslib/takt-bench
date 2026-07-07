@@ -1,0 +1,48 @@
+# Merge Readiness Review
+
+## 結果: REJECT
+
+## サマリー
+現在のワークツリーでは元要件の品質条件である `npm test` が失敗しているため、マージ可能状態ではありません。加えて、PR画像attachment実装と無関係な `.takt` workflow/config 差分が残っており、要求外変更として除外が必要です。
+
+## 保守前提のマージ品質チェック
+| # | 観点 | 状態 | 根拠（ファイル:行 / テスト / 実行証跡） | コメント |
+|---|------|------|---------------------------------------|----------|
+| 1 | 要求充足 | 充足 | `src/features/tasks/prReviewImageAttachments.ts:129`, `src/infra/github/attachmentDownload.ts:128`, `src/features/tasks/add/index.ts:195`, `src/features/pipeline/steps.ts:164` | PR本文・通常コメント・review本文の画像抽出、GitHub attachment download、`add --pr` / pipeline 配線は確認済み |
+| 2 | 既存契約・既存フローへの影響 | 問題なし | `src/infra/git/types.ts:107`, `src/infra/github/GitHubProvider.ts:35`, `src/infra/gitlab/GitLabProvider.ts:35` | provider契約追加は GitHub/GitLab 実装へ反映済み |
+| 3 | テスト・検証 | 不足 | `npm test` exit code 1 | `analytics-workflowExecution.test.ts` で2件失敗 |
+| 4 | 要求外変更・スコープクリープ | 問題あり | `.takt/workflows/takt-default-for-local-llm.yaml:1`, `.takt/config.yaml:40` | タスクと無関係な workflow/config 差分が残存 |
+| 5 | 保守可能性・将来変更容易性 | 問題なし | `src/shared/utils/imageAttachmentStore.ts:26`, `src/shared/utils/imageMime.ts:22` | store/MIME共通化と内部状態コピーは確認済み |
+| 6 | 明白なセキュリティ・データ保護・運用リスク | 問題なし | `src/infra/github/attachmentDownload.ts:23`, `src/infra/github/attachmentDownload.ts:99` | allowlist、Content-Type、magic bytes、stream上限検証を確認済み |
+
+## 横断監査証跡
+| # | 変更カテゴリ | 抽出した項目 | 確認した検索語・ファイル | 判定 | コメント |
+|---|--------------|--------------|--------------------------|------|----------|
+| 1 | 型 / adapter / entrypoint | `PrReviewImageAttachment`, `isPrReviewImageAttachmentUrl`, `downloadPrReviewImageAttachment`, `resolvePrReviewImageAttachments`, `attachments`, `cleanupAttachments` | `rg "resolvePrReviewImageAttachments\|downloadPrReviewImageAttachment\|isPrReviewImageAttachmentUrl\|cleanupAttachments\|TaskAttachment"` / `src/infra/git/types.ts`, `src/features/tasks/add/index.ts`, `src/features/pipeline/steps.ts`, tests | 問題なし | GitHub/GitLab/provider mock/add/pipeline/test に反映済み |
+| 2 | 設定 / workflow | `.takt/config.yaml`, `.takt/workflows/takt-default-for-local-llm.yaml` | `git status --short`, `git diff -- .takt/config.yaml`, `git ls-files .takt/workflows` | 問題あり | 要求外変更が未追跡または差分として残存 |
+
+## 要求照合
+| # | 要求（タスクから抽出） | 状態 | 根拠（ファイル:行） | コメント |
+|---|-------------------|------|-------------------|----------|
+| 1 | PR body / comments / review thread画像を検出し attachment 化 | 充足 | `src/features/tasks/prReviewImageAttachments.ts:143` | body/comments/reviews を置換対象にしている |
+| 2 | PNG/JPEG/GIF/WebP、Content-Type、magic bytes、サイズ上限 | 充足 | `src/shared/utils/imageMime.ts:1`, `src/infra/github/attachmentDownload.ts:147` | stream読み込み中のサイズ上限も確認済み |
+| 3 | `takt add --pr` と pipeline `--pr` の両経路 | 充足 | `src/features/tasks/add/index.ts:228`, `src/features/pipeline/steps.ts:314` | task spec attachments 配線を確認済み |
+| 4 | `npm run build`、`npm run lint`、`npm test` 全成功 | 未充足 | `npm test` 実行結果 | build/lint は成功、npm test は失敗 |
+
+## 要求外変更・既存影響
+| # | 変更 | ファイル | 判定 | コメント |
+|---|------|---------|------|----------|
+| 1 | workflow定義の未追跡追加 | `.takt/workflows/takt-default-for-local-llm.yaml` | 問題あり | PR画像attachment実装と関係が確認できず、自動コミット対象になるリスクがある |
+| 2 | 末尾改行のみの設定差分 | `.takt/config.yaml` | 問題あり | 機能要件と無関係なノイズ差分 |
+
+## 観測した指摘
+| # | family_tag | カテゴリ | 重大度 | 場所 | 問題 | 修正案 |
+|---|------------|---------|--------|------|------|--------|
+| 1 | merge-readiness-test-failure | テスト不足 | high | `src/__tests__/analytics-workflowExecution.test.ts:259`, `src/features/analytics/writer.ts:58` | `npm test` が exit code 1。`analytics-workflowExecution.test.ts:259` は期待2行に対して4行、同 `:321` 経由で `writer.ts:58` が ENOENT。元要件の品質条件を満たさない | 現在のワークツリーで `npm test` を成功させる。既存フレークなら原因を切り分け、成功証跡を出せる状態にする |
+| 2 | merge-readiness-out-of-scope-change | スコープクリープ | medium | `.takt/workflows/takt-default-for-local-llm.yaml:1`, `.takt/config.yaml:40` | タスクと無関係な workflow/config 差分が残っている | 今回タスクに不要なら差分から除外する。必要ならタスク要件との関係を明示してレビュー対象にする |
+
+## 検証証跡
+- ビルド: `npm run build` 成功
+- lint: `npm run lint` 成功
+- テスト: `npm test` 失敗。`Test Files 1 failed | 124 passed`、`Tests 2 failed | 1785 passed` を含む shard が exit code 1
+- ledger: F-0001〜F-0010 は resolved のまま。再オープン根拠は確認していない

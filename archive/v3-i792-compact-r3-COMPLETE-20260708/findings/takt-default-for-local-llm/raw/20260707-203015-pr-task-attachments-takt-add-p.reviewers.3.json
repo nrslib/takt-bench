@@ -1,0 +1,50 @@
+[
+  {
+    "rawFindingId": "20260707-203015-pr-task-attachments-takt-add-p:reviewers:3:arch-review:arch-review-3-resolve-F0010",
+    "stepName": "arch-review",
+    "reviewer": "arch-review",
+    "familyTag": "implementation-semantics.internal-state-reference-leak",
+    "severity": "medium",
+    "title": "画像attachment storeの内部状態参照漏れは解消済み",
+    "location": "src/shared/utils/imageAttachmentStore.ts:26",
+    "description": "`src/shared/types/image-attachments.ts:1` で `StoredImageAttachment` の各フィールドが readonly になっています。`src/shared/utils/imageAttachmentStore.ts:26` の `copyImageAttachment()` は `Object.freeze()` したコピーを返し、`createImageAttachmentStore()` は `initialAttachments` を `map(copyImageAttachment)` で内部化しています。`saveImage()` も `src/shared/utils/imageAttachmentStore.ts:89` で frozen copy を内部配列へ保持し、`src/shared/utils/imageAttachmentStore.ts:99` で別コピーを返し、`src/shared/utils/imageAttachmentStore.ts:102` の `listAttachments()` も `attachments.map(copyImageAttachment)` を返すため、呼び出し側の変更が store 内部状態へ波及しないことを確認しました。対象テスト `npm test -- imageAttachments.test.ts prReviewImageAttachments.test.ts` は 2 files / 19 tests passed でした。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0010"
+  },
+  {
+    "rawFindingId": "20260707-203015-pr-task-attachments-takt-add-p:reviewers:3:ai-antipattern-review:ai-antipattern-review-3-raw-1",
+    "stepName": "ai-antipattern-review",
+    "reviewer": "ai-antipattern-review",
+    "familyTag": "logic-error",
+    "severity": "medium",
+    "title": "画像attachment storeの内部状態参照漏れが解消されたことを確認",
+    "location": "src/shared/utils/imageAttachmentStore.ts:26",
+    "description": "src/shared/utils/imageAttachmentStore.ts:26-32 の copyImageAttachment() が attachment の各フィールドを新しいオブジェクトへコピーして Object.freeze() し、同ファイル89-99で内部保存用attachment作成後に別コピーを返し、同ファイル102-103で listAttachments() も attachments.map(copyImageAttachment) を返すことを確認しました。src/shared/types/image-attachments.ts:1-5 では StoredImageAttachment の各フィールドが readonly 化され、src/__tests__/imageAttachments.test.ts:71-96 では saveImage()/listAttachments() の返却値が同一参照でなくfreeze済みで、mutationしてもstore内部状態が変わらないことを検証しています。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0010"
+  },
+  {
+    "rawFindingId": "20260707-203015-pr-task-attachments-takt-add-p:reviewers:3:coding-review:coding-review-3-raw-1",
+    "stepName": "coding-review",
+    "reviewer": "coding-review",
+    "familyTag": "image_attachment_store_state_leak",
+    "severity": "medium",
+    "title": "画像attachment storeが内部状態のオブジェクト参照をそのまま返す問題は解消済み",
+    "location": "src/shared/utils/imageAttachmentStore.ts:26",
+    "description": "`copyImageAttachment()` が `placeholder`、`tempPath`、`fileName` を持つ別オブジェクトを `Object.freeze()` して返し、`saveImage()` は内部配列へ保持する attachment と別コピーを返しています。`listAttachments()` も `attachments.map(copyImageAttachment)` で内部状態と共有しない frozen copy を返します。`StoredImageAttachment` / `ImageAttachmentReference` も `src/shared/types/image-attachments.ts:1` で readonly 化されています。再走査証跡: Policy の ## 原則、## スコープ判定、## 判定基準、## 振る舞い証跡の判定、## ファクトチェック、## 指摘ID管理、## ボーイスカウトルール、## 判定ルール、## レビューの基本手順、コーディングポリシーの ## 原則、## フォールバック・デフォルト引数の禁止、## 解決責務の一元化、## フェーズ分離、## 抽象化、## 構造、## 契約変更の整合性、## 状態管理、## 未完成コード、## 機密情報の扱い、## エラーハンドリングを再読し、累積差分の PR 画像取得、MIME/magic bytes、attachment store、`takt add --pr`、pipeline `--pr`、provider 契約、ドキュメント、関連テストを再確認しました。`npm run build`、`npm run lint`、関連テスト、`npm test` は成功しました。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0010"
+  },
+  {
+    "rawFindingId": "20260707-203015-pr-task-attachments-takt-add-p:reviewers:3:implementation-semantics-review:impl-sem-resolved-F0010",
+    "stepName": "implementation-semantics-review",
+    "reviewer": "implementation-semantics-review",
+    "familyTag": "implementation-semantics.internal-state-reference-leak",
+    "severity": "medium",
+    "title": "画像attachment storeの内部状態参照漏れは修正済み",
+    "location": "src/shared/utils/imageAttachmentStore.ts:26",
+    "description": "`copyImageAttachment()` が追加され、返却値は `Object.freeze({ placeholder, tempPath, fileName })` で作成されます。`createImageAttachmentStore()` は初期値を `options.initialAttachments.map(copyImageAttachment)` で取り込み、`saveImage()` では凍結コピーを内部配列に保持したうえで `return copyImageAttachment(attachment)` を返し、`listAttachments()` も `attachments.map(copyImageAttachment)` を返すため、内部配列の格納オブジェクト参照をそのまま外へ返していません。`StoredImageAttachment` と `ImageAttachmentReference` の各フィールドも `readonly` に変更されています。再走査では Knowledge の「データ構造の意味選択」「導出値の単一情報源」「命名と意味の整合」「境界での fail-fast」「内部状態の参照漏れ」と、Policy の「原則」「スコープ判定」「判定基準」「ファクトチェック」「契約追加・変更の全入口検証」「副作用と状態遷移の確認」を照合し、PR画像抽出、GitProvider経由の画像attachment解決、ストリーム上限、MIME判定、`takt add --pr` / pipeline `--pr` 配線を再確認しました。新たな実装意味論上のブロッキング問題は確認されませんでした。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0010"
+  }
+]

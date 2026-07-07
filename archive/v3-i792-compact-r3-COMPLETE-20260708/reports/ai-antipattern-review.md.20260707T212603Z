@@ -1,0 +1,27 @@
+# AI生成コードレビュー
+
+## 結果: REJECT
+
+## サマリー
+PRコメント画像取得の安全境界で、サイズ上限と magic bytes 検証が不十分なため差し戻しです。
+
+## 検証した項目
+| 観点 | 結果 | 備考 |
+|------|------|------|
+| 仮定の妥当性 | ❌ | 外部画像取得のサイズ上限が実効的に保証されていない |
+| API/ライブラリの実在 | ✅ | `fetch` / `AbortSignal.timeout` / `gh auth token` の使用箇所は確認 |
+| コンテキスト適合 | ✅ | `TaskAttachment[]` と既存 attachment 経路への配線は確認 |
+| スコープ | ✅ | 変更は PR 画像 attachment 対応に概ね収まっている |
+
+## 観測した指摘
+| # | family_tag | カテゴリ | 重大度 | 場所 | 問題 | 修正案 |
+|---|------------|---------|--------|------|------|--------|
+| 1 | missing-edge-case | 外部取得境界 | medium | `src/infra/github/attachmentDownload.ts:121` | `Content-Length` が無い、または実体より小さいレスポンスでは `response.arrayBuffer()` で全 body を読み切ってからサイズ検証しており、メモリ確保前に上限で停止できない。サイズ上限を設ける要件を満たしていない。 | `response.body` をストリームで読み、累積バイト数が `MAX_GITHUB_ATTACHMENT_IMAGE_BYTES` を超えた時点で abort する。`Content-Length` 欠落時のテストも追加する。 |
+| 2 | unvalidated-assumption | magic bytes検証 | medium | `src/shared/utils/imageMime.ts:9` | PNG 判定が `89 50 4E 47` の4バイトだけで成功し、PNG署名8バイト全体を確認していない。Content-Type が `image/png` の偽装・破損データを attachment として保存できる。 | PNG は8バイト署名全体を検証する。JPEG/GIF/WebP も最小署名長を明示し、短い偽装データを拒否するテストを追加する。 |
+
+## 再走査証跡
+- Policy Source の全 `##` セクションを確認し、特に「判定基準」「契約追加・変更の全入口検証」「副作用と状態遷移の確認」「もっともらしいが間違っている検出」「フォールバック・デフォルト引数の濫用検出」を差分と照合した。
+- Knowledge Source の全 `##` セクションを確認し、特に「境界での fail-fast」「セキュリティ」「呼び出しチェーン検証」「実装意味論」を外部画像取得・保存経路と照合した。
+
+## REJECT判定条件
+- ブロッキング指摘が2件あるため REJECT。

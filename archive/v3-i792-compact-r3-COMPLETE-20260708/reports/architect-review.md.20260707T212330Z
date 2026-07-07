@@ -1,0 +1,31 @@
+# アーキテクチャレビュー
+
+## 結果: REJECT
+
+## サマリー
+PR画像attachment実装は主要経路に配線されていますが、provider境界・feature境界・外部取得サイズ上限の設計にブロッキング問題があります。スコープ内で修正可能なため差し戻しです。
+
+## 確認した観点
+- [x] 構造・設計
+- [x] コード品質
+- [x] 変更スコープ
+- [x] テストカバレッジ
+- [x] デッドコード
+- [x] 呼び出しチェーン検証
+
+## 観測した指摘
+| # | family_tag | スコープ | 重大度 | 場所 | 問題 | 修正案 |
+|---|------------|---------|--------|------|------|--------|
+| 1 | architecture.provider-boundary.github-specific-download | スコープ内 | medium | `src/features/tasks/prReviewImageAttachments.ts:2` | provider-neutralな `add --pr` / pipeline `--pr` 経路が `infra/github/attachmentDownload.js` に直接依存し、GitHub固有のURL判定・認証取得がtasks層へ漏れている。 | GitHub画像取得は `GitProvider` 契約またはprovider adapter配下へ移し、tasks/pipeline層は抽象化済みの `TaskAttachment[]` だけを扱う。 |
+| 2 | architecture.feature-boundary.interactive-store-reuse | スコープ内 | medium | `src/features/tasks/prReviewImageAttachments.ts:7` | 非対話PR処理が `features/interactive/imageAttachments.js` の一時画像storeへ依存しており、tasks featureとinteractive featureの責務境界が混在している。 | 一時画像storeの純粋な保存責務を `shared` または `features/tasks` のattachment基盤へ抽出し、interactive側にはpaste/clipboard連携だけを残す。 |
+| 3 | security.download-size-limit.streaming-boundary | スコープ内 | high | `src/infra/github/attachmentDownload.ts:118` | `Content-Length` 検証後に `response.arrayBuffer()` で全量読み込みしており、ヘッダー欠落・虚偽時にサイズ上限を読み込み境界で強制できない。 | `response.body` をstream読み込みし、累積サイズが上限を超えた時点でabortする。`Content-Length` は早期拒否の補助に留める。 |
+| 4 | architecture.state-ownership.duplicate-mutable-context | スコープ内 | medium | `src/features/tasks/prReviewImageAttachments.ts:88` | attachment状態をstoreと `ImageResolutionContext.attachments` の二重で持ち、contextプロパティを直接変更している。状態所有と不変性が崩れている。 | attachment一覧の所有元を1つにし、storeの `listAttachments()` または戻り値ベースの累積で結果を構成する。 |
+| 5 | contract.docs.pr-image-attachments | スコープ内 | low | `docs/cli-reference.md:16` | `--pr` の画像attachment化、対応形式、サイズ上限、失敗条件、`order.md` 追記という利用者向け契約がCLI/READMEドキュメントへ反映されていない。 | 英日CLI referenceとREADMEに、PR本文・コメント・review thread画像のattachment化仕様と制約を追記する。 |
+
+## 検証証跡
+- ビルド: 未実行。レビュー専用フェーズのためソース変更・検証コマンド実行なし。
+- テスト: 未実行。差分と既存テスト内容の読解で設計観点を確認。
+- 動作確認: 未実行。実コードの呼び出しチェーン、provider実装、attachment保存経路、docs差分を確認。
+
+## REJECT判定条件
+- スコープ内のブロッキング指摘が1件以上あるため REJECT。

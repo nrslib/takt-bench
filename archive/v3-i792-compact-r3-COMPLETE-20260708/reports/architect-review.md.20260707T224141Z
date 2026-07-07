@@ -1,0 +1,17 @@
+# アーキテクチャレビュー
+
+## 結果: REJECT
+
+## サマリー
+F-0014 の workflow override 残存は解消を確認しました。  
+ただし pipeline `--pr` 経路で、画像 attachment 解決後から `TaskContent` 返却前に例外が起きると一時 attachment cleanup が実行されない構造問題を検出したため差し戻します。
+
+## 観測した指摘
+| # | family_tag | スコープ | 重大度 | 場所 | 問題 | 修正案 |
+|---|------------|---------|--------|------|------|--------|
+| 1 | architecture.side-effect-cleanup.pipeline-pr-attachments | スコープ内 | medium | `src/features/pipeline/steps.ts:175` | `resolvePrReviewImageAttachments()` 成功後、`formatPrReviewAsTask()` など `TaskContent` 返却前の処理が throw すると、`resolvedPrReview.cleanup` が `runPipeline()` に渡らず一時 attachment store が解放されません。 | `resolvePrReviewImageAttachments()` 成功後から `TaskContent` 返却までを `try/finally` で囲み、返却できなかった場合はその場で cleanup してください。`formatPrReviewAsTask()` 失敗時も cleanup される単体テストを追加してください。 |
+
+## 検証証跡
+- F-0014: `.takt/workflows/takt-default-for-local-llm.yaml` 不存在、`.takt/workflows` と `.takt/config.yaml` の差分なしを確認。
+- 再走査: Policy / Knowledge 全章を再読し、累積差分全体の副作用・状態遷移・呼び出しチェーンを照合。
+- ビルド/テスト: 前段 fix で `npm run build`、`npm run lint`、`npm test`、`npm run test:it`、`npm run test:e2e:mock` 成功報告あり。

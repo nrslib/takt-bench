@@ -1,0 +1,19 @@
+# コーディングレビュー
+
+## 結果: REJECT
+
+## サマリー
+PR 画像 attachment の主要配線は実装されていますが、Content-Length が無い大容量レスポンスを全量メモリに読み込んでからサイズ検証しており、サイズ上限が取得境界で強制されていません。
+
+## 観測した指摘
+| # | family_tag | 重大度 | 場所 | 問題 | 影響 | 修正案 |
+|---|------------|--------|------|------|------|--------|
+| 1 | github_attachment_size_limit | Medium | `src/infra/github/attachmentDownload.ts:121` | `validateContentLength()` は `Content-Length` が無い場合に通過し、その後 `response.arrayBuffer()` でレスポンス全体を読み込んでから 10 MiB 超過を検出している | ヘッダー無しまたは不正な大容量レスポンスで、サイズ上限を超えたデータをメモリに読み切ってから失敗するため、要件の「サイズ上限」を取得中に強制できない | `response.body` の reader でチャンクごとに累積サイズを確認し、上限超過時点で読み取りを中止する。Content-Length 無しの 10 MiB 超過レスポンスを全量読み込まず拒否するテストを追加する |
+
+## 検証証跡
+- 差分確認: `attachmentDownload.ts`、PR 画像 resolver、`takt add --pr` 配線、pipeline `--pr` 配線、関連テストを確認
+- ビルド: `npm run build` 成功
+- テスト: 対象テスト成功。`npm test` は `for-local-llm-replan-wiring.test.ts` の既存 workflow 文言差分で1件失敗
+
+## REJECT判定条件
+- ブロッキング指摘が1件あるため REJECT

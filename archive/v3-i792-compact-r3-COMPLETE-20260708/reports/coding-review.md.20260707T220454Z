@@ -1,0 +1,6 @@
+# コーディングレビュー
+
+## 結果: APPROVE
+
+## サマリー
+PR 画像 attachment 実装について、現在の coding-review 範囲で追加のブロッキング指摘はありません。F-0010 は内部 attachment オブジェクトのコピー返却・readonly 化・freeze・回帰テストにより解消済みで、`npm run build`、`npm run lint`、`npm test` は成功しています。

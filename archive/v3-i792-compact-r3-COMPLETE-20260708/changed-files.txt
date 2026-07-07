@@ -1,0 +1,33 @@
+ M README.md
+ M docs/cli-reference.ja.md
+ M docs/cli-reference.md
+ M src/__tests__/addTask.test.ts
+ M src/__tests__/conversationLoop-resume.test.ts
+ M src/__tests__/for-local-llm-replan-wiring.test.ts
+ M src/__tests__/git-factory.test.ts
+ M src/__tests__/github-provider.test.ts
+ M src/__tests__/gitlab-provider.test.ts
+ M src/__tests__/imageAttachments.test.ts
+ M src/__tests__/inlineImagePaste.test.ts
+ M src/__tests__/instructMode.test.ts
+ M src/__tests__/interactive-mode.test.ts
+ M src/__tests__/lineEditor.test.ts
+ M src/__tests__/pipelineExecution.test.ts
+ M src/__tests__/retrySlashCommand.test.ts
+ M src/features/interactive/imageAttachments.ts
+ M src/features/interactive/inlineImagePaste.ts
+ M src/features/pipeline/execute.ts
+ M src/features/pipeline/steps.ts
+ M src/features/tasks/add/index.ts
+ M src/infra/git/index.ts
+ M src/infra/git/types.ts
+ M src/infra/github/GitHubProvider.ts
+ M src/infra/gitlab/GitLabProvider.ts
+ M src/shared/types/image-attachments.ts
+?? src/__tests__/github-attachmentDownload.test.ts
+?? src/__tests__/imageMime.test.ts
+?? src/__tests__/prReviewImageAttachments.test.ts
+?? src/features/tasks/prReviewImageAttachments.ts
+?? src/infra/github/attachmentDownload.ts
+?? src/shared/utils/imageAttachmentStore.ts
+?? src/shared/utils/imageMime.ts

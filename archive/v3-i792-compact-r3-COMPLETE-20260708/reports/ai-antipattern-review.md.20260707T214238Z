@@ -1,0 +1,33 @@
+# AI生成コードレビュー
+
+## 結果: APPROVE
+
+## サマリー
+前回のAIレビュー指摘 F-0006 / F-0007 を含む関連open findingは実コードで解消確認でき、新規のAI特有問題は検出しませんでした。
+
+## 検証した項目
+| 観点 | 結果 | 備考 |
+|------|------|------|
+| 仮定の妥当性 | ✅ | PR画像取得のサイズ上限・magic bytes検証を再確認 |
+| API/ライブラリの実在 | ✅ | `ReadableStreamDefaultReader` / provider経由downloadの実装を確認 |
+| コンテキスト適合 | ✅ | GitHub固有処理は provider adapter 側へ分離済み |
+| スコープ | ✅ | PR画像attachment対応と関連修正に収まっている |
+
+## 観測した指摘
+| # | family_tag | カテゴリ | 重大度 | 場所 | 問題 | 修正案 |
+|---|------------|---------|--------|------|------|--------|
+| - | - | - | - | - | 新規指摘なし | - |
+
+## 解消確認
+- F-0001: `src/features/tasks/prReviewImageAttachments.ts:1` / `src/infra/github/GitHubProvider.ts:35` で provider 経由へ分離済み。
+- F-0002: `src/shared/utils/imageAttachmentStore.ts:62` へ一時画像storeが抽出済み。
+- F-0003 / F-0006 / F-0008 / F-0009: `src/infra/github/attachmentDownload.ts:99` でstream読み込み中に累積サイズ上限を強制済み。
+- F-0004: `src/features/tasks/prReviewImageAttachments.ts:155` で attachment 一覧の所有元が store に一本化済み。
+- F-0005: `docs/cli-reference.md:28` / `docs/cli-reference.ja.md:28` / `README.md:103` に `--pr` 画像attachment契約が反映済み。
+- F-0007: `src/shared/utils/imageMime.ts:7` でPNG署名8バイト全体を検証済み。
+
+## 再走査証跡
+Policy Source の全 `##` セクション、Knowledge Source の全 `##` セクションを再読し、前回指摘、adapter、normalizer、builder、外部取得、副作用、保存識別子、docs契約を差分と照合しました。`npm run build`、`npm run lint`、対象テストは成功。`npm test` は既存の `for-local-llm-replan-wiring.test.ts` 文言差分1件で失敗し、今回のPR画像attachment経路外として非finding扱いです。
+
+## REJECT判定条件
+- ブロッキング指摘なし。

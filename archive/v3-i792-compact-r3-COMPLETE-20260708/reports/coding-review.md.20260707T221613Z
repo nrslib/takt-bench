@@ -1,0 +1,6 @@
+# コーディングレビュー
+
+## 結果: APPROVE
+
+## サマリー
+PR コメント内画像の task attachment 化について、現在の coding-review 範囲で追加のブロッキング指摘はありません。累積差分を再走査し、`npm run build`、`npm run lint`、`npm test` が成功していることを確認済みです。

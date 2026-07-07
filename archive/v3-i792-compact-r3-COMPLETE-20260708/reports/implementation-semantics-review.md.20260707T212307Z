@@ -1,0 +1,18 @@
+# 実装意味論レビュー
+
+## 結果: REJECT
+
+## サマリー
+PR 添付画像の取得境界で、`Content-Length` が無い巨大レスポンスを全量メモリへ読み込んでからサイズ超過判定しており、サイズ上限が fail-fast に機能していません。外部取得を伴う新規境界の意味契約としてブロッキングです。
+
+## 観測した指摘
+| # | family_tag | 重大度 | 場所 | 問題 | 壊れる条件 | 修正案 |
+|---|------------|--------|------|------|-----------|--------|
+| 1 | implementation-semantics.fail-fast.size-limit | High | `src/infra/github/attachmentDownload.ts:121` | `validateContentLength()` は `Content-Length` 欠落時に許可し、その後 `response.arrayBuffer()` で本文を全量読み込んでから 10 MiB 超過を判定している。 | allowlisted GitHub attachment URL が chunked 応答または `Content-Length` なしで 10 MiB を大きく超える画像を返すと、上限超過を検出する前に巨大な Buffer を確保する。 | `response.body` を reader でチャンク読みし、累積サイズが `MAX_GITHUB_ATTACHMENT_IMAGE_BYTES` を超えた時点で abort する。`Content-Length` は早期拒否の補助に留め、本文読み込み中にも同じ上限を強制する。 |
+
+## 検証証跡
+- 差分確認: PR画像抽出・ダウンロード・`takt add --pr` 配線・pipeline `--pr` 配線の累積差分を確認した。
+- 判定根拠の実在確認: `src/infra/github/attachmentDownload.ts:55-67` で `Content-Length` 欠落時に return すること、`src/infra/github/attachmentDownload.ts:121` で `response.arrayBuffer()` により全量読み込みしていること、`src/infra/github/attachmentDownload.ts:85-86` で読み込み後にサイズ超過判定していることを実コードで確認した。
+
+## REJECT判定条件
+- ブロッキング指摘が1件あるため REJECT。

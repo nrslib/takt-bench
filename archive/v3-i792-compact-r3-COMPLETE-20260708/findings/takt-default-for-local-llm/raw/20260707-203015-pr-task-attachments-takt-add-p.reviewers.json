@@ -1,0 +1,110 @@
+[
+  {
+    "rawFindingId": "20260707-203015-pr-task-attachments-takt-add-p:reviewers:1:arch-review:arch-raw-001",
+    "stepName": "arch-review",
+    "reviewer": "arch-review",
+    "familyTag": "architecture.provider-boundary.github-specific-download",
+    "severity": "medium",
+    "title": "provider-neutralなPR経路がGitHub専用downloaderへ直接依存している",
+    "location": "src/features/tasks/prReviewImageAttachments.ts:2",
+    "description": "`resolvePrReviewImageAttachments()` は `../../infra/github/attachmentDownload.js` を直接importしています。一方で `add --pr` と pipeline `--pr` は `GitProvider` 抽象を通るprovider-neutralな入口で、実コード上も `GitLabProvider` が同じ `fetchPrReviewComments()` 契約を実装しています。汎用PR処理のfeature層がGitHub attachment URL判定・`gh auth token`取得という特定実装を知る構造になっており、provider境界が崩れています。",
+    "suggestion": "画像attachment解決を `GitProvider` 側の契約またはprovider adapter配下へ移し、tasks/pipeline層は provider-neutral な `TaskAttachment[]` だけを受け取る構造にしてください。GitHub実装だけがGitHub URL allowlistと認証付き取得を持つ形に分離してください。",
+    "kind": "issue"
+  },
+  {
+    "rawFindingId": "20260707-203015-pr-task-attachments-takt-add-p:reviewers:1:arch-review:arch-raw-002",
+    "stepName": "arch-review",
+    "reviewer": "arch-review",
+    "familyTag": "architecture.feature-boundary.interactive-store-reuse",
+    "severity": "medium",
+    "title": "tasks featureがinteractive featureの一時画像storeへ依存している",
+    "location": "src/features/tasks/prReviewImageAttachments.ts:7",
+    "description": "PR画像attachment解決は非対話の `takt add --pr` / pipeline `--pr` でも使われますが、実装は `../interactive/imageAttachments.js` の `createSessionImageAttachmentStore` と `ImageAttachmentStore` に依存しています。このモジュールは `InteractiveModeResult` や clipboard paste handler も同居するinteractive featureであり、tasks featureから参照するとvertical slice境界と責務が混ざります。",
+    "suggestion": "一時画像attachment storeの純粋な保存責務を `shared` または `features/tasks` のattachment基盤へ抽出し、interactive側にはpaste/clipboard/interactive result連携だけを残してください。PR resolverは抽出後の汎用storeに依存させてください。",
+    "kind": "issue"
+  },
+  {
+    "rawFindingId": "20260707-203015-pr-task-attachments-takt-add-p:reviewers:1:arch-review:arch-raw-003",
+    "stepName": "arch-review",
+    "reviewer": "arch-review",
+    "familyTag": "security.download-size-limit.streaming-boundary",
+    "severity": "high",
+    "title": "Content-Length不在または虚偽のレスポンスを全量読み込んでからサイズ検証している",
+    "location": "src/infra/github/attachmentDownload.ts:118",
+    "description": "`validateContentLength()` はヘッダー値だけを事前検証し、その後 `Buffer.from(await response.arrayBuffer())` でレスポンス全体をメモリへ読み込んでから `validateDownloadedImage()` で実サイズを確認しています。Content-Lengthが無い、または実体より小さい場合、タスク要件の「サイズ上限を設ける」を境界で強制できず、外部URL取得の安全境界として不十分です。",
+    "suggestion": "`response.body` をstreamとして読み、累積サイズが `MAX_GITHUB_ATTACHMENT_IMAGE_BYTES` を超えた時点でabortする実装にしてください。Content-Lengthは早期拒否の補助に留め、実バイト列の読み込み中にも同じ上限を強制してください。",
+    "kind": "issue"
+  },
+  {
+    "rawFindingId": "20260707-203015-pr-task-attachments-takt-add-p:reviewers:1:arch-review:arch-raw-004",
+    "stepName": "arch-review",
+    "reviewer": "arch-review",
+    "familyTag": "architecture.state-ownership.duplicate-mutable-context",
+    "severity": "medium",
+    "title": "画像attachmentの状態所有がstoreとcontextで重複し、contextを直接変更している",
+    "location": "src/features/tasks/prReviewImageAttachments.ts:88",
+    "description": "`ImageResolutionContext` は `store` と別に `attachments` 配列を保持し、`resolveImagePlaceholder()` が `context.attachments = [...context.attachments, attachment]` でcontextオブジェクトを直接変更しています。attachmentの保存状態は `ImageAttachmentStore` 側にも存在するため、状態所有が二重化しており、Policyの直接変更禁止と状態整合性の観点に抵触します。",
+    "suggestion": "attachment一覧の所有元を1つにしてください。例えば `ImageAttachmentStore.listAttachments()` を成功時の返却元にするか、`resolveImagePlaceholder()` が新規attachmentを戻り値として返し、呼び出し元のローカル累積値から結果を構成してください。",
+    "kind": "issue"
+  },
+  {
+    "rawFindingId": "20260707-203015-pr-task-attachments-takt-add-p:reviewers:1:arch-review:arch-raw-005",
+    "stepName": "arch-review",
+    "reviewer": "arch-review",
+    "familyTag": "contract.docs.pr-image-attachments",
+    "severity": "low",
+    "title": "--prの画像attachment契約がCLIドキュメントに反映されていない",
+    "location": "docs/cli-reference.md:16",
+    "description": "差分は `takt add --pr` と pipeline `--pr` のユーザー向け挙動を変更し、PR本文・コメント内のGitHub画像URL、対応形式、サイズ上限、失敗条件、`order.md` のattachment追記を追加しています。しかし `docs/cli-reference.md` / `docs/cli-reference.ja.md` の `--pr` 説明はレビューコメント取得のみで、画像attachmentの説明はexec入力中のpaste画像に限定されたままです。利用者向け契約変更に対してドキュメントが同じ探索対象・制限・失敗条件を説明していません。",
+    "suggestion": "英日CLI referenceとREADMEの該当箇所に、`--pr` 経路でGitHub PR本文・通常コメント・review thread内のPNG/JPEG/GIF/WebP画像をattachment化すること、サイズ上限、GitHub attachment URL限定、失敗時の扱い、`order.md` の添付画像セクションを追記してください。",
+    "kind": "issue"
+  },
+  {
+    "rawFindingId": "20260707-203015-pr-task-attachments-takt-add-p:reviewers:1:ai-antipattern-review:ai-antipattern-review-raw-1",
+    "stepName": "ai-antipattern-review",
+    "reviewer": "ai-antipattern-review",
+    "familyTag": "external-fetch-size-limit-not-enforced",
+    "severity": "medium",
+    "title": "Content-Length が無い巨大画像を全量メモリに読み込む",
+    "location": "src/infra/github/attachmentDownload.ts:121",
+    "description": "PR コメント由来の外部画像取得でサイズ上限を設ける要件がありますが、Content-Length が無い、または実体より小さいレスポンスでは `response.arrayBuffer()` で全 body を読み切ってから `data.length` を検証しています。実際のメモリ確保前に上限で停止できないため、サイズ上限が境界防御として機能しません。対象コードとテストを再確認したところ、Content-Length 超過時に arrayBuffer を呼ばないテストはありますが、Content-Length 欠落時のストリーム上限検証はありませんでした。",
+    "suggestion": "`response.body` をストリームで読み、累積バイト数が `MAX_GITHUB_ATTACHMENT_IMAGE_BYTES` を超えた時点で abort してください。Content-Length は早期拒否の補助に留め、ヘッダーが無い場合も同じ上限を deterministic に検証する単体テストを追加してください。",
+    "kind": "issue"
+  },
+  {
+    "rawFindingId": "20260707-203015-pr-task-attachments-takt-add-p:reviewers:1:ai-antipattern-review:ai-antipattern-review-raw-2",
+    "stepName": "ai-antipattern-review",
+    "reviewer": "ai-antipattern-review",
+    "familyTag": "image-magic-byte-validation-too-shallow",
+    "severity": "medium",
+    "title": "PNG の magic bytes 検証が 4 バイトだけで不十分",
+    "location": "src/shared/utils/imageMime.ts:9",
+    "description": "PR コメント画像は Content-Type と magic bytes の検証が安全要件ですが、PNG 判定は `89 50 4E 47` の 4 バイトだけで成功します。PNG の署名として必要な 8 バイト全体を確認していないため、Content-Type が image/png のレスポンスで先頭4バイトだけを合わせた不正または破損データを attachment として保存できます。この shared helper は既存 inline paste 由来ですが、今回の外部取得境界 `downloadGitHubAttachmentImage()` からも使用されるため、変更の安全性に直接関係します。",
+    "suggestion": "PNG は 8 バイト署名全体を検証してください。あわせて JPEG/GIF/WebP もサポート対象ごとの最小署名長を明示し、短い偽装データを拒否するテストを追加してください。",
+    "kind": "issue"
+  },
+  {
+    "rawFindingId": "20260707-203015-pr-task-attachments-takt-add-p:reviewers:1:coding-review:coding-review-raw-1",
+    "stepName": "coding-review",
+    "reviewer": "coding-review",
+    "familyTag": "github_attachment_size_limit",
+    "severity": "medium",
+    "title": "Content-Length が無い大容量画像を読み切ってからサイズ検証している",
+    "location": "src/infra/github/attachmentDownload.ts:121",
+    "description": "`validateContentLength()` は `Content-Length` が無い場合に通過し、その後 `response.arrayBuffer()` でレスポンス全体をメモリへ読み込んでから `validateDownloadedImage()` で 10 MiB 超過を検出しています。GitHub attachment URL に限定していても、サイズ上限はダウンロード中に強制されないため、ヘッダー無しまたは不正な大容量レスポンスでメモリを消費してから失敗します。要件の「サイズ上限を設ける」を実際の取得境界で満たしていません。再走査証跡: Policy の ## 原則、## スコープ判定、## 判定基準、## 振る舞い証跡の判定、## ファクトチェックを再読し、PR 画像取得境界・`takt add --pr` 配線・pipeline `--pr` 配線・新規テストを再確認しました。`npm run build`、`npm run lint`、対象テストは成功、`npm test` は既存の `for-local-llm-replan-wiring.test.ts` 文言差分で失敗しました。",
+    "suggestion": "`response.body` の reader でチャンクごとに累積サイズを確認し、`MAX_GITHUB_ATTACHMENT_IMAGE_BYTES` を超えた時点で読み取りを中止して例外にしてください。`Content-Length` が無い 10 MiB 超過レスポンスでも全体を読み切らず拒否するテストを追加してください。",
+    "kind": "issue"
+  },
+  {
+    "rawFindingId": "20260707-203015-pr-task-attachments-takt-add-p:reviewers:1:implementation-semantics-review:implementation-semantics-raw-1",
+    "stepName": "implementation-semantics-review",
+    "reviewer": "implementation-semantics-review",
+    "familyTag": "implementation-semantics.fail-fast.size-limit",
+    "severity": "high",
+    "title": "Content-Length が無い巨大画像を全量読み込んでからサイズ超過判定している",
+    "location": "src/infra/github/attachmentDownload.ts:121",
+    "description": "`validateContentLength()` は `Content-Length` が無い場合に許可し、その後 `response.arrayBuffer()` で本文を全量メモリへ読み込んでから `validateDownloadedImage()` の `data.length` で 10 MiB 超過を判定しています。GitHub attachment URL が chunked 応答または Content-Length なしで 10 MiB を大きく超える画像を返す条件では、設定したサイズ上限がダウンロード境界で機能せず、上限超過を検出する前に巨大な Buffer を確保します。これは「サイズ上限を設ける」契約と、境界での fail-fast に反します。",
+    "suggestion": "`response.body` の reader でチャンクごとに読み、累積サイズが `MAX_GITHUB_ATTACHMENT_IMAGE_BYTES` を超えた時点で abort してください。`Content-Length` は早期拒否の補助として残しつつ、ヘッダー欠落・不正・実サイズ不一致でも本文読み込み中に同じ上限を強制してください。",
+    "kind": "issue"
+  }
+]

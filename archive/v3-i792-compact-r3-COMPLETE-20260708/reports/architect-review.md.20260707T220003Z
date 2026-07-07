@@ -1,0 +1,9 @@
+# アーキテクチャレビュー
+
+## 結果: APPROVE
+
+## サマリー
+F-0010 は readonly 化と frozen copy 返却で解消済みです。累積差分を Policy / Knowledge 全章基準で再走査し、新規のスコープ内ブロッキング指摘は検出しませんでした。
+
+## 再走査証跡
+Policy 全 `##` セクション、Knowledge 全 `##` / `###` セクションを照合。対象テスト `npm test -- imageAttachments.test.ts prReviewImageAttachments.test.ts` は 2 files / 19 tests passed。

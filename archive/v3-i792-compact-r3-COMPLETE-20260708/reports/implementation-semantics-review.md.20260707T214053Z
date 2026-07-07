@@ -1,0 +1,23 @@
+# 実装意味論レビュー
+
+## 結果: REJECT
+
+## サマリー
+前回のサイズ上限 fail-fast、PNG magic bytes、context 側の attachment 二重所有は解消済みです。再走査で、shared 化された画像 attachment store が内部に保持する mutable object 参照をそのまま外へ返している問題を新たに確認しました。
+
+## 観測した指摘
+| # | family_tag | 重大度 | 場所 | 問題 | 壊れる条件 | 修正案 |
+|---|------------|--------|------|------|-----------|--------|
+| 1 | implementation-semantics.internal-state-reference-leak | Medium | `src/shared/utils/imageAttachmentStore.ts:91` | `saveImage()` は内部配列に追加した `attachment` と同じオブジェクト参照を返し、`listAttachments()` も配列だけをコピーして格納オブジェクト自体は共有している。`StoredImageAttachment` は readonly ではないため、呼び出し側の変更が store 内部状態へ波及する。 | 呼び出し側が返却された attachment の `fileName` や `tempPath` を変更すると、後続の `store.listAttachments()` や `resolvePrReviewImageAttachments()` から `saveTaskFile()` / `promoteTaskAttachments()` へ渡る保存先ファイル名・コピー元パスが書き換わる。 | `saveImage()` と `listAttachments()` は内部配列に保持するオブジェクトとは別のコピーを返す。あわせて `StoredImageAttachment` を readonly 型にする、または返却時に freeze するなど、呼び出し側の変更が store 内部状態へ波及しない契約にする。 |
+
+## 検証証跡
+- 差分確認: PR画像抽出、GitProvider経由の画像attachment解決、shared画像attachment store、ストリーム読み込み、MIME判定、`takt add --pr` / pipeline `--pr` 配線を再走査した。
+- 判定根拠の実在確認: `src/shared/utils/imageAttachmentStore.ts:81-91` で内部配列へ追加した `attachment` と同じ参照を返すこと、`src/shared/utils/imageAttachmentStore.ts:94-95` で浅い配列コピーのみを返すこと、`src/shared/types/image-attachments.ts:1-5` で `StoredImageAttachment` の各フィールドが readonly ではないことを確認した。
+- 解消確認: F-0003 / F-0006 / F-0008 / F-0009 は `src/infra/github/attachmentDownload.ts:99-121` と `src/infra/github/attachmentDownload.ts:150` でストリーム上限へ変更済み。F-0007 は `src/shared/utils/imageMime.ts:7` と `src/shared/utils/imageMime.ts:23` でPNG 8バイト署名へ変更済み。F-0004 は `src/features/tasks/prReviewImageAttachments.ts:20-25` と `src/features/tasks/prReviewImageAttachments.ts:155` でcontext側のattachments二重所有が除去済み。
+
+## 再走査証跡
+- Knowledge: 「データ構造の意味選択」「導出値の単一情報源」「命名と意味の整合」「境界での fail-fast」「内部状態の参照漏れ」を照合した。
+- Policy: 「原則」「スコープ判定」「判定基準」「ファクトチェック」「契約追加・変更の全入口検証」「副作用と状態遷移の確認」を照合した。
+
+## REJECT判定条件
+- ブロッキング指摘が1件あるため REJECT。

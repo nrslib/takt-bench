@@ -1,0 +1,50 @@
+[
+  {
+    "rawFindingId": "20260707-203015-pr-task-attachments-takt-add-p:reviewers:7:arch-review:arch-review-7-resolve-F0015",
+    "stepName": "arch-review",
+    "reviewer": "arch-review",
+    "familyTag": "architecture.side-effect-cleanup.pipeline-pr-attachments",
+    "severity": "medium",
+    "title": "pipeline --pr の整形失敗時 cleanup 漏れは解消済み",
+    "location": "src/features/pipeline/steps.ts:190",
+    "description": "`src/features/pipeline/steps.ts:174-178` で `resolvePrReviewImageAttachments()` 成功後すぐに cleanup 関数を保持し、`src/features/pipeline/steps.ts:181-189` で `TaskContent` へ cleanup 所有権を移譲した後だけ `cleanupOwnershipTransferred` を true にしています。`src/features/pipeline/steps.ts:190-193` の catch では所有権移譲前に `cleanupResolvedAttachments?.()` を実行するため、`formatPrReviewAsTask()` または成功表示が throw しても一時 attachment store は解放されます。さらに `src/__tests__/pipelineExecution.test.ts:860-895` で `formatPrReviewAsTask()` が `format failed` を throw する pipeline `--pr` 経路でも cleanup が1回呼ばれ、workflow 実行へ進まないことを確認しています。再走査では Policy の `## 原則`、`## スコープ判定`、`## 判定基準`、`## 振る舞い証跡の判定`、`## ファクトチェック`、`## レビューの基本手順` と、Knowledge の `## 構造・設計`、`## 境界での解決`、`## 呼び出しチェーン検証`、`## 公開状態の不変性`、`## 変更スコープの評価` を含む全 `##` セクションを累積差分へ照合し、この finding の受入条件を満たすことを確認しました。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0015"
+  },
+  {
+    "rawFindingId": "20260707-203015-pr-task-attachments-takt-add-p:reviewers:7:ai-antipattern-review:ai-antipattern-review-7-raw-1",
+    "stepName": "ai-antipattern-review",
+    "reviewer": "ai-antipattern-review",
+    "familyTag": "logic-error",
+    "severity": "medium",
+    "title": "pipeline --pr の整形失敗時にも一時attachment cleanupが実行されることを確認",
+    "location": "src/features/pipeline/steps.ts:174",
+    "description": "`src/features/pipeline/steps.ts:174` で `cleanupResolvedAttachments` を保持し、`src/features/pipeline/steps.ts:190` 以降の catch で `cleanupOwnershipTransferred` が false の場合に `cleanupResolvedAttachments?.()` を呼ぶ実装を確認しました。これにより `resolvePrReviewImageAttachments()` 成功後、`formatPrReviewAsTask()` または成功表示が throw して `TaskContent` へ cleanup 所有権を移せない経路でも cleanup が実行されます。`src/__tests__/pipelineExecution.test.ts:860` のテストで `formatPrReviewAsTask()` が throw した場合に cleanup が1回呼ばれ、task execution が開始されないことも確認しました。再走査証跡: Policy Source と Knowledge Source の全 `##` セクションを列挙し、Policy の原則、スコープ判定、判定基準、振る舞い証跡、ファクトチェック、契約追加・変更の全入口検証、副作用と状態遷移の確認、AI Antipattern の仮定検証、コンテキスト適合性、スコープクリープ、未使用コード検出、不要な後方互換コード検出、および Knowledge の構造・設計、呼び出しチェーン検証、公開状態の不変性、境界での fail-fast、内部状態の参照漏れと照合しました。`npm run build`、`npm run lint`、`npm test` は成功しました。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0015"
+  },
+  {
+    "rawFindingId": "20260707-203015-pr-task-attachments-takt-add-p:reviewers:7:coding-review:coding-review-7-raw-1",
+    "stepName": "coding-review",
+    "reviewer": "coding-review",
+    "familyTag": "pipeline_pr_attachment_cleanup_on_format_failure",
+    "severity": "medium",
+    "title": "pipeline --pr の整形失敗時に一時attachment cleanupが実行されない",
+    "location": "src/features/pipeline/steps.ts:174",
+    "description": "`resolveTaskContent()` は `resolvePrReviewImageAttachments()` 成功後に `cleanupResolvedAttachments` を保持し、`formatPrReviewAsTask()` を含む返却前処理を `try/catch` 内で実行しています。`TaskContent` へ cleanup 所有権を移す前に例外が起きた場合は `src/features/pipeline/steps.ts:190-193` で `cleanupResolvedAttachments?.()` を呼び、`src/features/pipeline/execute.ts:90-92` では所有権移譲後の cleanup を `finally` で実行するため、F-0015 の漏れは解消されています。回帰テスト `src/__tests__/pipelineExecution.test.ts:860` で `formatPrReviewAsTask()` が throw した場合に cleanup が1回呼ばれ、workflow 実行に進まないことを確認しました。再走査証跡: Policy の ## 原則、## スコープ判定、## 判定基準、## 振る舞い証跡の判定、## ファクトチェック、## ボーイスカウトルールを再読し、pipeline `--pr` と `takt add --pr` の attachment cleanup 所有移譲を累積差分から確認しました。`npm run build`、`npm run lint`、関連テスト、`npm test` は成功しました。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0015"
+  },
+  {
+    "rawFindingId": "20260707-203015-pr-task-attachments-takt-add-p:reviewers:7:implementation-semantics-review:implementation-semantics-7-resolved-001",
+    "stepName": "implementation-semantics-review",
+    "reviewer": "implementation-semantics-review",
+    "familyTag": "state-consistency",
+    "severity": "medium",
+    "title": "pipeline --pr の整形失敗時にも一時attachment cleanupが実行されることを確認",
+    "location": "src/features/pipeline/steps.ts:174",
+    "description": "`resolveTaskContent()` は `resolvePrReviewImageAttachments()` 成功後に `cleanupResolvedAttachments` へ cleanup を保持し、`cleanupOwnershipTransferred` が true になる前の例外経路では `src/features/pipeline/steps.ts:190` の catch で `cleanupResolvedAttachments?.()` を呼ぶ実装になっています。`formatPrReviewAsTask()` が throw する場合も `TaskContent` へ所有権移譲される前なので cleanup が実行されます。`src/__tests__/pipelineExecution.test.ts:860` で format 失敗時に exit code 2、`cleanup` 1回、`executeTask` 未呼び出しを検証していることも確認しました。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0015"
+  }
+]

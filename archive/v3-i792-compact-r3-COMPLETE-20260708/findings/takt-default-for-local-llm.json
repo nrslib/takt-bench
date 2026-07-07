@@ -1,0 +1,1259 @@
+{
+  "version": 1,
+  "workflowName": "takt-default-for-local-llm",
+  "nextId": 16,
+  "updatedAt": "2026-07-07T22:44:44.668Z",
+  "findings": [
+    {
+      "id": "F-0001",
+      "status": "resolved",
+      "lifecycle": "resolved",
+      "severity": "medium",
+      "title": "provider-neutralなPR経路がGitHub専用downloaderへ直接依存している",
+      "location": "src/features/tasks/prReviewImageAttachments.ts:2",
+      "description": "`resolvePrReviewImageAttachments()` は `../../infra/github/attachmentDownload.js` を直接importしています。一方で `add --pr` と pipeline `--pr` は `GitProvider` 抽象を通るprovider-neutralな入口で、実コード上も `GitLabProvider` が同じ `fetchPrReviewComments()` 契約を実装しています。汎用PR処理のfeature層がGitHub attachment URL判定・`gh auth token`取得という特定実装を知る構造になっており、provider境界が崩れています。",
+      "suggestion": "画像attachment解決を `GitProvider` 側の契約またはprovider adapter配下へ移し、tasks/pipeline層は provider-neutral な `TaskAttachment[]` だけを受け取る構造にしてください。GitHub実装だけがGitHub URL allowlistと認証付き取得を持つ形に分離してください。",
+      "reviewers": [
+        "arch-review"
+      ],
+      "rawFindingIds": [
+        "20260707-203015-pr-task-attachments-takt-add-p:reviewers:1:arch-review:arch-raw-001"
+      ],
+      "firstSeen": {
+        "runId": "20260707-203015-pr-task-attachments-takt-add-p",
+        "stepName": "arch-review",
+        "timestamp": "2026-07-07T21:02:05.519Z"
+      },
+      "lastSeen": {
+        "runId": "20260707-203015-pr-task-attachments-takt-add-p",
+        "stepName": "reviewers",
+        "timestamp": "2026-07-07T21:02:05.519Z"
+      },
+      "resolvedAt": "2026-07-07T21:26:11.323Z",
+      "resolvedEvidence": "resolution_confirmation が targetFindingId=F-0001 を明示し、provider-neutral PR経路のGitHub専用downloader直接依存解消を確認しているため。"
+    },
+    {
+      "id": "F-0002",
+      "status": "resolved",
+      "lifecycle": "resolved",
+      "severity": "medium",
+      "title": "tasks featureがinteractive featureの一時画像storeへ依存している",
+      "location": "src/features/tasks/prReviewImageAttachments.ts:7",
+      "description": "PR画像attachment解決は非対話の `takt add --pr` / pipeline `--pr` でも使われますが、実装は `../interactive/imageAttachments.js` の `createSessionImageAttachmentStore` と `ImageAttachmentStore` に依存しています。このモジュールは `InteractiveModeResult` や clipboard paste handler も同居するinteractive featureであり、tasks featureから参照するとvertical slice境界と責務が混ざります。",
+      "suggestion": "一時画像attachment storeの純粋な保存責務を `shared` または `features/tasks` のattachment基盤へ抽出し、interactive側にはpaste/clipboard/interactive result連携だけを残してください。PR resolverは抽出後の汎用storeに依存させてください。",
+      "reviewers": [
+        "arch-review"
+      ],
+      "rawFindingIds": [
+        "20260707-203015-pr-task-attachments-takt-add-p:reviewers:1:arch-review:arch-raw-002"
+      ],
+      "firstSeen": {
+        "runId": "20260707-203015-pr-task-attachments-takt-add-p",
+        "stepName": "arch-review",
+        "timestamp": "2026-07-07T21:02:05.519Z"
+      },
+      "lastSeen": {
+        "runId": "20260707-203015-pr-task-attachments-takt-add-p",
+        "stepName": "reviewers",
+        "timestamp": "2026-07-07T21:02:05.519Z"
+      },
+      "resolvedAt": "2026-07-07T21:26:11.323Z",
+      "resolvedEvidence": "resolution_confirmation が targetFindingId=F-0002 を明示し、tasks featureからinteractive storeへの依存解消を確認しているため。"
+    },
+    {
+      "id": "F-0003",
+      "status": "resolved",
+      "lifecycle": "resolved",
+      "severity": "high",
+      "title": "Content-Length不在または虚偽のレスポンスを全量読み込んでからサイズ検証している",
+      "location": "src/infra/github/attachmentDownload.ts:118",
+      "description": "`validateContentLength()` はヘッダー値だけを事前検証し、その後 `Buffer.from(await response.arrayBuffer())` でレスポンス全体をメモリへ読み込んでから `validateDownloadedImage()` で実サイズを確認しています。Content-Lengthが無い、または実体より小さい場合、タスク要件の「サイズ上限を設ける」を境界で強制できず、外部URL取得の安全境界として不十分です。",
+      "suggestion": "`response.body` をstreamとして読み、累積サイズが `MAX_GITHUB_ATTACHMENT_IMAGE_BYTES` を超えた時点でabortする実装にしてください。Content-Lengthは早期拒否の補助に留め、実バイト列の読み込み中にも同じ上限を強制してください。",
+      "reviewers": [
+        "arch-review"
+      ],
+      "rawFindingIds": [
+        "20260707-203015-pr-task-attachments-takt-add-p:reviewers:1:arch-review:arch-raw-003"
+      ],
+      "firstSeen": {
+        "runId": "20260707-203015-pr-task-attachments-takt-add-p",
+        "stepName": "arch-review",
+        "timestamp": "2026-07-07T21:02:05.519Z"
+      },
+      "lastSeen": {
+        "runId": "20260707-203015-pr-task-attachments-takt-add-p",
+        "stepName": "reviewers",
+        "timestamp": "2026-07-07T21:02:05.519Z"
+      },
+      "resolvedAt": "2026-07-07T21:26:11.323Z",
+      "resolvedEvidence": "resolution_confirmation が targetFindingId=F-0003 を明示し、Content-Length不在または虚偽レスポンスの全量読み込み解消を確認しているため。"
+    },
+    {
+      "id": "F-0004",
+      "status": "resolved",
+      "lifecycle": "resolved",
+      "severity": "medium",
+      "title": "画像attachmentの状態所有がstoreとcontextで重複し、contextを直接変更している",
+      "location": "src/features/tasks/prReviewImageAttachments.ts:88",
+      "description": "`ImageResolutionContext` は `store` と別に `attachments` 配列を保持し、`resolveImagePlaceholder()` が `context.attachments = [...context.attachments, attachment]` でcontextオブジェクトを直接変更しています。attachmentの保存状態は `ImageAttachmentStore` 側にも存在するため、状態所有が二重化しており、Policyの直接変更禁止と状態整合性の観点に抵触します。",
+      "suggestion": "attachment一覧の所有元を1つにしてください。例えば `ImageAttachmentStore.listAttachments()` を成功時の返却元にするか、`resolveImagePlaceholder()` が新規attachmentを戻り値として返し、呼び出し元のローカル累積値から結果を構成してください。",
+      "reviewers": [
+        "arch-review"
+      ],
+      "rawFindingIds": [
+        "20260707-203015-pr-task-attachments-takt-add-p:reviewers:1:arch-review:arch-raw-004"
+      ],
+      "firstSeen": {
+        "runId": "20260707-203015-pr-task-attachments-takt-add-p",
+        "stepName": "arch-review",
+        "timestamp": "2026-07-07T21:02:05.519Z"
+      },
+      "lastSeen": {
+        "runId": "20260707-203015-pr-task-attachments-takt-add-p",
+        "stepName": "reviewers",
+        "timestamp": "2026-07-07T21:02:05.519Z"
+      },
+      "resolvedAt": "2026-07-07T21:26:11.323Z",
+      "resolvedEvidence": "resolution_confirmation が targetFindingId=F-0004 を明示し、画像attachment状態の二重所有とcontext直接変更の解消を確認しているため。"
+    },
+    {
+      "id": "F-0005",
+      "status": "resolved",
+      "lifecycle": "resolved",
+      "severity": "low",
+      "title": "--prの画像attachment契約がCLIドキュメントに反映されていない",
+      "location": "docs/cli-reference.md:16",
+      "description": "差分は `takt add --pr` と pipeline `--pr` のユーザー向け挙動を変更し、PR本文・コメント内のGitHub画像URL、対応形式、サイズ上限、失敗条件、`order.md` のattachment追記を追加しています。しかし `docs/cli-reference.md` / `docs/cli-reference.ja.md` の `--pr` 説明はレビューコメント取得のみで、画像attachmentの説明はexec入力中のpaste画像に限定されたままです。利用者向け契約変更に対してドキュメントが同じ探索対象・制限・失敗条件を説明していません。",
+      "suggestion": "英日CLI referenceとREADMEの該当箇所に、`--pr` 経路でGitHub PR本文・通常コメント・review thread内のPNG/JPEG/GIF/WebP画像をattachment化すること、サイズ上限、GitHub attachment URL限定、失敗時の扱い、`order.md` の添付画像セクションを追記してください。",
+      "reviewers": [
+        "arch-review"
+      ],
+      "rawFindingIds": [
+        "20260707-203015-pr-task-attachments-takt-add-p:reviewers:1:arch-review:arch-raw-005"
+      ],
+      "firstSeen": {
+        "runId": "20260707-203015-pr-task-attachments-takt-add-p",
+        "stepName": "arch-review",
+        "timestamp": "2026-07-07T21:02:05.519Z"
+      },
+      "lastSeen": {
+        "runId": "20260707-203015-pr-task-attachments-takt-add-p",
+        "stepName": "reviewers",
+        "timestamp": "2026-07-07T21:02:05.519Z"
+      },
+      "resolvedAt": "2026-07-07T21:26:11.323Z",
+      "resolvedEvidence": "resolution_confirmation が targetFindingId=F-0005 を明示し、--pr画像attachment契約のCLIドキュメント反映を確認しているため。"
+    },
+    {
+      "id": "F-0006",
+      "status": "resolved",
+      "lifecycle": "resolved",
+      "severity": "medium",
+      "title": "Content-Length が無い巨大画像を全量メモリに読み込む",
+      "location": "src/infra/github/attachmentDownload.ts:121",
+      "description": "PR コメント由来の外部画像取得でサイズ上限を設ける要件がありますが、Content-Length が無い、または実体より小さいレスポンスでは `response.arrayBuffer()` で全 body を読み切ってから `data.length` を検証しています。実際のメモリ確保前に上限で停止できないため、サイズ上限が境界防御として機能しません。対象コードとテストを再確認したところ、Content-Length 超過時に arrayBuffer を呼ばないテストはありますが、Content-Length 欠落時のストリーム上限検証はありませんでした。",
+      "suggestion": "`response.body` をストリームで読み、累積バイト数が `MAX_GITHUB_ATTACHMENT_IMAGE_BYTES` を超えた時点で abort してください。Content-Length は早期拒否の補助に留め、ヘッダーが無い場合も同じ上限を deterministic に検証する単体テストを追加してください。",
+      "reviewers": [
+        "ai-antipattern-review"
+      ],
+      "rawFindingIds": [
+        "20260707-203015-pr-task-attachments-takt-add-p:reviewers:1:ai-antipattern-review:ai-antipattern-review-raw-1"
+      ],
+      "firstSeen": {
+        "runId": "20260707-203015-pr-task-attachments-takt-add-p",
+        "stepName": "ai-antipattern-review",
+        "timestamp": "2026-07-07T21:02:05.519Z"
+      },
+      "lastSeen": {
+        "runId": "20260707-203015-pr-task-attachments-takt-add-p",
+        "stepName": "reviewers",
+        "timestamp": "2026-07-07T21:02:05.519Z"
+      },
+      "resolvedAt": "2026-07-07T21:26:11.323Z",
+      "resolvedEvidence": "resolution_confirmation が targetFindingId=F-0006 を明示し、Content-Lengthなし巨大画像の全量メモリ読み込み解消を確認しているため。"
+    },
+    {
+      "id": "F-0007",
+      "status": "resolved",
+      "lifecycle": "resolved",
+      "severity": "medium",
+      "title": "PNG の magic bytes 検証が 4 バイトだけで不十分",
+      "location": "src/shared/utils/imageMime.ts:9",
+      "description": "PR コメント画像は Content-Type と magic bytes の検証が安全要件ですが、PNG 判定は `89 50 4E 47` の 4 バイトだけで成功します。PNG の署名として必要な 8 バイト全体を確認していないため、Content-Type が image/png のレスポンスで先頭4バイトだけを合わせた不正または破損データを attachment として保存できます。この shared helper は既存 inline paste 由来ですが、今回の外部取得境界 `downloadGitHubAttachmentImage()` からも使用されるため、変更の安全性に直接関係します。",
+      "suggestion": "PNG は 8 バイト署名全体を検証してください。あわせて JPEG/GIF/WebP もサポート対象ごとの最小署名長を明示し、短い偽装データを拒否するテストを追加してください。",
+      "reviewers": [
+        "ai-antipattern-review"
+      ],
+      "rawFindingIds": [
+        "20260707-203015-pr-task-attachments-takt-add-p:reviewers:1:ai-antipattern-review:ai-antipattern-review-raw-2"
+      ],
+      "firstSeen": {
+        "runId": "20260707-203015-pr-task-attachments-takt-add-p",
+        "stepName": "ai-antipattern-review",
+        "timestamp": "2026-07-07T21:02:05.519Z"
+      },
+      "lastSeen": {
+        "runId": "20260707-203015-pr-task-attachments-takt-add-p",
+        "stepName": "reviewers",
+        "timestamp": "2026-07-07T21:02:05.519Z"
+      },
+      "resolvedAt": "2026-07-07T21:26:11.323Z",
+      "resolvedEvidence": "resolution_confirmation が targetFindingId=F-0007 を明示し、PNG magic bytesの4バイト判定解消を確認しているため。"
+    },
+    {
+      "id": "F-0008",
+      "status": "resolved",
+      "lifecycle": "resolved",
+      "severity": "medium",
+      "title": "Content-Length が無い大容量画像を読み切ってからサイズ検証している",
+      "location": "src/infra/github/attachmentDownload.ts:121",
+      "description": "`validateContentLength()` は `Content-Length` が無い場合に通過し、その後 `response.arrayBuffer()` でレスポンス全体をメモリへ読み込んでから `validateDownloadedImage()` で 10 MiB 超過を検出しています。GitHub attachment URL に限定していても、サイズ上限はダウンロード中に強制されないため、ヘッダー無しまたは不正な大容量レスポンスでメモリを消費してから失敗します。要件の「サイズ上限を設ける」を実際の取得境界で満たしていません。再走査証跡: Policy の ## 原則、## スコープ判定、## 判定基準、## 振る舞い証跡の判定、## ファクトチェックを再読し、PR 画像取得境界・`takt add --pr` 配線・pipeline `--pr` 配線・新規テストを再確認しました。`npm run build`、`npm run lint`、対象テストは成功、`npm test` は既存の `for-local-llm-replan-wiring.test.ts` 文言差分で失敗しました。",
+      "suggestion": "`response.body` の reader でチャンクごとに累積サイズを確認し、`MAX_GITHUB_ATTACHMENT_IMAGE_BYTES` を超えた時点で読み取りを中止して例外にしてください。`Content-Length` が無い 10 MiB 超過レスポンスでも全体を読み切らず拒否するテストを追加してください。",
+      "reviewers": [
+        "coding-review"
+      ],
+      "rawFindingIds": [
+        "20260707-203015-pr-task-attachments-takt-add-p:reviewers:1:coding-review:coding-review-raw-1"
+      ],
+      "firstSeen": {
+        "runId": "20260707-203015-pr-task-attachments-takt-add-p",
+        "stepName": "coding-review",
+        "timestamp": "2026-07-07T21:02:05.519Z"
+      },
+      "lastSeen": {
+        "runId": "20260707-203015-pr-task-attachments-takt-add-p",
+        "stepName": "reviewers",
+        "timestamp": "2026-07-07T21:02:05.519Z"
+      },
+      "resolvedAt": "2026-07-07T21:26:11.323Z",
+      "resolvedEvidence": "resolution_confirmation が targetFindingId=F-0008 を明示し、Content-Lengthなし大容量画像の読み切り後サイズ検証解消を確認しているため。"
+    },
+    {
+      "id": "F-0009",
+      "status": "resolved",
+      "lifecycle": "resolved",
+      "severity": "high",
+      "title": "Content-Length が無い巨大画像を全量読み込んでからサイズ超過判定している",
+      "location": "src/infra/github/attachmentDownload.ts:121",
+      "description": "`validateContentLength()` は `Content-Length` が無い場合に許可し、その後 `response.arrayBuffer()` で本文を全量メモリへ読み込んでから `validateDownloadedImage()` の `data.length` で 10 MiB 超過を判定しています。GitHub attachment URL が chunked 応答または Content-Length なしで 10 MiB を大きく超える画像を返す条件では、設定したサイズ上限がダウンロード境界で機能せず、上限超過を検出する前に巨大な Buffer を確保します。これは「サイズ上限を設ける」契約と、境界での fail-fast に反します。",
+      "suggestion": "`response.body` の reader でチャンクごとに読み、累積サイズが `MAX_GITHUB_ATTACHMENT_IMAGE_BYTES` を超えた時点で abort してください。`Content-Length` は早期拒否の補助として残しつつ、ヘッダー欠落・不正・実サイズ不一致でも本文読み込み中に同じ上限を強制してください。",
+      "reviewers": [
+        "implementation-semantics-review"
+      ],
+      "rawFindingIds": [
+        "20260707-203015-pr-task-attachments-takt-add-p:reviewers:1:implementation-semantics-review:implementation-semantics-raw-1"
+      ],
+      "firstSeen": {
+        "runId": "20260707-203015-pr-task-attachments-takt-add-p",
+        "stepName": "implementation-semantics-review",
+        "timestamp": "2026-07-07T21:02:05.519Z"
+      },
+      "lastSeen": {
+        "runId": "20260707-203015-pr-task-attachments-takt-add-p",
+        "stepName": "reviewers",
+        "timestamp": "2026-07-07T21:02:05.519Z"
+      },
+      "resolvedAt": "2026-07-07T21:26:11.323Z",
+      "resolvedEvidence": "resolution_confirmation が targetFindingId=F-0009 を明示し、Content-Lengthなし巨大画像のダウンロード境界fail-fast解消を確認しているため。"
+    },
+    {
+      "id": "F-0010",
+      "status": "resolved",
+      "lifecycle": "resolved",
+      "severity": "medium",
+      "title": "画像attachment storeが内部状態のオブジェクト参照をそのまま返している",
+      "location": "src/shared/utils/imageAttachmentStore.ts:91",
+      "description": "`saveImage()` は内部配列へ追加した `attachment` オブジェクトと同じ参照を返し、`listAttachments()` も配列だけをコピーして格納オブジェクト自体は共有しています。`StoredImageAttachment` の `placeholder`、`tempPath`、`fileName` は readonly ではないため、呼び出し側が返却された attachment の `fileName` や `tempPath` を変更すると、store 内部の保存済み attachment も同時に書き換わります。その後の `store.listAttachments()` や `resolvePrReviewImageAttachments()` の返却値を `saveTaskFile()` / `promoteTaskAttachments()` へ渡す経路で、保存先ファイル名やコピー元パスが呼び出し側の変更に引きずられます。これはナレッジの「コレクションのコピーは返すが、格納されたオブジェクト自体は共有されている」内部状態漏れに該当します。",
+      "suggestion": "`saveImage()` と `listAttachments()` は内部配列に保持するオブジェクトとは別のコピーを返してください。あわせて `StoredImageAttachment` を readonly 型にする、または返却時に `Object.freeze` した値を返すなど、呼び出し側の変更が store 内部状態へ波及しない契約にしてください。",
+      "reviewers": [
+        "implementation-semantics-review"
+      ],
+      "rawFindingIds": [
+        "20260707-203015-pr-task-attachments-takt-add-p:reviewers:2:implementation-semantics-review:impl-sem-raw-001"
+      ],
+      "firstSeen": {
+        "runId": "20260707-203015-pr-task-attachments-takt-add-p",
+        "stepName": "implementation-semantics-review",
+        "timestamp": "2026-07-07T21:26:11.323Z"
+      },
+      "lastSeen": {
+        "runId": "20260707-203015-pr-task-attachments-takt-add-p",
+        "stepName": "reviewers",
+        "timestamp": "2026-07-07T21:26:11.323Z"
+      },
+      "resolvedAt": "2026-07-07T21:44:37.325Z",
+      "resolvedEvidence": "prior ledger の open finding F-0010 は familyTag implementation-semantics.internal-state-reference-leak / location src/shared/utils/imageAttachmentStore.ts:91 の内部状態参照漏れ。現在 raw findings はすべて kind=resolution_confirmation で targetFindingId=F-0010 を指し、copyImageAttachment による frozen copy、saveImage/listAttachments の別コピー返却、readonly 型化を確認しているため解消確認として扱う。"
+    },
+    {
+      "id": "F-0011",
+      "status": "resolved",
+      "lifecycle": "resolved",
+      "severity": "medium",
+      "title": "PR画像attachmentのcleanup失敗が本来の結果やエラーを上書きする",
+      "location": "src/features/tasks/prReviewImageAttachments.ts:44",
+      "description": "`createIdempotentCleanup()` は `store.cleanup()` を直接呼び出しており、`cleanupImageAttachmentStore()` のような例外吸収を使っていません。そのため `resolvePrReviewImageAttachments()` の失敗経路では `catch` 内の `cleanup()` が throw すると元の download / validation エラーが `throw error` へ到達する前に失われます。同じ cleanup は `src/features/tasks/add/index.ts:236` の `finally` と `src/features/pipeline/execute.ts:91` の `finally` からも呼ばれるため、task 保存または workflow 実行が完了した後でも一時ディレクトリ削除失敗だけで `add --pr` / pipeline `--pr` の結果を例外化できます。これは Policy の状態整合性・副作用と状態遷移の確認、および plan の「cleanup は成功・失敗の両方で実行する」契約に対して、後片付け失敗が主処理の結果を壊す構造です。",
+      "suggestion": "`createIdempotentCleanup()` は `cleanupImageAttachmentStore(store)` を使うか、同等に cleanup 例外を debug log に留める実装にしてください。失敗経路では元の download / validation エラーを保持し、成功後の `finally` では cleanup 失敗で `add --pr` / pipeline `--pr` の成功結果を上書きしないようにしてください。あわせて cleanup が throw しても元エラーが保持される単体テストと、成功後 cleanup 失敗が呼び出し結果を壊さない配線テストを追加してください。",
+      "reviewers": [
+        "arch-review"
+      ],
+      "rawFindingIds": [
+        "20260707-203015-pr-task-attachments-takt-add-p:reviewers:4:arch-review:arch-review-4-raw-001"
+      ],
+      "firstSeen": {
+        "runId": "20260707-203015-pr-task-attachments-takt-add-p",
+        "stepName": "arch-review",
+        "timestamp": "2026-07-07T22:05:03.461Z"
+      },
+      "lastSeen": {
+        "runId": "20260707-203015-pr-task-attachments-takt-add-p",
+        "stepName": "reviewers",
+        "timestamp": "2026-07-07T22:05:03.461Z"
+      },
+      "resolvedAt": "2026-07-07T22:18:02.912Z",
+      "resolvedEvidence": "kind=resolution_confirmation が targetFindingId=F-0011 を指しており、PR画像attachment cleanup失敗が結果や元エラーを上書きしないことの確認として同一対象を明示している。"
+    },
+    {
+      "id": "F-0012",
+      "status": "resolved",
+      "lifecycle": "resolved",
+      "severity": "low",
+      "title": "PR画像attachmentと無関係な設定ファイルのEOF改変が残っている",
+      "location": ".takt/config.yaml:40",
+      "description": "`.takt/config.yaml` の差分は40行目末尾の改行削除のみで、PRコメント画像をtask attachmentsへ配置する実装・テスト・ドキュメント更新に必要な変更ではありません。`git diff -- .takt/config.yaml` で `\\ No newline at end of file` のみを確認し、`tail -c 1 .takt/config.yaml | od -An -t x1` でも最終バイトが `22` で改行ではないことを確認しました。Policyのスコープクリープ/最小差分基準に照らすと、AIが周辺ファイルを不要に触った変更として残すべきではありません。",
+      "suggestion": "`.takt/config.yaml` の末尾改行を元に戻し、このタスクに無関係な設定ファイル差分を消してください。",
+      "reviewers": [
+        "ai-antipattern-review"
+      ],
+      "rawFindingIds": [
+        "20260707-203015-pr-task-attachments-takt-add-p:reviewers:4:ai-antipattern-review:ai-antipattern-review-4-raw-1"
+      ],
+      "firstSeen": {
+        "runId": "20260707-203015-pr-task-attachments-takt-add-p",
+        "stepName": "ai-antipattern-review",
+        "timestamp": "2026-07-07T22:05:03.461Z"
+      },
+      "lastSeen": {
+        "runId": "20260707-203015-pr-task-attachments-takt-add-p",
+        "stepName": "reviewers",
+        "timestamp": "2026-07-07T22:05:03.461Z"
+      },
+      "resolvedAt": "2026-07-07T22:18:02.912Z",
+      "resolvedEvidence": "kind=resolution_confirmation が targetFindingId=F-0012 を指しており、.takt/config.yaml のEOF差分解消を同一対象として確認している。"
+    },
+    {
+      "id": "F-0013",
+      "status": "resolved",
+      "lifecycle": "resolved",
+      "severity": "low",
+      "title": "Content-Length の数値 prefix だけを有効値として扱っている",
+      "location": "src/infra/github/attachmentDownload.ts:60",
+      "description": "`validateContentLength()` は `Number.parseInt(value, 10)` の結果だけを検証しているため、`Content-Length: 1abc` のような不正ヘッダーでも `1` として `Number.isSafeInteger` を通過します。実確認でも `Number.parseInt('1abc', 10)` は `1`、`Number.isSafeInteger(...)` は `true` でした。GitHub attachment 応答が malformed な Content-Length と有効な小さい画像 body を返す条件では、外部境界の契約違反を fail-fast せず attachment として受け入れます。ストリーム上限により巨大 body の防御は維持されていますが、Content-Length 検証としては不正入力を黙って正規化しています。",
+      "suggestion": "`Content-Length` は `trim()` 後に `^[0-9]+$` などで全体が10進数字であることを検証してから数値化してください。`1abc`、`1, 1`、空文字などの malformed 値を `Invalid GitHub attachment image Content-Length` として拒否する単体テストも追加してください。",
+      "reviewers": [
+        "implementation-semantics-review"
+      ],
+      "rawFindingIds": [
+        "20260707-203015-pr-task-attachments-takt-add-p:reviewers:4:implementation-semantics-review:implementation-semantics-4-001"
+      ],
+      "firstSeen": {
+        "runId": "20260707-203015-pr-task-attachments-takt-add-p",
+        "stepName": "implementation-semantics-review",
+        "timestamp": "2026-07-07T22:05:03.461Z"
+      },
+      "lastSeen": {
+        "runId": "20260707-203015-pr-task-attachments-takt-add-p",
+        "stepName": "reviewers",
+        "timestamp": "2026-07-07T22:05:03.461Z"
+      },
+      "resolvedAt": "2026-07-07T22:18:02.912Z",
+      "resolvedEvidence": "kind=resolution_confirmation が targetFindingId=F-0013 を指しており、Content-Length の malformed 値を数値prefixとして受け入れないことを同一対象として確認している。"
+    },
+    {
+      "id": "F-0014",
+      "status": "resolved",
+      "lifecycle": "resolved",
+      "severity": "medium",
+      "title": "PR画像attachmentと無関係なプロジェクトworkflow overrideが未追跡で残っている",
+      "location": ".takt/workflows/takt-default-for-local-llm.yaml:10",
+      "description": "未追跡の `.takt/workflows/takt-default-for-local-llm.yaml` が追加されています。`diff -u builtins/ja/workflows/takt-default-for-local-llm.yaml .takt/workflows/takt-default-for-local-llm.yaml` で、PR画像attachment実装とは無関係な `max_steps: 50` から `200` への変更と複数stepへの `session: compact` 追加を確認しました。`src/infra/config/loaders/workflowLookupDirectories.ts:76-94` では名前付きworkflow解決で project workflow が builtin より先に探索されるため、この未追跡ファイルは同名builtin workflowを上書きし得る公開設定変更です。AI生成コードのスコープクリープとして、今回タスク差分に残すべきではありません。",
+      "suggestion": "`.takt/workflows/takt-default-for-local-llm.yaml` を削除し、今回タスクに無関係なworkflow overrideを差分から除外してください。workflow自体を変更する必要がある場合は別タスクで扱い、意図した挙動変更としてテストとドキュメントを付けてください。",
+      "reviewers": [
+        "ai-antipattern-review"
+      ],
+      "rawFindingIds": [
+        "20260707-203015-pr-task-attachments-takt-add-p:reviewers:5:ai-antipattern-review:ai-antipattern-review-5-raw-4"
+      ],
+      "firstSeen": {
+        "runId": "20260707-203015-pr-task-attachments-takt-add-p",
+        "stepName": "ai-antipattern-review",
+        "timestamp": "2026-07-07T22:18:02.912Z"
+      },
+      "lastSeen": {
+        "runId": "20260707-203015-pr-task-attachments-takt-add-p",
+        "stepName": "reviewers",
+        "timestamp": "2026-07-07T22:18:02.912Z"
+      },
+      "resolvedAt": "2026-07-07T22:30:28.859Z",
+      "resolvedEvidence": "3件のcurrent raw findingがいずれもkind=resolution_confirmationかつtargetFindingId=F-0014で、対象の.takt/workflows/takt-default-for-local-llm.yamlが存在せず、.takt/workflowsや.takt/config.yamlに差分が残っていないことを確認しているため。"
+    },
+    {
+      "id": "F-0015",
+      "status": "resolved",
+      "lifecycle": "resolved",
+      "severity": "medium",
+      "title": "pipeline --pr の整形失敗時に一時attachment cleanupが実行されない",
+      "location": "src/features/pipeline/steps.ts:175",
+      "description": "`resolveTaskContent()` は `resolvePrReviewImageAttachments(prReview, cwd, getGitProvider())` の成功後、`formatPrReviewAsTask(resolvedPrReview.prReview)` を呼び、その後に `cleanupAttachments: resolvedPrReview.cleanup` を返しています。`formatPrReviewAsTask()` または後続の成功表示が throw した場合は `catch` に入り `undefined` を返しますが、この経路では `resolvedPrReview.cleanup` が呼ばれません。`runPipeline()` の `finally` は `resolveTaskContent()` から `TaskContent` が返った後にしか cleanup を所有できないため、PR画像の一時 attachment store が解放されない失敗経路が残っています。累積差分の再走査では Policy の「副作用と状態遷移の確認」「契約追加・変更の全入口検証」、Knowledge の「呼び出しチェーン検証」「公開状態の不変性」「構造・設計」を、`takt add --pr` 経路と pipeline `--pr` 経路の cleanup 所有移譲に照合し、この pipeline 側だけが成功後・返却前の例外経路を cleanup していないことを確認しました。",
+      "suggestion": "`resolvePrReviewImageAttachments()` 成功後から `TaskContent` 返却までを `try/catch` または `try/finally` で囲み、`TaskContent` として cleanup 所有権を返せなかった場合はその場で `resolvedPrReview.cleanup()` を実行してください。あわせて `formatPrReviewAsTask()` が throw した場合でも cleanup が呼ばれる pipeline `--pr` の単体テストを追加してください。",
+      "reviewers": [
+        "arch-review"
+      ],
+      "rawFindingIds": [
+        "20260707-203015-pr-task-attachments-takt-add-p:reviewers:6:arch-review:arch-review-6-raw-001"
+      ],
+      "firstSeen": {
+        "runId": "20260707-203015-pr-task-attachments-takt-add-p",
+        "stepName": "arch-review",
+        "timestamp": "2026-07-07T22:30:28.859Z"
+      },
+      "lastSeen": {
+        "runId": "20260707-203015-pr-task-attachments-takt-add-p",
+        "stepName": "reviewers",
+        "timestamp": "2026-07-07T22:30:28.859Z"
+      },
+      "resolvedAt": "2026-07-07T22:44:44.668Z",
+      "resolvedEvidence": "現在の raw findings はいずれも kind=resolution_confirmation で targetFindingId=F-0015 を明示しており、pipeline --pr の整形失敗時 cleanup 漏れが src/features/pipeline/steps.ts:174 および catch 周辺で解消され、src/__tests__/pipelineExecution.test.ts:860 の回帰テストで確認されたと報告しているため。"
+    }
+  ],
+  "rawFindings": [
+    {
+      "rawFindingId": "20260707-203015-pr-task-attachments-takt-add-p:reviewers:1:arch-review:arch-raw-001",
+      "stepName": "arch-review",
+      "reviewer": "arch-review",
+      "familyTag": "architecture.provider-boundary.github-specific-download",
+      "severity": "medium",
+      "title": "provider-neutralなPR経路がGitHub専用downloaderへ直接依存している",
+      "location": "src/features/tasks/prReviewImageAttachments.ts:2",
+      "description": "`resolvePrReviewImageAttachments()` は `../../infra/github/attachmentDownload.js` を直接importしています。一方で `add --pr` と pipeline `--pr` は `GitProvider` 抽象を通るprovider-neutralな入口で、実コード上も `GitLabProvider` が同じ `fetchPrReviewComments()` 契約を実装しています。汎用PR処理のfeature層がGitHub attachment URL判定・`gh auth token`取得という特定実装を知る構造になっており、provider境界が崩れています。",
+      "suggestion": "画像attachment解決を `GitProvider` 側の契約またはprovider adapter配下へ移し、tasks/pipeline層は provider-neutral な `TaskAttachment[]` だけを受け取る構造にしてください。GitHub実装だけがGitHub URL allowlistと認証付き取得を持つ形に分離してください。",
+      "kind": "issue"
+    },
+    {
+      "rawFindingId": "20260707-203015-pr-task-attachments-takt-add-p:reviewers:1:arch-review:arch-raw-002",
+      "stepName": "arch-review",
+      "reviewer": "arch-review",
+      "familyTag": "architecture.feature-boundary.interactive-store-reuse",
+      "severity": "medium",
+      "title": "tasks featureがinteractive featureの一時画像storeへ依存している",
+      "location": "src/features/tasks/prReviewImageAttachments.ts:7",
+      "description": "PR画像attachment解決は非対話の `takt add --pr` / pipeline `--pr` でも使われますが、実装は `../interactive/imageAttachments.js` の `createSessionImageAttachmentStore` と `ImageAttachmentStore` に依存しています。このモジュールは `InteractiveModeResult` や clipboard paste handler も同居するinteractive featureであり、tasks featureから参照するとvertical slice境界と責務が混ざります。",
+      "suggestion": "一時画像attachment storeの純粋な保存責務を `shared` または `features/tasks` のattachment基盤へ抽出し、interactive側にはpaste/clipboard/interactive result連携だけを残してください。PR resolverは抽出後の汎用storeに依存させてください。",
+      "kind": "issue"
+    },
+    {
+      "rawFindingId": "20260707-203015-pr-task-attachments-takt-add-p:reviewers:1:arch-review:arch-raw-003",
+      "stepName": "arch-review",
+      "reviewer": "arch-review",
+      "familyTag": "security.download-size-limit.streaming-boundary",
+      "severity": "high",
+      "title": "Content-Length不在または虚偽のレスポンスを全量読み込んでからサイズ検証している",
+      "location": "src/infra/github/attachmentDownload.ts:118",
+      "description": "`validateContentLength()` はヘッダー値だけを事前検証し、その後 `Buffer.from(await response.arrayBuffer())` でレスポンス全体をメモリへ読み込んでから `validateDownloadedImage()` で実サイズを確認しています。Content-Lengthが無い、または実体より小さい場合、タスク要件の「サイズ上限を設ける」を境界で強制できず、外部URL取得の安全境界として不十分です。",
+      "suggestion": "`response.body` をstreamとして読み、累積サイズが `MAX_GITHUB_ATTACHMENT_IMAGE_BYTES` を超えた時点でabortする実装にしてください。Content-Lengthは早期拒否の補助に留め、実バイト列の読み込み中にも同じ上限を強制してください。",
+      "kind": "issue"
+    },
+    {
+      "rawFindingId": "20260707-203015-pr-task-attachments-takt-add-p:reviewers:1:arch-review:arch-raw-004",
+      "stepName": "arch-review",
+      "reviewer": "arch-review",
+      "familyTag": "architecture.state-ownership.duplicate-mutable-context",
+      "severity": "medium",
+      "title": "画像attachmentの状態所有がstoreとcontextで重複し、contextを直接変更している",
+      "location": "src/features/tasks/prReviewImageAttachments.ts:88",
+      "description": "`ImageResolutionContext` は `store` と別に `attachments` 配列を保持し、`resolveImagePlaceholder()` が `context.attachments = [...context.attachments, attachment]` でcontextオブジェクトを直接変更しています。attachmentの保存状態は `ImageAttachmentStore` 側にも存在するため、状態所有が二重化しており、Policyの直接変更禁止と状態整合性の観点に抵触します。",
+      "suggestion": "attachment一覧の所有元を1つにしてください。例えば `ImageAttachmentStore.listAttachments()` を成功時の返却元にするか、`resolveImagePlaceholder()` が新規attachmentを戻り値として返し、呼び出し元のローカル累積値から結果を構成してください。",
+      "kind": "issue"
+    },
+    {
+      "rawFindingId": "20260707-203015-pr-task-attachments-takt-add-p:reviewers:1:arch-review:arch-raw-005",
+      "stepName": "arch-review",
+      "reviewer": "arch-review",
+      "familyTag": "contract.docs.pr-image-attachments",
+      "severity": "low",
+      "title": "--prの画像attachment契約がCLIドキュメントに反映されていない",
+      "location": "docs/cli-reference.md:16",
+      "description": "差分は `takt add --pr` と pipeline `--pr` のユーザー向け挙動を変更し、PR本文・コメント内のGitHub画像URL、対応形式、サイズ上限、失敗条件、`order.md` のattachment追記を追加しています。しかし `docs/cli-reference.md` / `docs/cli-reference.ja.md` の `--pr` 説明はレビューコメント取得のみで、画像attachmentの説明はexec入力中のpaste画像に限定されたままです。利用者向け契約変更に対してドキュメントが同じ探索対象・制限・失敗条件を説明していません。",
+      "suggestion": "英日CLI referenceとREADMEの該当箇所に、`--pr` 経路でGitHub PR本文・通常コメント・review thread内のPNG/JPEG/GIF/WebP画像をattachment化すること、サイズ上限、GitHub attachment URL限定、失敗時の扱い、`order.md` の添付画像セクションを追記してください。",
+      "kind": "issue"
+    },
+    {
+      "rawFindingId": "20260707-203015-pr-task-attachments-takt-add-p:reviewers:1:ai-antipattern-review:ai-antipattern-review-raw-1",
+      "stepName": "ai-antipattern-review",
+      "reviewer": "ai-antipattern-review",
+      "familyTag": "external-fetch-size-limit-not-enforced",
+      "severity": "medium",
+      "title": "Content-Length が無い巨大画像を全量メモリに読み込む",
+      "location": "src/infra/github/attachmentDownload.ts:121",
+      "description": "PR コメント由来の外部画像取得でサイズ上限を設ける要件がありますが、Content-Length が無い、または実体より小さいレスポンスでは `response.arrayBuffer()` で全 body を読み切ってから `data.length` を検証しています。実際のメモリ確保前に上限で停止できないため、サイズ上限が境界防御として機能しません。対象コードとテストを再確認したところ、Content-Length 超過時に arrayBuffer を呼ばないテストはありますが、Content-Length 欠落時のストリーム上限検証はありませんでした。",
+      "suggestion": "`response.body` をストリームで読み、累積バイト数が `MAX_GITHUB_ATTACHMENT_IMAGE_BYTES` を超えた時点で abort してください。Content-Length は早期拒否の補助に留め、ヘッダーが無い場合も同じ上限を deterministic に検証する単体テストを追加してください。",
+      "kind": "issue"
+    },
+    {
+      "rawFindingId": "20260707-203015-pr-task-attachments-takt-add-p:reviewers:1:ai-antipattern-review:ai-antipattern-review-raw-2",
+      "stepName": "ai-antipattern-review",
+      "reviewer": "ai-antipattern-review",
+      "familyTag": "image-magic-byte-validation-too-shallow",
+      "severity": "medium",
+      "title": "PNG の magic bytes 検証が 4 バイトだけで不十分",
+      "location": "src/shared/utils/imageMime.ts:9",
+      "description": "PR コメント画像は Content-Type と magic bytes の検証が安全要件ですが、PNG 判定は `89 50 4E 47` の 4 バイトだけで成功します。PNG の署名として必要な 8 バイト全体を確認していないため、Content-Type が image/png のレスポンスで先頭4バイトだけを合わせた不正または破損データを attachment として保存できます。この shared helper は既存 inline paste 由来ですが、今回の外部取得境界 `downloadGitHubAttachmentImage()` からも使用されるため、変更の安全性に直接関係します。",
+      "suggestion": "PNG は 8 バイト署名全体を検証してください。あわせて JPEG/GIF/WebP もサポート対象ごとの最小署名長を明示し、短い偽装データを拒否するテストを追加してください。",
+      "kind": "issue"
+    },
+    {
+      "rawFindingId": "20260707-203015-pr-task-attachments-takt-add-p:reviewers:1:coding-review:coding-review-raw-1",
+      "stepName": "coding-review",
+      "reviewer": "coding-review",
+      "familyTag": "github_attachment_size_limit",
+      "severity": "medium",
+      "title": "Content-Length が無い大容量画像を読み切ってからサイズ検証している",
+      "location": "src/infra/github/attachmentDownload.ts:121",
+      "description": "`validateContentLength()` は `Content-Length` が無い場合に通過し、その後 `response.arrayBuffer()` でレスポンス全体をメモリへ読み込んでから `validateDownloadedImage()` で 10 MiB 超過を検出しています。GitHub attachment URL に限定していても、サイズ上限はダウンロード中に強制されないため、ヘッダー無しまたは不正な大容量レスポンスでメモリを消費してから失敗します。要件の「サイズ上限を設ける」を実際の取得境界で満たしていません。再走査証跡: Policy の ## 原則、## スコープ判定、## 判定基準、## 振る舞い証跡の判定、## ファクトチェックを再読し、PR 画像取得境界・`takt add --pr` 配線・pipeline `--pr` 配線・新規テストを再確認しました。`npm run build`、`npm run lint`、対象テストは成功、`npm test` は既存の `for-local-llm-replan-wiring.test.ts` 文言差分で失敗しました。",
+      "suggestion": "`response.body` の reader でチャンクごとに累積サイズを確認し、`MAX_GITHUB_ATTACHMENT_IMAGE_BYTES` を超えた時点で読み取りを中止して例外にしてください。`Content-Length` が無い 10 MiB 超過レスポンスでも全体を読み切らず拒否するテストを追加してください。",
+      "kind": "issue"
+    },
+    {
+      "rawFindingId": "20260707-203015-pr-task-attachments-takt-add-p:reviewers:1:implementation-semantics-review:implementation-semantics-raw-1",
+      "stepName": "implementation-semantics-review",
+      "reviewer": "implementation-semantics-review",
+      "familyTag": "implementation-semantics.fail-fast.size-limit",
+      "severity": "high",
+      "title": "Content-Length が無い巨大画像を全量読み込んでからサイズ超過判定している",
+      "location": "src/infra/github/attachmentDownload.ts:121",
+      "description": "`validateContentLength()` は `Content-Length` が無い場合に許可し、その後 `response.arrayBuffer()` で本文を全量メモリへ読み込んでから `validateDownloadedImage()` の `data.length` で 10 MiB 超過を判定しています。GitHub attachment URL が chunked 応答または Content-Length なしで 10 MiB を大きく超える画像を返す条件では、設定したサイズ上限がダウンロード境界で機能せず、上限超過を検出する前に巨大な Buffer を確保します。これは「サイズ上限を設ける」契約と、境界での fail-fast に反します。",
+      "suggestion": "`response.body` の reader でチャンクごとに読み、累積サイズが `MAX_GITHUB_ATTACHMENT_IMAGE_BYTES` を超えた時点で abort してください。`Content-Length` は早期拒否の補助として残しつつ、ヘッダー欠落・不正・実サイズ不一致でも本文読み込み中に同じ上限を強制してください。",
+      "kind": "issue"
+    },
+    {
+      "rawFindingId": "20260707-203015-pr-task-attachments-takt-add-p:reviewers:2:arch-review:arch-round2-resolved-0001",
+      "stepName": "arch-review",
+      "reviewer": "arch-review",
+      "familyTag": "architecture.provider-boundary.github-specific-download",
+      "severity": "medium",
+      "title": "provider-neutralなPR経路のGitHub専用downloader直接依存は解消済み",
+      "location": "src/features/tasks/prReviewImageAttachments.ts:1",
+      "description": "`src/features/tasks/prReviewImageAttachments.ts:1` は `GitProvider` 型に依存し、`src/features/tasks/prReviewImageAttachments.ts:72` と `src/features/tasks/prReviewImageAttachments.ts:81` で provider 契約経由の URL 判定・画像取得を行っています。GitHub固有の `attachmentDownload.js` import は同ファイルに存在せず、GitHub固有処理は `src/infra/github/GitHubProvider.ts:35` と `src/infra/github/GitHubProvider.ts:39` に閉じています。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0001"
+    },
+    {
+      "rawFindingId": "20260707-203015-pr-task-attachments-takt-add-p:reviewers:2:arch-review:arch-round2-resolved-0002",
+      "stepName": "arch-review",
+      "reviewer": "arch-review",
+      "familyTag": "architecture.feature-boundary.interactive-store-reuse",
+      "severity": "medium",
+      "title": "tasks featureからinteractive featureの一時画像store依存は解消済み",
+      "location": "src/features/tasks/prReviewImageAttachments.ts:2",
+      "description": "`src/features/tasks/prReviewImageAttachments.ts:2` は一時画像storeを `../../shared/utils/imageAttachmentStore.js` から import しています。`src/features/interactive/imageAttachments.ts:3` も同じ shared store を利用する薄いinteractive連携層になっており、PR resolver が interactive feature に依存する構造は解消されています。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0002"
+    },
+    {
+      "rawFindingId": "20260707-203015-pr-task-attachments-takt-add-p:reviewers:2:arch-review:arch-round2-resolved-0003",
+      "stepName": "arch-review",
+      "reviewer": "arch-review",
+      "familyTag": "security.download-size-limit.streaming-boundary",
+      "severity": "high",
+      "title": "Content-Length不在または虚偽レスポンスの全量読み込みは解消済み",
+      "location": "src/infra/github/attachmentDownload.ts:99",
+      "description": "`src/infra/github/attachmentDownload.ts:99` の `readResponseBodyWithLimit()` が `response.body.getReader()` でstream読み込みし、`src/infra/github/attachmentDownload.ts:116` から `src/infra/github/attachmentDownload.ts:119` で累積サイズが `MAX_GITHUB_ATTACHMENT_IMAGE_BYTES` を超えた時点で `reader.cancel()` して例外を投げます。`response.arrayBuffer()` は検索結果上このファイルに残っていません。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0003"
+    },
+    {
+      "rawFindingId": "20260707-203015-pr-task-attachments-takt-add-p:reviewers:2:arch-review:arch-round2-resolved-0004",
+      "stepName": "arch-review",
+      "reviewer": "arch-review",
+      "familyTag": "architecture.state-ownership.duplicate-mutable-context",
+      "severity": "medium",
+      "title": "画像attachment一覧の二重所有とcontext直接変更は解消済み",
+      "location": "src/features/tasks/prReviewImageAttachments.ts:20",
+      "description": "`src/features/tasks/prReviewImageAttachments.ts:20` の `ImageResolutionContext` は `attachments` 配列を保持していません。新規attachmentは `src/features/tasks/prReviewImageAttachments.ts:82` で store に保存され、返却時は `src/features/tasks/prReviewImageAttachments.ts:155` の `store.listAttachments()` を唯一の一覧取得元にしています。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0004"
+    },
+    {
+      "rawFindingId": "20260707-203015-pr-task-attachments-takt-add-p:reviewers:2:arch-review:arch-round2-resolved-0005",
+      "stepName": "arch-review",
+      "reviewer": "arch-review",
+      "familyTag": "contract.docs.pr-image-attachments",
+      "severity": "low",
+      "title": "--pr画像attachment契約のCLIドキュメント反映は解消済み",
+      "location": "docs/cli-reference.md:28",
+      "description": "`docs/cli-reference.md:28` と `docs/cli-reference.ja.md:28` に、`--pr` が PR body、conversation comments、review summaries、review thread comments から GitHub-hosted PNG/JPEG/GIF/WebP を検出し、認証済み `gh` セッションで取得し、Content-Type・magic bytes・size limit を検証して `attachments/` と `order.md` に反映する契約が追記されています。`README.md:103` にも認証済み `gh` セッションでの取得と検証が記載されています。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0005"
+    },
+    {
+      "rawFindingId": "20260707-203015-pr-task-attachments-takt-add-p:reviewers:2:arch-review:arch-round2-resolved-0006",
+      "stepName": "arch-review",
+      "reviewer": "arch-review",
+      "familyTag": "security.download-size-limit.streaming-boundary",
+      "severity": "medium",
+      "title": "Content-Lengthなし巨大画像の全量メモリ読み込みは解消済み",
+      "location": "src/infra/github/attachmentDownload.ts:99",
+      "description": "`src/infra/github/attachmentDownload.ts:99` のstream読み込み実装が Content-Length 欠落時にも適用され、`src/infra/github/attachmentDownload.ts:116` から `src/infra/github/attachmentDownload.ts:119` で累積サイズ上限を強制します。`src/__tests__/github-attachmentDownload.test.ts:191` には Content-Length がないレスポンスで上限超過時にstreamを停止する回帰テストがあります。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0006"
+    },
+    {
+      "rawFindingId": "20260707-203015-pr-task-attachments-takt-add-p:reviewers:2:arch-review:arch-round2-resolved-0007",
+      "stepName": "arch-review",
+      "reviewer": "arch-review",
+      "familyTag": "security.magic-bytes.png-signature",
+      "severity": "medium",
+      "title": "PNG magic bytesの4バイト判定は解消済み",
+      "location": "src/shared/utils/imageMime.ts:7",
+      "description": "`src/shared/utils/imageMime.ts:7` で PNG 署名は 8 バイト全体の `Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])` として定義され、`src/shared/utils/imageMime.ts:23` で `startsWithSignature()` により署名長全体を検証しています。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0007"
+    },
+    {
+      "rawFindingId": "20260707-203015-pr-task-attachments-takt-add-p:reviewers:2:arch-review:arch-round2-resolved-0008",
+      "stepName": "arch-review",
+      "reviewer": "arch-review",
+      "familyTag": "security.download-size-limit.streaming-boundary",
+      "severity": "medium",
+      "title": "Content-Lengthなし大容量画像の読み切り後サイズ検証は解消済み",
+      "location": "src/infra/github/attachmentDownload.ts:150",
+      "description": "`src/infra/github/attachmentDownload.ts:150` は `arrayBuffer()` ではなく `readResponseBodyWithLimit(response)` を呼びます。同関数は `src/infra/github/attachmentDownload.ts:104` で reader を取得し、`src/infra/github/attachmentDownload.ts:117` から `src/infra/github/attachmentDownload.ts:119` で上限超過時に読み取りを中止します。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0008"
+    },
+    {
+      "rawFindingId": "20260707-203015-pr-task-attachments-takt-add-p:reviewers:2:arch-review:arch-round2-resolved-0009",
+      "stepName": "arch-review",
+      "reviewer": "arch-review",
+      "familyTag": "security.download-size-limit.streaming-boundary",
+      "severity": "high",
+      "title": "Content-Lengthなし巨大画像のダウンロード境界fail-fastは解消済み",
+      "location": "src/infra/github/attachmentDownload.ts:117",
+      "description": "`src/infra/github/attachmentDownload.ts:117` で各chunk読み込み後の累積サイズを `MAX_GITHUB_ATTACHMENT_IMAGE_BYTES` と比較し、超過時は `src/infra/github/attachmentDownload.ts:118` で `reader.cancel()` してから例外化しています。`src/__tests__/github-attachmentDownload.test.ts:142` は Content-Length 超過時にbodyを読まないこと、`src/__tests__/github-attachmentDownload.test.ts:191` は Content-Length 欠落時もstream中に停止することを検証しています。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0009"
+    },
+    {
+      "rawFindingId": "20260707-203015-pr-task-attachments-takt-add-p:reviewers:2:ai-antipattern-review:ai-antipattern-review-2-raw-1",
+      "stepName": "ai-antipattern-review",
+      "reviewer": "ai-antipattern-review",
+      "familyTag": "scope-creep",
+      "severity": "medium",
+      "title": "provider-neutralなPR経路のGitHub直接依存が解消されたことを確認",
+      "location": "src/features/tasks/prReviewImageAttachments.ts:1",
+      "description": "src/features/tasks/prReviewImageAttachments.ts:1-5 を再読し、feature層は GitHub infra ではなく GitProvider 型と shared の imageAttachmentStore に依存していることを確認しました。画像URL判定とdownloadは同ファイルの72行・81行で provider 経由になり、GitHub固有実装は src/infra/github/GitHubProvider.ts:35-40 に閉じています。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0001"
+    },
+    {
+      "rawFindingId": "20260707-203015-pr-task-attachments-takt-add-p:reviewers:2:ai-antipattern-review:ai-antipattern-review-2-raw-2",
+      "stepName": "ai-antipattern-review",
+      "reviewer": "ai-antipattern-review",
+      "familyTag": "scope-creep",
+      "severity": "medium",
+      "title": "tasks featureのinteractive store依存が解消されたことを確認",
+      "location": "src/features/tasks/prReviewImageAttachments.ts:3",
+      "description": "src/features/tasks/prReviewImageAttachments.ts:3-5 を再読し、PR画像resolverは ../interactive/imageAttachments.js ではなく ../../shared/utils/imageAttachmentStore.js を使用していることを確認しました。保存責務は src/shared/utils/imageAttachmentStore.ts:62-112 に抽出され、interactive側は src/features/interactive/imageAttachments.ts:3-17 で再利用・再exportする形になっています。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0002"
+    },
+    {
+      "rawFindingId": "20260707-203015-pr-task-attachments-takt-add-p:reviewers:2:ai-antipattern-review:ai-antipattern-review-2-raw-3",
+      "stepName": "ai-antipattern-review",
+      "reviewer": "ai-antipattern-review",
+      "familyTag": "missing-edge-case",
+      "severity": "high",
+      "title": "Content-Length不在時のサイズ上限がstream読み込みで強制されることを確認",
+      "location": "src/infra/github/attachmentDownload.ts:99",
+      "description": "src/infra/github/attachmentDownload.ts:99-125 を再読し、response.body.getReader() でチャンクごとに読み、totalBytes が MAX_GITHUB_ATTACHMENT_IMAGE_BYTES を超えた時点で reader.cancel() して例外を投げる実装を確認しました。downloadGitHubAttachmentImage() は同ファイル150行で readResponseBodyWithLimit() を使用しています。src/__tests__/github-attachmentDownload.test.ts:191-222 で Content-Length なしの上限超過streamが拒否されることも確認しました。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0003"
+    },
+    {
+      "rawFindingId": "20260707-203015-pr-task-attachments-takt-add-p:reviewers:2:ai-antipattern-review:ai-antipattern-review-2-raw-4",
+      "stepName": "ai-antipattern-review",
+      "reviewer": "ai-antipattern-review",
+      "familyTag": "logic-error",
+      "severity": "medium",
+      "title": "画像attachment状態の二重所有とcontext直接変更が解消されたことを確認",
+      "location": "src/features/tasks/prReviewImageAttachments.ts:20",
+      "description": "src/features/tasks/prReviewImageAttachments.ts:20-25 の ImageResolutionContext から attachments 配列が消え、resolveImagePlaceholder() は同ファイル81-84行で store.saveImage() と attachmentByUrl のみを扱う形になっています。成功時の返却も同ファイル155行で store.listAttachments() を使用しており、context.attachments への直接代入は残っていません。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0004"
+    },
+    {
+      "rawFindingId": "20260707-203015-pr-task-attachments-takt-add-p:reviewers:2:ai-antipattern-review:ai-antipattern-review-2-raw-5",
+      "stepName": "ai-antipattern-review",
+      "reviewer": "ai-antipattern-review",
+      "familyTag": "missing-edge-case",
+      "severity": "low",
+      "title": "--pr画像attachment契約のCLIドキュメント反映を確認",
+      "location": "docs/cli-reference.md:28",
+      "description": "docs/cli-reference.md:28 と docs/cli-reference.ja.md:28 を再読し、GitHubでの --pr が PR本文・通常コメント・review summary・review threadコメント内のPNG/JPEG/GIF/WebP画像を検出し、認証済みgh、Content-Type、magic bytes、サイズ上限、attachments/配置、order.md追記、非GitHub URLの扱い、失敗条件を説明していることを確認しました。README.md:103 にも gh 認証セッションと検証条件が追記されています。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0005"
+    },
+    {
+      "rawFindingId": "20260707-203015-pr-task-attachments-takt-add-p:reviewers:2:ai-antipattern-review:ai-antipattern-review-2-raw-6",
+      "stepName": "ai-antipattern-review",
+      "reviewer": "ai-antipattern-review",
+      "familyTag": "missing-edge-case",
+      "severity": "medium",
+      "title": "Content-Lengthなし巨大画像の全量読み込み問題が解消されたことを確認",
+      "location": "src/infra/github/attachmentDownload.ts:117",
+      "description": "src/infra/github/attachmentDownload.ts:99-125 を再読し、Content-Length の有無に関係なくstream読み込み中に totalBytes を加算し、117-120行で上限超過時に cancel して失敗することを確認しました。src/__tests__/github-attachmentDownload.test.ts:191-222 で Content-Length なしの上限超過ケースを検証しています。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0006"
+    },
+    {
+      "rawFindingId": "20260707-203015-pr-task-attachments-takt-add-p:reviewers:2:ai-antipattern-review:ai-antipattern-review-2-raw-7",
+      "stepName": "ai-antipattern-review",
+      "reviewer": "ai-antipattern-review",
+      "familyTag": "unvalidated-assumption",
+      "severity": "medium",
+      "title": "PNG magic bytesが8バイト署名で検証されることを確認",
+      "location": "src/shared/utils/imageMime.ts:7",
+      "description": "src/shared/utils/imageMime.ts:7 と同ファイル22-24行を再読し、PNG_SIGNATURE が 8 バイト全体で定義され、startsWithSignature() で署名長以上かつ全バイト一致を確認してから image/png を返す実装になっていることを確認しました。src/__tests__/imageMime.test.ts:16-23 で4バイト・6バイトの不完全PNG署名が null になることも確認しました。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0007"
+    },
+    {
+      "rawFindingId": "20260707-203015-pr-task-attachments-takt-add-p:reviewers:2:ai-antipattern-review:ai-antipattern-review-2-raw-8",
+      "stepName": "ai-antipattern-review",
+      "reviewer": "ai-antipattern-review",
+      "familyTag": "missing-edge-case",
+      "severity": "medium",
+      "title": "Content-Lengthなし大容量画像の読み込み中サイズ検証を確認",
+      "location": "src/infra/github/attachmentDownload.ts:150",
+      "description": "src/infra/github/attachmentDownload.ts:150 で response.arrayBuffer() ではなく readResponseBodyWithLimit(response) が使われ、同ファイル99-125行でstream読み込み中に累積サイズ上限を強制することを確認しました。対象テスト npm test -- imageMime.test.ts github-attachmentDownload.test.ts prReviewImageAttachments.test.ts addTask.test.ts pipelineExecution.test.ts github-provider.test.ts gitlab-provider.test.ts は 7 files / 166 tests passed でした。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0008"
+    },
+    {
+      "rawFindingId": "20260707-203015-pr-task-attachments-takt-add-p:reviewers:2:ai-antipattern-review:ai-antipattern-review-2-raw-9",
+      "stepName": "ai-antipattern-review",
+      "reviewer": "ai-antipattern-review",
+      "familyTag": "missing-edge-case",
+      "severity": "high",
+      "title": "巨大画像のfail-fastサイズ超過判定を確認",
+      "location": "src/infra/github/attachmentDownload.ts:99",
+      "description": "src/infra/github/attachmentDownload.ts:99-125 を再読し、response.body の reader を使ってチャンク単位で読み、117-120行で MAX_GITHUB_ATTACHMENT_IMAGE_BYTES 超過を検出した時点で cancel して例外にする実装を確認しました。npm run build と npm run lint は成功しました。npm test は既存の src/__tests__/for-local-llm-replan-wiring.test.ts:56 の英日workflow文言差分1件で失敗し、この確認対象の画像取得境界では対象テストが成功しています。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0009"
+    },
+    {
+      "rawFindingId": "20260707-203015-pr-task-attachments-takt-add-p:reviewers:2:coding-review:coding-review-2-raw-1",
+      "stepName": "coding-review",
+      "reviewer": "coding-review",
+      "familyTag": "provider_boundary",
+      "severity": "medium",
+      "title": "provider-neutralなPR経路がGitHub専用downloaderへ直接依存している問題は解消済み",
+      "location": "src/features/tasks/prReviewImageAttachments.ts:1",
+      "description": "`resolvePrReviewImageAttachments()` は GitHub 専用 downloader を直接 import せず、`GitProvider` を受け取って `isPrReviewImageAttachmentUrl()` / `downloadPrReviewImageAttachment()` を呼び出しています。GitHub 固有処理は `src/infra/github/GitHubProvider.ts:35` と `src/infra/github/GitHubProvider.ts:39` に移っています。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0001"
+    },
+    {
+      "rawFindingId": "20260707-203015-pr-task-attachments-takt-add-p:reviewers:2:coding-review:coding-review-2-raw-2",
+      "stepName": "coding-review",
+      "reviewer": "coding-review",
+      "familyTag": "feature_boundary",
+      "severity": "medium",
+      "title": "tasks featureがinteractive featureの一時画像storeへ依存している問題は解消済み",
+      "location": "src/features/tasks/prReviewImageAttachments.ts:2",
+      "description": "PR 画像 resolver は `../interactive/imageAttachments.js` ではなく `../../shared/utils/imageAttachmentStore.js` から `createSessionImageAttachmentStore` と `ImageAttachmentStore` を import しています。純粋な一時画像保存責務は `src/shared/utils/imageAttachmentStore.ts:11` 以降に抽出されています。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0002"
+    },
+    {
+      "rawFindingId": "20260707-203015-pr-task-attachments-takt-add-p:reviewers:2:coding-review:coding-review-2-raw-3",
+      "stepName": "coding-review",
+      "reviewer": "coding-review",
+      "familyTag": "github_attachment_size_limit",
+      "severity": "high",
+      "title": "Content-Length不在または虚偽のレスポンスを全量読み込む問題は解消済み",
+      "location": "src/infra/github/attachmentDownload.ts:99",
+      "description": "`readResponseBodyWithLimit()` が `response.body.getReader()` でチャンク読み取りし、累積サイズが `MAX_GITHUB_ATTACHMENT_IMAGE_BYTES` を超えた時点で `reader.cancel()` して例外を投げる実装になっています。`src/__tests__/github-attachmentDownload.test.ts:191` で Content-Length 不在の上限超過ストリームが中断されることも検証されています。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0003"
+    },
+    {
+      "rawFindingId": "20260707-203015-pr-task-attachments-takt-add-p:reviewers:2:coding-review:coding-review-2-raw-4",
+      "stepName": "coding-review",
+      "reviewer": "coding-review",
+      "familyTag": "attachment_state_ownership",
+      "severity": "medium",
+      "title": "画像attachmentの状態所有重複とcontext直接変更は解消済み",
+      "location": "src/features/tasks/prReviewImageAttachments.ts:20",
+      "description": "`ImageResolutionContext` から `attachments` 配列が削除され、成功時の返却は `store.listAttachments()` に一本化されています。`resolveImagePlaceholder()` は保存結果を URL キャッシュへ登録するだけで、attachment 一覧は store が所有しています。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0004"
+    },
+    {
+      "rawFindingId": "20260707-203015-pr-task-attachments-takt-add-p:reviewers:2:coding-review:coding-review-2-raw-5",
+      "stepName": "coding-review",
+      "reviewer": "coding-review",
+      "familyTag": "github_attachment_size_limit",
+      "severity": "medium",
+      "title": "Content-Length が無い巨大画像を全量メモリに読み込む問題は解消済み",
+      "location": "src/infra/github/attachmentDownload.ts:99",
+      "description": "`downloadGitHubAttachmentImage()` は `response.arrayBuffer()` を使わず、`readResponseBodyWithLimit()` 経由でストリーム読み込み中に累積サイズを検証しています。Content-Length は早期拒否の補助として残り、実バイト列にも同じ上限が適用されています。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0006"
+    },
+    {
+      "rawFindingId": "20260707-203015-pr-task-attachments-takt-add-p:reviewers:2:coding-review:coding-review-2-raw-6",
+      "stepName": "coding-review",
+      "reviewer": "coding-review",
+      "familyTag": "image_magic_bytes_validation",
+      "severity": "medium",
+      "title": "PNG の magic bytes 検証不足は解消済み",
+      "location": "src/shared/utils/imageMime.ts:7",
+      "description": "PNG 判定は 8 バイト署名 `89 50 4E 47 0D 0A 1A 0A` 全体を `PNG_SIGNATURE` として確認する実装になっています。`src/__tests__/imageMime.test.ts:16` で 4 バイトや 6 バイトの不完全 PNG 署名が null になることも検証されています。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0007"
+    },
+    {
+      "rawFindingId": "20260707-203015-pr-task-attachments-takt-add-p:reviewers:2:coding-review:coding-review-2-raw-7",
+      "stepName": "coding-review",
+      "reviewer": "coding-review",
+      "familyTag": "github_attachment_size_limit",
+      "severity": "medium",
+      "title": "Content-Length が無い大容量画像を読み切ってからサイズ検証する問題は解消済み",
+      "location": "src/infra/github/attachmentDownload.ts:150",
+      "description": "本文取得は `const data = await readResponseBodyWithLimit(response)` に置き換わっており、`response.arrayBuffer()` による全量読み込みは残っていません。上限超過時は `src/infra/github/attachmentDownload.ts:117` で読み取り中に検出されます。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0008"
+    },
+    {
+      "rawFindingId": "20260707-203015-pr-task-attachments-takt-add-p:reviewers:2:coding-review:coding-review-2-raw-8",
+      "stepName": "coding-review",
+      "reviewer": "coding-review",
+      "familyTag": "github_attachment_size_limit",
+      "severity": "high",
+      "title": "Content-Length が無い巨大画像を全量読み込んでからサイズ超過判定する問題は解消済み",
+      "location": "src/infra/github/attachmentDownload.ts:104",
+      "description": "`readResponseBodyWithLimit()` が reader を取得してチャンクごとに読み、`totalBytes > MAX_GITHUB_ATTACHMENT_IMAGE_BYTES` の時点で cancel します。`npm run build`、`npm run lint`、関連テスト `npm test -- imageMime.test.ts github-attachmentDownload.test.ts prReviewImageAttachments.test.ts addTask.test.ts pipelineExecution.test.ts github-provider.test.ts gitlab-provider.test.ts` は成功しました。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0009"
+    },
+    {
+      "rawFindingId": "20260707-203015-pr-task-attachments-takt-add-p:reviewers:2:implementation-semantics-review:impl-sem-resolved-F0003",
+      "stepName": "implementation-semantics-review",
+      "reviewer": "implementation-semantics-review",
+      "familyTag": "implementation-semantics.fail-fast.size-limit",
+      "severity": "high",
+      "title": "Content-Length不在または虚偽のレスポンスを全量読み込む問題は修正済み",
+      "location": "src/infra/github/attachmentDownload.ts:99",
+      "description": "`readResponseBodyWithLimit()` が追加され、`response.body.getReader()` でチャンクごとに読み込み、累積 `totalBytes` が `MAX_GITHUB_ATTACHMENT_IMAGE_BYTES` を超えた時点で `reader.cancel()` して例外を投げる実装を確認しました。`downloadGitHubAttachmentImage()` も `response.arrayBuffer()` ではなく `readResponseBodyWithLimit(response)` を呼んでいます。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0003"
+    },
+    {
+      "rawFindingId": "20260707-203015-pr-task-attachments-takt-add-p:reviewers:2:implementation-semantics-review:impl-sem-resolved-F0004",
+      "stepName": "implementation-semantics-review",
+      "reviewer": "implementation-semantics-review",
+      "familyTag": "implementation-semantics.state-ownership",
+      "severity": "medium",
+      "title": "画像attachmentの状態所有重複とcontext直接変更は修正済み",
+      "location": "src/features/tasks/prReviewImageAttachments.ts:20",
+      "description": "`ImageResolutionContext` から `attachments` 配列が削除され、`resolveImagePlaceholder()` も `context.attachments = ...` を行わず、成功時の返却は `attachments: store.listAttachments()` に一本化されています。元findingのcontext側での二重所有と直接変更は解消されています。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0004"
+    },
+    {
+      "rawFindingId": "20260707-203015-pr-task-attachments-takt-add-p:reviewers:2:implementation-semantics-review:impl-sem-resolved-F0006",
+      "stepName": "implementation-semantics-review",
+      "reviewer": "implementation-semantics-review",
+      "familyTag": "implementation-semantics.fail-fast.size-limit",
+      "severity": "medium",
+      "title": "Content-Length が無い巨大画像のストリーム上限検証は修正済み",
+      "location": "src/infra/github/attachmentDownload.ts:115",
+      "description": "本文読み込みは `Buffer.from(await response.arrayBuffer())` ではなく、各チャンクを受け取るたびに `totalBytes += chunk.length` を行い、上限超過時に即例外へ進む形に変更されています。Content-Length 欠落時も同じ累積サイズ上限が適用されます。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0006"
+    },
+    {
+      "rawFindingId": "20260707-203015-pr-task-attachments-takt-add-p:reviewers:2:implementation-semantics-review:impl-sem-resolved-F0007",
+      "stepName": "implementation-semantics-review",
+      "reviewer": "implementation-semantics-review",
+      "familyTag": "implementation-semantics.magic-bytes-validation",
+      "severity": "medium",
+      "title": "PNG magic bytes の4バイト判定は修正済み",
+      "location": "src/shared/utils/imageMime.ts:7",
+      "description": "`PNG_SIGNATURE` が8バイト署名 `89 50 4E 47 0D 0A 1A 0A` として定義され、`inferImageMimeTypeFromMagicBytes()` は `startsWithSignature(data, PNG_SIGNATURE)` を使う実装になっています。4バイトだけでPNG扱いする経路は確認されませんでした。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0007"
+    },
+    {
+      "rawFindingId": "20260707-203015-pr-task-attachments-takt-add-p:reviewers:2:implementation-semantics-review:impl-sem-resolved-F0008",
+      "stepName": "implementation-semantics-review",
+      "reviewer": "implementation-semantics-review",
+      "familyTag": "implementation-semantics.fail-fast.size-limit",
+      "severity": "medium",
+      "title": "Content-Length が無い大容量画像の読み切り後検証は修正済み",
+      "location": "src/infra/github/attachmentDownload.ts:150",
+      "description": "`downloadGitHubAttachmentImage()` は `const data = await readResponseBodyWithLimit(response)` を使用しており、ヘッダーだけでなく実バイト列の読み込み中にサイズ上限を強制しています。`response.arrayBuffer()` による全量読み込みは現在の該当ファイルでは確認されませんでした。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0008"
+    },
+    {
+      "rawFindingId": "20260707-203015-pr-task-attachments-takt-add-p:reviewers:2:implementation-semantics-review:impl-sem-resolved-F0009",
+      "stepName": "implementation-semantics-review",
+      "reviewer": "implementation-semantics-review",
+      "familyTag": "implementation-semantics.fail-fast.size-limit",
+      "severity": "high",
+      "title": "Content-Length が無い巨大画像を全量読み込む問題は修正済み",
+      "location": "src/infra/github/attachmentDownload.ts:117",
+      "description": "`readResponseBodyWithLimit()` が `totalBytes > MAX_GITHUB_ATTACHMENT_IMAGE_BYTES` をチャンク読み込み中に判定し、上限超過時に `reader.cancel()` して例外を投げています。前回根拠だった `response.arrayBuffer()` による全量読み込みは `downloadGitHubAttachmentImage()` から除去されています。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0009"
+    },
+    {
+      "rawFindingId": "20260707-203015-pr-task-attachments-takt-add-p:reviewers:2:implementation-semantics-review:impl-sem-raw-001",
+      "stepName": "implementation-semantics-review",
+      "reviewer": "implementation-semantics-review",
+      "familyTag": "implementation-semantics.internal-state-reference-leak",
+      "severity": "medium",
+      "title": "画像attachment storeが内部状態のオブジェクト参照をそのまま返している",
+      "location": "src/shared/utils/imageAttachmentStore.ts:91",
+      "description": "`saveImage()` は内部配列へ追加した `attachment` オブジェクトと同じ参照を返し、`listAttachments()` も配列だけをコピーして格納オブジェクト自体は共有しています。`StoredImageAttachment` の `placeholder`、`tempPath`、`fileName` は readonly ではないため、呼び出し側が返却された attachment の `fileName` や `tempPath` を変更すると、store 内部の保存済み attachment も同時に書き換わります。その後の `store.listAttachments()` や `resolvePrReviewImageAttachments()` の返却値を `saveTaskFile()` / `promoteTaskAttachments()` へ渡す経路で、保存先ファイル名やコピー元パスが呼び出し側の変更に引きずられます。これはナレッジの「コレクションのコピーは返すが、格納されたオブジェクト自体は共有されている」内部状態漏れに該当します。",
+      "suggestion": "`saveImage()` と `listAttachments()` は内部配列に保持するオブジェクトとは別のコピーを返してください。あわせて `StoredImageAttachment` を readonly 型にする、または返却時に `Object.freeze` した値を返すなど、呼び出し側の変更が store 内部状態へ波及しない契約にしてください。",
+      "kind": "issue"
+    },
+    {
+      "rawFindingId": "20260707-203015-pr-task-attachments-takt-add-p:reviewers:3:arch-review:arch-review-3-resolve-F0010",
+      "stepName": "arch-review",
+      "reviewer": "arch-review",
+      "familyTag": "implementation-semantics.internal-state-reference-leak",
+      "severity": "medium",
+      "title": "画像attachment storeの内部状態参照漏れは解消済み",
+      "location": "src/shared/utils/imageAttachmentStore.ts:26",
+      "description": "`src/shared/types/image-attachments.ts:1` で `StoredImageAttachment` の各フィールドが readonly になっています。`src/shared/utils/imageAttachmentStore.ts:26` の `copyImageAttachment()` は `Object.freeze()` したコピーを返し、`createImageAttachmentStore()` は `initialAttachments` を `map(copyImageAttachment)` で内部化しています。`saveImage()` も `src/shared/utils/imageAttachmentStore.ts:89` で frozen copy を内部配列へ保持し、`src/shared/utils/imageAttachmentStore.ts:99` で別コピーを返し、`src/shared/utils/imageAttachmentStore.ts:102` の `listAttachments()` も `attachments.map(copyImageAttachment)` を返すため、呼び出し側の変更が store 内部状態へ波及しないことを確認しました。対象テスト `npm test -- imageAttachments.test.ts prReviewImageAttachments.test.ts` は 2 files / 19 tests passed でした。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0010"
+    },
+    {
+      "rawFindingId": "20260707-203015-pr-task-attachments-takt-add-p:reviewers:3:ai-antipattern-review:ai-antipattern-review-3-raw-1",
+      "stepName": "ai-antipattern-review",
+      "reviewer": "ai-antipattern-review",
+      "familyTag": "logic-error",
+      "severity": "medium",
+      "title": "画像attachment storeの内部状態参照漏れが解消されたことを確認",
+      "location": "src/shared/utils/imageAttachmentStore.ts:26",
+      "description": "src/shared/utils/imageAttachmentStore.ts:26-32 の copyImageAttachment() が attachment の各フィールドを新しいオブジェクトへコピーして Object.freeze() し、同ファイル89-99で内部保存用attachment作成後に別コピーを返し、同ファイル102-103で listAttachments() も attachments.map(copyImageAttachment) を返すことを確認しました。src/shared/types/image-attachments.ts:1-5 では StoredImageAttachment の各フィールドが readonly 化され、src/__tests__/imageAttachments.test.ts:71-96 では saveImage()/listAttachments() の返却値が同一参照でなくfreeze済みで、mutationしてもstore内部状態が変わらないことを検証しています。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0010"
+    },
+    {
+      "rawFindingId": "20260707-203015-pr-task-attachments-takt-add-p:reviewers:3:coding-review:coding-review-3-raw-1",
+      "stepName": "coding-review",
+      "reviewer": "coding-review",
+      "familyTag": "image_attachment_store_state_leak",
+      "severity": "medium",
+      "title": "画像attachment storeが内部状態のオブジェクト参照をそのまま返す問題は解消済み",
+      "location": "src/shared/utils/imageAttachmentStore.ts:26",
+      "description": "`copyImageAttachment()` が `placeholder`、`tempPath`、`fileName` を持つ別オブジェクトを `Object.freeze()` して返し、`saveImage()` は内部配列へ保持する attachment と別コピーを返しています。`listAttachments()` も `attachments.map(copyImageAttachment)` で内部状態と共有しない frozen copy を返します。`StoredImageAttachment` / `ImageAttachmentReference` も `src/shared/types/image-attachments.ts:1` で readonly 化されています。再走査証跡: Policy の ## 原則、## スコープ判定、## 判定基準、## 振る舞い証跡の判定、## ファクトチェック、## 指摘ID管理、## ボーイスカウトルール、## 判定ルール、## レビューの基本手順、コーディングポリシーの ## 原則、## フォールバック・デフォルト引数の禁止、## 解決責務の一元化、## フェーズ分離、## 抽象化、## 構造、## 契約変更の整合性、## 状態管理、## 未完成コード、## 機密情報の扱い、## エラーハンドリングを再読し、累積差分の PR 画像取得、MIME/magic bytes、attachment store、`takt add --pr`、pipeline `--pr`、provider 契約、ドキュメント、関連テストを再確認しました。`npm run build`、`npm run lint`、関連テスト、`npm test` は成功しました。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0010"
+    },
+    {
+      "rawFindingId": "20260707-203015-pr-task-attachments-takt-add-p:reviewers:3:implementation-semantics-review:impl-sem-resolved-F0010",
+      "stepName": "implementation-semantics-review",
+      "reviewer": "implementation-semantics-review",
+      "familyTag": "implementation-semantics.internal-state-reference-leak",
+      "severity": "medium",
+      "title": "画像attachment storeの内部状態参照漏れは修正済み",
+      "location": "src/shared/utils/imageAttachmentStore.ts:26",
+      "description": "`copyImageAttachment()` が追加され、返却値は `Object.freeze({ placeholder, tempPath, fileName })` で作成されます。`createImageAttachmentStore()` は初期値を `options.initialAttachments.map(copyImageAttachment)` で取り込み、`saveImage()` では凍結コピーを内部配列に保持したうえで `return copyImageAttachment(attachment)` を返し、`listAttachments()` も `attachments.map(copyImageAttachment)` を返すため、内部配列の格納オブジェクト参照をそのまま外へ返していません。`StoredImageAttachment` と `ImageAttachmentReference` の各フィールドも `readonly` に変更されています。再走査では Knowledge の「データ構造の意味選択」「導出値の単一情報源」「命名と意味の整合」「境界での fail-fast」「内部状態の参照漏れ」と、Policy の「原則」「スコープ判定」「判定基準」「ファクトチェック」「契約追加・変更の全入口検証」「副作用と状態遷移の確認」を照合し、PR画像抽出、GitProvider経由の画像attachment解決、ストリーム上限、MIME判定、`takt add --pr` / pipeline `--pr` 配線を再確認しました。新たな実装意味論上のブロッキング問題は確認されませんでした。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0010"
+    },
+    {
+      "rawFindingId": "20260707-203015-pr-task-attachments-takt-add-p:reviewers:4:arch-review:arch-review-4-raw-001",
+      "stepName": "arch-review",
+      "reviewer": "arch-review",
+      "familyTag": "architecture.side-effect-cleanup.pr-image-attachments",
+      "severity": "medium",
+      "title": "PR画像attachmentのcleanup失敗が本来の結果やエラーを上書きする",
+      "location": "src/features/tasks/prReviewImageAttachments.ts:44",
+      "description": "`createIdempotentCleanup()` は `store.cleanup()` を直接呼び出しており、`cleanupImageAttachmentStore()` のような例外吸収を使っていません。そのため `resolvePrReviewImageAttachments()` の失敗経路では `catch` 内の `cleanup()` が throw すると元の download / validation エラーが `throw error` へ到達する前に失われます。同じ cleanup は `src/features/tasks/add/index.ts:236` の `finally` と `src/features/pipeline/execute.ts:91` の `finally` からも呼ばれるため、task 保存または workflow 実行が完了した後でも一時ディレクトリ削除失敗だけで `add --pr` / pipeline `--pr` の結果を例外化できます。これは Policy の状態整合性・副作用と状態遷移の確認、および plan の「cleanup は成功・失敗の両方で実行する」契約に対して、後片付け失敗が主処理の結果を壊す構造です。",
+      "suggestion": "`createIdempotentCleanup()` は `cleanupImageAttachmentStore(store)` を使うか、同等に cleanup 例外を debug log に留める実装にしてください。失敗経路では元の download / validation エラーを保持し、成功後の `finally` では cleanup 失敗で `add --pr` / pipeline `--pr` の成功結果を上書きしないようにしてください。あわせて cleanup が throw しても元エラーが保持される単体テストと、成功後 cleanup 失敗が呼び出し結果を壊さない配線テストを追加してください。",
+      "kind": "issue"
+    },
+    {
+      "rawFindingId": "20260707-203015-pr-task-attachments-takt-add-p:reviewers:4:ai-antipattern-review:ai-antipattern-review-4-raw-1",
+      "stepName": "ai-antipattern-review",
+      "reviewer": "ai-antipattern-review",
+      "familyTag": "scope-creep",
+      "severity": "low",
+      "title": "PR画像attachmentと無関係な設定ファイルのEOF改変が残っている",
+      "location": ".takt/config.yaml:40",
+      "description": "`.takt/config.yaml` の差分は40行目末尾の改行削除のみで、PRコメント画像をtask attachmentsへ配置する実装・テスト・ドキュメント更新に必要な変更ではありません。`git diff -- .takt/config.yaml` で `\\ No newline at end of file` のみを確認し、`tail -c 1 .takt/config.yaml | od -An -t x1` でも最終バイトが `22` で改行ではないことを確認しました。Policyのスコープクリープ/最小差分基準に照らすと、AIが周辺ファイルを不要に触った変更として残すべきではありません。",
+      "suggestion": "`.takt/config.yaml` の末尾改行を元に戻し、このタスクに無関係な設定ファイル差分を消してください。",
+      "kind": "issue"
+    },
+    {
+      "rawFindingId": "20260707-203015-pr-task-attachments-takt-add-p:reviewers:4:implementation-semantics-review:implementation-semantics-4-001",
+      "stepName": "implementation-semantics-review",
+      "reviewer": "implementation-semantics-review",
+      "familyTag": "fail-fast",
+      "severity": "low",
+      "title": "Content-Length の数値 prefix だけを有効値として扱っている",
+      "location": "src/infra/github/attachmentDownload.ts:60",
+      "description": "`validateContentLength()` は `Number.parseInt(value, 10)` の結果だけを検証しているため、`Content-Length: 1abc` のような不正ヘッダーでも `1` として `Number.isSafeInteger` を通過します。実確認でも `Number.parseInt('1abc', 10)` は `1`、`Number.isSafeInteger(...)` は `true` でした。GitHub attachment 応答が malformed な Content-Length と有効な小さい画像 body を返す条件では、外部境界の契約違反を fail-fast せず attachment として受け入れます。ストリーム上限により巨大 body の防御は維持されていますが、Content-Length 検証としては不正入力を黙って正規化しています。",
+      "suggestion": "`Content-Length` は `trim()` 後に `^[0-9]+$` などで全体が10進数字であることを検証してから数値化してください。`1abc`、`1, 1`、空文字などの malformed 値を `Invalid GitHub attachment image Content-Length` として拒否する単体テストも追加してください。",
+      "kind": "issue"
+    },
+    {
+      "rawFindingId": "20260707-203015-pr-task-attachments-takt-add-p:reviewers:5:arch-review:arch-review-5-resolve-F0011",
+      "stepName": "arch-review",
+      "reviewer": "arch-review",
+      "familyTag": "architecture.side-effect-cleanup.pr-image-attachments",
+      "severity": "medium",
+      "title": "PR画像attachment cleanup失敗の結果上書き問題は解消済み",
+      "location": "src/features/tasks/prReviewImageAttachments.ts:45",
+      "description": "`createIdempotentCleanup()` は `cleanupImageAttachmentStore(store)` を呼ぶ実装になっており、`src/shared/utils/imageAttachmentStore.ts:62-68` の helper が cleanup 例外を捕捉して debug log に留めるため、元の download / validation エラーや成功結果を cleanup 失敗で上書きしません。再発防止として `src/__tests__/prReviewImageAttachments.test.ts:168` で cleanup 失敗時も元の `download failed` が保持されること、同ファイル `src/__tests__/prReviewImageAttachments.test.ts:198` で成功後 cleanup 失敗が結果を壊さないことを確認しています。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0011"
+    },
+    {
+      "rawFindingId": "20260707-203015-pr-task-attachments-takt-add-p:reviewers:5:arch-review:arch-review-5-resolve-F0012",
+      "stepName": "arch-review",
+      "reviewer": "arch-review",
+      "familyTag": "scope-creep",
+      "severity": "low",
+      "title": "無関係な .takt/config.yaml EOF 差分は解消済み",
+      "location": ".takt/config.yaml:40",
+      "description": "`.takt/config.yaml` は `git status --short .takt/config.yaml` と `git diff -- .takt/config.yaml` の出力が空で、不要な設定ファイル差分が残っていないことを確認しました。あわせて `tail -c 1 .takt/config.yaml | od -An -t x1` が `0a` を返し、末尾改行も復元済みです。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0012"
+    },
+    {
+      "rawFindingId": "20260707-203015-pr-task-attachments-takt-add-p:reviewers:5:arch-review:arch-review-5-resolve-F0013",
+      "stepName": "arch-review",
+      "reviewer": "arch-review",
+      "familyTag": "fail-fast",
+      "severity": "low",
+      "title": "Content-Length の malformed 値受け入れ問題は解消済み",
+      "location": "src/infra/github/attachmentDownload.ts:60",
+      "description": "`validateContentLength()` は `value.trim()` 後に `^[0-9]+$` でヘッダー全体を検証してから `Number.parseInt()` する実装になっており、`downloadGitHubAttachmentImage()` でも body 読み取り前に `validateContentLength(response.headers.get('content-length'))` を実行しています。`src/__tests__/github-attachmentDownload.test.ts:171` で `1abc`、`1, 1`、空文字、空白を body 読み取り前に拒否することを確認しています。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0013"
+    },
+    {
+      "rawFindingId": "20260707-203015-pr-task-attachments-takt-add-p:reviewers:5:ai-antipattern-review:ai-antipattern-review-5-raw-1",
+      "stepName": "ai-antipattern-review",
+      "reviewer": "ai-antipattern-review",
+      "familyTag": "logic-error",
+      "severity": "medium",
+      "title": "PR画像attachmentのcleanup失敗が本来の結果やエラーを上書きしないことを確認",
+      "location": "src/features/tasks/prReviewImageAttachments.ts:38",
+      "description": "`src/features/tasks/prReviewImageAttachments.ts:38-46` の `createIdempotentCleanup()` は `store.cleanup()` 直呼びではなく `cleanupImageAttachmentStore(store)` を呼ぶようになっています。`src/shared/utils/imageAttachmentStore.ts:62-67` で cleanup 例外は debug log に留まり、`src/__tests__/prReviewImageAttachments.test.ts:168-182` と `:198-215` で失敗時の元エラー保持と成功後 cleanup 失敗が throw しないことを確認しました。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0011"
+    },
+    {
+      "rawFindingId": "20260707-203015-pr-task-attachments-takt-add-p:reviewers:5:ai-antipattern-review:ai-antipattern-review-5-raw-2",
+      "stepName": "ai-antipattern-review",
+      "reviewer": "ai-antipattern-review",
+      "familyTag": "scope-creep",
+      "severity": "low",
+      "title": "PR画像attachmentと無関係な .takt/config.yaml のEOF改変が消えていることを確認",
+      "location": ".takt/config.yaml:40",
+      "description": "`git diff -- .takt/config.yaml` が空であること、かつ `tail -c 1 .takt/config.yaml | od -An -t x1` が `0a` を返すことを確認しました。`.takt/config.yaml` の末尾改行削除差分は残っていません。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0012"
+    },
+    {
+      "rawFindingId": "20260707-203015-pr-task-attachments-takt-add-p:reviewers:5:ai-antipattern-review:ai-antipattern-review-5-raw-3",
+      "stepName": "ai-antipattern-review",
+      "reviewer": "ai-antipattern-review",
+      "familyTag": "logic-error",
+      "severity": "low",
+      "title": "Content-Length の数値prefixだけを有効値として扱わないことを確認",
+      "location": "src/infra/github/attachmentDownload.ts:60",
+      "description": "`src/infra/github/attachmentDownload.ts:60-63` で `trim()` 後の値全体を `/^[0-9]+$/` で検証してから数値化するようになっています。`src/__tests__/github-attachmentDownload.test.ts:171-201` で `1abc`、`1, 1`、空文字、空白の malformed Content-Length を body 読み取り前に拒否するテストも確認しました。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0013"
+    },
+    {
+      "rawFindingId": "20260707-203015-pr-task-attachments-takt-add-p:reviewers:5:ai-antipattern-review:ai-antipattern-review-5-raw-4",
+      "stepName": "ai-antipattern-review",
+      "reviewer": "ai-antipattern-review",
+      "familyTag": "scope-creep",
+      "severity": "medium",
+      "title": "PR画像attachmentと無関係なプロジェクトworkflow overrideが未追跡で残っている",
+      "location": ".takt/workflows/takt-default-for-local-llm.yaml:10",
+      "description": "未追跡の `.takt/workflows/takt-default-for-local-llm.yaml` が追加されています。`diff -u builtins/ja/workflows/takt-default-for-local-llm.yaml .takt/workflows/takt-default-for-local-llm.yaml` で、PR画像attachment実装とは無関係な `max_steps: 50` から `200` への変更と複数stepへの `session: compact` 追加を確認しました。`src/infra/config/loaders/workflowLookupDirectories.ts:76-94` では名前付きworkflow解決で project workflow が builtin より先に探索されるため、この未追跡ファイルは同名builtin workflowを上書きし得る公開設定変更です。AI生成コードのスコープクリープとして、今回タスク差分に残すべきではありません。",
+      "suggestion": "`.takt/workflows/takt-default-for-local-llm.yaml` を削除し、今回タスクに無関係なworkflow overrideを差分から除外してください。workflow自体を変更する必要がある場合は別タスクで扱い、意図した挙動変更としてテストとドキュメントを付けてください。",
+      "kind": "issue"
+    },
+    {
+      "rawFindingId": "20260707-203015-pr-task-attachments-takt-add-p:reviewers:5:coding-review:coding-review-5-raw-1",
+      "stepName": "coding-review",
+      "reviewer": "coding-review",
+      "familyTag": "pr_image_attachment_cleanup_failure",
+      "severity": "medium",
+      "title": "PR画像attachmentのcleanup失敗が本来の結果やエラーを上書きする",
+      "location": "src/features/tasks/prReviewImageAttachments.ts:38",
+      "description": "`createIdempotentCleanup()` が `cleanupImageAttachmentStore(store)` を呼ぶ実装になっており、cleanup 例外は共有 cleanup 契約側で吸収されます。失敗経路は `src/features/tasks/prReviewImageAttachments.ts:159` の `cleanup(); throw error;` で元エラーを投げ直す構造を維持し、`src/__tests__/prReviewImageAttachments.test.ts:168` が cleanup 失敗時も `download failed` を保持すること、`src/__tests__/prReviewImageAttachments.test.ts:198` が成功後 cleanup 失敗でも throw しないことを検証しています。`npm run build`、`npm run lint`、関連テスト、`npm test` は成功しました。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0011"
+    },
+    {
+      "rawFindingId": "20260707-203015-pr-task-attachments-takt-add-p:reviewers:5:coding-review:coding-review-5-raw-2",
+      "stepName": "coding-review",
+      "reviewer": "coding-review",
+      "familyTag": "unrelated_config_eof_change",
+      "severity": "low",
+      "title": "PR画像attachmentと無関係な設定ファイルのEOF改変が残っている",
+      "location": ".takt/config.yaml:40",
+      "description": "`git diff -- .takt/config.yaml` は空で、`.takt/config.yaml` の不要なEOF差分は解消されています。`tail -c 1 .takt/config.yaml | od -An -t x1` でも最終バイトが `0a` で末尾改行が戻っていることを確認しました。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0012"
+    },
+    {
+      "rawFindingId": "20260707-203015-pr-task-attachments-takt-add-p:reviewers:5:coding-review:coding-review-5-raw-3",
+      "stepName": "coding-review",
+      "reviewer": "coding-review",
+      "familyTag": "github_attachment_content_length_validation",
+      "severity": "low",
+      "title": "Content-Length の数値 prefix だけを有効値として扱っている",
+      "location": "src/infra/github/attachmentDownload.ts:60",
+      "description": "`validateContentLength()` が `value.trim()` 後に `/^[0-9]+$/` で全体を検証してから `Number.parseInt()` する実装になり、`1abc` などの数値prefixだけを有効扱いしなくなっています。`src/__tests__/github-attachmentDownload.test.ts:171` は `1abc`、`1, 1`、空文字、空白を本文読み込み前に `Invalid GitHub attachment image Content-Length` で拒否することを検証しています。`npm run build`、`npm run lint`、関連テスト、`npm test` は成功しました。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0013"
+    },
+    {
+      "rawFindingId": "20260707-203015-pr-task-attachments-takt-add-p:reviewers:5:implementation-semantics-review:implementation-semantics-5-resolved-001",
+      "stepName": "implementation-semantics-review",
+      "reviewer": "implementation-semantics-review",
+      "familyTag": "state-consistency",
+      "severity": "medium",
+      "title": "PR画像attachmentのcleanup失敗が本来の結果やエラーを上書きしないことを確認",
+      "location": "src/features/tasks/prReviewImageAttachments.ts:38",
+      "description": "`createIdempotentCleanup()` は `cleanupImageAttachmentStore(store)` を呼ぶ実装に変わっており、`src/shared/utils/imageAttachmentStore.ts:62` で cleanup 例外が捕捉され debug log に留まることを確認しました。失敗経路は `src/features/tasks/prReviewImageAttachments.ts:159` の `cleanup(); throw error;` に到達でき、成功後の `add --pr` / pipeline `--pr` の finally から呼ばれる cleanup も例外を外へ出しません。`src/__tests__/prReviewImageAttachments.test.ts:168` と `src/__tests__/prReviewImageAttachments.test.ts:198` で、cleanup 失敗時に元エラーと成功結果が上書きされない検証も確認しました。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0011"
+    },
+    {
+      "rawFindingId": "20260707-203015-pr-task-attachments-takt-add-p:reviewers:5:implementation-semantics-review:implementation-semantics-5-resolved-002",
+      "stepName": "implementation-semantics-review",
+      "reviewer": "implementation-semantics-review",
+      "familyTag": "fail-fast",
+      "severity": "low",
+      "title": "Content-Length の malformed 値を数値 prefix として受け入れないことを確認",
+      "location": "src/infra/github/attachmentDownload.ts:60",
+      "description": "`validateContentLength()` は `const normalizedValue = value.trim();` の後、`/^[0-9]+$/` で全体が10進数字であることを検証してから `Number.parseInt(normalizedValue, 10)` する実装に変わっています。`1abc`、`1, 1`、空文字、空白は `Invalid GitHub attachment image Content-Length` で拒否され、body getter も読まれないことを `src/__tests__/github-attachmentDownload.test.ts:171` で確認しました。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0013"
+    },
+    {
+      "rawFindingId": "20260707-203015-pr-task-attachments-takt-add-p:reviewers:6:arch-review:arch-review-6-resolve-F0014",
+      "stepName": "arch-review",
+      "reviewer": "arch-review",
+      "familyTag": "scope-creep.workflow-override",
+      "severity": "medium",
+      "title": "PR画像attachmentと無関係な workflow override は解消済み",
+      "location": ".takt/workflows/takt-default-for-local-llm.yaml:10",
+      "description": "`test -e .takt/workflows/takt-default-for-local-llm.yaml` は exit status 1 で、対象の未追跡 workflow override が存在しないことを確認しました。`find .takt/workflows -maxdepth 2 -type f -print` も出力なし、`git status --short .takt/workflows .takt/config.yaml` も出力なしで、同名 builtin workflow を上書きし得るスコープ外差分は残っていません。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0014"
+    },
+    {
+      "rawFindingId": "20260707-203015-pr-task-attachments-takt-add-p:reviewers:6:arch-review:arch-review-6-raw-001",
+      "stepName": "arch-review",
+      "reviewer": "arch-review",
+      "familyTag": "architecture.side-effect-cleanup.pipeline-pr-attachments",
+      "severity": "medium",
+      "title": "pipeline --pr で画像attachment解決後の整形失敗時に一時attachment cleanupが実行されない",
+      "location": "src/features/pipeline/steps.ts:175",
+      "description": "`resolveTaskContent()` は `resolvePrReviewImageAttachments(prReview, cwd, getGitProvider())` の成功後、`formatPrReviewAsTask(resolvedPrReview.prReview)` を呼び、その後に `cleanupAttachments: resolvedPrReview.cleanup` を返しています。`formatPrReviewAsTask()` または後続の成功表示が throw した場合は `catch` に入り `undefined` を返しますが、この経路では `resolvedPrReview.cleanup` が呼ばれません。`runPipeline()` の `finally` は `resolveTaskContent()` から `TaskContent` が返った後にしか cleanup を所有できないため、PR画像の一時 attachment store が解放されない失敗経路が残っています。累積差分の再走査では Policy の「副作用と状態遷移の確認」「契約追加・変更の全入口検証」、Knowledge の「呼び出しチェーン検証」「公開状態の不変性」「構造・設計」を、`takt add --pr` 経路と pipeline `--pr` 経路の cleanup 所有移譲に照合し、この pipeline 側だけが成功後・返却前の例外経路を cleanup していないことを確認しました。",
+      "suggestion": "`resolvePrReviewImageAttachments()` 成功後から `TaskContent` 返却までを `try/catch` または `try/finally` で囲み、`TaskContent` として cleanup 所有権を返せなかった場合はその場で `resolvedPrReview.cleanup()` を実行してください。あわせて `formatPrReviewAsTask()` が throw した場合でも cleanup が呼ばれる pipeline `--pr` の単体テストを追加してください。",
+      "kind": "issue"
+    },
+    {
+      "rawFindingId": "20260707-203015-pr-task-attachments-takt-add-p:reviewers:6:ai-antipattern-review:ai-antipattern-review-6-raw-1",
+      "stepName": "ai-antipattern-review",
+      "reviewer": "ai-antipattern-review",
+      "familyTag": "scope-creep",
+      "severity": "medium",
+      "title": "PR画像attachmentと無関係なプロジェクトworkflow overrideが削除されていることを確認",
+      "location": ".takt/workflows/takt-default-for-local-llm.yaml:10",
+      "description": "`git status --short --untracked-files=all` に `.takt/workflows/` が表示されず、`find .takt/workflows -maxdepth 1 -type f -print` も出力なしでした。`git diff -- .takt/workflows/takt-default-for-local-llm.yaml` と `git ls-files .takt/workflows/takt-default-for-local-llm.yaml` も空で、F-0014 の未追跡 workflow override は差分から除外されています。再走査では Policy の全 ## セクション、Knowledge の Architecture / Implementation Semantics 各 ## セクション、差分、PR画像attachment配線、cleanup、Content-Length、`.takt/workflows` 状態を確認し、`npm run build`、`npm run lint`、`npm test` が成功しました。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0014"
+    },
+    {
+      "rawFindingId": "20260707-203015-pr-task-attachments-takt-add-p:reviewers:6:coding-review:coding-review-6-raw-1",
+      "stepName": "coding-review",
+      "reviewer": "coding-review",
+      "familyTag": "unrelated_project_workflow_override",
+      "severity": "medium",
+      "title": "PR画像attachmentと無関係なプロジェクトworkflow overrideが未追跡で残っている",
+      "location": ".takt/workflows/takt-default-for-local-llm.yaml",
+      "description": "`.takt/workflows/takt-default-for-local-llm.yaml` は存在せず、`rg --files .takt/workflows` も空で、未追跡の project workflow override は差分から除外されています。`git status --short` でも `.takt/workflows/` は表示されません。再走査証跡: Policy の ## 原則、## スコープ判定、## 判定基準、## 振る舞い証跡の判定、## ファクトチェック、## ボーイスカウトルールを再読し、タスク開始時点からの累積差分と F-0014 の対象パスを確認しました。`npm run build`、`npm run lint`、関連テスト、`npm test` は成功しました。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0014"
+    },
+    {
+      "rawFindingId": "20260707-203015-pr-task-attachments-takt-add-p:reviewers:7:arch-review:arch-review-7-resolve-F0015",
+      "familyTag": "architecture.side-effect-cleanup.pipeline-pr-attachments",
+      "severity": "medium",
+      "title": "pipeline --pr の整形失敗時 cleanup 漏れは解消済み",
+      "location": "src/features/pipeline/steps.ts:190",
+      "description": "`src/features/pipeline/steps.ts:174-178` で `resolvePrReviewImageAttachments()` 成功後すぐに cleanup 関数を保持し、`src/features/pipeline/steps.ts:181-189` で `TaskContent` へ cleanup 所有権を移譲した後だけ `cleanupOwnershipTransferred` を true にしています。`src/features/pipeline/steps.ts:190-193` の catch では所有権移譲前に `cleanupResolvedAttachments?.()` を実行するため、`formatPrReviewAsTask()` または成功表示が throw しても一時 attachment store は解放されます。さらに `src/__tests__/pipelineExecution.test.ts:860-895` で `formatPrReviewAsTask()` が `format failed` を throw する pipeline `--pr` 経路でも cleanup が1回呼ばれ、workflow 実行へ進まないことを確認しています。再走査では Policy の `## 原則`、`## スコープ判定`、`## 判定基準`、`## 振る舞い証跡の判定`、`## ファクトチェック`、`## レビューの基本手順` と、Knowledge の `## 構造・設計`、`## 境界での解決`、`## 呼び出しチェーン検証`、`## 公開状態の不変性`、`## 変更スコープの評価` を含む全 `##` セクションを累積差分へ照合し、この finding の受入条件を満たすことを確認しました。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0015",
+      "reviewer": "arch-review",
+      "stepName": "arch-review"
+    },
+    {
+      "rawFindingId": "20260707-203015-pr-task-attachments-takt-add-p:reviewers:7:ai-antipattern-review:ai-antipattern-review-7-raw-1",
+      "familyTag": "logic-error",
+      "severity": "medium",
+      "title": "pipeline --pr の整形失敗時にも一時attachment cleanupが実行されることを確認",
+      "location": "src/features/pipeline/steps.ts:174",
+      "description": "`src/features/pipeline/steps.ts:174` で `cleanupResolvedAttachments` を保持し、`src/features/pipeline/steps.ts:190` 以降の catch で `cleanupOwnershipTransferred` が false の場合に `cleanupResolvedAttachments?.()` を呼ぶ実装を確認しました。これにより `resolvePrReviewImageAttachments()` 成功後、`formatPrReviewAsTask()` または成功表示が throw して `TaskContent` へ cleanup 所有権を移せない経路でも cleanup が実行されます。`src/__tests__/pipelineExecution.test.ts:860` のテストで `formatPrReviewAsTask()` が throw した場合に cleanup が1回呼ばれ、task execution が開始されないことも確認しました。再走査証跡: Policy Source と Knowledge Source の全 `##` セクションを列挙し、Policy の原則、スコープ判定、判定基準、振る舞い証跡、ファクトチェック、契約追加・変更の全入口検証、副作用と状態遷移の確認、AI Antipattern の仮定検証、コンテキスト適合性、スコープクリープ、未使用コード検出、不要な後方互換コード検出、および Knowledge の構造・設計、呼び出しチェーン検証、公開状態の不変性、境界での fail-fast、内部状態の参照漏れと照合しました。`npm run build`、`npm run lint`、`npm test` は成功しました。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0015",
+      "reviewer": "ai-antipattern-review",
+      "stepName": "ai-antipattern-review"
+    },
+    {
+      "rawFindingId": "20260707-203015-pr-task-attachments-takt-add-p:reviewers:7:coding-review:coding-review-7-raw-1",
+      "familyTag": "pipeline_pr_attachment_cleanup_on_format_failure",
+      "severity": "medium",
+      "title": "pipeline --pr の整形失敗時に一時attachment cleanupが実行されない",
+      "location": "src/features/pipeline/steps.ts:174",
+      "description": "`resolveTaskContent()` は `resolvePrReviewImageAttachments()` 成功後に `cleanupResolvedAttachments` を保持し、`formatPrReviewAsTask()` を含む返却前処理を `try/catch` 内で実行しています。`TaskContent` へ cleanup 所有権を移す前に例外が起きた場合は `src/features/pipeline/steps.ts:190-193` で `cleanupResolvedAttachments?.()` を呼び、`src/features/pipeline/execute.ts:90-92` では所有権移譲後の cleanup を `finally` で実行するため、F-0015 の漏れは解消されています。回帰テスト `src/__tests__/pipelineExecution.test.ts:860` で `formatPrReviewAsTask()` が throw した場合に cleanup が1回呼ばれ、workflow 実行に進まないことを確認しました。再走査証跡: Policy の ## 原則、## スコープ判定、## 判定基準、## 振る舞い証跡の判定、## ファクトチェック、## ボーイスカウトルールを再読し、pipeline `--pr` と `takt add --pr` の attachment cleanup 所有移譲を累積差分から確認しました。`npm run build`、`npm run lint`、関連テスト、`npm test` は成功しました。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0015",
+      "reviewer": "coding-review",
+      "stepName": "coding-review"
+    },
+    {
+      "rawFindingId": "20260707-203015-pr-task-attachments-takt-add-p:reviewers:7:implementation-semantics-review:implementation-semantics-7-resolved-001",
+      "familyTag": "state-consistency",
+      "severity": "medium",
+      "title": "pipeline --pr の整形失敗時にも一時attachment cleanupが実行されることを確認",
+      "location": "src/features/pipeline/steps.ts:174",
+      "description": "`resolveTaskContent()` は `resolvePrReviewImageAttachments()` 成功後に `cleanupResolvedAttachments` へ cleanup を保持し、`cleanupOwnershipTransferred` が true になる前の例外経路では `src/features/pipeline/steps.ts:190` の catch で `cleanupResolvedAttachments?.()` を呼ぶ実装になっています。`formatPrReviewAsTask()` が throw する場合も `TaskContent` へ所有権移譲される前なので cleanup が実行されます。`src/__tests__/pipelineExecution.test.ts:860` で format 失敗時に exit code 2、`cleanup` 1回、`executeTask` 未呼び出しを検証していることも確認しました。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0015",
+      "reviewer": "implementation-semantics-review",
+      "stepName": "implementation-semantics-review"
+    }
+  ],
+  "conflicts": []
+}

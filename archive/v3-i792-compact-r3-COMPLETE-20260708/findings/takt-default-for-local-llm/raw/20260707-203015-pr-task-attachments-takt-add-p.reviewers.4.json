@@ -1,0 +1,38 @@
+[
+  {
+    "rawFindingId": "20260707-203015-pr-task-attachments-takt-add-p:reviewers:4:arch-review:arch-review-4-raw-001",
+    "stepName": "arch-review",
+    "reviewer": "arch-review",
+    "familyTag": "architecture.side-effect-cleanup.pr-image-attachments",
+    "severity": "medium",
+    "title": "PR画像attachmentのcleanup失敗が本来の結果やエラーを上書きする",
+    "location": "src/features/tasks/prReviewImageAttachments.ts:44",
+    "description": "`createIdempotentCleanup()` は `store.cleanup()` を直接呼び出しており、`cleanupImageAttachmentStore()` のような例外吸収を使っていません。そのため `resolvePrReviewImageAttachments()` の失敗経路では `catch` 内の `cleanup()` が throw すると元の download / validation エラーが `throw error` へ到達する前に失われます。同じ cleanup は `src/features/tasks/add/index.ts:236` の `finally` と `src/features/pipeline/execute.ts:91` の `finally` からも呼ばれるため、task 保存または workflow 実行が完了した後でも一時ディレクトリ削除失敗だけで `add --pr` / pipeline `--pr` の結果を例外化できます。これは Policy の状態整合性・副作用と状態遷移の確認、および plan の「cleanup は成功・失敗の両方で実行する」契約に対して、後片付け失敗が主処理の結果を壊す構造です。",
+    "suggestion": "`createIdempotentCleanup()` は `cleanupImageAttachmentStore(store)` を使うか、同等に cleanup 例外を debug log に留める実装にしてください。失敗経路では元の download / validation エラーを保持し、成功後の `finally` では cleanup 失敗で `add --pr` / pipeline `--pr` の成功結果を上書きしないようにしてください。あわせて cleanup が throw しても元エラーが保持される単体テストと、成功後 cleanup 失敗が呼び出し結果を壊さない配線テストを追加してください。",
+    "kind": "issue"
+  },
+  {
+    "rawFindingId": "20260707-203015-pr-task-attachments-takt-add-p:reviewers:4:ai-antipattern-review:ai-antipattern-review-4-raw-1",
+    "stepName": "ai-antipattern-review",
+    "reviewer": "ai-antipattern-review",
+    "familyTag": "scope-creep",
+    "severity": "low",
+    "title": "PR画像attachmentと無関係な設定ファイルのEOF改変が残っている",
+    "location": ".takt/config.yaml:40",
+    "description": "`.takt/config.yaml` の差分は40行目末尾の改行削除のみで、PRコメント画像をtask attachmentsへ配置する実装・テスト・ドキュメント更新に必要な変更ではありません。`git diff -- .takt/config.yaml` で `\\ No newline at end of file` のみを確認し、`tail -c 1 .takt/config.yaml | od -An -t x1` でも最終バイトが `22` で改行ではないことを確認しました。Policyのスコープクリープ/最小差分基準に照らすと、AIが周辺ファイルを不要に触った変更として残すべきではありません。",
+    "suggestion": "`.takt/config.yaml` の末尾改行を元に戻し、このタスクに無関係な設定ファイル差分を消してください。",
+    "kind": "issue"
+  },
+  {
+    "rawFindingId": "20260707-203015-pr-task-attachments-takt-add-p:reviewers:4:implementation-semantics-review:implementation-semantics-4-001",
+    "stepName": "implementation-semantics-review",
+    "reviewer": "implementation-semantics-review",
+    "familyTag": "fail-fast",
+    "severity": "low",
+    "title": "Content-Length の数値 prefix だけを有効値として扱っている",
+    "location": "src/infra/github/attachmentDownload.ts:60",
+    "description": "`validateContentLength()` は `Number.parseInt(value, 10)` の結果だけを検証しているため、`Content-Length: 1abc` のような不正ヘッダーでも `1` として `Number.isSafeInteger` を通過します。実確認でも `Number.parseInt('1abc', 10)` は `1`、`Number.isSafeInteger(...)` は `true` でした。GitHub attachment 応答が malformed な Content-Length と有効な小さい画像 body を返す条件では、外部境界の契約違反を fail-fast せず attachment として受け入れます。ストリーム上限により巨大 body の防御は維持されていますが、Content-Length 検証としては不正入力を黙って正規化しています。",
+    "suggestion": "`Content-Length` は `trim()` 後に `^[0-9]+$` などで全体が10進数字であることを検証してから数値化してください。`1abc`、`1, 1`、空文字などの malformed 値を `Invalid GitHub attachment image Content-Length` として拒否する単体テストも追加してください。",
+    "kind": "issue"
+  }
+]

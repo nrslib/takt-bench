@@ -1,0 +1,50 @@
+[
+  {
+    "rawFindingId": "20260707-203015-pr-task-attachments-takt-add-p:reviewers:6:arch-review:arch-review-6-resolve-F0014",
+    "stepName": "arch-review",
+    "reviewer": "arch-review",
+    "familyTag": "scope-creep.workflow-override",
+    "severity": "medium",
+    "title": "PR画像attachmentと無関係な workflow override は解消済み",
+    "location": ".takt/workflows/takt-default-for-local-llm.yaml:10",
+    "description": "`test -e .takt/workflows/takt-default-for-local-llm.yaml` は exit status 1 で、対象の未追跡 workflow override が存在しないことを確認しました。`find .takt/workflows -maxdepth 2 -type f -print` も出力なし、`git status --short .takt/workflows .takt/config.yaml` も出力なしで、同名 builtin workflow を上書きし得るスコープ外差分は残っていません。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0014"
+  },
+  {
+    "rawFindingId": "20260707-203015-pr-task-attachments-takt-add-p:reviewers:6:arch-review:arch-review-6-raw-001",
+    "stepName": "arch-review",
+    "reviewer": "arch-review",
+    "familyTag": "architecture.side-effect-cleanup.pipeline-pr-attachments",
+    "severity": "medium",
+    "title": "pipeline --pr で画像attachment解決後の整形失敗時に一時attachment cleanupが実行されない",
+    "location": "src/features/pipeline/steps.ts:175",
+    "description": "`resolveTaskContent()` は `resolvePrReviewImageAttachments(prReview, cwd, getGitProvider())` の成功後、`formatPrReviewAsTask(resolvedPrReview.prReview)` を呼び、その後に `cleanupAttachments: resolvedPrReview.cleanup` を返しています。`formatPrReviewAsTask()` または後続の成功表示が throw した場合は `catch` に入り `undefined` を返しますが、この経路では `resolvedPrReview.cleanup` が呼ばれません。`runPipeline()` の `finally` は `resolveTaskContent()` から `TaskContent` が返った後にしか cleanup を所有できないため、PR画像の一時 attachment store が解放されない失敗経路が残っています。累積差分の再走査では Policy の「副作用と状態遷移の確認」「契約追加・変更の全入口検証」、Knowledge の「呼び出しチェーン検証」「公開状態の不変性」「構造・設計」を、`takt add --pr` 経路と pipeline `--pr` 経路の cleanup 所有移譲に照合し、この pipeline 側だけが成功後・返却前の例外経路を cleanup していないことを確認しました。",
+    "suggestion": "`resolvePrReviewImageAttachments()` 成功後から `TaskContent` 返却までを `try/catch` または `try/finally` で囲み、`TaskContent` として cleanup 所有権を返せなかった場合はその場で `resolvedPrReview.cleanup()` を実行してください。あわせて `formatPrReviewAsTask()` が throw した場合でも cleanup が呼ばれる pipeline `--pr` の単体テストを追加してください。",
+    "kind": "issue"
+  },
+  {
+    "rawFindingId": "20260707-203015-pr-task-attachments-takt-add-p:reviewers:6:ai-antipattern-review:ai-antipattern-review-6-raw-1",
+    "stepName": "ai-antipattern-review",
+    "reviewer": "ai-antipattern-review",
+    "familyTag": "scope-creep",
+    "severity": "medium",
+    "title": "PR画像attachmentと無関係なプロジェクトworkflow overrideが削除されていることを確認",
+    "location": ".takt/workflows/takt-default-for-local-llm.yaml:10",
+    "description": "`git status --short --untracked-files=all` に `.takt/workflows/` が表示されず、`find .takt/workflows -maxdepth 1 -type f -print` も出力なしでした。`git diff -- .takt/workflows/takt-default-for-local-llm.yaml` と `git ls-files .takt/workflows/takt-default-for-local-llm.yaml` も空で、F-0014 の未追跡 workflow override は差分から除外されています。再走査では Policy の全 ## セクション、Knowledge の Architecture / Implementation Semantics 各 ## セクション、差分、PR画像attachment配線、cleanup、Content-Length、`.takt/workflows` 状態を確認し、`npm run build`、`npm run lint`、`npm test` が成功しました。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0014"
+  },
+  {
+    "rawFindingId": "20260707-203015-pr-task-attachments-takt-add-p:reviewers:6:coding-review:coding-review-6-raw-1",
+    "stepName": "coding-review",
+    "reviewer": "coding-review",
+    "familyTag": "unrelated_project_workflow_override",
+    "severity": "medium",
+    "title": "PR画像attachmentと無関係なプロジェクトworkflow overrideが未追跡で残っている",
+    "location": ".takt/workflows/takt-default-for-local-llm.yaml",
+    "description": "`.takt/workflows/takt-default-for-local-llm.yaml` は存在せず、`rg --files .takt/workflows` も空で、未追跡の project workflow override は差分から除外されています。`git status --short` でも `.takt/workflows/` は表示されません。再走査証跡: Policy の ## 原則、## スコープ判定、## 判定基準、## 振る舞い証跡の判定、## ファクトチェック、## ボーイスカウトルールを再読し、タスク開始時点からの累積差分と F-0014 の対象パスを確認しました。`npm run build`、`npm run lint`、関連テスト、`npm test` は成功しました。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0014"
+  }
+]

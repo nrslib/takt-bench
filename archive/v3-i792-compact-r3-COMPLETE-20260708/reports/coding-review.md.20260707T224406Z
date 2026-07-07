@@ -1,0 +1,6 @@
+# コーディングレビュー
+
+## 結果: APPROVE
+
+## サマリー
+F-0014 は `.takt/workflows/takt-default-for-local-llm.yaml` の未追跡 workflow override が差分から除外されていることを確認済みです。追加のブロッキング指摘はなく、`npm run build`、`npm run lint`、`npm test` は成功しています。

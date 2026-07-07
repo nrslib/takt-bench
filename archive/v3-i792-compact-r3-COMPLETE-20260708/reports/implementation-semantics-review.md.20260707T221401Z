@@ -1,0 +1,19 @@
+# 実装意味論レビュー
+
+## 結果: REJECT
+
+## サマリー
+PR画像attachmentの主要経路と既存 resolved finding の修正状態は概ね整っていますが、外部応答境界の `Content-Length` 検証に fail-fast 不備があります。
+
+## 観測した指摘
+| # | family_tag | 重大度 | 場所 | 問題 | 壊れる条件 | 修正案 |
+|---|------------|--------|------|------|-----------|--------|
+| 1 | fail-fast | Low | `src/infra/github/attachmentDownload.ts:60` | `Number.parseInt(value, 10)` の結果だけを検証しており、`Content-Length: 1abc` のような malformed 値を `1` として受け入れる | GitHub attachment 応答が不正な `Content-Length` と有効な小さい画像 body を返すと、外部境界の契約違反を検出せず attachment として保存する | `trim()` 後に `^[0-9]+$` などで全体が10進数字であることを検証してから数値化し、`1abc`、`1, 1`、空文字を拒否するテストを追加する |
+
+## 検証証跡
+- 差分確認: PR画像抽出、provider経由ダウンロード、stream上限、magic bytes検証、store防衛的コピー、`add --pr` / pipeline `--pr` 配線を再走査しました。
+- 判定根拠の実在確認: `src/infra/github/attachmentDownload.ts:60` の `Number.parseInt(value, 10)` と、`Number.parseInt('1abc', 10) === 1` / `Number.isSafeInteger(...) === true` を確認しました。
+- 再走査証跡: Knowledge の「データ構造の意味選択」「導出値の単一情報源」「命名と意味の整合」「境界での fail-fast」「内部状態の参照漏れ」を照合しました。
+
+## REJECT判定条件
+- ブロッキング指摘が1件あります。

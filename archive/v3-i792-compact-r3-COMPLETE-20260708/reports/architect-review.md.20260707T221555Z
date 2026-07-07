@@ -1,0 +1,19 @@
+# アーキテクチャレビュー
+
+## 結果: REJECT
+
+## サマリー
+累積差分を再走査し、PR画像attachmentの一時store cleanup失敗が主処理の結果や元エラーを上書きする副作用経路を確認しました。スコープ内のブロッキング指摘が1件あります。
+
+## 観測した指摘
+| # | family_tag | スコープ | 重大度 | 場所 | 問題 | 修正案 |
+|---|------------|---------|--------|------|------|--------|
+| 1 | architecture.side-effect-cleanup.pr-image-attachments | スコープ内 | medium | `src/features/tasks/prReviewImageAttachments.ts:44` | `createIdempotentCleanup()` が `store.cleanup()` を直接呼び、cleanup 例外を吸収しません。失敗経路では `src/features/tasks/prReviewImageAttachments.ts:159` の cleanup 例外が元の download / validation エラーを上書きし、成功後も `src/features/tasks/add/index.ts:236` と `src/features/pipeline/execute.ts:91` の `finally` から task 作成・pipeline 成功結果を例外化できます。 | `cleanupImageAttachmentStore(store)` 相当の安全な cleanup に寄せ、後片付け失敗を debug log に留めて元エラー・成功結果を壊さないようにしてください。cleanup throw 時の元エラー保持と成功後結果維持のテストを追加してください。 |
+
+## 再走査証跡
+Policy 全 `##` セクション、Knowledge 全 `##` / `###` セクションを再読し、累積差分の PR画像抽出、GitProvider境界、MIME/magic bytes、attachment store、`takt add --pr`、pipeline `--pr` 配線、cleanup 経路を照合しました。
+
+## 検証証跡
+- ビルド: 未確認（このレビューでは読み取り・検索のみ）
+- テスト: 未確認（このレビューでは読み取り・検索のみ）
+- 動作確認: 実コード上の呼び出しチェーンと cleanup 例外経路を確認済み。
