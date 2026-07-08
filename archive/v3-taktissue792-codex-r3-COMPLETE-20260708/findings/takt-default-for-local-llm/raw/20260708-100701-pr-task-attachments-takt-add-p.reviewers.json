@@ -1,0 +1,86 @@
+[
+  {
+    "rawFindingId": "20260708-100701-pr-task-attachments-takt-add-p:reviewers:1:arch-review:raw-arch-001-resolve-f0009",
+    "stepName": "arch-review",
+    "reviewer": "arch-review",
+    "familyTag": "test_failure",
+    "severity": "medium",
+    "title": "フル npm test が再び終了コード 1 で失敗する問題は解消済み",
+    "location": "scripts/run-npm-test.mjs:7; src/__tests__/npmTestEntrypoint.test.ts:8",
+    "description": "F-0009 の受入条件に戻って確認した。`scripts/run-npm-test.mjs:7` で無引数 `npm test` の unit shard count は 16 になり、`src/__tests__/npmTestEntrypoint.test.ts:8` 以降で `selectNpmTestRuns([])` が `--shard=1/16` から `--shard=16/16` を返す契約を固定している。現在の実行確認では `npm test -- --run src/__tests__/prImageAttachments.test.ts src/__tests__/npmTestEntrypoint.test.ts` が 2 files / 22 tests passed、`npm run build` が終了コード 0、`npm run lint` が終了コード 0、フル `npm test` が 16/16 shard まで完走して終了コード 0 だった。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0009"
+  },
+  {
+    "rawFindingId": "20260708-100701-pr-task-attachments-takt-add-p:reviewers:1:arch-review:raw-arch-001-resolve-f0010",
+    "stepName": "arch-review",
+    "reviewer": "arch-review",
+    "familyTag": "bug",
+    "severity": "medium",
+    "title": "画像 redirect 検証エラーが Promise rejection にならず uncaught exception になる問題は解消済み",
+    "location": "src/infra/github/prImageAttachments.ts:254; src/__tests__/prImageAttachments.test.ts:310; src/__tests__/prImageAttachments.test.ts:340; src/__tests__/prImageAttachments.test.ts:363",
+    "description": "F-0010 の受入条件に戻って確認した。`src/infra/github/prImageAttachments.ts:254` 以降で `resolveRedirectUrl()` は response callback 内の try/catch に入り、Location 欠落・allowlist 外 redirect の例外は `reject(error)` に統一されている。`src/__tests__/prImageAttachments.test.ts:310` 以降で Location 欠落、`:340` 以降で allowlist 外 redirect、`:363` 以降で redirect 上限が rejected error と cleanup として検証されている。対象テスト `prImageAttachments.test.ts` も現在の実行で成功した。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0010"
+  },
+  {
+    "rawFindingId": "20260708-100701-pr-task-attachments-takt-add-p:reviewers:1:ai-antipattern-review:raw-ai-antipattern-001-001",
+    "stepName": "ai-antipattern-review",
+    "reviewer": "ai-antipattern-review",
+    "familyTag": "missing-edge-case",
+    "severity": "medium",
+    "title": "画像 redirect 検証エラーは Promise rejection として処理される",
+    "location": "src/infra/github/prImageAttachments.ts:252; src/__tests__/prImageAttachments.test.ts:310",
+    "description": "Policy/Knowledge の `##` セクションを列挙して照合しました。現行実装では 3xx 応答分岐で `resolveRedirectUrl()` を `try/catch` し、Location 欠落や allowlist 外 redirect の例外を `reject(error)` に渡しています。`src/__tests__/prImageAttachments.test.ts:310` 以降で Location 欠落、allowlist 外 redirect、redirect 上限が rejected error として返り、temp root cleanup も実行されることを確認するテストがあります。`npm test -- --run src/__tests__/prImageAttachments.test.ts src/__tests__/npmTestEntrypoint.test.ts` は終了コード 0 でした。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0010"
+  },
+  {
+    "rawFindingId": "20260708-100701-pr-task-attachments-takt-add-p:reviewers:1:ai-antipattern-review:raw-ai-antipattern-001-002",
+    "stepName": "ai-antipattern-review",
+    "reviewer": "ai-antipattern-review",
+    "familyTag": "missing-edge-case",
+    "severity": "medium",
+    "title": "フル npm test の終了コード 1 は解消済み",
+    "location": "scripts/run-npm-test.mjs:7; src/__tests__/npmTestEntrypoint.test.ts:8",
+    "description": "Policy/Knowledge の `##` セクションを列挙して照合しました。現行実装では無引数 `npm test` の unit shard が 16 分割に更新され、入口テストも `--shard=1/16` から `--shard=16/16` までの生成を固定しています。現環境で `npm run build`、`npm run lint`、対象テスト、フル `npm test` を再実行し、すべて終了コード 0 で完了しました。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0009"
+  },
+  {
+    "rawFindingId": "20260708-100701-pr-task-attachments-takt-add-p:reviewers:1:coding-review:coding-review-100701-001",
+    "stepName": "coding-review",
+    "reviewer": "coding-review",
+    "familyTag": "test_failure",
+    "severity": "medium",
+    "title": "フル npm test が終了コード 0 で成功する",
+    "location": "scripts/run-npm-test.mjs:7",
+    "description": "F-0009 の受入条件に戻って確認しました。`scripts/run-npm-test.mjs:7` は unit shard 数を 16 に分割し、`runNpmTest()` は各 shard を逐次実行します。`npm run build`、`npm run lint`、対象テスト `prImageAttachments.test.ts` / `pipelineExecution.test.ts` / `npmTestEntrypoint.test.ts` はすべて終了コード 0 でした。さらにフル `npm test` も 1/16 から 16/16 まで全 shard が passed で終了コード 0 になり、前回の `Timeout calling \"onTaskUpdate\"` と shard 2/8 の失敗は再現しませんでした。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0009"
+  },
+  {
+    "rawFindingId": "20260708-100701-pr-task-attachments-takt-add-p:reviewers:1:coding-review:coding-review-100701-002",
+    "stepName": "coding-review",
+    "reviewer": "coding-review",
+    "familyTag": "bug",
+    "severity": "medium",
+    "title": "画像 redirect 検証エラーが Promise rejection として処理される",
+    "location": "src/infra/github/prImageAttachments.ts:254; src/__tests__/prImageAttachments.test.ts:310; src/__tests__/prImageAttachments.test.ts:340; src/__tests__/prImageAttachments.test.ts:363",
+    "description": "F-0010 の受入条件に戻って確認しました。`src/infra/github/prImageAttachments.ts:254` 以降の 3xx 分岐は `resolveRedirectUrl()` を `try/catch` で呼び、Location 欠落や allowlist 外 redirect の例外を `reject(error)` に変換してから return します。`src/__tests__/prImageAttachments.test.ts:310`、`:340`、`:363` では Location 欠落、allowlist 外 redirect、redirect 上限が `resolvePrReviewImageAttachments()` の rejected error として返り、一時ディレクトリ cleanup も実行されることを検証しています。対象テストとフル `npm test` は終了コード 0 でした。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0010"
+  },
+  {
+    "rawFindingId": "20260708-100701-pr-task-attachments-takt-add-p:reviewers:1:implementation-semantics-review:impl-sem-resolve-f0010-round1",
+    "stepName": "implementation-semantics-review",
+    "reviewer": "implementation-semantics-review",
+    "familyTag": "fail-fast.redirect-error-propagation",
+    "severity": "medium",
+    "title": "画像 redirect 検証エラーが Promise rejection として処理される",
+    "location": "src/infra/github/prImageAttachments.ts:254; src/infra/github/prImageAttachments.ts:257; src/infra/github/prImageAttachments.ts:362; src/__tests__/prImageAttachments.test.ts:310",
+    "description": "`requestGitHubAttachment()` の 3xx 分岐で `resolveRedirectUrl()` が try/catch 内に入り、例外時は `reject(error)` して return する実装を確認しました。さらに `resolvePrReviewImageAttachments()` の catch で tempRoot cleanup 後に rethrow され、Location 欠落・allowlist 外 redirect・redirect 上限の各テストが rejected error と cleanup を検証しているため、F-0010 の受入条件は満たされています。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0010"
+  }
+]

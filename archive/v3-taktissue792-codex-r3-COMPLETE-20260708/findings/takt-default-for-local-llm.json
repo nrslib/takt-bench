@@ -1,0 +1,804 @@
+{
+  "version": 1,
+  "workflowName": "takt-default-for-local-llm",
+  "nextId": 11,
+  "updatedAt": "2026-07-08T10:20:24.579Z",
+  "findings": [
+    {
+      "id": "F-0001",
+      "status": "resolved",
+      "lifecycle": "resolved",
+      "severity": "high",
+      "title": "takt add --pr が PR 本文だけの画像を処理せず早期終了する",
+      "location": "src/features/tasks/add/index.ts:195; src/__tests__/addTask.test.ts:375",
+      "description": "`addTask()` は `prReview.reviews.length === 0 && prReview.comments.length === 0` の場合に画像 resolver を呼ぶ前に return します。一方、`resolvePrReviewImageAttachments()` は PR 本文も収集対象にしており、要件も PR 本文・通常コメント・review thread コメント内の画像検出を求めています。現在のテストも resolver が呼ばれないことを固定しているため、PR 本文にだけ `![image](https://github.com/user-attachments/assets/...)` がある `takt add --pr` では attachments が保存されません。",
+      "suggestion": "`takt add --pr` の no-comment 早期終了を削除するか、少なくとも PR body/images を考慮した後に判定してください。あわせて addTask のテストを、コメントなしでも PR body 画像が task attachments に保存される契約へ更新してください。",
+      "reviewers": [
+        "arch-review"
+      ],
+      "rawFindingIds": [
+        "20260708-024638-pr-task-attachments-takt-add-p:reviewers:1:arch-review:raw-arch-001"
+      ],
+      "firstSeen": {
+        "runId": "20260708-024638-pr-task-attachments-takt-add-p",
+        "stepName": "arch-review",
+        "timestamp": "2026-07-08T04:02:54.800Z"
+      },
+      "lastSeen": {
+        "runId": "20260708-024638-pr-task-attachments-takt-add-p",
+        "stepName": "reviewers",
+        "timestamp": "2026-07-08T04:02:54.800Z"
+      },
+      "resolvedAt": "2026-07-08T04:33:07.513Z",
+      "resolvedEvidence": "kind=resolution_confirmation の raw finding が targetFindingId=F-0001 を指し、add --pr が PR 本文だけの画像を resolver 前に早期終了していた問題の解消確認として同じ location と issue meaning を示しているため。"
+    },
+    {
+      "id": "F-0002",
+      "status": "resolved",
+      "lifecycle": "resolved",
+      "severity": "medium",
+      "title": "takt --pr の画像一時ファイルが workflow 選択中の例外で cleanup されない",
+      "location": "src/app/cli/routing.ts:154",
+      "description": "`resolvePrInput()` 後に `cleanupSourceAttachments` が設定されますが、`determineWorkflow()`、`getWorkflowDescription()`、`selectInteractiveMode()` などは `try/finally` の外側で実行されています。これらが throw した場合、PR 画像を保存した一時ディレクトリの cleanup が実行されず、private repository 由来の画像ファイルが残ります。キャンセル分岐と interactive 実行後だけ cleanup されるため、例外経路の状態整合性が欠落しています。",
+      "suggestion": "`cleanupSourceAttachments` を取得した直後から後続の workflow/mode 解決と interactive 実行全体を同一の `try/finally` に入れ、正常終了・キャンセル・例外の全経路で一度だけ cleanup される構造にしてください。",
+      "reviewers": [
+        "arch-review"
+      ],
+      "rawFindingIds": [
+        "20260708-024638-pr-task-attachments-takt-add-p:reviewers:1:arch-review:raw-arch-002"
+      ],
+      "firstSeen": {
+        "runId": "20260708-024638-pr-task-attachments-takt-add-p",
+        "stepName": "arch-review",
+        "timestamp": "2026-07-08T04:02:54.800Z"
+      },
+      "lastSeen": {
+        "runId": "20260708-024638-pr-task-attachments-takt-add-p",
+        "stepName": "reviewers",
+        "timestamp": "2026-07-08T04:02:54.800Z"
+      },
+      "resolvedAt": "2026-07-08T04:33:07.513Z",
+      "resolvedEvidence": "kind=resolution_confirmation の raw finding が targetFindingId=F-0002 を指し、routing の PR 画像一時ファイル cleanup 漏れの解消確認として同じ location と issue meaning を示しているため。"
+    },
+    {
+      "id": "F-0003",
+      "status": "resolved",
+      "lifecycle": "resolved",
+      "severity": "high",
+      "title": "private-user-images の署名付きURLがエラー表示へ漏れる",
+      "location": "src/infra/github/prImageAttachments.ts:216; src/infra/github/prImageAttachments.ts:221; src/infra/github/prImageAttachments.ts:224; src/features/tasks/add/index.ts:204; src/features/pipeline/steps.ts:164; src/app/cli/routing.ts:127",
+      "description": "GitHub の private-user-images URL はクエリに期限付きトークンを含むことがありますが、検証エラーが `url` 全体を例外メッセージへ埋め込み、その例外を `getErrorMessage()` 経由で CLI に表示しています。`execFileSync('gh', ['api', '--include', url])` の失敗時も Node の Error.message にコマンド引数のURLが含まれることを実コマンドで確認しました。レビューポリシーの「ログ、エラーレスポンス、テスト出力への機密情報露出」に該当します。",
+      "suggestion": "画像URLを例外・ログに出さないでください。少なくとも `URL` の query/hash を除去した表示用識別子、または `Image #N` / host のみを使い、`execFileSync` 失敗も resolver 内で捕捉してサニタイズ済みのエラーへ変換してください。Content-Type/magic bytes 不一致のエラーも同じサニタイズ経路に統一し、クエリ付き private-user-images URL が表示されないテストを追加してください。",
+      "reviewers": [
+        "ai-antipattern-review"
+      ],
+      "rawFindingIds": [
+        "20260708-024638-pr-task-attachments-takt-add-p:reviewers:1:ai-antipattern-review:raw-ai-antipattern-001"
+      ],
+      "firstSeen": {
+        "runId": "20260708-024638-pr-task-attachments-takt-add-p",
+        "stepName": "ai-antipattern-review",
+        "timestamp": "2026-07-08T04:02:54.800Z"
+      },
+      "lastSeen": {
+        "runId": "20260708-024638-pr-task-attachments-takt-add-p",
+        "stepName": "reviewers",
+        "timestamp": "2026-07-08T04:02:54.800Z"
+      },
+      "resolvedAt": "2026-07-08T04:33:07.513Z",
+      "resolvedEvidence": "kind=resolution_confirmation の raw finding が targetFindingId=F-0003 を指し、private-user-images の署名付き URL がエラー表示へ漏れる問題の解消確認として同じ location と issue meaning を示しているため。"
+    },
+    {
+      "id": "F-0004",
+      "status": "resolved",
+      "lifecycle": "resolved",
+      "severity": "medium",
+      "title": "takt add --pr が PR 本文だけの画像を処理せず終了する",
+      "location": "src/features/tasks/add/index.ts:195; src/__tests__/addTask.test.ts:375",
+      "description": "要件は `takt add --pr <number>` で PR 本文・通常コメント・review thread コメント内の画像URLを検出することですが、`addTask()` は `reviews` と `comments` が空だと resolver 実行前に `PR #... has no review comments` で return します。そのため PR 本文に `![image](https://github.com/user-attachments/assets/...)` があるだけのPRでは、本文画像が保存されません。追加テストも `mockResolvePrReviewImageAttachments` が呼ばれないことを期待しており、今回の要件と逆の既存契約を固定しています。",
+      "suggestion": "`takt add --pr` では PR 本文も task 化・画像抽出の対象にしてください。少なくとも resolver を no-review-comments 判定より前に実行し、本文・コメント・レビューのいずれかに内容または画像がある場合は保存へ進むように契約を更新してください。`addTask.test.ts` の no-review-comments ケースは、本文画像がある場合に attachment が保存される回帰テストへ置き換えてください。",
+      "reviewers": [
+        "ai-antipattern-review"
+      ],
+      "rawFindingIds": [
+        "20260708-024638-pr-task-attachments-takt-add-p:reviewers:1:ai-antipattern-review:raw-ai-antipattern-002"
+      ],
+      "firstSeen": {
+        "runId": "20260708-024638-pr-task-attachments-takt-add-p",
+        "stepName": "ai-antipattern-review",
+        "timestamp": "2026-07-08T04:02:54.800Z"
+      },
+      "lastSeen": {
+        "runId": "20260708-024638-pr-task-attachments-takt-add-p",
+        "stepName": "reviewers",
+        "timestamp": "2026-07-08T04:02:54.800Z"
+      },
+      "resolvedAt": "2026-07-08T04:33:07.513Z",
+      "resolvedEvidence": "kind=resolution_confirmation の raw finding が targetFindingId=F-0004 を指し、add --pr が PR 本文だけの画像を処理せず終了していた requirement mismatch の解消確認として同じ location と issue meaning を示しているため。"
+    },
+    {
+      "id": "F-0005",
+      "status": "resolved",
+      "lifecycle": "resolved",
+      "severity": "medium",
+      "title": "takt add --pr が PR 本文だけに画像があるケースを処理しない",
+      "location": "src/features/tasks/add/index.ts:195",
+      "description": "`takt add --pr` は `prReview.reviews.length === 0 && prReview.comments.length === 0` の場合に画像 resolver を呼ぶ前に return します。`formatPrReviewAsTask()` は PR body も task に含める実装で、元要件も PR 本文内の画像 URL 検出を要求しています。そのため、PR 本文に `![image](https://github.com/user-attachments/assets/...)` があり、通常コメント/review thread がまだ無い PR では task 作成自体が中断され、画像は `.takt/tasks/<slug>/attachments/` に保存されません。既存テストも `src/__tests__/addTask.test.ts:375` で resolver 未呼び出しを固定しており、この要件分岐が未検証です。",
+      "suggestion": "この早期 return を削除するか、少なくとも PR body の有無/画像参照を考慮した後に判定してください。`comments: []`, `reviews: []`, `body` に GitHub attachment 画像を含む `takt add --pr` の回帰テストを追加し、resolver と `saveTaskFile(... attachments ...)` が呼ばれることを固定してください。",
+      "reviewers": [
+        "coding-review"
+      ],
+      "rawFindingIds": [
+        "20260708-024638-pr-task-attachments-takt-add-p:reviewers:1:coding-review:raw-coding-review-001"
+      ],
+      "firstSeen": {
+        "runId": "20260708-024638-pr-task-attachments-takt-add-p",
+        "stepName": "coding-review",
+        "timestamp": "2026-07-08T04:02:54.800Z"
+      },
+      "lastSeen": {
+        "runId": "20260708-024638-pr-task-attachments-takt-add-p",
+        "stepName": "reviewers",
+        "timestamp": "2026-07-08T04:02:54.800Z"
+      },
+      "resolvedAt": "2026-07-08T04:33:07.513Z",
+      "resolvedEvidence": "kind=resolution_confirmation の raw finding が targetFindingId=F-0005 を指し、add --pr が PR 本文だけに画像があるケースを処理しない問題の解消確認として同じ location と issue meaning を示しているため。"
+    },
+    {
+      "id": "F-0006",
+      "status": "resolved",
+      "lifecycle": "resolved",
+      "severity": "medium",
+      "title": "フル npm test が終了コード 1 で失敗する",
+      "description": "レビュー中に `npm run build` と `npm run lint` は成功しましたが、`npm test` は Vitest の unhandled error `Timeout calling \"onTaskUpdate\"` で終了コード 1 になりました。全テスト本体の pass 表示は出ていますが、品質要件は `npm test` の成功なので現状態では満たせていません。",
+      "suggestion": "フル `npm test` が安定して終了コード 0 になるよう、該当 shard/テストランナーの timeout 原因を切り分けて修正し、再実行結果を確認してください。",
+      "reviewers": [
+        "coding-review"
+      ],
+      "rawFindingIds": [
+        "20260708-024638-pr-task-attachments-takt-add-p:reviewers:1:coding-review:raw-coding-review-002"
+      ],
+      "firstSeen": {
+        "runId": "20260708-024638-pr-task-attachments-takt-add-p",
+        "stepName": "coding-review",
+        "timestamp": "2026-07-08T04:02:54.800Z"
+      },
+      "lastSeen": {
+        "runId": "20260708-024638-pr-task-attachments-takt-add-p",
+        "stepName": "reviewers",
+        "timestamp": "2026-07-08T04:02:54.800Z"
+      },
+      "resolvedAt": "2026-07-08T05:01:11.645Z",
+      "resolvedEvidence": "両 raw finding が kind=resolution_confirmation かつ targetFindingId=F-0006 を明示し、前回 open だった full npm test 終了コード 1 の問題について npm run build、npm run lint、npm test の終了コード 0 と前回 timeout 非再現を確認しているため。"
+    },
+    {
+      "id": "F-0007",
+      "status": "resolved",
+      "lifecycle": "resolved",
+      "severity": "medium",
+      "title": "takt add --pr が PR 本文だけの画像を処理前に捨てる",
+      "location": "src/features/tasks/add/index.ts:195",
+      "description": "`addTask()` は `prReview.reviews.length === 0 && prReview.comments.length === 0` の場合に即 return するため、PR 本文に `![screenshot](https://github.com/user-attachments/assets/...)` があっても `resolvePrReviewImageAttachments()` に到達しません。期待挙動は PR 本文・通常コメント・review thread コメント内の画像 URL 検出なので、コメントが無い PR でも本文画像は task attachments に保存される必要があります。`takt --pr` と pipeline 側は同じコメント有無ゲートを持たないため、入口ごとに PR body の意味が不一致になっています。",
+      "suggestion": "このコメント専用ゲートを削除するか、少なくとも `prReview.body.trim().length > 0` を有効な PR task 入力として扱う条件に変更してください。`takt --pr` / pipeline と同じく `formatPrReviewAsTask()` と `resolvePrReviewImageAttachments()` が PR body を処理する経路へ揃えるのが安全です。",
+      "reviewers": [
+        "implementation-semantics-review"
+      ],
+      "rawFindingIds": [
+        "20260708-024638-pr-task-attachments-takt-add-p:reviewers:1:implementation-semantics-review:impl-semantics-raw-1"
+      ],
+      "firstSeen": {
+        "runId": "20260708-024638-pr-task-attachments-takt-add-p",
+        "stepName": "implementation-semantics-review",
+        "timestamp": "2026-07-08T04:02:54.800Z"
+      },
+      "lastSeen": {
+        "runId": "20260708-024638-pr-task-attachments-takt-add-p",
+        "stepName": "reviewers",
+        "timestamp": "2026-07-08T04:02:54.800Z"
+      },
+      "resolvedAt": "2026-07-08T04:33:07.513Z",
+      "resolvedEvidence": "kind=resolution_confirmation の raw finding が targetFindingId=F-0007 を指し、add --pr が PR 本文だけの画像を処理前に捨てる入口契約問題の解消確認として同じ location と issue meaning を示しているため。"
+    },
+    {
+      "id": "F-0008",
+      "status": "resolved",
+      "lifecycle": "resolved",
+      "severity": "high",
+      "title": "GitHub attachment の web URL を gh api endpoint として渡している",
+      "location": "src/infra/github/prImageAttachments.ts:233; src/infra/github/prImageAttachments.ts:275; src/__tests__/prImageAttachments.test.ts:53",
+      "description": "`downloadImageWithGhApi()` は allowlist 済みの `https://github.com/user-attachments/assets/...` や `https://private-user-images.githubusercontent.com/...` をそのまま `gh api --include <url>` に渡しています。しかしローカル一次情報の `gh api --help` は endpoint 引数を GitHub API v3 の path または `graphql` と説明しており、今回の対象 URL は GitHub API endpoint ではなく web attachment URL です。テストも `execFileSync` を mock して引数とレスポンス parse だけを確認しているため、対象画像 URL を実際にダウンロードできる外部契約が検証されていません。これは PR コメント内画像をローカルにダウンロードする中核要件の入口を満たさない構造です。",
+      "suggestion": "GitHub attachment の full URL 取得は `gh api` endpoint として扱わず、allowlist 済み URL 専用の downloader 境界に分離してください。例えば `gh auth token` で取得した token をログに出さずに Authorization 付き HTTPS request へ渡す、または GitHub が公式に提供する該当 API endpoint がある場合だけ `gh api` を使う構造にしてください。あわせて `github.com/user-attachments/assets/...` と `private-user-images.githubusercontent.com/...` の download 経路が mock だけでなく CLI 契約に沿うことを固定するテストを追加してください。",
+      "reviewers": [
+        "arch-review"
+      ],
+      "rawFindingIds": [
+        "20260708-024638-pr-task-attachments-takt-add-p:reviewers:4:arch-review:raw-arch-004-001"
+      ],
+      "firstSeen": {
+        "runId": "20260708-024638-pr-task-attachments-takt-add-p",
+        "stepName": "arch-review",
+        "timestamp": "2026-07-08T05:37:05.338Z"
+      },
+      "lastSeen": {
+        "runId": "20260708-024638-pr-task-attachments-takt-add-p",
+        "stepName": "reviewers",
+        "timestamp": "2026-07-08T05:37:05.338Z"
+      },
+      "resolvedAt": "2026-07-08T06:12:08.195Z",
+      "resolvedEvidence": "現在の raw findings はいずれも kind=resolution_confirmation で targetFindingId=F-0008 を指しており、同一の GitHub attachment download 契約問題について、旧 gh api --include <web URL> 経路が gh auth token + 認証付き HTTPS GET 経路へ置換されたことを確認している。"
+    },
+    {
+      "id": "F-0009",
+      "status": "resolved",
+      "lifecycle": "resolved",
+      "severity": "medium",
+      "title": "フル npm test が再び終了コード 1 で失敗する",
+      "location": "scripts/run-npm-test.mjs:7",
+      "description": "`npm run build` と `npm run lint` は成功し、対象テスト `prImageAttachments.test.ts` / `pipelineExecution.test.ts` / `npmTestEntrypoint.test.ts` も成功しました。しかしフル `npm test` は shard 2/8 で Vitest の unhandled error `Timeout calling \"onTaskUpdate\"` を出した後、最終的に `[takt] npm run test:unit:parallel -- --shard=2/8 --maxWorkers=1 failed with exit=1` で終了しました。品質要件はフル `npm test` 成功なので、現状態では満たしていません。なお同じ shard の単独再実行は成功しており、フル実行経路の不安定さとして観測しています。",
+      "suggestion": "フル `npm test` が安定して終了コード 0 になるよう、shard 2/8 の `onTaskUpdate` timeout 原因または `scripts/run-npm-test.mjs` の shard/worker 実行方式を修正し、フル `npm test` を再実行して成功を確認してください。",
+      "reviewers": [
+        "coding-review"
+      ],
+      "rawFindingIds": [
+        "20260708-024638-pr-task-attachments-takt-add-p:reviewers:6:coding-review:coding-review-6-001"
+      ],
+      "firstSeen": {
+        "runId": "20260708-024638-pr-task-attachments-takt-add-p",
+        "stepName": "coding-review",
+        "timestamp": "2026-07-08T06:52:07.755Z"
+      },
+      "lastSeen": {
+        "runId": "20260708-024638-pr-task-attachments-takt-add-p",
+        "stepName": "reviewers",
+        "timestamp": "2026-07-08T06:52:07.755Z"
+      },
+      "resolvedAt": "2026-07-08T10:20:24.579Z",
+      "resolvedEvidence": "いずれも kind=resolution_confirmation で targetFindingId が F-0009。既存 F-0009 の test_failure / npm test 失敗について、16 shard 化、入口テスト、フル npm test 終了コード 0 を確認した同一解消確認。"
+    },
+    {
+      "id": "F-0010",
+      "status": "resolved",
+      "lifecycle": "resolved",
+      "severity": "medium",
+      "title": "画像 redirect 検証エラーが Promise rejection にならず uncaught exception になる",
+      "location": "src/infra/github/prImageAttachments.ts:254",
+      "description": "`requestGitHubAttachment()` の 3xx 応答分岐で `resolveRedirectUrl(url, response.headers.location, imageLabel)` を response callback 内から直接呼んでいます。`resolveRedirectUrl()` は Location 欠落や allowlist 外 redirect で throw しますが、この throw は非同期 callback 内で発生するため、返却 Promise の `reject` や `downloadImageWithAuthenticatedRequest()` の catch に変換されません。結果として、不正な redirect 応答時にサニタイズ済みのダウンロード失敗として扱えず、cleanup と通常エラー処理の経路から外れる可能性があります。`prImageAttachments.test.ts` には redirect の Location 欠落・allowlist 外を rejection として検証するテストもありませんでした。",
+      "suggestion": "3xx 分岐で `resolveRedirectUrl()` を `try/catch` し、例外を `reject(error)` に統一してください。あわせて Location 欠落、allowlist 外 redirect、redirect 上限の各ケースが `resolvePrReviewImageAttachments()` から通常の rejected error として返り、cleanup も実行されることを単体テストで固定してください。",
+      "reviewers": [
+        "coding-review"
+      ],
+      "rawFindingIds": [
+        "20260708-024638-pr-task-attachments-takt-add-p:reviewers:6:coding-review:coding-review-6-002"
+      ],
+      "firstSeen": {
+        "runId": "20260708-024638-pr-task-attachments-takt-add-p",
+        "stepName": "coding-review",
+        "timestamp": "2026-07-08T06:52:07.755Z"
+      },
+      "lastSeen": {
+        "runId": "20260708-024638-pr-task-attachments-takt-add-p",
+        "stepName": "reviewers",
+        "timestamp": "2026-07-08T06:52:07.755Z"
+      },
+      "resolvedAt": "2026-07-08T10:20:24.579Z",
+      "resolvedEvidence": "いずれも kind=resolution_confirmation で targetFindingId が F-0010。既存 F-0010 の redirect 検証例外が Promise rejection にならない問題について、3xx 分岐の try/catch と Location 欠落・allowlist 外・redirect 上限テストを確認した同一解消確認。"
+    }
+  ],
+  "rawFindings": [
+    {
+      "rawFindingId": "20260708-024638-pr-task-attachments-takt-add-p:reviewers:1:arch-review:raw-arch-001",
+      "stepName": "arch-review",
+      "reviewer": "arch-review",
+      "familyTag": "arch.contract.pr_body_images.add_pr_entrypoint",
+      "severity": "high",
+      "title": "takt add --pr が PR 本文だけの画像を処理せず早期終了する",
+      "location": "src/features/tasks/add/index.ts:195; src/__tests__/addTask.test.ts:375",
+      "description": "`addTask()` は `prReview.reviews.length === 0 && prReview.comments.length === 0` の場合に画像 resolver を呼ぶ前に return します。一方、`resolvePrReviewImageAttachments()` は PR 本文も収集対象にしており、要件も PR 本文・通常コメント・review thread コメント内の画像検出を求めています。現在のテストも resolver が呼ばれないことを固定しているため、PR 本文にだけ `![image](https://github.com/user-attachments/assets/...)` がある `takt add --pr` では attachments が保存されません。",
+      "suggestion": "`takt add --pr` の no-comment 早期終了を削除するか、少なくとも PR body/images を考慮した後に判定してください。あわせて addTask のテストを、コメントなしでも PR body 画像が task attachments に保存される契約へ更新してください。",
+      "kind": "issue"
+    },
+    {
+      "rawFindingId": "20260708-024638-pr-task-attachments-takt-add-p:reviewers:1:arch-review:raw-arch-002",
+      "stepName": "arch-review",
+      "reviewer": "arch-review",
+      "familyTag": "arch.state_cleanup.pr_source_attachments.routing",
+      "severity": "medium",
+      "title": "takt --pr の画像一時ファイルが workflow 選択中の例外で cleanup されない",
+      "location": "src/app/cli/routing.ts:154",
+      "description": "`resolvePrInput()` 後に `cleanupSourceAttachments` が設定されますが、`determineWorkflow()`、`getWorkflowDescription()`、`selectInteractiveMode()` などは `try/finally` の外側で実行されています。これらが throw した場合、PR 画像を保存した一時ディレクトリの cleanup が実行されず、private repository 由来の画像ファイルが残ります。キャンセル分岐と interactive 実行後だけ cleanup されるため、例外経路の状態整合性が欠落しています。",
+      "suggestion": "`cleanupSourceAttachments` を取得した直後から後続の workflow/mode 解決と interactive 実行全体を同一の `try/finally` に入れ、正常終了・キャンセル・例外の全経路で一度だけ cleanup される構造にしてください。",
+      "kind": "issue"
+    },
+    {
+      "rawFindingId": "20260708-024638-pr-task-attachments-takt-add-p:reviewers:1:ai-antipattern-review:raw-ai-antipattern-001",
+      "stepName": "ai-antipattern-review",
+      "reviewer": "ai-antipattern-review",
+      "familyTag": "ai-antipattern.security.secret-url-leak",
+      "severity": "high",
+      "title": "private-user-images の署名付きURLがエラー表示へ漏れる",
+      "location": "src/infra/github/prImageAttachments.ts:216; src/infra/github/prImageAttachments.ts:221; src/infra/github/prImageAttachments.ts:224; src/features/tasks/add/index.ts:204; src/features/pipeline/steps.ts:164; src/app/cli/routing.ts:127",
+      "description": "GitHub の private-user-images URL はクエリに期限付きトークンを含むことがありますが、検証エラーが `url` 全体を例外メッセージへ埋め込み、その例外を `getErrorMessage()` 経由で CLI に表示しています。`execFileSync('gh', ['api', '--include', url])` の失敗時も Node の Error.message にコマンド引数のURLが含まれることを実コマンドで確認しました。レビューポリシーの「ログ、エラーレスポンス、テスト出力への機密情報露出」に該当します。",
+      "suggestion": "画像URLを例外・ログに出さないでください。少なくとも `URL` の query/hash を除去した表示用識別子、または `Image #N` / host のみを使い、`execFileSync` 失敗も resolver 内で捕捉してサニタイズ済みのエラーへ変換してください。Content-Type/magic bytes 不一致のエラーも同じサニタイズ経路に統一し、クエリ付き private-user-images URL が表示されないテストを追加してください。",
+      "kind": "issue"
+    },
+    {
+      "rawFindingId": "20260708-024638-pr-task-attachments-takt-add-p:reviewers:1:ai-antipattern-review:raw-ai-antipattern-002",
+      "stepName": "ai-antipattern-review",
+      "reviewer": "ai-antipattern-review",
+      "familyTag": "ai-antipattern.requirement-mismatch.entrypoint",
+      "severity": "medium",
+      "title": "takt add --pr が PR 本文だけの画像を処理せず終了する",
+      "location": "src/features/tasks/add/index.ts:195; src/__tests__/addTask.test.ts:375",
+      "description": "要件は `takt add --pr <number>` で PR 本文・通常コメント・review thread コメント内の画像URLを検出することですが、`addTask()` は `reviews` と `comments` が空だと resolver 実行前に `PR #... has no review comments` で return します。そのため PR 本文に `![image](https://github.com/user-attachments/assets/...)` があるだけのPRでは、本文画像が保存されません。追加テストも `mockResolvePrReviewImageAttachments` が呼ばれないことを期待しており、今回の要件と逆の既存契約を固定しています。",
+      "suggestion": "`takt add --pr` では PR 本文も task 化・画像抽出の対象にしてください。少なくとも resolver を no-review-comments 判定より前に実行し、本文・コメント・レビューのいずれかに内容または画像がある場合は保存へ進むように契約を更新してください。`addTask.test.ts` の no-review-comments ケースは、本文画像がある場合に attachment が保存される回帰テストへ置き換えてください。",
+      "kind": "issue"
+    },
+    {
+      "rawFindingId": "20260708-024638-pr-task-attachments-takt-add-p:reviewers:1:coding-review:raw-coding-review-001",
+      "stepName": "coding-review",
+      "reviewer": "coding-review",
+      "familyTag": "pr_body_image_attachments_add_pr",
+      "severity": "medium",
+      "title": "`takt add --pr` が PR 本文だけに画像があるケースを処理しない",
+      "location": "src/features/tasks/add/index.ts:195",
+      "description": "`takt add --pr` は `prReview.reviews.length === 0 && prReview.comments.length === 0` の場合に画像 resolver を呼ぶ前に return します。`formatPrReviewAsTask()` は PR body も task に含める実装で、元要件も PR 本文内の画像 URL 検出を要求しています。そのため、PR 本文に `![image](https://github.com/user-attachments/assets/...)` があり、通常コメント/review thread がまだ無い PR では task 作成自体が中断され、画像は `.takt/tasks/<slug>/attachments/` に保存されません。既存テストも `src/__tests__/addTask.test.ts:375` で resolver 未呼び出しを固定しており、この要件分岐が未検証です。",
+      "suggestion": "この早期 return を削除するか、少なくとも PR body の有無/画像参照を考慮した後に判定してください。`comments: []`, `reviews: []`, `body` に GitHub attachment 画像を含む `takt add --pr` の回帰テストを追加し、resolver と `saveTaskFile(... attachments ...)` が呼ばれることを固定してください。",
+      "kind": "issue"
+    },
+    {
+      "rawFindingId": "20260708-024638-pr-task-attachments-takt-add-p:reviewers:1:coding-review:raw-coding-review-002",
+      "stepName": "coding-review",
+      "reviewer": "coding-review",
+      "familyTag": "verification_npm_test_failure",
+      "severity": "medium",
+      "title": "フル `npm test` が終了コード 1 で失敗する",
+      "description": "レビュー中に `npm run build` と `npm run lint` は成功しましたが、`npm test` は Vitest の unhandled error `Timeout calling \"onTaskUpdate\"` で終了コード 1 になりました。全テスト本体の pass 表示は出ていますが、品質要件は `npm test` の成功なので現状態では満たせていません。",
+      "suggestion": "フル `npm test` が安定して終了コード 0 になるよう、該当 shard/テストランナーの timeout 原因を切り分けて修正し、再実行結果を確認してください。",
+      "kind": "issue"
+    },
+    {
+      "rawFindingId": "20260708-024638-pr-task-attachments-takt-add-p:reviewers:1:implementation-semantics-review:impl-semantics-raw-1",
+      "stepName": "implementation-semantics-review",
+      "reviewer": "implementation-semantics-review",
+      "familyTag": "implementation-semantics.contract-entrance",
+      "severity": "medium",
+      "title": "takt add --pr が PR 本文だけの画像を処理前に捨てる",
+      "location": "src/features/tasks/add/index.ts:195",
+      "description": "`addTask()` は `prReview.reviews.length === 0 && prReview.comments.length === 0` の場合に即 return するため、PR 本文に `![screenshot](https://github.com/user-attachments/assets/...)` があっても `resolvePrReviewImageAttachments()` に到達しません。期待挙動は PR 本文・通常コメント・review thread コメント内の画像 URL 検出なので、コメントが無い PR でも本文画像は task attachments に保存される必要があります。`takt --pr` と pipeline 側は同じコメント有無ゲートを持たないため、入口ごとに PR body の意味が不一致になっています。",
+      "suggestion": "このコメント専用ゲートを削除するか、少なくとも `prReview.body.trim().length > 0` を有効な PR task 入力として扱う条件に変更してください。`takt --pr` / pipeline と同じく `formatPrReviewAsTask()` と `resolvePrReviewImageAttachments()` が PR body を処理する経路へ揃えるのが安全です。",
+      "kind": "issue"
+    },
+    {
+      "rawFindingId": "20260708-024638-pr-task-attachments-takt-add-p:reviewers:2:arch-review:raw-arch-002-resolve-f0001",
+      "stepName": "arch-review",
+      "reviewer": "arch-review",
+      "familyTag": "arch.contract.pr_body_images.add_pr_entrypoint",
+      "severity": "high",
+      "title": "takt add --pr が PR 本文だけの画像を処理せず早期終了する問題は解消済み",
+      "location": "src/features/tasks/add/index.ts:195; src/features/tasks/add/index.ts:203; src/__tests__/addTask.test.ts:375",
+      "description": "`addTask()` は現在、no-comment 判定より前の src/features/tasks/add/index.ts:195 で `resolvePrReviewImageAttachments(prReview, cwd)` を呼び、src/features/tasks/add/index.ts:203-206 で `reviews`、`comments`、PR body、attachments のいずれかを有効な入力として扱っています。src/__tests__/addTask.test.ts:375 には comments/reviews が空でも PR body 画像 attachment を保存する回帰テストがあります。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0001"
+    },
+    {
+      "rawFindingId": "20260708-024638-pr-task-attachments-takt-add-p:reviewers:2:arch-review:raw-arch-002-resolve-f0002",
+      "stepName": "arch-review",
+      "reviewer": "arch-review",
+      "familyTag": "arch.state_cleanup.pr_source_attachments.routing",
+      "severity": "medium",
+      "title": "takt --pr の workflow 選択例外で画像一時ファイル cleanup が漏れる問題は解消済み",
+      "location": "src/app/cli/routing.ts:150; src/app/cli/routing.ts:298; src/__tests__/cli-routing-pr-resolve.test.ts:357",
+      "description": "`cleanupSourceAttachments` 取得後の workflow 設定解決、`determineWorkflow()`、`getWorkflowDescription()`、mode 選択、interactive 実行、dispatch は src/app/cli/routing.ts:150 からの同一 `try` 内に入り、src/app/cli/routing.ts:298-302 の `finally` で `cleanupSourceAttachments?.()` が実行されます。src/__tests__/cli-routing-pr-resolve.test.ts:357 で workflow 選択例外時の cleanup が検証されています。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0002"
+    },
+    {
+      "rawFindingId": "20260708-024638-pr-task-attachments-takt-add-p:reviewers:2:arch-review:raw-arch-002-resolve-f0003",
+      "stepName": "arch-review",
+      "reviewer": "arch-review",
+      "familyTag": "ai-antipattern.security.secret-url-leak",
+      "severity": "high",
+      "title": "private-user-images の署名付き URL がエラー表示へ漏れる問題は解消済み",
+      "location": "src/infra/github/prImageAttachments.ts:207; src/infra/github/prImageAttachments.ts:230; src/__tests__/prImageAttachments.test.ts:142",
+      "description": "検証エラーは src/infra/github/prImageAttachments.ts:207-224 で URL ではなく `Image #N` ラベルだけを使い、`gh api` 失敗も src/infra/github/prImageAttachments.ts:230-240 で捕捉して URL を含まないエラーへ変換しています。src/__tests__/prImageAttachments.test.ts:142-181 で署名付き private-user-images URL の token / path が例外メッセージへ出ないことを確認しています。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0003"
+    },
+    {
+      "rawFindingId": "20260708-024638-pr-task-attachments-takt-add-p:reviewers:2:arch-review:raw-arch-002-resolve-f0004",
+      "stepName": "arch-review",
+      "reviewer": "arch-review",
+      "familyTag": "ai-antipattern.requirement-mismatch.entrypoint",
+      "severity": "medium",
+      "title": "takt add --pr が PR 本文だけの画像を処理せず終了する問題は解消済み",
+      "location": "src/features/tasks/add/index.ts:195; src/features/tasks/add/index.ts:203; src/__tests__/addTask.test.ts:375",
+      "description": "`takt add --pr` 経路では src/features/tasks/add/index.ts:195-197 で resolver を実行した後、src/features/tasks/add/index.ts:203-206 で PR body と attachments も保存継続条件に含めています。src/__tests__/addTask.test.ts:375-408 で本文画像のみの PR が task attachment として保存されることを検証しています。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0004"
+    },
+    {
+      "rawFindingId": "20260708-024638-pr-task-attachments-takt-add-p:reviewers:2:arch-review:raw-arch-002-resolve-f0005",
+      "stepName": "arch-review",
+      "reviewer": "arch-review",
+      "familyTag": "pr_body_image_attachments_add_pr",
+      "severity": "medium",
+      "title": "takt add --pr が PR 本文だけに画像があるケースを処理しない問題は解消済み",
+      "location": "src/features/tasks/add/index.ts:195; src/features/tasks/add/index.ts:226; src/__tests__/addTask.test.ts:375",
+      "description": "src/features/tasks/add/index.ts:195-197 で PR body を含む `PrReviewData` が resolver に渡され、src/features/tasks/add/index.ts:226-230 で resolver が返した attachments を `saveTaskFile()` へ渡しています。src/__tests__/addTask.test.ts:375-408 は comments/reviews が空で body に GitHub attachment 画像があるケースを固定しています。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0005"
+    },
+    {
+      "rawFindingId": "20260708-024638-pr-task-attachments-takt-add-p:reviewers:2:arch-review:raw-arch-002-resolve-f0007",
+      "stepName": "arch-review",
+      "reviewer": "arch-review",
+      "familyTag": "implementation-semantics.contract-entrance",
+      "severity": "medium",
+      "title": "takt add --pr が PR 本文だけの画像を処理前に捨てる問題は解消済み",
+      "location": "src/features/tasks/add/index.ts:195; src/features/tasks/add/index.ts:203; src/__tests__/addTask.test.ts:410",
+      "description": "src/features/tasks/add/index.ts:195-206 では resolver 実行後に PR body と attachments を有効な PR task 入力として扱うため、コメント専用ゲートで本文画像を捨てる経路は残っていません。完全に空の PR だけは src/__tests__/addTask.test.ts:410-429 で保存しないことを確認しています。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0007"
+    },
+    {
+      "rawFindingId": "20260708-024638-pr-task-attachments-takt-add-p:reviewers:2:ai-antipattern-review:raw-ai-antipattern-002-001",
+      "stepName": "ai-antipattern-review",
+      "reviewer": "ai-antipattern-review",
+      "familyTag": "missing-edge-case",
+      "severity": "high",
+      "title": "private-user-images の署名付きURL漏えいは解消済み",
+      "location": "src/infra/github/prImageAttachments.ts:207; src/infra/github/prImageAttachments.ts:230; src/__tests__/prImageAttachments.test.ts:142",
+      "description": "現在の実装では検証エラーが URL ではなく `imageLabel` を使う形に変更され、`downloadImageWithGhApi()` も `execFileSync('gh', ['api', '--include', url])` 失敗を捕捉して `Failed to download GitHub image attachment Image #N.` に変換しています。`src/__tests__/prImageAttachments.test.ts:142` 以降で `?token=secret-token` を含む private-user-images URL が download 失敗時の message に含まれないこと、`src/__tests__/prImageAttachments.test.ts:163` 以降で validation 失敗時にも含まれないことを確認しました。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0003"
+    },
+    {
+      "rawFindingId": "20260708-024638-pr-task-attachments-takt-add-p:reviewers:2:ai-antipattern-review:raw-ai-antipattern-002-002",
+      "stepName": "ai-antipattern-review",
+      "reviewer": "ai-antipattern-review",
+      "familyTag": "missing-edge-case",
+      "severity": "medium",
+      "title": "takt add --pr の PR 本文だけの画像処理漏れは解消済み",
+      "location": "src/features/tasks/add/index.ts:195; src/features/tasks/add/index.ts:203; src/__tests__/addTask.test.ts:375",
+      "description": "現在の `addTask()` は no-comment 判定より前に `resolvePrReviewImageAttachments(prReview, cwd)` を呼び、`hasReviewContent` に `resolvedImages.prReview.body.trim().length > 0` と `resolvedImages.attachments.length > 0` を含めています。`src/__tests__/addTask.test.ts:375` 以降で comments/reviews が空でも PR body の GitHub attachment 画像が resolver 経由で `[Image #1]` に置換され、task attachments として保存されることを確認しました。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0004"
+    },
+    {
+      "rawFindingId": "20260708-024638-pr-task-attachments-takt-add-p:reviewers:2:coding-review:raw-coding-review-2-resolve-f0001",
+      "stepName": "coding-review",
+      "reviewer": "coding-review",
+      "familyTag": "arch.contract.pr_body_images.add_pr_entrypoint",
+      "severity": "high",
+      "title": "takt add --pr の PR 本文のみ画像処理が修正済み",
+      "location": "src/features/tasks/add/index.ts:197; src/__tests__/addTask.test.ts:375",
+      "description": "`src/features/tasks/add/index.ts:197` で no-content 判定前に `resolvePrReviewImageAttachments()` が実行され、`src/features/tasks/add/index.ts:203-206` で PR body と attachments が有効な入力として扱われています。`src/features/tasks/add/index.ts:226-230` で attachments が `saveTaskFile()` に渡され、`src/__tests__/addTask.test.ts:375-407` でコメントなし・PR本文画像のみの保存経路が検証されています。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0001"
+    },
+    {
+      "rawFindingId": "20260708-024638-pr-task-attachments-takt-add-p:reviewers:2:coding-review:raw-coding-review-2-resolve-f0002",
+      "stepName": "coding-review",
+      "reviewer": "coding-review",
+      "familyTag": "arch.state_cleanup.pr_source_attachments.routing",
+      "severity": "medium",
+      "title": "takt --pr の画像一時ファイル cleanup 漏れが修正済み",
+      "location": "src/app/cli/routing.ts:150; src/__tests__/cli-routing-pr-resolve.test.ts:357",
+      "description": "`src/app/cli/routing.ts:150-303` で workflow/mode 解決から dispatch までが `try/finally` 内に入り、`src/app/cli/routing.ts:302` で `cleanupSourceAttachments?.()` が例外経路でも実行されます。`src/__tests__/cli-routing-pr-resolve.test.ts:357-370` で workflow selection throw 時の cleanup が検証されています。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0002"
+    },
+    {
+      "rawFindingId": "20260708-024638-pr-task-attachments-takt-add-p:reviewers:2:coding-review:raw-coding-review-2-resolve-f0003",
+      "stepName": "coding-review",
+      "reviewer": "coding-review",
+      "familyTag": "ai-antipattern.security.secret-url-leak",
+      "severity": "high",
+      "title": "private-user-images の署名付きURL漏洩が修正済み",
+      "location": "src/infra/github/prImageAttachments.ts:216; src/__tests__/prImageAttachments.test.ts:142",
+      "description": "`src/infra/github/prImageAttachments.ts:216,221,224` の検証エラーは URL ではなく `imageLabel` を使い、`src/infra/github/prImageAttachments.ts:239-241` で `gh api` 失敗もサニタイズ済みメッセージに変換されています。`src/__tests__/prImageAttachments.test.ts:142-181` で署名付きURLの token や host/path がエラーに含まれないことが検証されています。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0003"
+    },
+    {
+      "rawFindingId": "20260708-024638-pr-task-attachments-takt-add-p:reviewers:2:coding-review:raw-coding-review-2-resolve-f0004",
+      "stepName": "coding-review",
+      "reviewer": "coding-review",
+      "familyTag": "ai-antipattern.requirement-mismatch.entrypoint",
+      "severity": "medium",
+      "title": "takt add --pr の PR 本文のみ画像処理が修正済み",
+      "location": "src/features/tasks/add/index.ts:197; src/__tests__/addTask.test.ts:375",
+      "description": "`src/features/tasks/add/index.ts:197` で画像 resolver が no-content 判定前に呼ばれ、`src/features/tasks/add/index.ts:203-206` で PR body と attachments が保存対象の入力として評価されます。`src/__tests__/addTask.test.ts:375-407` は comments/reviews が空でも PR body の GitHub attachment 画像が task attachment として保存されることを固定しています。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0004"
+    },
+    {
+      "rawFindingId": "20260708-024638-pr-task-attachments-takt-add-p:reviewers:2:coding-review:raw-coding-review-2-resolve-f0005",
+      "stepName": "coding-review",
+      "reviewer": "coding-review",
+      "familyTag": "pr_body_image_attachments_add_pr",
+      "severity": "medium",
+      "title": "takt add --pr の PR 本文だけに画像があるケースが修正済み",
+      "location": "src/features/tasks/add/index.ts:203; src/__tests__/addTask.test.ts:375",
+      "description": "`src/features/tasks/add/index.ts:203-206` の `hasReviewContent` は reviews/comments に加えて `prReview.body.trim().length > 0` と `resolvedImages.attachments.length > 0` を見るため、PR 本文画像のみで早期 return しません。`src/features/tasks/add/index.ts:226-230` で attachments を保存し、`src/__tests__/addTask.test.ts:375-407` で body-only image の保存と cleanup が検証されています。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0005"
+    },
+    {
+      "rawFindingId": "20260708-024638-pr-task-attachments-takt-add-p:reviewers:2:coding-review:raw-coding-review-2-resolve-f0007",
+      "stepName": "coding-review",
+      "reviewer": "coding-review",
+      "familyTag": "implementation-semantics.contract-entrance",
+      "severity": "medium",
+      "title": "takt add --pr の PR body 契約不一致が修正済み",
+      "location": "src/features/tasks/add/index.ts:197; src/features/tasks/add/index.ts:212",
+      "description": "`src/features/tasks/add/index.ts:197` で PR body を含む resolver 経路に入り、`src/features/tasks/add/index.ts:212` で `resolvedImages.prReview` を `formatPrReviewAsTask()` に渡しています。`src/features/tasks/add/index.ts:203-206` で PR body/attachments も有効入力として扱われるため、`takt --pr` / pipeline と同じく PR body 画像を参照できる入口契約になっています。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0007"
+    },
+    {
+      "rawFindingId": "20260708-024638-pr-task-attachments-takt-add-p:reviewers:2:implementation-semantics-review:impl-sem-resolve-f0001",
+      "stepName": "implementation-semantics-review",
+      "reviewer": "implementation-semantics-review",
+      "familyTag": "implementation-semantics.contract-entrance",
+      "severity": "high",
+      "title": "takt add --pr が PR 本文だけの画像を処理せず早期終了する",
+      "location": "src/features/tasks/add/index.ts:195; src/__tests__/addTask.test.ts:375",
+      "description": "解消を確認しました。現在の `addTask()` は `src/features/tasks/add/index.ts:195` で `resolvePrReviewImageAttachments(prReview, cwd)` を no-content 判定より前に実行し、`src/features/tasks/add/index.ts:203` から `reviews`、`comments`、`body.trim()`、`attachments.length` を含めて有効な PR 入力かを判定しています。`src/__tests__/addTask.test.ts:375` にはコメントなし・PR本文画像ありのケースで resolver と attachment 保存を期待する回帰テストがあります。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0001"
+    },
+    {
+      "rawFindingId": "20260708-024638-pr-task-attachments-takt-add-p:reviewers:2:implementation-semantics-review:impl-sem-resolve-f0002",
+      "stepName": "implementation-semantics-review",
+      "reviewer": "implementation-semantics-review",
+      "familyTag": "implementation-semantics.state-cleanup",
+      "severity": "medium",
+      "title": "takt --pr の画像一時ファイルが workflow 選択中の例外で cleanup されない",
+      "location": "src/app/cli/routing.ts:150; src/app/cli/routing.ts:302; src/__tests__/cli-routing-pr-resolve.test.ts:357",
+      "description": "解消を確認しました。`cleanupSourceAttachments` 設定後の workflow 解決、mode 選択、interactive 実行、dispatch は `src/app/cli/routing.ts:150` からの `try` に入り、`src/app/cli/routing.ts:298` 以降の `finally` で interactive result cleanup と `cleanupSourceAttachments?.()` が実行されます。`src/__tests__/cli-routing-pr-resolve.test.ts:357` では workflow selection が throw した場合に PR 画像 attachment cleanup が1回呼ばれることを固定しています。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0002"
+    },
+    {
+      "rawFindingId": "20260708-024638-pr-task-attachments-takt-add-p:reviewers:2:implementation-semantics-review:impl-sem-resolve-f0003",
+      "stepName": "implementation-semantics-review",
+      "reviewer": "implementation-semantics-review",
+      "familyTag": "implementation-semantics.error-sanitization",
+      "severity": "high",
+      "title": "private-user-images の署名付きURLがエラー表示へ漏れる",
+      "location": "src/infra/github/prImageAttachments.ts:207; src/infra/github/prImageAttachments.ts:230; src/__tests__/prImageAttachments.test.ts:142",
+      "description": "解消を確認しました。検証エラーは `src/infra/github/prImageAttachments.ts:207` 以降で URL ではなく `imageLabel` を受け取り、Content-Type/magic bytes エラーにも URL 全体を含めていません。`src/infra/github/prImageAttachments.ts:230` 以降では `gh api` 失敗を捕捉し、コマンド引数入りの元例外ではなく `Image #N` だけのエラーに変換しています。`src/__tests__/prImageAttachments.test.ts:142` と `src/__tests__/prImageAttachments.test.ts:163` で signed private URL の token/host path がエラーに出ないことを確認しています。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0003"
+    },
+    {
+      "rawFindingId": "20260708-024638-pr-task-attachments-takt-add-p:reviewers:2:implementation-semantics-review:impl-sem-resolve-f0004",
+      "stepName": "implementation-semantics-review",
+      "reviewer": "implementation-semantics-review",
+      "familyTag": "implementation-semantics.contract-entrance",
+      "severity": "medium",
+      "title": "takt add --pr が PR 本文だけの画像を処理せず終了する",
+      "location": "src/features/tasks/add/index.ts:195; src/__tests__/addTask.test.ts:375",
+      "description": "解消を確認しました。`src/features/tasks/add/index.ts:195` で画像 resolver を先に実行し、`src/features/tasks/add/index.ts:203` から PR本文と attachments も有効入力として扱っています。`src/__tests__/addTask.test.ts:375` で PR本文画像のみの `takt add --pr` が attachment を保存する契約に更新されています。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0004"
+    },
+    {
+      "rawFindingId": "20260708-024638-pr-task-attachments-takt-add-p:reviewers:2:implementation-semantics-review:impl-sem-resolve-f0005",
+      "stepName": "implementation-semantics-review",
+      "reviewer": "implementation-semantics-review",
+      "familyTag": "implementation-semantics.contract-entrance",
+      "severity": "medium",
+      "title": "takt add --pr が PR 本文だけに画像があるケースを処理しない",
+      "location": "src/features/tasks/add/index.ts:195; src/__tests__/addTask.test.ts:375",
+      "description": "解消を確認しました。`src/features/tasks/add/index.ts:195` で resolver が呼ばれ、`src/features/tasks/add/index.ts:203` から `resolvedImages.prReview.body.trim().length > 0` と `resolvedImages.attachments.length > 0` を no-content 判定に含めています。`src/__tests__/addTask.test.ts:375` で comments/reviews が空でも PR body 画像 attachment が保存されることを検証しています。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0005"
+    },
+    {
+      "rawFindingId": "20260708-024638-pr-task-attachments-takt-add-p:reviewers:2:implementation-semantics-review:impl-sem-resolve-f0007",
+      "stepName": "implementation-semantics-review",
+      "reviewer": "implementation-semantics-review",
+      "familyTag": "implementation-semantics.contract-entrance",
+      "severity": "medium",
+      "title": "takt add --pr が PR 本文だけの画像を処理前に捨てる",
+      "location": "src/features/tasks/add/index.ts:195; src/__tests__/addTask.test.ts:375",
+      "description": "解消を確認しました。前回問題だった comments/reviews 空での resolver 前 return はなくなり、`src/features/tasks/add/index.ts:195` で `resolvePrReviewImageAttachments()` が先に実行されます。`src/features/tasks/add/index.ts:203` の `hasReviewContent` は body と attachments を含むため、PR本文だけの画像も task attachments に進みます。`src/__tests__/addTask.test.ts:375` の回帰テストも確認しました。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0007"
+    },
+    {
+      "rawFindingId": "20260708-024638-pr-task-attachments-takt-add-p:reviewers:3:ai-antipattern-review:raw-ai-antipattern-003-001",
+      "stepName": "ai-antipattern-review",
+      "reviewer": "ai-antipattern-review",
+      "familyTag": "missing-edge-case",
+      "severity": "medium",
+      "title": "フル npm test の終了コード 1 は解消済み",
+      "location": "src/__tests__/analytics-metrics.test.ts:24; src/__tests__/workflowDiscovery.test.ts:41; src/__tests__/claude-terminal-transcript-reader.test.ts:58",
+      "description": "F-0006 の受入条件に戻って再確認した。`src/__tests__/analytics-metrics.test.ts:24` は `mkdtempSync(join(tmpdir(), 'takt-test-analytics-metrics-'))` で一時ディレクトリ名の衝突を避けている。`src/__tests__/workflowDiscovery.test.ts:41` は builtin workflow 名を列挙して `auto-improvement-loop` 以外を disabled にし、対象契約を保持しながら全件ロードを避けている。`src/__tests__/claude-terminal-transcript-reader.test.ts:58` は transcript 更新待機 timeout を `TRANSCRIPT_UPDATE_TIMEOUT_MS = 3_000` として、該当待機箇所で使用している。検証コマンドは `npm run build` 終了コード 0、`npm run lint` 終了コード 0、`npm test -- --run src/__tests__/analytics-metrics.test.ts src/__tests__/workflowDiscovery.test.ts src/__tests__/claude-terminal-transcript-reader.test.ts` 終了コード 0（3 files / 42 tests passed）、フル `npm test` 終了コード 0（4 shards all passed: 125/123/125/125 files, 1791/1785/2114/1735 tests）。前回の `Timeout calling \"onTaskUpdate\"` による終了コード 1 は再現しなかった。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0006"
+    },
+    {
+      "rawFindingId": "20260708-024638-pr-task-attachments-takt-add-p:reviewers:3:coding-review:raw-coding-review-3-resolve-f0006",
+      "stepName": "coding-review",
+      "reviewer": "coding-review",
+      "familyTag": "test_failure",
+      "severity": "medium",
+      "title": "フル npm test が終了コード 0 で成功する",
+      "description": "`npm run build` と `npm run lint` は終了コード 0 で成功し、`npm test` も再実行で終了コード 0 になりました。最終出力では各 shard が `Test Files 125 passed (125)` / `125 passed (125)` / `123 passed (123)` / `125 passed (125)`、合計テストも全て passed と表示され、前回の `workflowDiscovery.test.ts` timeout と Vitest の `Timeout calling \"onTaskUpdate\"` は再現しませんでした。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0006"
+    },
+    {
+      "rawFindingId": "20260708-024638-pr-task-attachments-takt-add-p:reviewers:4:arch-review:raw-arch-004-001",
+      "stepName": "arch-review",
+      "reviewer": "arch-review",
+      "familyTag": "arch.external_contract.github_attachment_download",
+      "severity": "high",
+      "title": "GitHub attachment の web URL を gh api endpoint として渡している",
+      "location": "src/infra/github/prImageAttachments.ts:233; src/infra/github/prImageAttachments.ts:275; src/__tests__/prImageAttachments.test.ts:53",
+      "description": "`downloadImageWithGhApi()` は allowlist 済みの `https://github.com/user-attachments/assets/...` や `https://private-user-images.githubusercontent.com/...` をそのまま `gh api --include <url>` に渡しています。しかしローカル一次情報の `gh api --help` は endpoint 引数を GitHub API v3 の path または `graphql` と説明しており、今回の対象 URL は GitHub API endpoint ではなく web attachment URL です。テストも `execFileSync` を mock して引数とレスポンス parse だけを確認しているため、対象画像 URL を実際にダウンロードできる外部契約が検証されていません。これは PR コメント内画像をローカルにダウンロードする中核要件の入口を満たさない構造です。",
+      "suggestion": "GitHub attachment の full URL 取得は `gh api` endpoint として扱わず、allowlist 済み URL 専用の downloader 境界に分離してください。例えば `gh auth token` で取得した token をログに出さずに Authorization 付き HTTPS request へ渡す、または GitHub が公式に提供する該当 API endpoint がある場合だけ `gh api` を使う構造にしてください。あわせて `github.com/user-attachments/assets/...` と `private-user-images.githubusercontent.com/...` の download 経路が mock だけでなく CLI 契約に沿うことを固定するテストを追加してください。",
+      "kind": "issue"
+    },
+    {
+      "rawFindingId": "20260708-024638-pr-task-attachments-takt-add-p:reviewers:5:arch-review:raw-arch-005-resolve-f0008",
+      "stepName": "arch-review",
+      "reviewer": "arch-review",
+      "familyTag": "arch.external_contract.github_attachment_download",
+      "severity": "high",
+      "title": "GitHub attachment の web URL を gh api endpoint として渡している問題は解消済み",
+      "location": "src/infra/github/prImageAttachments.ts:198; src/infra/github/prImageAttachments.ts:238; src/__tests__/prImageAttachments.test.ts:52",
+      "description": "F-0008 の受入条件に戻って確認した。現在の `src/infra/github/prImageAttachments.ts` は `downloadImageWithGhApi` / `gh api --include <web URL>` を持たず、`src/infra/github/prImageAttachments.ts:198` で `gh auth token` を取得し、`src/infra/github/prImageAttachments.ts:238` 以降で allowlist 済み attachment URL へ Authorization 付き HTTPS GET を行っている。`rg` でも対象ファイル内に `gh api`、`--include`、`downloadImageWithGhApi` は残っていない。`src/__tests__/prImageAttachments.test.ts:52` 以降は `gh auth token` の CLI 契約と HTTPS request の Authorization header を固定しており、旧 `gh api` endpoint 誤用の構造は解消されている。追加確認として `npm run build`、`npm run lint`、`npm test` はいずれも終了コード 0。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0008"
+    },
+    {
+      "rawFindingId": "20260708-024638-pr-task-attachments-takt-add-p:reviewers:5:ai-antipattern-review:raw-ai-antipattern-005-001",
+      "stepName": "ai-antipattern-review",
+      "reviewer": "ai-antipattern-review",
+      "familyTag": "api-mismatch",
+      "severity": "high",
+      "title": "GitHub attachment web URL の gh api endpoint 誤用は解消済み",
+      "location": "src/infra/github/prImageAttachments.ts:198; src/infra/github/prImageAttachments.ts:238; src/__tests__/prImageAttachments.test.ts:52",
+      "description": "現行実装は `gh api --include <web URL>` ではなく、`gh auth token` で認証トークンを取得し、allowlist 済み GitHub attachment URL を `https.request` の GET で取得しています。`src/infra/github/prImageAttachments.ts` には旧 `downloadImageWithGhApi` / `parseGhApiIncludeResponse` / `--include` 経路が存在しないことを `rg` で確認しました。テストでは `gh auth token` 呼び出しと `Authorization: Bearer gh-token` 付き HTTPS request を検証しており、`github.com/user-attachments/assets/...` と `github.com/{org}/{repo}/assets/...` の成功経路、`private-user-images.githubusercontent.com` の署名付き URL 非漏洩経路も確認されています。`npm run build`、`npm run lint`、対象テスト、フル `npm test` は終了コード 0 でした。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0008"
+    },
+    {
+      "rawFindingId": "20260708-024638-pr-task-attachments-takt-add-p:reviewers:5:coding-review:raw-coding-review-5-f0008-resolved",
+      "stepName": "coding-review",
+      "reviewer": "coding-review",
+      "familyTag": "external_contract.github_attachment_download",
+      "severity": "high",
+      "title": "GitHub attachment URL の取得経路が gh api endpoint 扱いから認証付き HTTPS request に修正済み",
+      "location": "src/infra/github/prImageAttachments.ts:198; src/infra/github/prImageAttachments.ts:226; src/infra/github/prImageAttachments.ts:238; src/infra/github/prImageAttachments.ts:253; src/infra/github/prImageAttachments.ts:287; src/__tests__/prImageAttachments.test.ts:52; src/__tests__/prImageAttachments.test.ts:64",
+      "description": "F-0008 の受入条件を再確認しました。現在の実装は `gh api --include <web URL>` を使わず、`gh auth token` で認証トークンだけを取得し、allowlist 済み GitHub attachment URL を `https.request` の GET と `Authorization: Bearer ...` で直接取得しています。redirect 先も `resolveRedirectUrl()` で GitHub attachment URL allowlist に再検証されます。テストでも `gh auth token` 呼び出しと HTTPS request の URL/Authorization header 経路が固定されています。`npm run build`、`npm run lint`、`npm test` はすべて終了コード 0 で成功しました。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0008"
+    },
+    {
+      "rawFindingId": "20260708-024638-pr-task-attachments-takt-add-p:reviewers:5:implementation-semantics-review:impl-sem-resolve-f0008-round5",
+      "stepName": "implementation-semantics-review",
+      "reviewer": "implementation-semantics-review",
+      "familyTag": "arch.external_contract.github_attachment_download",
+      "severity": "high",
+      "title": "GitHub attachment の web URL を gh api endpoint として渡している問題は解消済み",
+      "location": "src/infra/github/prImageAttachments.ts:198; src/infra/github/prImageAttachments.ts:226; src/infra/github/prImageAttachments.ts:287; src/__tests__/prImageAttachments.test.ts:52",
+      "description": "解消を確認しました。現在の実装は `src/infra/github/prImageAttachments.ts:198-211` で `gh auth token` から認証トークンを取得し、`src/infra/github/prImageAttachments.ts:226-284` で allowlist 済み GitHub attachment URL を `node:https` の GET request として取得しています。`src/infra/github/prImageAttachments.ts:287-290` でそのレスポンスを Content-Type/magic bytes 検証へ渡しており、F-0008 の問題だった `gh api --include <web URL>` 経路は残っていません。`src/__tests__/prImageAttachments.test.ts:52-66` でも `gh auth token` と HTTPS request の契約を固定しています。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0008"
+    },
+    {
+      "rawFindingId": "20260708-024638-pr-task-attachments-takt-add-p:reviewers:6:coding-review:coding-review-6-001",
+      "stepName": "coding-review",
+      "reviewer": "coding-review",
+      "familyTag": "test_failure",
+      "severity": "medium",
+      "title": "フル npm test が再び終了コード 1 で失敗する",
+      "location": "scripts/run-npm-test.mjs:7",
+      "description": "`npm run build` と `npm run lint` は成功し、対象テスト `prImageAttachments.test.ts` / `pipelineExecution.test.ts` / `npmTestEntrypoint.test.ts` も成功しました。しかしフル `npm test` は shard 2/8 で Vitest の unhandled error `Timeout calling \"onTaskUpdate\"` を出した後、最終的に `[takt] npm run test:unit:parallel -- --shard=2/8 --maxWorkers=1 failed with exit=1` で終了しました。品質要件はフル `npm test` 成功なので、現状態では満たしていません。なお同じ shard の単独再実行は成功しており、フル実行経路の不安定さとして観測しています。",
+      "suggestion": "フル `npm test` が安定して終了コード 0 になるよう、shard 2/8 の `onTaskUpdate` timeout 原因または `scripts/run-npm-test.mjs` の shard/worker 実行方式を修正し、フル `npm test` を再実行して成功を確認してください。",
+      "kind": "issue"
+    },
+    {
+      "rawFindingId": "20260708-024638-pr-task-attachments-takt-add-p:reviewers:6:coding-review:coding-review-6-002",
+      "stepName": "coding-review",
+      "reviewer": "coding-review",
+      "familyTag": "bug",
+      "severity": "medium",
+      "title": "画像 redirect 検証エラーが Promise rejection にならず uncaught exception になる",
+      "location": "src/infra/github/prImageAttachments.ts:254",
+      "description": "`requestGitHubAttachment()` の 3xx 応答分岐で `resolveRedirectUrl(url, response.headers.location, imageLabel)` を response callback 内から直接呼んでいます。`resolveRedirectUrl()` は Location 欠落や allowlist 外 redirect で throw しますが、この throw は非同期 callback 内で発生するため、返却 Promise の `reject` や `downloadImageWithAuthenticatedRequest()` の catch に変換されません。結果として、不正な redirect 応答時にサニタイズ済みのダウンロード失敗として扱えず、cleanup と通常エラー処理の経路から外れる可能性があります。`prImageAttachments.test.ts` には redirect の Location 欠落・allowlist 外を rejection として検証するテストもありませんでした。",
+      "suggestion": "3xx 分岐で `resolveRedirectUrl()` を `try/catch` し、例外を `reject(error)` に統一してください。あわせて Location 欠落、allowlist 外 redirect、redirect 上限の各ケースが `resolvePrReviewImageAttachments()` から通常の rejected error として返り、cleanup も実行されることを単体テストで固定してください。",
+      "kind": "issue"
+    },
+    {
+      "rawFindingId": "20260708-100701-pr-task-attachments-takt-add-p:reviewers:1:arch-review:raw-arch-001-resolve-f0009",
+      "familyTag": "test_failure",
+      "severity": "medium",
+      "title": "フル npm test が再び終了コード 1 で失敗する問題は解消済み",
+      "location": "scripts/run-npm-test.mjs:7; src/__tests__/npmTestEntrypoint.test.ts:8",
+      "description": "F-0009 の受入条件に戻って確認した。`scripts/run-npm-test.mjs:7` で無引数 `npm test` の unit shard count は 16 になり、`src/__tests__/npmTestEntrypoint.test.ts:8` 以降で `selectNpmTestRuns([])` が `--shard=1/16` から `--shard=16/16` を返す契約を固定している。現在の実行確認では `npm test -- --run src/__tests__/prImageAttachments.test.ts src/__tests__/npmTestEntrypoint.test.ts` が 2 files / 22 tests passed、`npm run build` が終了コード 0、`npm run lint` が終了コード 0、フル `npm test` が 16/16 shard まで完走して終了コード 0 だった。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0009",
+      "reviewer": "arch-review",
+      "stepName": "arch-review"
+    },
+    {
+      "rawFindingId": "20260708-100701-pr-task-attachments-takt-add-p:reviewers:1:arch-review:raw-arch-001-resolve-f0010",
+      "familyTag": "bug",
+      "severity": "medium",
+      "title": "画像 redirect 検証エラーが Promise rejection にならず uncaught exception になる問題は解消済み",
+      "location": "src/infra/github/prImageAttachments.ts:254; src/__tests__/prImageAttachments.test.ts:310; src/__tests__/prImageAttachments.test.ts:340; src/__tests__/prImageAttachments.test.ts:363",
+      "description": "F-0010 の受入条件に戻って確認した。`src/infra/github/prImageAttachments.ts:254` 以降で `resolveRedirectUrl()` は response callback 内の try/catch に入り、Location 欠落・allowlist 外 redirect の例外は `reject(error)` に統一されている。`src/__tests__/prImageAttachments.test.ts:310` 以降で Location 欠落、`:340` 以降で allowlist 外 redirect、`:363` 以降で redirect 上限が rejected error と cleanup として検証されている。対象テスト `prImageAttachments.test.ts` も現在の実行で成功した。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0010",
+      "reviewer": "arch-review",
+      "stepName": "arch-review"
+    },
+    {
+      "rawFindingId": "20260708-100701-pr-task-attachments-takt-add-p:reviewers:1:ai-antipattern-review:raw-ai-antipattern-001-001",
+      "familyTag": "missing-edge-case",
+      "severity": "medium",
+      "title": "画像 redirect 検証エラーは Promise rejection として処理される",
+      "location": "src/infra/github/prImageAttachments.ts:252; src/__tests__/prImageAttachments.test.ts:310",
+      "description": "Policy/Knowledge の `##` セクションを列挙して照合しました。現行実装では 3xx 応答分岐で `resolveRedirectUrl()` を `try/catch` し、Location 欠落や allowlist 外 redirect の例外を `reject(error)` に渡しています。`src/__tests__/prImageAttachments.test.ts:310` 以降で Location 欠落、allowlist 外 redirect、redirect 上限が rejected error として返り、temp root cleanup も実行されることを確認するテストがあります。`npm test -- --run src/__tests__/prImageAttachments.test.ts src/__tests__/npmTestEntrypoint.test.ts` は終了コード 0 でした。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0010",
+      "reviewer": "ai-antipattern-review",
+      "stepName": "ai-antipattern-review"
+    },
+    {
+      "rawFindingId": "20260708-100701-pr-task-attachments-takt-add-p:reviewers:1:ai-antipattern-review:raw-ai-antipattern-001-002",
+      "familyTag": "missing-edge-case",
+      "severity": "medium",
+      "title": "フル npm test の終了コード 1 は解消済み",
+      "location": "scripts/run-npm-test.mjs:7; src/__tests__/npmTestEntrypoint.test.ts:8",
+      "description": "Policy/Knowledge の `##` セクションを列挙して照合しました。現行実装では無引数 `npm test` の unit shard が 16 分割に更新され、入口テストも `--shard=1/16` から `--shard=16/16` までの生成を固定しています。現環境で `npm run build`、`npm run lint`、対象テスト、フル `npm test` を再実行し、すべて終了コード 0 で完了しました。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0009",
+      "reviewer": "ai-antipattern-review",
+      "stepName": "ai-antipattern-review"
+    },
+    {
+      "rawFindingId": "20260708-100701-pr-task-attachments-takt-add-p:reviewers:1:coding-review:coding-review-100701-001",
+      "familyTag": "test_failure",
+      "severity": "medium",
+      "title": "フル npm test が終了コード 0 で成功する",
+      "location": "scripts/run-npm-test.mjs:7",
+      "description": "F-0009 の受入条件に戻って確認しました。`scripts/run-npm-test.mjs:7` は unit shard 数を 16 に分割し、`runNpmTest()` は各 shard を逐次実行します。`npm run build`、`npm run lint`、対象テスト `prImageAttachments.test.ts` / `pipelineExecution.test.ts` / `npmTestEntrypoint.test.ts` はすべて終了コード 0 でした。さらにフル `npm test` も 1/16 から 16/16 まで全 shard が passed で終了コード 0 になり、前回の `Timeout calling \"onTaskUpdate\"` と shard 2/8 の失敗は再現しませんでした。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0009",
+      "reviewer": "coding-review",
+      "stepName": "coding-review"
+    },
+    {
+      "rawFindingId": "20260708-100701-pr-task-attachments-takt-add-p:reviewers:1:coding-review:coding-review-100701-002",
+      "familyTag": "bug",
+      "severity": "medium",
+      "title": "画像 redirect 検証エラーが Promise rejection として処理される",
+      "location": "src/infra/github/prImageAttachments.ts:254; src/__tests__/prImageAttachments.test.ts:310; src/__tests__/prImageAttachments.test.ts:340; src/__tests__/prImageAttachments.test.ts:363",
+      "description": "F-0010 の受入条件に戻って確認しました。`src/infra/github/prImageAttachments.ts:254` 以降の 3xx 分岐は `resolveRedirectUrl()` を `try/catch` で呼び、Location 欠落や allowlist 外 redirect の例外を `reject(error)` に変換してから return します。`src/__tests__/prImageAttachments.test.ts:310`、`:340`、`:363` では Location 欠落、allowlist 外 redirect、redirect 上限が `resolvePrReviewImageAttachments()` の rejected error として返り、一時ディレクトリ cleanup も実行されることを検証しています。対象テストとフル `npm test` は終了コード 0 でした。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0010",
+      "reviewer": "coding-review",
+      "stepName": "coding-review"
+    },
+    {
+      "rawFindingId": "20260708-100701-pr-task-attachments-takt-add-p:reviewers:1:implementation-semantics-review:impl-sem-resolve-f0010-round1",
+      "familyTag": "fail-fast.redirect-error-propagation",
+      "severity": "medium",
+      "title": "画像 redirect 検証エラーが Promise rejection として処理される",
+      "location": "src/infra/github/prImageAttachments.ts:254; src/infra/github/prImageAttachments.ts:257; src/infra/github/prImageAttachments.ts:362; src/__tests__/prImageAttachments.test.ts:310",
+      "description": "`requestGitHubAttachment()` の 3xx 分岐で `resolveRedirectUrl()` が try/catch 内に入り、例外時は `reject(error)` して return する実装を確認しました。さらに `resolvePrReviewImageAttachments()` の catch で tempRoot cleanup 後に rethrow され、Location 欠落・allowlist 外 redirect・redirect 上限の各テストが rejected error と cleanup を検証しているため、F-0010 の受入条件は満たされています。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0010",
+      "reviewer": "implementation-semantics-review",
+      "stepName": "implementation-semantics-review"
+    }
+  ],
+  "conflicts": []
+}

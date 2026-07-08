@@ -1,0 +1,85 @@
+[
+  {
+    "rawFindingId": "20260708-024638-pr-task-attachments-takt-add-p:reviewers:1:arch-review:raw-arch-001",
+    "stepName": "arch-review",
+    "reviewer": "arch-review",
+    "familyTag": "arch.contract.pr_body_images.add_pr_entrypoint",
+    "severity": "high",
+    "title": "takt add --pr が PR 本文だけの画像を処理せず早期終了する",
+    "location": "src/features/tasks/add/index.ts:195; src/__tests__/addTask.test.ts:375",
+    "description": "`addTask()` は `prReview.reviews.length === 0 && prReview.comments.length === 0` の場合に画像 resolver を呼ぶ前に return します。一方、`resolvePrReviewImageAttachments()` は PR 本文も収集対象にしており、要件も PR 本文・通常コメント・review thread コメント内の画像検出を求めています。現在のテストも resolver が呼ばれないことを固定しているため、PR 本文にだけ `![image](https://github.com/user-attachments/assets/...)` がある `takt add --pr` では attachments が保存されません。",
+    "suggestion": "`takt add --pr` の no-comment 早期終了を削除するか、少なくとも PR body/images を考慮した後に判定してください。あわせて addTask のテストを、コメントなしでも PR body 画像が task attachments に保存される契約へ更新してください。",
+    "kind": "issue"
+  },
+  {
+    "rawFindingId": "20260708-024638-pr-task-attachments-takt-add-p:reviewers:1:arch-review:raw-arch-002",
+    "stepName": "arch-review",
+    "reviewer": "arch-review",
+    "familyTag": "arch.state_cleanup.pr_source_attachments.routing",
+    "severity": "medium",
+    "title": "takt --pr の画像一時ファイルが workflow 選択中の例外で cleanup されない",
+    "location": "src/app/cli/routing.ts:154",
+    "description": "`resolvePrInput()` 後に `cleanupSourceAttachments` が設定されますが、`determineWorkflow()`、`getWorkflowDescription()`、`selectInteractiveMode()` などは `try/finally` の外側で実行されています。これらが throw した場合、PR 画像を保存した一時ディレクトリの cleanup が実行されず、private repository 由来の画像ファイルが残ります。キャンセル分岐と interactive 実行後だけ cleanup されるため、例外経路の状態整合性が欠落しています。",
+    "suggestion": "`cleanupSourceAttachments` を取得した直後から後続の workflow/mode 解決と interactive 実行全体を同一の `try/finally` に入れ、正常終了・キャンセル・例外の全経路で一度だけ cleanup される構造にしてください。",
+    "kind": "issue"
+  },
+  {
+    "rawFindingId": "20260708-024638-pr-task-attachments-takt-add-p:reviewers:1:ai-antipattern-review:raw-ai-antipattern-001",
+    "stepName": "ai-antipattern-review",
+    "reviewer": "ai-antipattern-review",
+    "familyTag": "ai-antipattern.security.secret-url-leak",
+    "severity": "high",
+    "title": "private-user-images の署名付きURLがエラー表示へ漏れる",
+    "location": "src/infra/github/prImageAttachments.ts:216; src/infra/github/prImageAttachments.ts:221; src/infra/github/prImageAttachments.ts:224; src/features/tasks/add/index.ts:204; src/features/pipeline/steps.ts:164; src/app/cli/routing.ts:127",
+    "description": "GitHub の private-user-images URL はクエリに期限付きトークンを含むことがありますが、検証エラーが `url` 全体を例外メッセージへ埋め込み、その例外を `getErrorMessage()` 経由で CLI に表示しています。`execFileSync('gh', ['api', '--include', url])` の失敗時も Node の Error.message にコマンド引数のURLが含まれることを実コマンドで確認しました。レビューポリシーの「ログ、エラーレスポンス、テスト出力への機密情報露出」に該当します。",
+    "suggestion": "画像URLを例外・ログに出さないでください。少なくとも `URL` の query/hash を除去した表示用識別子、または `Image #N` / host のみを使い、`execFileSync` 失敗も resolver 内で捕捉してサニタイズ済みのエラーへ変換してください。Content-Type/magic bytes 不一致のエラーも同じサニタイズ経路に統一し、クエリ付き private-user-images URL が表示されないテストを追加してください。",
+    "kind": "issue"
+  },
+  {
+    "rawFindingId": "20260708-024638-pr-task-attachments-takt-add-p:reviewers:1:ai-antipattern-review:raw-ai-antipattern-002",
+    "stepName": "ai-antipattern-review",
+    "reviewer": "ai-antipattern-review",
+    "familyTag": "ai-antipattern.requirement-mismatch.entrypoint",
+    "severity": "medium",
+    "title": "takt add --pr が PR 本文だけの画像を処理せず終了する",
+    "location": "src/features/tasks/add/index.ts:195; src/__tests__/addTask.test.ts:375",
+    "description": "要件は `takt add --pr <number>` で PR 本文・通常コメント・review thread コメント内の画像URLを検出することですが、`addTask()` は `reviews` と `comments` が空だと resolver 実行前に `PR #... has no review comments` で return します。そのため PR 本文に `![image](https://github.com/user-attachments/assets/...)` があるだけのPRでは、本文画像が保存されません。追加テストも `mockResolvePrReviewImageAttachments` が呼ばれないことを期待しており、今回の要件と逆の既存契約を固定しています。",
+    "suggestion": "`takt add --pr` では PR 本文も task 化・画像抽出の対象にしてください。少なくとも resolver を no-review-comments 判定より前に実行し、本文・コメント・レビューのいずれかに内容または画像がある場合は保存へ進むように契約を更新してください。`addTask.test.ts` の no-review-comments ケースは、本文画像がある場合に attachment が保存される回帰テストへ置き換えてください。",
+    "kind": "issue"
+  },
+  {
+    "rawFindingId": "20260708-024638-pr-task-attachments-takt-add-p:reviewers:1:coding-review:raw-coding-review-001",
+    "stepName": "coding-review",
+    "reviewer": "coding-review",
+    "familyTag": "pr_body_image_attachments_add_pr",
+    "severity": "medium",
+    "title": "`takt add --pr` が PR 本文だけに画像があるケースを処理しない",
+    "location": "src/features/tasks/add/index.ts:195",
+    "description": "`takt add --pr` は `prReview.reviews.length === 0 && prReview.comments.length === 0` の場合に画像 resolver を呼ぶ前に return します。`formatPrReviewAsTask()` は PR body も task に含める実装で、元要件も PR 本文内の画像 URL 検出を要求しています。そのため、PR 本文に `![image](https://github.com/user-attachments/assets/...)` があり、通常コメント/review thread がまだ無い PR では task 作成自体が中断され、画像は `.takt/tasks/<slug>/attachments/` に保存されません。既存テストも `src/__tests__/addTask.test.ts:375` で resolver 未呼び出しを固定しており、この要件分岐が未検証です。",
+    "suggestion": "この早期 return を削除するか、少なくとも PR body の有無/画像参照を考慮した後に判定してください。`comments: []`, `reviews: []`, `body` に GitHub attachment 画像を含む `takt add --pr` の回帰テストを追加し、resolver と `saveTaskFile(... attachments ...)` が呼ばれることを固定してください。",
+    "kind": "issue"
+  },
+  {
+    "rawFindingId": "20260708-024638-pr-task-attachments-takt-add-p:reviewers:1:coding-review:raw-coding-review-002",
+    "stepName": "coding-review",
+    "reviewer": "coding-review",
+    "familyTag": "verification_npm_test_failure",
+    "severity": "medium",
+    "title": "フル `npm test` が終了コード 1 で失敗する",
+    "description": "レビュー中に `npm run build` と `npm run lint` は成功しましたが、`npm test` は Vitest の unhandled error `Timeout calling \"onTaskUpdate\"` で終了コード 1 になりました。全テスト本体の pass 表示は出ていますが、品質要件は `npm test` の成功なので現状態では満たせていません。",
+    "suggestion": "フル `npm test` が安定して終了コード 0 になるよう、該当 shard/テストランナーの timeout 原因を切り分けて修正し、再実行結果を確認してください。",
+    "kind": "issue"
+  },
+  {
+    "rawFindingId": "20260708-024638-pr-task-attachments-takt-add-p:reviewers:1:implementation-semantics-review:impl-semantics-raw-1",
+    "stepName": "implementation-semantics-review",
+    "reviewer": "implementation-semantics-review",
+    "familyTag": "implementation-semantics.contract-entrance",
+    "severity": "medium",
+    "title": "takt add --pr が PR 本文だけの画像を処理前に捨てる",
+    "location": "src/features/tasks/add/index.ts:195",
+    "description": "`addTask()` は `prReview.reviews.length === 0 && prReview.comments.length === 0` の場合に即 return するため、PR 本文に `![screenshot](https://github.com/user-attachments/assets/...)` があっても `resolvePrReviewImageAttachments()` に到達しません。期待挙動は PR 本文・通常コメント・review thread コメント内の画像 URL 検出なので、コメントが無い PR でも本文画像は task attachments に保存される必要があります。`takt --pr` と pipeline 側は同じコメント有無ゲートを持たないため、入口ごとに PR body の意味が不一致になっています。",
+    "suggestion": "このコメント専用ゲートを削除するか、少なくとも `prReview.body.trim().length > 0` を有効な PR task 入力として扱う条件に変更してください。`takt --pr` / pipeline と同じく `formatPrReviewAsTask()` と `resolvePrReviewImageAttachments()` が PR body を処理する経路へ揃えるのが安全です。",
+    "kind": "issue"
+  }
+]

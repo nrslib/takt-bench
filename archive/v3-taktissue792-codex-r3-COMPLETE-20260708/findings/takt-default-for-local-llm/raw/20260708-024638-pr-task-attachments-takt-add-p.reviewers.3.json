@@ -1,0 +1,25 @@
+[
+  {
+    "rawFindingId": "20260708-024638-pr-task-attachments-takt-add-p:reviewers:3:ai-antipattern-review:raw-ai-antipattern-003-001",
+    "stepName": "ai-antipattern-review",
+    "reviewer": "ai-antipattern-review",
+    "familyTag": "missing-edge-case",
+    "severity": "medium",
+    "title": "フル npm test の終了コード 1 は解消済み",
+    "location": "src/__tests__/analytics-metrics.test.ts:24; src/__tests__/workflowDiscovery.test.ts:41; src/__tests__/claude-terminal-transcript-reader.test.ts:58",
+    "description": "F-0006 の受入条件に戻って再確認した。`src/__tests__/analytics-metrics.test.ts:24` は `mkdtempSync(join(tmpdir(), 'takt-test-analytics-metrics-'))` で一時ディレクトリ名の衝突を避けている。`src/__tests__/workflowDiscovery.test.ts:41` は builtin workflow 名を列挙して `auto-improvement-loop` 以外を disabled にし、対象契約を保持しながら全件ロードを避けている。`src/__tests__/claude-terminal-transcript-reader.test.ts:58` は transcript 更新待機 timeout を `TRANSCRIPT_UPDATE_TIMEOUT_MS = 3_000` として、該当待機箇所で使用している。検証コマンドは `npm run build` 終了コード 0、`npm run lint` 終了コード 0、`npm test -- --run src/__tests__/analytics-metrics.test.ts src/__tests__/workflowDiscovery.test.ts src/__tests__/claude-terminal-transcript-reader.test.ts` 終了コード 0（3 files / 42 tests passed）、フル `npm test` 終了コード 0（4 shards all passed: 125/123/125/125 files, 1791/1785/2114/1735 tests）。前回の `Timeout calling \"onTaskUpdate\"` による終了コード 1 は再現しなかった。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0006"
+  },
+  {
+    "rawFindingId": "20260708-024638-pr-task-attachments-takt-add-p:reviewers:3:coding-review:raw-coding-review-3-resolve-f0006",
+    "stepName": "coding-review",
+    "reviewer": "coding-review",
+    "familyTag": "test_failure",
+    "severity": "medium",
+    "title": "フル npm test が終了コード 0 で成功する",
+    "description": "`npm run build` と `npm run lint` は終了コード 0 で成功し、`npm test` も再実行で終了コード 0 になりました。最終出力では各 shard が `Test Files 125 passed (125)` / `125 passed (125)` / `123 passed (123)` / `125 passed (125)`、合計テストも全て passed と表示され、前回の `workflowDiscovery.test.ts` timeout と Vitest の `Timeout calling \"onTaskUpdate\"` は再現しませんでした。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0006"
+  }
+]

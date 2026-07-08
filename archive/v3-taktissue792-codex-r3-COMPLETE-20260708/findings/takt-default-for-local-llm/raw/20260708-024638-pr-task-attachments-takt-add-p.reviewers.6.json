@@ -1,0 +1,26 @@
+[
+  {
+    "rawFindingId": "20260708-024638-pr-task-attachments-takt-add-p:reviewers:6:coding-review:coding-review-6-001",
+    "stepName": "coding-review",
+    "reviewer": "coding-review",
+    "familyTag": "test_failure",
+    "severity": "medium",
+    "title": "フル npm test が再び終了コード 1 で失敗する",
+    "location": "scripts/run-npm-test.mjs:7",
+    "description": "`npm run build` と `npm run lint` は成功し、対象テスト `prImageAttachments.test.ts` / `pipelineExecution.test.ts` / `npmTestEntrypoint.test.ts` も成功しました。しかしフル `npm test` は shard 2/8 で Vitest の unhandled error `Timeout calling \"onTaskUpdate\"` を出した後、最終的に `[takt] npm run test:unit:parallel -- --shard=2/8 --maxWorkers=1 failed with exit=1` で終了しました。品質要件はフル `npm test` 成功なので、現状態では満たしていません。なお同じ shard の単独再実行は成功しており、フル実行経路の不安定さとして観測しています。",
+    "suggestion": "フル `npm test` が安定して終了コード 0 になるよう、shard 2/8 の `onTaskUpdate` timeout 原因または `scripts/run-npm-test.mjs` の shard/worker 実行方式を修正し、フル `npm test` を再実行して成功を確認してください。",
+    "kind": "issue"
+  },
+  {
+    "rawFindingId": "20260708-024638-pr-task-attachments-takt-add-p:reviewers:6:coding-review:coding-review-6-002",
+    "stepName": "coding-review",
+    "reviewer": "coding-review",
+    "familyTag": "bug",
+    "severity": "medium",
+    "title": "画像 redirect 検証エラーが Promise rejection にならず uncaught exception になる",
+    "location": "src/infra/github/prImageAttachments.ts:254",
+    "description": "`requestGitHubAttachment()` の 3xx 応答分岐で `resolveRedirectUrl(url, response.headers.location, imageLabel)` を response callback 内から直接呼んでいます。`resolveRedirectUrl()` は Location 欠落や allowlist 外 redirect で throw しますが、この throw は非同期 callback 内で発生するため、返却 Promise の `reject` や `downloadImageWithAuthenticatedRequest()` の catch に変換されません。結果として、不正な redirect 応答時にサニタイズ済みのダウンロード失敗として扱えず、cleanup と通常エラー処理の経路から外れる可能性があります。`prImageAttachments.test.ts` には redirect の Location 欠落・allowlist 外を rejection として検証するテストもありませんでした。",
+    "suggestion": "3xx 分岐で `resolveRedirectUrl()` を `try/catch` し、例外を `reject(error)` に統一してください。あわせて Location 欠落、allowlist 外 redirect、redirect 上限の各ケースが `resolvePrReviewImageAttachments()` から通常の rejected error として返り、cleanup も実行されることを単体テストで固定してください。",
+    "kind": "issue"
+  }
+]

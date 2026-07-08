@@ -1,0 +1,14 @@
+[
+  {
+    "rawFindingId": "20260708-024638-pr-task-attachments-takt-add-p:reviewers:4:arch-review:raw-arch-004-001",
+    "stepName": "arch-review",
+    "reviewer": "arch-review",
+    "familyTag": "arch.external_contract.github_attachment_download",
+    "severity": "high",
+    "title": "GitHub attachment の web URL を gh api endpoint として渡している",
+    "location": "src/infra/github/prImageAttachments.ts:233; src/infra/github/prImageAttachments.ts:275; src/__tests__/prImageAttachments.test.ts:53",
+    "description": "`downloadImageWithGhApi()` は allowlist 済みの `https://github.com/user-attachments/assets/...` や `https://private-user-images.githubusercontent.com/...` をそのまま `gh api --include <url>` に渡しています。しかしローカル一次情報の `gh api --help` は endpoint 引数を GitHub API v3 の path または `graphql` と説明しており、今回の対象 URL は GitHub API endpoint ではなく web attachment URL です。テストも `execFileSync` を mock して引数とレスポンス parse だけを確認しているため、対象画像 URL を実際にダウンロードできる外部契約が検証されていません。これは PR コメント内画像をローカルにダウンロードする中核要件の入口を満たさない構造です。",
+    "suggestion": "GitHub attachment の full URL 取得は `gh api` endpoint として扱わず、allowlist 済み URL 専用の downloader 境界に分離してください。例えば `gh auth token` で取得した token をログに出さずに Authorization 付き HTTPS request へ渡す、または GitHub が公式に提供する該当 API endpoint がある場合だけ `gh api` を使う構造にしてください。あわせて `github.com/user-attachments/assets/...` と `private-user-images.githubusercontent.com/...` の download 経路が mock だけでなく CLI 契約に沿うことを固定するテストを追加してください。",
+    "kind": "issue"
+  }
+]

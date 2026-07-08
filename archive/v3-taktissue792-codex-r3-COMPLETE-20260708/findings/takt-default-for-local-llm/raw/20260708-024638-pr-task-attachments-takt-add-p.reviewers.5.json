@@ -1,0 +1,50 @@
+[
+  {
+    "rawFindingId": "20260708-024638-pr-task-attachments-takt-add-p:reviewers:5:arch-review:raw-arch-005-resolve-f0008",
+    "stepName": "arch-review",
+    "reviewer": "arch-review",
+    "familyTag": "arch.external_contract.github_attachment_download",
+    "severity": "high",
+    "title": "GitHub attachment の web URL を gh api endpoint として渡している問題は解消済み",
+    "location": "src/infra/github/prImageAttachments.ts:198; src/infra/github/prImageAttachments.ts:238; src/__tests__/prImageAttachments.test.ts:52",
+    "description": "F-0008 の受入条件に戻って確認した。現在の `src/infra/github/prImageAttachments.ts` は `downloadImageWithGhApi` / `gh api --include <web URL>` を持たず、`src/infra/github/prImageAttachments.ts:198` で `gh auth token` を取得し、`src/infra/github/prImageAttachments.ts:238` 以降で allowlist 済み attachment URL へ Authorization 付き HTTPS GET を行っている。`rg` でも対象ファイル内に `gh api`、`--include`、`downloadImageWithGhApi` は残っていない。`src/__tests__/prImageAttachments.test.ts:52` 以降は `gh auth token` の CLI 契約と HTTPS request の Authorization header を固定しており、旧 `gh api` endpoint 誤用の構造は解消されている。追加確認として `npm run build`、`npm run lint`、`npm test` はいずれも終了コード 0。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0008"
+  },
+  {
+    "rawFindingId": "20260708-024638-pr-task-attachments-takt-add-p:reviewers:5:ai-antipattern-review:raw-ai-antipattern-005-001",
+    "stepName": "ai-antipattern-review",
+    "reviewer": "ai-antipattern-review",
+    "familyTag": "api-mismatch",
+    "severity": "high",
+    "title": "GitHub attachment web URL の gh api endpoint 誤用は解消済み",
+    "location": "src/infra/github/prImageAttachments.ts:198; src/infra/github/prImageAttachments.ts:238; src/__tests__/prImageAttachments.test.ts:52",
+    "description": "現行実装は `gh api --include <web URL>` ではなく、`gh auth token` で認証トークンを取得し、allowlist 済み GitHub attachment URL を `https.request` の GET で取得しています。`src/infra/github/prImageAttachments.ts` には旧 `downloadImageWithGhApi` / `parseGhApiIncludeResponse` / `--include` 経路が存在しないことを `rg` で確認しました。テストでは `gh auth token` 呼び出しと `Authorization: Bearer gh-token` 付き HTTPS request を検証しており、`github.com/user-attachments/assets/...` と `github.com/{org}/{repo}/assets/...` の成功経路、`private-user-images.githubusercontent.com` の署名付き URL 非漏洩経路も確認されています。`npm run build`、`npm run lint`、対象テスト、フル `npm test` は終了コード 0 でした。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0008"
+  },
+  {
+    "rawFindingId": "20260708-024638-pr-task-attachments-takt-add-p:reviewers:5:coding-review:raw-coding-review-5-f0008-resolved",
+    "stepName": "coding-review",
+    "reviewer": "coding-review",
+    "familyTag": "external_contract.github_attachment_download",
+    "severity": "high",
+    "title": "GitHub attachment URL の取得経路が gh api endpoint 扱いから認証付き HTTPS request に修正済み",
+    "location": "src/infra/github/prImageAttachments.ts:198; src/infra/github/prImageAttachments.ts:226; src/infra/github/prImageAttachments.ts:238; src/infra/github/prImageAttachments.ts:253; src/infra/github/prImageAttachments.ts:287; src/__tests__/prImageAttachments.test.ts:52; src/__tests__/prImageAttachments.test.ts:64",
+    "description": "F-0008 の受入条件を再確認しました。現在の実装は `gh api --include <web URL>` を使わず、`gh auth token` で認証トークンだけを取得し、allowlist 済み GitHub attachment URL を `https.request` の GET と `Authorization: Bearer ...` で直接取得しています。redirect 先も `resolveRedirectUrl()` で GitHub attachment URL allowlist に再検証されます。テストでも `gh auth token` 呼び出しと HTTPS request の URL/Authorization header 経路が固定されています。`npm run build`、`npm run lint`、`npm test` はすべて終了コード 0 で成功しました。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0008"
+  },
+  {
+    "rawFindingId": "20260708-024638-pr-task-attachments-takt-add-p:reviewers:5:implementation-semantics-review:impl-sem-resolve-f0008-round5",
+    "stepName": "implementation-semantics-review",
+    "reviewer": "implementation-semantics-review",
+    "familyTag": "arch.external_contract.github_attachment_download",
+    "severity": "high",
+    "title": "GitHub attachment の web URL を gh api endpoint として渡している問題は解消済み",
+    "location": "src/infra/github/prImageAttachments.ts:198; src/infra/github/prImageAttachments.ts:226; src/infra/github/prImageAttachments.ts:287; src/__tests__/prImageAttachments.test.ts:52",
+    "description": "解消を確認しました。現在の実装は `src/infra/github/prImageAttachments.ts:198-211` で `gh auth token` から認証トークンを取得し、`src/infra/github/prImageAttachments.ts:226-284` で allowlist 済み GitHub attachment URL を `node:https` の GET request として取得しています。`src/infra/github/prImageAttachments.ts:287-290` でそのレスポンスを Content-Type/magic bytes 検証へ渡しており、F-0008 の問題だった `gh api --include <web URL>` 経路は残っていません。`src/__tests__/prImageAttachments.test.ts:52-66` でも `gh auth token` と HTTPS request の契約を固定しています。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0008"
+  }
+]
