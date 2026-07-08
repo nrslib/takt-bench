@@ -1,0 +1,74 @@
+[
+  {
+    "rawFindingId": "20260708-165721-pr-task-attachments-takt-add-p:reviewers:4:arch-review:arch-review-20260708-165721-r4-confirm-F-0025",
+    "stepName": "arch-review",
+    "reviewer": "arch-review",
+    "familyTag": "scope-creep",
+    "severity": "medium",
+    "title": "PR画像添付要件外の projectConfig 独自キャッシュが削除済み",
+    "location": "src/infra/config/project/projectConfig.ts:66, src/__tests__/projectConfig.test.ts:57",
+    "description": "F-0025 の受入条件に戻って確認しました。`src/infra/config/project/projectConfig.ts` は `readFileSync` import、`loadedProjectConfigCache`、`getProjectConfigSignature()`、cache hit 分岐を持たず、`loadProjectConfig()` は従来どおり `loadProjectConfigTrace()` を呼び `setCachedProjectConfigTrace(projectDir, trace)` を設定する構造に戻っています。`rg` でも `loadedProjectConfigCache|getProjectConfigSignature|getTaktEnvSignature|cloneProjectConfig` は該当なしでした。`src/__tests__/projectConfig.test.ts:57-67` には明示的な cache invalidation なしで config file 変更が次回 `loadProjectConfig()` に反映される回帰テストが追加されています。Policy / Knowledge の全 `##` セクション、既存慣例の config 読み込み・trace cache・無効化 API、PR画像添付の外部アクセス/認証/ファイルIO/エラー処理を再走査し、同じ要求外キャッシュ追加の残存は確認されませんでした。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0025"
+  },
+  {
+    "rawFindingId": "20260708-165721-pr-task-attachments-takt-add-p:reviewers:4:ai-antipattern-review:ai-4-resolution-f0025",
+    "stepName": "ai-antipattern-review",
+    "reviewer": "ai-antipattern-review",
+    "familyTag": "scope-creep",
+    "severity": "medium",
+    "title": "PR画像添付要件外の projectConfig キャッシュ追加",
+    "location": "src/infra/config/project/projectConfig.ts:66",
+    "description": "`src/infra/config/project/projectConfig.ts:66-75` を再確認し、`loadedProjectConfigCache`、`getProjectConfigSignature()`、cache hit 分岐は存在せず、`loadProjectConfig()` は従来どおり `loadProjectConfigTrace()` を毎回呼んで `setCachedProjectConfigTrace()` に trace を設定する構造へ戻っています。`src/__tests__/projectConfig.test.ts:57-67` には明示的な cache invalidation なしで config ファイル変更が反映される回帰テストも追加されており、F-0025 の要求外キャッシュ追加は解消されています。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0025"
+  },
+  {
+    "rawFindingId": "20260708-165721-pr-task-attachments-takt-add-p:reviewers:4:coding-review:coding-review-4-resolved-001",
+    "stepName": "coding-review",
+    "reviewer": "coding-review",
+    "familyTag": "ai-antipattern",
+    "severity": "medium",
+    "title": "PR画像添付要件外の projectConfig キャッシュ追加",
+    "location": "src/infra/config/project/projectConfig.ts:66",
+    "description": "F-0025 の受入条件に戻って確認しました。現在の `loadProjectConfig()` は `src/infra/config/project/projectConfig.ts:66` から直接 `loadProjectConfigTrace()` を呼び、`loadedProjectConfigCache` / `getProjectConfigSignature()` / cache hit 分岐は残っていません。`rg` でも `loadedProjectConfigCache` 等が検出されず、`src/__tests__/projectConfig.test.ts:58` には明示的な cache invalidation なしで config file 変更を反映する回帰テストが追加されています。`npx vitest run src/__tests__/projectConfig.test.ts --config vitest.config.unit.parallel.ts --maxWorkers=1` と PR 添付関連テスト、`npm run build`、`npm run lint` は成功しました。なお `npm test` は既知の `workflow-categories.test.ts` timeout で失敗しましたが、今回確認した projectConfig キャッシュ撤去とは別経路です。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0025"
+  },
+  {
+    "rawFindingId": "20260708-165721-pr-task-attachments-takt-add-p:reviewers:4:implementation-semantics-review:implsem-4-resolve-0025",
+    "stepName": "implementation-semantics-review",
+    "reviewer": "implementation-semantics-review",
+    "familyTag": "implementation-semantics:state-accounting.cache-scope",
+    "severity": "medium",
+    "title": "PR画像添付要件外の projectConfig キャッシュ追加は削除済み",
+    "location": "src/infra/config/project/projectConfig.ts:66",
+    "description": "`src/infra/config/project/projectConfig.ts:1-72` を再読し、`readFileSync` import、`LoadedProjectConfigCacheEntry`、`loadedProjectConfigCache`、`getProjectConfigSignature()`、cache hit 分岐が存在せず、`loadProjectConfig()` は毎回 `loadProjectConfigTrace()` を呼んで `setCachedProjectConfigTrace(projectDir, trace)` を設定する構造に戻っていることを確認しました。`src/infra/config/project/projectConfig.ts:325-327` でも独自 cache delete はなく、既存の `invalidateResolvedConfigCache(projectDir)` 契約のみが残っています。`rg` で `loadedProjectConfigCache|getProjectConfigSignature` が `src/infra/config` に存在しないこと、`src/__tests__/projectConfig.test.ts:57-67` で明示的 cache invalidation なしの設定ファイル再読込が固定されていること、関連テスト 7 ファイル 220 件が成功したことを確認しました。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0025"
+  },
+  {
+    "rawFindingId": "20260708-165721-pr-task-attachments-takt-add-p:reviewers:4:contract-lifecycle-review:contract-lifecycle-review-raw-001",
+    "stepName": "contract-lifecycle-review",
+    "reviewer": "contract-lifecycle-review",
+    "familyTag": "config_cache_lifecycle",
+    "severity": "medium",
+    "title": "PR画像添付要件外の projectConfig キャッシュ追加が除去されたことを確認",
+    "location": "src/infra/config/project/projectConfig.ts:1, src/infra/config/project/projectConfig.ts:66, src/infra/config/project/projectConfig.ts:68, src/infra/config/project/projectConfig.ts:203, src/__tests__/projectConfig.test.ts:57",
+    "description": "F-0025 の対象経路を再走査しました。`src/infra/config/project/projectConfig.ts` から `loadedProjectConfigCache`、`getProjectConfigSignature()`、`cloneProjectConfig()`、cache hit 分岐、保存時の新キャッシュ削除が削除され、`loadProjectConfig()` は従来どおり毎回 `loadProjectConfigTrace()` を呼んで `setCachedProjectConfigTrace(projectDir, trace)` を設定する構造に戻っています。`loadProjectConfigTraceState()` も trace cache miss 時に `loadProjectConfig()` を呼べば trace が再設定される経路になっています。`src/__tests__/projectConfig.test.ts:57` では config ファイル変更後に明示的な cache invalidation なしで `loadProjectConfig()` が変更後の値を返すことが固定されています。検証として `npx vitest run src/__tests__/projectConfig.test.ts src/__tests__/provider-routing.test.ts src/__tests__/prReviewAttachments.test.ts src/__tests__/prReviewImageReferences.test.ts src/__tests__/imageAttachmentData.test.ts src/__tests__/cli-routing-pr-resolve.test.ts src/__tests__/pipelineExecution.test.ts src/__tests__/addTask.test.ts` を実行し、8 files / 263 tests passed を確認しました。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0025"
+  },
+  {
+    "rawFindingId": "20260708-165721-pr-task-attachments-takt-add-p:reviewers:4:robustness-review:robustness-165721-r4-raw-1",
+    "stepName": "robustness-review",
+    "reviewer": "robustness-review",
+    "familyTag": "robustness.scope_shared_state",
+    "severity": "medium",
+    "title": "PR画像添付要件外の projectConfig キャッシュが削除されたことを確認",
+    "location": "src/infra/config/project/projectConfig.ts:66, src/infra/config/project/projectConfig.ts:68, src/infra/config/project/projectConfig.ts:72, src/infra/config/resolutionCache.ts:58",
+    "description": "F-0025 の同じ欠陥クラスを再走査しました。`src/infra/config/project/projectConfig.ts` では `loadProjectConfig()` が line 66 から始まり、line 68 で `loadProjectConfigTrace()` を呼び、line 72 で `setCachedProjectConfigTrace(projectDir, trace)` を実行しています。`loadedProjectConfigCache` と `getProjectConfigSignature` は `src/infra/config` / `src/__tests__` 配下の検索で存在しないことを確認しました。既存の無効化契約は `src/infra/config/resolutionCache.ts:46-61` の `projectConfigCache` / `projectConfigTraceCache` / `resolvedValueCache` に戻っており、PR画像添付要件外の独自 projectConfig キャッシュは残っていません。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0025"
+  }
+]

@@ -1,0 +1,74 @@
+[
+  {
+    "rawFindingId": "20260708-160616-pr-task-attachments-takt-add-p:reviewers:1:arch-review:arch-review-160616-r1-resolved-1",
+    "stepName": "arch-review",
+    "reviewer": "arch-review",
+    "familyTag": "robustness.resource_bounds",
+    "severity": "medium",
+    "title": "単体上限超過レスポンスの読み込み分が合計上限へ算入済み",
+    "location": "src/infra/github/prReviewAttachments.ts:50, src/infra/github/prReviewAttachments.ts:158, src/infra/github/prReviewAttachments.ts:301, src/__tests__/prReviewAttachments.test.ts:359",
+    "description": "F-0021 の同種経路を再走査しました。`PrReviewImageReadLimitError` が `consumedBytes` と `totalLimitReached` を保持し、`readResponseBodyWithinLimit()` は Content-Length なしの stream / non-stream の単体上限超過でも読み込み済み bytes を含む専用エラーを投げます。呼び出し元 catch は `error.consumedBytes` を `totalDownloadedBytes` に加算し、合計上限到達または消費済み bytes が上限以上の場合に後続 fetch を停止します。`prReviewAttachments.test.ts:359` 以降で、単体上限超過レスポンスが合計上限に算入され、4 件目の fetch が発生しないことも固定されています。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0021"
+  },
+  {
+    "rawFindingId": "20260708-160616-pr-task-attachments-takt-add-p:reviewers:1:ai-antipattern-review:ai-r1-resolved-1",
+    "stepName": "ai-antipattern-review",
+    "reviewer": "ai-antipattern-review",
+    "familyTag": "missing-edge-case",
+    "severity": "medium",
+    "title": "単体上限超過レスポンスの読み込み分が合計上限に算入されるよう修正済み",
+    "location": "src/infra/github/prReviewAttachments.ts:185",
+    "description": "`src/infra/github/prReviewAttachments.ts:185-187` で Content-Length なしのストリームが単体上限を超えた場合、`PrReviewImageReadLimitError` に `consumedBytes` を入れて投げるようになっています。呼び出し元の `src/infra/github/prReviewAttachments.ts:301-310` ではこの `consumedBytes` を `totalDownloadedBytes` に加算し、合計上限到達時は `totalBytesLimitReached` を立てるため、単体上限超過の失敗画像でも後続 fetch が抑止されます。`src/__tests__/prReviewAttachments.test.ts:359-404` で Content-Length なしの単体上限超過レスポンスが合計上限を消費し、4件目を fetch しないことも確認されています。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0021"
+  },
+  {
+    "rawFindingId": "20260708-160616-pr-task-attachments-takt-add-p:reviewers:1:coding-review:raw-coding-review-1-confirm-F-0021",
+    "stepName": "coding-review",
+    "reviewer": "coding-review",
+    "familyTag": "robustness.resource_bounds",
+    "severity": "medium",
+    "title": "単体上限超過レスポンスの読み込み分が合計上限に算入される",
+    "location": "src/infra/github/prReviewAttachments.ts:50, src/infra/github/prReviewAttachments.ts:181, src/infra/github/prReviewAttachments.ts:301, src/__tests__/prReviewAttachments.test.ts:359",
+    "description": "F-0021 の同種経路を再走査しました。`PrReviewImageReadLimitError` が consumedBytes と totalLimitReached を保持し、Content-Length なしストリームの単体上限超過時も `readResponseBodyWithinLimit()` が consumedBytes 付きで例外化します。`downloadPrReviewAttachments()` の catch は `PrReviewImageReadLimitError` の consumedBytes を `totalDownloadedBytes` に加算し、累計上限到達時に後続 fetch を止めます。`src/__tests__/prReviewAttachments.test.ts:359` の追加テストで、単体上限超過レスポンスが複数続く場合に4件目を fetch しないことも確認しました。関連 targeted tests は 6 files / 120 tests passed、`npm run build` と `npm run lint` は成功しました。`npm test` 全体は差分外の workflow-categories/workflowLoader timeout で失敗しましたが、本 finding の解消条件に関わる経路は上記テストで確認済みです。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0021"
+  },
+  {
+    "rawFindingId": "20260708-160616-pr-task-attachments-takt-add-p:reviewers:1:implementation-semantics-review:implsem-1-resolve-0021",
+    "stepName": "implementation-semantics-review",
+    "reviewer": "implementation-semantics-review",
+    "familyTag": "implementation-semantics:state-accounting.resource-bound",
+    "severity": "medium",
+    "title": "単体上限超過レスポンスの読み込み分が合計上限に算入されるよう修正済み",
+    "location": "src/infra/github/prReviewAttachments.ts:185",
+    "description": "`src/infra/github/prReviewAttachments.ts:181-187` で Content-Length なしのストリーム読み込み中に `MAX_IMAGE_ATTACHMENT_BYTES` を超えた場合、`createReadImageBytesLimitError(totalBytes)` により消費済み bytes を持つ `PrReviewImageReadLimitError` を投げることを確認しました。呼び出し元の `src/infra/github/prReviewAttachments.ts:301-311` ではこの error の `consumedBytes` を `totalDownloadedBytes` に加算し、累計が `MAX_PR_REVIEW_IMAGE_ATTACHMENT_TOTAL_BYTES` 以上なら `totalBytesLimitReached` を立てて後続画像を fetch しない構造です。`src/__tests__/prReviewAttachments.test.ts:359-404` でも単体上限超過レスポンスが合計上限を消費し、4件目の fetch が発生しないことが固定されています。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0021"
+  },
+  {
+    "rawFindingId": "20260708-160616-pr-task-attachments-takt-add-p:reviewers:1:contract-lifecycle-review:contract-lifecycle-review-raw-001",
+    "stepName": "contract-lifecycle-review",
+    "reviewer": "contract-lifecycle-review",
+    "familyTag": "resource_lifecycle.pr_attachment_total_bytes",
+    "severity": "medium",
+    "title": "単体上限超過レスポンスの読み込み分が合計上限へ算入されることを確認",
+    "location": "src/infra/github/prReviewAttachments.ts:50, src/infra/github/prReviewAttachments.ts:158, src/infra/github/prReviewAttachments.ts:181, src/infra/github/prReviewAttachments.ts:302, src/__tests__/prReviewAttachments.test.ts:359",
+    "description": "F-0021 の同種経路を再走査しました。`PrReviewImageReadLimitError` が consumedBytes と totalLimitReached を保持し、`readResponseBodyWithinLimit(response, remainingTotalBytes)` は arrayBuffer 経路と stream 経路の両方で、合計上限超過または単体上限超過時に読み込み済み byte 数を含む専用エラーを投げています。呼び出し元 catch は `error instanceof PrReviewImageReadLimitError` の場合に `totalDownloadedBytes += error.consumedBytes` し、合計上限到達時は以降の reference を fetch せず limit failure にしています。`src/__tests__/prReviewAttachments.test.ts:359` のテストで、Content-Length なしの単体上限超過 body が合計上限を消費し、4件目 fetch が発生しないことも固定されています。検証として `npx vitest run src/__tests__/prReviewAttachments.test.ts src/__tests__/prReviewImageReferences.test.ts src/__tests__/imageAttachmentData.test.ts src/__tests__/cli-routing-pr-resolve.test.ts src/__tests__/pipelineExecution.test.ts src/__tests__/addTask.test.ts` を実行し、6 files / 120 tests passed を確認しました。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0021"
+  },
+  {
+    "rawFindingId": "20260708-160616-pr-task-attachments-takt-add-p:reviewers:1:robustness-review:robustness-160616-r1-raw-1",
+    "stepName": "robustness-review",
+    "reviewer": "robustness-review",
+    "familyTag": "robustness.resource_bounds",
+    "severity": "medium",
+    "title": "ストリーム読み込み失敗時の消費bytesが合計上限に算入されない",
+    "location": "src/infra/github/prReviewAttachments.ts:175, src/infra/github/prReviewAttachments.ts:302",
+    "description": "F-0021 の同種経路を再走査しました。単体上限超過は PrReviewImageReadLimitError で consumedBytes を伝えるよう修正されていますが、stream 本体の `reader.read()` が line 175 で reject した場合、readResponseBodyWithinLimit() はそれまで line 180 で加算していた totalBytes を専用エラーとして返さず、呼び出し元の catch では line 302-304 の PrReviewImageReadLimitError 分岐に入りません。そのため、Content-Length なしの supported Content-Type レスポンスが数MBを送信後にストリームエラーになる画像を複数含むと、実際に読み込んだ bytes が totalDownloadedBytes に反映されず、後続画像の fetch が継続します。line 182/186 の reader.cancel() が reject した場合も、作成予定の PrReviewImageReadLimitError が失われるため同じく消費bytesが合計上限に算入されません。既存テスト src/__tests__/prReviewAttachments.test.ts:359-404 は単体上限超過の専用エラー経路だけを固定しており、stream read/cancel 失敗後に後続 fetch が止まることは検証していません。",
+    "suggestion": "readResponseBodyWithinLimit() の stream 読み込み全体を try/catch で囲み、reader.read() や reader.cancel() の失敗でも既に読み込んだ totalBytes を含む専用エラーを投げるか、chunk 読み込み時点で外側の合計予算を更新してください。Content-Length なしで一部 body を返した後に stream が error になるレスポンスを複数並べ、合計上限到達後に追加 fetch/read が行われない単体テストを追加してください。",
+    "kind": "issue"
+  }
+]

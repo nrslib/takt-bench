@@ -1,0 +1,74 @@
+[
+  {
+    "rawFindingId": "20260708-165802-pr-task-attachments-takt-add-p:reviewers:3:arch-review:arch-review-3-resolved-F-0021",
+    "stepName": "arch-review",
+    "reviewer": "arch-review",
+    "familyTag": "implementation-semantics/meaning-contract",
+    "severity": "medium",
+    "title": "対話 --pr 経路で resolvedCwd が PR 入力解決に渡されない",
+    "location": "src/app/cli/routing.ts:113",
+    "description": "現行コードを再読し、`executeDefaultAction()` の対話 `--pr` 経路が `src/app/cli/routing.ts:113` で `resolvePrInput(prNumber, resolvedCwd)` を呼び出すことを確認しました。`resolvePrInput()` 側は `src/app/cli/routing-inputs.ts:63-74` で同じ `cwd` を `provider.checkCliStatus(cwd)`、`provider.fetchPrReviewComments(prNumber, cwd)`、`buildPrReviewTaskInput(..., { cwd })` に伝播しています。同じ欠陥クラスの入口も再走査し、`takt add --pr` は `src/features/tasks/add/index.ts:188` と `src/features/tasks/add/index.ts:207` で `cwd` を渡し、pipeline `--pr` は `src/features/pipeline/steps.ts:157` と `src/features/pipeline/steps.ts:162` で `cwd` を渡しています。回帰テストも `src/__tests__/cli-routing-pr-resolve.test.ts:358` で `fetchPrReviewComments(456, '/test/cwd')`、`src/__tests__/cli-routing-pr-resolve.test.ts:398-402` で `gh auth token` の `cwd: '/test/cwd'` を期待しており、F-0021 の受入条件を満たしています。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0021"
+  },
+  {
+    "rawFindingId": "20260708-165802-pr-task-attachments-takt-add-p:reviewers:3:ai-antipattern-review:ai-antipattern-20260708-165802-r3-f0021-resolved",
+    "stepName": "ai-antipattern-review",
+    "reviewer": "ai-antipattern-review",
+    "familyTag": "api-mismatch",
+    "severity": "medium",
+    "title": "対話 --pr 経路で resolvedCwd が PR 入力解決へ渡ることを確認",
+    "location": "src/app/cli/routing.ts:113; src/app/cli/routing-inputs.ts:71; src/app/cli/routing-inputs.ts:74; src/features/tasks/prReviewTaskInput.ts:29; src/infra/github/prImageAttachments.ts:20; src/__tests__/cli-routing-pr-resolve.test.ts:358; src/__tests__/cli-routing-pr-resolve.test.ts:398",
+    "description": "Policy Source と Knowledge Source を再読し、## セクションを列挙したうえで、契約全入口、境界での解決、Tell Don't Ask、呼び出しチェーン検証、もっともらしいが間違っている検出、テストダブルによる見かけ上の修正検出、コンテキスト適合性、フォールバック濫用検出を照合した。F-0021 の受入条件に戻って同種の cwd 伝播経路を再走査し、executeDefaultAction() は routing.ts:113 で resolvePrInput(prNumber, resolvedCwd) を呼ぶ。resolvePrInput() は routing-inputs.ts:63 で checkCliStatus(cwd)、同:71 で fetchPrReviewComments(prNumber, cwd)、同:74 で buildPrReviewTaskInput(..., { gitProvider: provider, cwd }) を呼ぶ。buildPrReviewTaskInput() は prReviewTaskInput.ts:29-32 で downloadPrImageAttachments に cwd を渡し、GitHub downloader は prImageAttachments.ts:20-23 で gh auth token の cwd に使う。add/pipeline の同種 builder 経路も add/index.ts:207 と pipeline/steps.ts:162 で cwd を渡している。テストは cli-routing-pr-resolve.test.ts:358 で fetchPrReviewComments(456, '/test/cwd')、同:398-402 で gh auth token cwd '/test/cwd'、git-cwd-propagation.test.ts:127-131 で resolvePrInput(456, '/worktree/clone') の cwd 伝播を検証している。npm run lint、npx tsc --noEmit、npm test -- src/__tests__/cli-routing-pr-resolve.test.ts src/__tests__/git-cwd-propagation.test.ts src/__tests__/prReviewTaskInput.test.ts は成功した。全体 npm test は別ファイルの timeout で失敗したが、該当2ファイルは単体再実行で成功し、F-0021 の解消判定には使っていない。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0021"
+  },
+  {
+    "rawFindingId": "20260708-165802-pr-task-attachments-takt-add-p:reviewers:3:coding-review:coding-review-r3-confirm-f0021",
+    "stepName": "coding-review",
+    "reviewer": "coding-review",
+    "familyTag": "contract.cwd-propagation",
+    "severity": "medium",
+    "title": "対話 --pr 経路で resolvedCwd が PR 入力解決に渡されない",
+    "location": "src/app/cli/routing.ts:113; src/app/cli/routing-inputs.ts:71; src/app/cli/routing-inputs.ts:74; src/__tests__/cli-routing-pr-resolve.test.ts:358; src/__tests__/cli-routing-pr-resolve.test.ts:398",
+    "description": "F-0021 の受入条件に戻って対話 `--pr` 経路を再確認しました。`executeDefaultAction()` は `resolvePrInput(prNumber, resolvedCwd)` を呼び、`resolvePrInput()` はその `cwd` を `provider.fetchPrReviewComments(prNumber, cwd)` と `buildPrReviewTaskInput(prReview, { gitProvider: provider, cwd })` に渡しています。テストも `fetchPrReviewComments(456, '/test/cwd')` と `gh auth token` の `cwd: '/test/cwd'` を期待する形に更新されています。`rg` で `resolvePrInput(` の呼び出し元を確認し、同じ対話 `--pr` 経路で未修正の同種呼び出しは確認できませんでした。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0021"
+  },
+  {
+    "rawFindingId": "20260708-165802-pr-task-attachments-takt-add-p:reviewers:3:implementation-semantics-review:impl-semantics-r3-001",
+    "stepName": "implementation-semantics-review",
+    "reviewer": "implementation-semantics-review",
+    "familyTag": "implementation-semantics/meaning-contract",
+    "severity": "medium",
+    "title": "対話 --pr 経路の resolvedCwd 伝播を確認",
+    "location": "src/app/cli/routing.ts:113; src/app/cli/routing-inputs.ts:63; src/app/cli/routing-inputs.ts:71; src/app/cli/routing-inputs.ts:74; src/__tests__/cli-routing-pr-resolve.test.ts:358; src/__tests__/cli-routing-pr-resolve.test.ts:398",
+    "description": "`executeDefaultAction()` は `resolvePrInput(prNumber, resolvedCwd)` を呼ぶようになり、`resolvePrInput()` 内では受け取った `cwd` が `provider.checkCliStatus(cwd)`、`provider.fetchPrReviewComments(prNumber, cwd)`、`buildPrReviewTaskInput(..., { cwd })` に渡されています。対話 --pr のテストも `fetchPrReviewComments(456, '/test/cwd')` と `gh auth token` の `cwd: '/test/cwd'` を期待する形に更新されています。同種の PR 入力経路として `takt add --pr` は `src/features/tasks/add/index.ts:188` と `:207` で cwd を渡し、pipeline --pr は `src/features/pipeline/steps.ts:157` と `:162` で cwd を渡していることも再確認しました。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0021"
+  },
+  {
+    "rawFindingId": "20260708-165802-pr-task-attachments-takt-add-p:reviewers:3:contract-lifecycle-review:contract-review-7-resolve-F0021",
+    "stepName": "contract-lifecycle-review",
+    "reviewer": "contract-lifecycle-review",
+    "familyTag": "contract-lifecycle.cwd-boundary-propagation",
+    "severity": "medium",
+    "title": "対話 --pr 経路で resolvedCwd が PR 入力解決に渡されない",
+    "location": "src/app/cli/routing.ts:113; src/app/cli/routing-inputs.ts:63; src/app/cli/routing-inputs.ts:71; src/app/cli/routing-inputs.ts:74; src/infra/github/prImageAttachments.ts:20; src/__tests__/cli-routing-pr-resolve.test.ts:358; src/__tests__/cli-routing-pr-resolve.test.ts:398",
+    "description": "F-0021 の同欠陥クラスを再走査しました。src/app/cli/routing.ts:113 は resolvePrInput(prNumber, resolvedCwd) を呼び、対話 --pr 経路の PR 入力解決に resolvedCwd を渡しています。resolvePrInput() 側では src/app/cli/routing-inputs.ts:63 で provider.checkCliStatus(cwd)、src/app/cli/routing-inputs.ts:71 で provider.fetchPrReviewComments(prNumber, cwd)、src/app/cli/routing-inputs.ts:74 で buildPrReviewTaskInput(..., { gitProvider: provider, cwd }) に同じ cwd を渡しています。private 画像取得用の gh auth token も src/infra/github/prImageAttachments.ts:20-22 で options.cwd を execFileSync の cwd に渡す経路に接続されています。テストは src/__tests__/cli-routing-pr-resolve.test.ts:358 で fetchPrReviewComments(456, '/test/cwd')、src/__tests__/cli-routing-pr-resolve.test.ts:398-402 で gh auth token の cwd: '/test/cwd' を検証しています。rg による同種入口確認でも add --pr は src/features/tasks/add/index.ts:188 と src/features/tasks/add/index.ts:207、pipeline --pr は src/features/pipeline/steps.ts:157 と src/features/pipeline/steps.ts:162 で cwd を PR 取得と画像 attachment 準備へ渡しており、同じ PR 画像取得境界に cwd 未伝播の残存は確認されませんでした。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0021"
+  },
+  {
+    "rawFindingId": "20260708-165802-pr-task-attachments-takt-add-p:reviewers:3:robustness-review:raw-robustness-20260709-f0021-resolution",
+    "stepName": "robustness-review",
+    "reviewer": "robustness-review",
+    "familyTag": "robustness.cwd-propagation",
+    "severity": "medium",
+    "title": "対話 --pr 経路で resolvedCwd が PR 入力解決に渡されない",
+    "location": "src/app/cli/routing.ts:113",
+    "description": "解消確認。`src/app/cli/routing.ts:113` で `resolvePrInput(prNumber, resolvedCwd)` が呼ばれており、対話 `--pr` 経路の PR 取得と画像添付ダウンロードへ resolvedCwd が渡る。`src/app/cli/routing-inputs.ts:63-74` では受け取った cwd を `provider.checkCliStatus(cwd)`、`provider.fetchPrReviewComments(prNumber, cwd)`、`buildPrReviewTaskInput(..., { gitProvider: provider, cwd })` に伝播し、`src/features/tasks/prReviewTaskInput.ts:29-31` で `downloadPrImageAttachments()` の cwd に渡している。テストも `src/__tests__/cli-routing-pr-resolve.test.ts:358` で `fetchPrReviewComments(456, '/test/cwd')`、同 `:398-402` で `gh auth token` の `cwd: '/test/cwd'` を期待する内容に更新済み。`rg` で `resolvePrInput(` の同種呼び出しを再走査し、対話入口は上記1箇所、単体テストの明示的な cwd 省略ケース以外に未伝播経路が残っていないことを確認した。関連テスト `npm test -- cli-routing-pr-resolve git-cwd-propagation` は 2 files / 37 tests passed。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0021"
+  }
+]

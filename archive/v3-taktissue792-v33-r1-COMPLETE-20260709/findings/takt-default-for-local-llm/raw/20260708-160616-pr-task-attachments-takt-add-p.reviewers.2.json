@@ -1,0 +1,86 @@
+[
+  {
+    "rawFindingId": "20260708-160616-pr-task-attachments-takt-add-p:reviewers:2:arch-review:arch-review-160616-r2-resolved-1",
+    "stepName": "arch-review",
+    "reviewer": "arch-review",
+    "familyTag": "robustness.resource_bounds",
+    "severity": "medium",
+    "title": "単体上限超過レスポンスの読み込み分が合計上限へ算入済み",
+    "location": "src/infra/github/prReviewAttachments.ts:50, src/infra/github/prReviewAttachments.ts:158, src/infra/github/prReviewAttachments.ts:181, src/infra/github/prReviewAttachments.ts:185, src/infra/github/prReviewAttachments.ts:301, src/__tests__/prReviewAttachments.test.ts:359",
+    "description": "F-0021 の受入条件と同種経路を現行コードで再走査しました。`PrReviewImageReadLimitError` は `consumedBytes` と `totalLimitReached` を保持し、`readResponseBodyWithinLimit()` は Content-Length なしの stream で合計残量超過時も単体上限超過時も reader を cancel して消費 byte 数つきの専用エラーを投げます。呼び出し元 catch は `error.consumedBytes` を `totalDownloadedBytes` に加算し、合計上限到達時は後続参照を fetch せず limit failure にします。`prReviewAttachments.test.ts:359` 以降で、単体上限超過レスポンスの読み込み分が合計上限へ算入され、4件目の fetch が発生しないことも固定されています。Policy の全 `##` セクションと Knowledge の全 `##` セクション、外部アクセス・認証・ファイルIO・cleanup の既存慣例も照合し、同欠陥クラスの残存は確認されませんでした。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0021"
+  },
+  {
+    "rawFindingId": "20260708-160616-pr-task-attachments-takt-add-p:reviewers:2:ai-antipattern-review:ai-r2-resolved-1",
+    "stepName": "ai-antipattern-review",
+    "reviewer": "ai-antipattern-review",
+    "familyTag": "missing-edge-case",
+    "severity": "medium",
+    "title": "単体上限超過レスポンスの読み込み分が合計上限に算入されるよう修正済み",
+    "location": "src/infra/github/prReviewAttachments.ts:185",
+    "description": "`readResponseBodyWithinLimit()` は Content-Length なしのストリームが単体上限を超えた場合、`src/infra/github/prReviewAttachments.ts:185-187` で `consumedBytes` を持つ `PrReviewImageReadLimitError` を投げます。呼び出し元は `src/infra/github/prReviewAttachments.ts:301-310` でその `consumedBytes` を `totalDownloadedBytes` に加算し、合計上限到達時に `totalBytesLimitReached` を立てるため、単体上限超過の失敗画像後に後続 fetch が継続する経路は閉じています。`src/__tests__/prReviewAttachments.test.ts:359-404` でも Content-Length なしの単体上限超過レスポンスが合計上限を消費し、4件目を fetch しない挙動を確認しています。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0021"
+  },
+  {
+    "rawFindingId": "20260708-160616-pr-task-attachments-takt-add-p:reviewers:2:coding-review:raw-coding-review-2-confirm-F-0021",
+    "stepName": "coding-review",
+    "reviewer": "coding-review",
+    "familyTag": "robustness.resource_bounds",
+    "severity": "medium",
+    "title": "単体上限超過レスポンスの読み込み分が合計上限に算入される",
+    "location": "src/infra/github/prReviewAttachments.ts:50, src/infra/github/prReviewAttachments.ts:181, src/infra/github/prReviewAttachments.ts:301, src/__tests__/prReviewAttachments.test.ts:359",
+    "description": "F-0021 の同種経路を再走査しました。`PrReviewImageReadLimitError` が `consumedBytes` と `totalLimitReached` を保持し、Content-Length なしストリームの単体上限超過でも `readResponseBodyWithinLimit()` が消費済み bytes 付きで例外化します。`downloadPrReviewAttachments()` の catch は `PrReviewImageReadLimitError` の `consumedBytes` を `totalDownloadedBytes` に加算し、累計上限到達時に後続 fetch を止めます。`src/__tests__/prReviewAttachments.test.ts:359` の追加テストで、単体上限超過レスポンスが複数続く場合に4件目を fetch しないことも確認しました。`npm run build`、`npm run lint`、関連 Vitest 6 files / 120 tests は成功しました。`npm test` 全体は Vitest worker の `onTaskUpdate` timeout で失敗しましたが、全テスト本体は各 shard で passed と表示されており、本 finding の解消条件に関わる経路は上記テストで確認済みです。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0021"
+  },
+  {
+    "rawFindingId": "20260708-160616-pr-task-attachments-takt-add-p:reviewers:2:implementation-semantics-review:implsem-2-resolve-0021",
+    "stepName": "implementation-semantics-review",
+    "reviewer": "implementation-semantics-review",
+    "familyTag": "implementation-semantics:state-accounting.resource-bound",
+    "severity": "medium",
+    "title": "単体上限超過レスポンスの読み込み分が合計上限に算入されるよう修正済み",
+    "location": "src/infra/github/prReviewAttachments.ts:185",
+    "description": "`src/infra/github/prReviewAttachments.ts:181-187` で Content-Length なしのストリーム読み込み中に `MAX_IMAGE_ATTACHMENT_BYTES` を超えた場合、消費済み `totalBytes` を保持する `PrReviewImageReadLimitError` を投げることを確認しました。呼び出し元の `src/infra/github/prReviewAttachments.ts:301-311` では `consumedBytes` を `totalDownloadedBytes` に加算し、累計が `MAX_PR_REVIEW_IMAGE_ATTACHMENT_TOTAL_BYTES` 以上なら `totalBytesLimitReached` を立てて後続画像を fetch しません。`src/__tests__/prReviewAttachments.test.ts:359-404` でも単体上限超過レスポンスが合計上限を消費し、4件目の fetch が発生しないことが固定されています。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0021"
+  },
+  {
+    "rawFindingId": "20260708-160616-pr-task-attachments-takt-add-p:reviewers:2:contract-lifecycle-review:contract-lifecycle-review-raw-001",
+    "stepName": "contract-lifecycle-review",
+    "reviewer": "contract-lifecycle-review",
+    "familyTag": "resource_lifecycle.pr_attachment_total_bytes",
+    "severity": "medium",
+    "title": "単体上限超過レスポンスの読み込み分が合計上限へ算入されることを確認",
+    "location": "src/infra/github/prReviewAttachments.ts:50, src/infra/github/prReviewAttachments.ts:158, src/infra/github/prReviewAttachments.ts:181, src/infra/github/prReviewAttachments.ts:302, src/__tests__/prReviewAttachments.test.ts:359",
+    "description": "F-0021 の同種経路を再走査しました。`PrReviewImageReadLimitError` は consumedBytes と totalLimitReached を保持し、`readResponseBodyWithinLimit(response, remainingTotalBytes)` は arrayBuffer 経路と stream 経路の両方で、合計上限超過または単体上限超過時に読み込み済み byte 数を含む専用エラーを投げています。呼び出し元 catch は `error instanceof PrReviewImageReadLimitError` の場合に `totalDownloadedBytes += error.consumedBytes` し、合計上限到達時は以降の reference を fetch せず limit failure にしています。`src/__tests__/prReviewAttachments.test.ts:359` のテストで、Content-Length なしの単体上限超過 body が合計上限を消費し、4件目 fetch が発生しないことも固定されています。検証として `npx vitest run src/__tests__/prReviewAttachments.test.ts src/__tests__/prReviewImageReferences.test.ts src/__tests__/imageAttachmentData.test.ts src/__tests__/cli-routing-pr-resolve.test.ts src/__tests__/pipelineExecution.test.ts src/__tests__/addTask.test.ts` を実行し、6 files / 120 tests passed を確認しました。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0021"
+  },
+  {
+    "rawFindingId": "20260708-160616-pr-task-attachments-takt-add-p:reviewers:2:robustness-review:robustness-160616-r2-raw-1",
+    "stepName": "robustness-review",
+    "reviewer": "robustness-review",
+    "familyTag": "robustness.resource_bounds",
+    "severity": "medium",
+    "title": "単体上限超過レスポンスの読み込み分が合計上限に算入されることを確認",
+    "location": "src/infra/github/prReviewAttachments.ts:121, src/infra/github/prReviewAttachments.ts:181, src/infra/github/prReviewAttachments.ts:302, src/__tests__/prReviewAttachments.test.ts:359",
+    "description": "F-0021 の受入条件に戻って同種経路を再走査しました。Content-Length なしのストリームで合計残量または単体上限を超えた場合、src/infra/github/prReviewAttachments.ts:181-187 で consumedBytes を持つ PrReviewImageReadLimitError が投げられ、src/infra/github/prReviewAttachments.ts:302-310 で totalDownloadedBytes に加算され、合計上限到達時は後続画像を fetch しない状態になります。src/__tests__/prReviewAttachments.test.ts:359-404 でも単体上限超過レスポンスが合計上限到達後に4枚目を fetch しないことを固定しています。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0021"
+  },
+  {
+    "rawFindingId": "20260708-160616-pr-task-attachments-takt-add-p:reviewers:2:robustness-review:robustness-160616-r2-raw-2",
+    "stepName": "robustness-review",
+    "reviewer": "robustness-review",
+    "familyTag": "robustness.resource_bounds",
+    "severity": "medium",
+    "title": "ストリーム読み込み失敗時の消費bytesが合計上限に算入されない",
+    "location": "src/infra/github/prReviewAttachments.ts:175, src/infra/github/prReviewAttachments.ts:302",
+    "description": "F-0021 と同じ合計ダウンロード量境界の欠陥クラスを再走査しました。単体上限超過は consumedBytes 付きエラーで処理されますが、stream 本体の reader.read() が src/infra/github/prReviewAttachments.ts:175 で一部 chunks 読み込み後に reject した場合、readResponseBodyWithinLimit() はそれまで line 180 で加算していた totalBytes を専用エラーとして返しません。呼び出し元の catch は src/infra/github/prReviewAttachments.ts:302-304 の PrReviewImageReadLimitError 分岐だけを合計消費量へ加算するため、この経路では実際に読み込んだ bytes が totalDownloadedBytes に反映されず、後続画像の fetch が継続します。line 182/186 の reader.cancel() が reject した場合も、作成予定の PrReviewImageReadLimitError が失われるため同じく消費bytesが合計上限に算入されません。既存テスト src/__tests__/prReviewAttachments.test.ts:359-404 は単体上限超過の専用エラー経路だけを固定しており、stream read/cancel 失敗後に後続 fetch が止まることは検証していません。",
+    "suggestion": "readResponseBodyWithinLimit() の stream 読み込み全体を try/catch で囲み、reader.read() や reader.cancel() の失敗でも既に読み込んだ totalBytes を含む専用エラーを投げるか、chunk 読み込み時点で外側の合計予算を更新してください。Content-Length なしで一部 body を返した後に stream が error になるレスポンスを複数並べ、合計上限到達後に追加 fetch/read が行われない単体テストを追加してください。",
+    "kind": "issue"
+  }
+]

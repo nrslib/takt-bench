@@ -1,0 +1,74 @@
+[
+  {
+    "rawFindingId": "20260708-123344-pr-task-attachments-takt-add-p:reviewers:3:arch-review:arch-review-3-raw-1",
+    "stepName": "arch-review",
+    "reviewer": "arch-review",
+    "familyTag": "resource_limits.total_download_bytes_failed_images_unaccounted",
+    "severity": "medium",
+    "title": "合計ダウンロード量上限が失敗画像の読み込み分を数えていない",
+    "location": "src/infra/github/prReviewAttachments.ts:263",
+    "description": "F-0017 対応として合計サイズ上限は追加されていますが、`totalDownloadedBytes` は `validateImageAttachmentData()` と `writeAttachmentFile()` が成功した後の `src/infra/github/prReviewAttachments.ts:267` でだけ加算されます。`fetchAttachmentData()` は line 263 で本文を読み切って `data` を返し、その後 line 264 の magic bytes 検証で失敗した場合、その最大10MBの読み込み分は合計に反映されません。したがって supported Content-Type だが magic bytes 不一致の画像を複数並べると、設定された 25MB 合計上限を超えるネットワーク読み込みを継続できます。既存テストは成功画像の合計超過だけを確認しており、失敗画像の読み込み分が合計上限に算入されることを固定していません。",
+    "suggestion": "本文を読んだ時点で `data.byteLength` を合計消費量へ反映し、検証や書き込みに失敗しても以降の残量判定に使ってください。さらに Content-Length がないストリームでは `remainingTotalBytes` を超えた時点で reader を cancel する構造にし、supported Content-Type かつ magic bytes 不一致の大きな画像が続く場合に後続 fetch が止まるテストを追加してください。",
+    "kind": "issue"
+  },
+  {
+    "rawFindingId": "20260708-123344-pr-task-attachments-takt-add-p:reviewers:3:ai-antipattern-review:ai-r3-resolved-1",
+    "stepName": "ai-antipattern-review",
+    "reviewer": "ai-antipattern-review",
+    "familyTag": "missing-edge-case",
+    "severity": "medium",
+    "title": "PR画像参照数と合計ダウンロード量の上限が追加済み",
+    "location": "src/infra/github/prReviewImageReferences.ts:87, src/infra/github/prReviewAttachments.ts:248",
+    "description": "`extractPrReviewImageReferences()` は `MAX_PR_REVIEW_IMAGE_REFERENCES` 到達後の画像を references に追加せず、本文を `[Image #N] download skipped: ...` に置換します。`downloadPrReviewAttachments()` も `options.references.slice(0, MAX_PR_REVIEW_IMAGE_REFERENCES)` のみを取得対象にし、`MAX_PR_REVIEW_IMAGE_ATTACHMENT_TOTAL_BYTES` を超えた時点で以降の画像を fetch せず失敗注記にします。対応テストは `src/__tests__/prReviewImageReferences.test.ts:85`、`src/__tests__/prReviewAttachments.test.ts:229`、`src/__tests__/prReviewAttachments.test.ts:249` で確認しました。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0017"
+  },
+  {
+    "rawFindingId": "20260708-123344-pr-task-attachments-takt-add-p:reviewers:3:coding-review:raw-coding-review-3-1",
+    "stepName": "coding-review",
+    "reviewer": "coding-review",
+    "familyTag": "robustness.resource_bounds",
+    "severity": "medium",
+    "title": "合計ダウンロード量上限が失敗レスポンスに適用されない",
+    "location": "src/infra/github/prReviewAttachments.ts:184",
+    "description": "現在の合計サイズ上限は content-length がある場合の事前検証と、validateImageAttachmentData() 成功後に totalDownloadedBytes を加算する経路だけで効いています。content-length が無いレスポンスは readResponseBodyWithinLimit() が画像単体上限まで本文を読み、その後 magic bytes 検証で失敗すると src/infra/github/prReviewAttachments.ts:267 の totalDownloadedBytes 加算に到達しません。そのため、許可済み GitHub URL が複数あり各レスポンスが Content-Length なしの不正画像を返す場合、最大10件分の本文を読み続けられ、F-0017 が求める合計ダウンロード量の境界になっていません。",
+    "suggestion": "readResponseBodyWithinLimit() に remainingTotalBytes を渡してストリーミング中に合計残量を超えた時点で cancel してください。成功画像だけでなく、検証失敗するレスポンスの読み込みバイトも合計消費量として扱い、Content-Length なしの複数不正レスポンスで追加 fetch/read が止まる単体テストを追加してください。",
+    "kind": "issue"
+  },
+  {
+    "rawFindingId": "20260708-123344-pr-task-attachments-takt-add-p:reviewers:3:implementation-semantics-review:implsem-3-001",
+    "stepName": "implementation-semantics-review",
+    "reviewer": "implementation-semantics-review",
+    "familyTag": "implementation-semantics:state-accounting.resource-bound",
+    "severity": "medium",
+    "title": "totalDownloadedBytes が実際のダウンロード量ではなく成功保存量だけを数えている",
+    "location": "src/infra/github/prReviewAttachments.ts:253",
+    "description": "`totalDownloadedBytes` は line 253 で初期化され、line 267 で `validateImageAttachmentData()` とファイル書き込みが成功した後にだけ加算されています。一方、本文読み込みは line 184 の `readResponseBodyWithinLimit(response)` で先に完了し、magic bytes 不一致などで line 264 の検証が失敗すると catch に入り、既に読んだ bytes が累計上限に反映されません。Content-Type は対応形式で body が各10MB以下だが magic bytes が不正な画像URLを複数含むPRでは、実際には大量にダウンロードしても累計上限 `MAX_PR_REVIEW_IMAGE_ATTACHMENT_TOTAL_BYTES` が消費されず、資源境界の意味が「総ダウンロード量」ではなく「成功保存量」になっています。",
+    "suggestion": "本文読み込み中または読み込み直後に、成功/失敗に関係なく実際に取得した byte 数を累計予算から消費してください。`readResponseBodyWithinLimit()` に残り累計 bytes を渡してストリーム読み込み時点で中断するか、少なくとも validation 前に取得済み bytes を加算してください。対応 Content-Type だが magic bytes 不正な複数レスポンスで、累計上限超過後に追加 fetch/read が進まないことをテストしてください。",
+    "kind": "issue"
+  },
+  {
+    "rawFindingId": "20260708-123344-pr-task-attachments-takt-add-p:reviewers:3:contract-lifecycle-review:contract-lifecycle-r3-1",
+    "stepName": "contract-lifecycle-review",
+    "reviewer": "contract-lifecycle-review",
+    "familyTag": "resource_boundary.pr_attachment_limits",
+    "severity": "medium",
+    "title": "PR画像参照数と合計取得サイズの境界は修正済み",
+    "location": "src/infra/github/prReviewAttachmentLimits.ts:1, src/infra/github/prReviewImageReferences.ts:98, src/infra/github/prReviewAttachments.ts:248, src/infra/github/prReviewAttachments.ts:262",
+    "description": "`MAX_PR_REVIEW_IMAGE_REFERENCES` と `MAX_PR_REVIEW_IMAGE_ATTACHMENT_TOTAL_BYTES` が定義され、抽出時は `references.length >= MAX_PR_REVIEW_IMAGE_REFERENCES` で超過分を fetch 対象へ追加せず skip 注記に置換しています。直接 `downloadPrReviewAttachments()` に過剰な references が渡る同種入口でも `options.references.slice(0, MAX_PR_REVIEW_IMAGE_REFERENCES)` により取得対象が制限され、超過分は failures に変換されます。合計サイズは `remainingTotalBytes = MAX_PR_REVIEW_IMAGE_ATTACHMENT_TOTAL_BYTES - totalDownloadedBytes` を各取得へ渡し、Content-Length と実データ長の両方で `assertRemainingTotalBytes()` を通しており、上限到達後は `totalBytesLimitReached` により後続画像を fetch せず failure 化します。`src/__tests__/prReviewImageReferences.test.ts:85` と `src/__tests__/prReviewAttachments.test.ts:229` で件数上限、`src/__tests__/prReviewAttachments.test.ts:249` で合計サイズ上限後に後続 fetch が発生しないことを確認しています。対象テスト `npx vitest run src/__tests__/prReviewAttachments.test.ts src/__tests__/prReviewImageReferences.test.ts src/__tests__/imageAttachmentData.test.ts src/__tests__/cli-routing-pr-resolve.test.ts src/__tests__/pipelineExecution.test.ts src/__tests__/addTask.test.ts` は 6 files / 118 tests passed でした。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0017"
+  },
+  {
+    "rawFindingId": "20260708-123344-pr-task-attachments-takt-add-p:reviewers:3:robustness-review:robustness-r3-raw-1",
+    "stepName": "robustness-review",
+    "reviewer": "robustness-review",
+    "familyTag": "robustness.resource_bounds",
+    "severity": "medium",
+    "title": "PR画像参照数と合計ダウンロード量に上限が追加された",
+    "location": "src/infra/github/prReviewImageReferences.ts:98, src/infra/github/prReviewAttachments.ts:248",
+    "description": "F-0017 の同種経路を再走査しました。src/infra/github/prReviewImageReferences.ts:87-103 で抽出段階の参照数が `MAX_PR_REVIEW_IMAGE_REFERENCES` に制限され、超過分は fetch 対象に入らず本文へ `download skipped` 注記として残ります。src/infra/github/prReviewAttachments.ts:248-251 でも呼び出し元から渡された参照を上限で切り、超過分を failure 化しています。さらに src/infra/github/prReviewAttachments.ts:262-278 で累計 `totalDownloadedBytes` と `MAX_PR_REVIEW_IMAGE_ATTACHMENT_TOTAL_BYTES` を比較し、上限到達後は後続画像を fetch せず failure として扱うことを確認しました。src/__tests__/prReviewImageReferences.test.ts:85-105、src/__tests__/prReviewAttachments.test.ts:229-300 で参照数上限と合計サイズ上限後に追加 fetch しない挙動も固定されています。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0017"
+  }
+]

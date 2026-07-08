@@ -1,0 +1,26 @@
+[
+  {
+    "rawFindingId": "20260708-165721-pr-task-attachments-takt-add-p:reviewers:2:arch-review:arch-review-20260708-165721-r2-001",
+    "stepName": "arch-review",
+    "reviewer": "arch-review",
+    "familyTag": "cache-invalidation",
+    "severity": "medium",
+    "title": "projectConfig の新規キャッシュが既存の無効化契約から外れている",
+    "location": "src/infra/config/project/projectConfig.ts:96, src/infra/config/project/projectConfig.ts:239, src/infra/config/resolutionCache.ts:58",
+    "description": "直前の修正で `loadedProjectConfigCache` が `projectConfig.ts` 内に追加されていますが、既存の設定キャッシュ慣例である `invalidateResolvedConfigCache()` / `invalidateAllResolvedConfigCache()` は `resolutionCache.ts` 側の `projectConfigCache` と `projectConfigTraceCache` だけを無効化します。`loadProjectConfigTraceState()` は trace が無い場合に `loadProjectConfig()` が `setCachedProjectConfigTrace(projectDir, trace)` を実行する契約ですが、`loadProjectConfig()` は `loadedProjectConfigCache` hit 時に trace を再設定せず return します。そのため `loadProjectConfig()` で新キャッシュを温めた後に既存 API で trace cache を無効化し、同じ設定内容のまま `loadProjectConfigTraceState()` を呼ぶと、trace が復元されず `Project config trace is not available...` に到達します。これは既存慣例との照合で確認した config cache / trace cache の所有境界と無効化契約から外れています。",
+    "suggestion": "`loadedProjectConfigCache` を `resolutionCache` の無効化 API と同じ所有境界へ統合するか、cache entry に trace も保持して cache hit 時にも `setCachedProjectConfigTrace(projectDir, cached.trace)` を実行してください。あわせて `loadProjectConfig()` → `invalidateAllResolvedConfigCache()` → `loadProjectConfigTraceState()` で trace が復元される単体テストを追加してください。",
+    "kind": "issue"
+  },
+  {
+    "rawFindingId": "20260708-165721-pr-task-attachments-takt-add-p:reviewers:2:coding-review:coding-review-2-001",
+    "stepName": "coding-review",
+    "reviewer": "coding-review",
+    "familyTag": "bug",
+    "severity": "medium",
+    "title": "Project config の新キャッシュが trace cache 無効化後に trace を復元しない",
+    "location": "src/infra/config/project/projectConfig.ts:96, src/infra/config/project/projectConfig.ts:244, src/infra/config/resolutionCache.ts:46",
+    "description": "今回追加された `loadedProjectConfigCache` は `loadProjectConfig()` の cache hit 時に config だけを返し、`setCachedProjectConfigTrace()` を呼びません。一方 `invalidateResolvedConfigCache()` / `invalidateAllResolvedConfigCache()` は既存の `projectConfigTraceCache` を消しますが、この新キャッシュは消しません。そのため、同一プロセスで `loadProjectConfig(projectDir)` 後に resolved config cache を無効化し、その後 `loadProjectConfigTraceState(projectDir)` を呼ぶと、line 244 の再ロードが line 96 の cache hit で trace を再設定せず、`Project config trace is not available` で失敗します。実際に dist 経由で `loadProjectConfig()` → `invalidateAllResolvedConfigCache()` → `loadProjectConfigTraceState()` を実行して同エラーを確認しました。",
+    "suggestion": "`loadedProjectConfigCache` には config と一緒に trace も保持し、cache hit 時に `setCachedProjectConfigTrace(projectDir, cached.trace)` を行うか、`invalidateResolvedConfigCache()` / `invalidateAllResolvedConfigCache()` からこの新キャッシュも必ず無効化してください。あわせて、`loadProjectConfig()` 後に cache invalidation してから `loadProjectConfigTraceState()` または `resolveProviderOptionsWithTrace()` を呼ぶ回帰テストを追加してください。",
+    "kind": "issue"
+  }
+]

@@ -1,0 +1,74 @@
+[
+  {
+    "rawFindingId": "20260708-165721-pr-task-attachments-takt-add-p:reviewers:6:arch-review:arch-review-6-f0026-resolved",
+    "stepName": "arch-review",
+    "reviewer": "arch-review",
+    "familyTag": "secret-exposure",
+    "severity": "medium",
+    "title": "拒否したリダイレクトURL全文がタスク本文へ書き込まれないことを確認",
+    "location": "src/infra/github/prReviewAttachments.ts:100",
+    "description": "F-0026 は解消済みです。`src/infra/github/prReviewAttachments.ts:83-107` で許可外 attachment/redirect URL のエラーは host のみに制限され、`src/infra/github/prReviewAttachments.ts:100-102` と `src/infra/github/prReviewAttachments.ts:295-302` で task 本文へ渡る failure reason が URL サニタイズ済みになります。下流の `src/infra/github/prReviewImageReferences.ts:147-150` はこの `failure.reason` を本文注釈に使う経路ですが、同種経路の再走査では他に未サニタイズの `failure.reason` 生成箇所は見つかりませんでした。回帰テストも `src/__tests__/prReviewAttachments.test.ts:183-207` で外部リダイレクト拒否、`src/__tests__/prReviewAttachments.test.ts:617-644` で fetch 失敗由来の署名付き URL の path/query/token 非露出を固定しています。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0026"
+  },
+  {
+    "rawFindingId": "20260708-165721-pr-task-attachments-takt-add-p:reviewers:6:ai-antipattern-review:ai-antipattern-6-resolution-f0026",
+    "stepName": "ai-antipattern-review",
+    "reviewer": "ai-antipattern-review",
+    "familyTag": "missing-edge-case",
+    "severity": "medium",
+    "title": "拒否したリダイレクトURL全文がタスク本文へ書き込まれる",
+    "location": "src/infra/github/prReviewAttachments.ts:83",
+    "description": "F-0026 の同種経路を再走査しました。`describeUrlForError()` は URL 全文ではなく `host ${new URL(url).hostname}` だけを返し、`assertAllowedAttachmentUrl()` はその値だけを例外に含めます。さらに `createDownloadFailure()` は `sanitizeFailureReason()` を通して failure reason 内の https URL を scheme+host へ短縮します。`src/__tests__/prReviewAttachments.test.ts:183` の外部リダイレクト拒否テストと `src/__tests__/prReviewAttachments.test.ts:617` の failure annotation テストで、パスと `secret-token` がタスク本文相当の出力へ残らないことを確認しました。`npm test -- prReviewAttachments.test.ts` と `npm run lint` は成功しています。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0026"
+  },
+  {
+    "rawFindingId": "20260708-165721-pr-task-attachments-takt-add-p:reviewers:6:coding-review:coding-review-6-resolution-F-0026",
+    "stepName": "coding-review",
+    "reviewer": "coding-review",
+    "familyTag": "security",
+    "severity": "medium",
+    "title": "拒否したリダイレクトURL全文がタスク本文へ書き込まれる問題は解消済み",
+    "location": "src/infra/github/prReviewAttachments.ts:83, src/infra/github/prReviewAttachments.ts:100, src/infra/github/prReviewAttachments.ts:106, src/__tests__/prReviewAttachments.test.ts:203",
+    "description": "`describeUrlForError()` は URL 全文ではなく host のみを返し、`assertAllowedAttachmentUrl()` は拒否メッセージに `describeUrlForError(url)` を使っています。さらに `createDownloadFailure()` は `sanitizeFailureReason()` を通して https URL を origin までに削り、テストでは外部リダイレクト失敗 reason に `host example.com` が含まれ、パス `/private/screenshot.png` と `secret-token` が含まれないことを確認しています。関連テスト、build、lint、npm test も成功しました。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0026"
+  },
+  {
+    "rawFindingId": "20260708-165721-pr-task-attachments-takt-add-p:reviewers:6:implementation-semantics-review:implsem-6-resolve-0026",
+    "stepName": "implementation-semantics-review",
+    "reviewer": "implementation-semantics-review",
+    "familyTag": "fail-fast",
+    "severity": "medium",
+    "title": "拒否したリダイレクトURL全文がタスク本文へ書き込まれる問題は解消済み",
+    "location": "src/infra/github/prReviewAttachments.ts:83",
+    "description": "src/infra/github/prReviewAttachments.ts:83-107 を再読し、allowlist 外 URL のエラーは describeUrlForError() により host のみを含む形で生成され、path/query は含まれないことを確認しました。さらに src/infra/github/prReviewAttachments.ts:100-102,295-302 で一般の fetch 失敗理由も sanitizeFailureReason() を通してから failures に格納され、src/infra/github/prReviewImageReferences.ts:147-150 で task 本文へ注入される failure reason が URL 全文を保持しないことを確認しました。src/__tests__/prReviewAttachments.test.ts:163-208,617-646 では初期 URL 拒否、外部 redirect、fetch 例外に含まれる署名付き URL の path/query/token が出力されないことが固定されています。関連テスト npm test -- src/__tests__/prReviewAttachments.test.ts src/__tests__/prReviewImageReferences.test.ts src/__tests__/imageAttachmentData.test.ts src/__tests__/addTask.test.ts src/__tests__/pipelineExecution.test.ts src/__tests__/cli-routing-pr-resolve.test.ts は 6 files / 123 tests passed でした。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0026"
+  },
+  {
+    "rawFindingId": "20260708-165721-pr-task-attachments-takt-add-p:reviewers:6:contract-lifecycle-review:contract-lifecycle-review-20260709-001",
+    "stepName": "contract-lifecycle-review",
+    "reviewer": "contract-lifecycle-review",
+    "familyTag": "security",
+    "severity": "medium",
+    "title": "拒否したリダイレクトURL全文がタスク本文へ書き込まれる",
+    "location": "src/infra/github/prReviewAttachments.ts:83, src/infra/github/prReviewAttachments.ts:100, src/infra/github/prReviewAttachments.ts:104, src/infra/github/prReviewAttachments.ts:295, src/infra/github/prReviewImageReferences.ts:147",
+    "description": "F-0026 の欠陥クラスを再走査しました。現在は `assertAllowedAttachmentUrl()` が URL 全文ではなく `describeUrlForError()` の `host ...` だけを例外に含めます（src/infra/github/prReviewAttachments.ts:83-107）。画像単位の failure reason は `createDownloadFailure()` で `sanitizeFailureReason(getErrorMessage(error))` を通してから保存されます（src/infra/github/prReviewAttachments.ts:295-302）。その後 PR 本文へ補足される経路は `annotateFailedPrReviewImageReferences()` の `${failure.reason}` ですが、ここへ渡る値は上記 sanitize 済みです（src/infra/github/prReviewImageReferences.ts:147-150）。同種経路として初期URL拒否、redirect URL拒否、fetch/HTTP失敗、failure annotation を確認し、拒否URLのクエリ付き全文を task 本文へ書き込む経路は残っていません。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0026"
+  },
+  {
+    "rawFindingId": "20260708-165721-pr-task-attachments-takt-add-p:reviewers:6:robustness-review:robustness-165721-r6-raw-1",
+    "stepName": "robustness-review",
+    "reviewer": "robustness-review",
+    "familyTag": "robustness.secret_leakage",
+    "severity": "medium",
+    "title": "拒否したリダイレクトURL全文がタスク本文へ書き込まれないことを確認",
+    "location": "src/infra/github/prReviewAttachments.ts:83, src/infra/github/prReviewAttachments.ts:91, src/infra/github/prReviewAttachments.ts:100, src/infra/github/prReviewAttachments.ts:104, src/infra/github/prReviewAttachments.ts:106, src/infra/github/prReviewAttachments.ts:199, src/infra/github/prReviewAttachments.ts:201, src/infra/github/prReviewAttachments.ts:295, src/infra/github/prReviewAttachments.ts:301, src/__tests__/prReviewAttachments.test.ts:183, src/__tests__/prReviewAttachments.test.ts:617",
+    "description": "F-0026 と同じ秘匿URL漏出経路を再走査しました。`assertAllowedAttachmentUrl()` は `src/infra/github/prReviewAttachments.ts:104-106` で URL 全文ではなく `describeUrlForError()` の host 表示だけを例外に含めます。リダイレクト経路は `src/infra/github/prReviewAttachments.ts:199-201` で `Location` から解決した URL を同じ検証へ通すため、拒否時に path/query は例外へ入りません。さらに画像単位の失敗は `src/infra/github/prReviewAttachments.ts:295-301` で `sanitizeFailureReason()` を通し、`https://...` の path/query を `protocol//hostname` へ縮約してから `PrReviewImageDownloadFailure.reason` に保存します。`src/__tests__/prReviewAttachments.test.ts:183-207` で allowlist 外リダイレクトの path と token が reason に含まれないこと、`src/__tests__/prReviewAttachments.test.ts:617-645` で fetch 例外内の署名付き URL の path と token が PR review text に含まれないことを確認しています。`npm test -- --run src/__tests__/prReviewAttachments.test.ts` は 16 tests passed でした。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0026"
+  }
+]

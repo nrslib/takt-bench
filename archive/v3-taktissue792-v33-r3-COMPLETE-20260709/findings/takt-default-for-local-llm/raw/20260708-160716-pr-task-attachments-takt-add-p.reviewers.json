@@ -1,0 +1,74 @@
+[
+  {
+    "rawFindingId": "20260708-160716-pr-task-attachments-takt-add-p:reviewers:1:arch-review:arch-review-1-resolved-F-0020",
+    "stepName": "arch-review",
+    "reviewer": "arch-review",
+    "familyTag": "contract-lifecycle.fetch-response-body-cleanup",
+    "severity": "medium",
+    "title": "エラー/リダイレクト経路で fetch Response body が解放されない",
+    "location": "src/infra/github/prImageAttachments.ts:109",
+    "description": "現行コードを再読し、`cancelResponseBody()` が `src/infra/github/prImageAttachments.ts:109-110` に追加され、redirect 応答では `src/infra/github/prImageAttachments.ts:124-127` で Location 取得後かつ次 URL 検証前に body cancel されることを確認しました。HTTP エラー、Content-Length 検証失敗、Content-Type 欠落の早期 throw 経路も `src/infra/github/prImageAttachments.ts:161-176` で cancel してから例外化されています。同種経路のテストは `src/__tests__/prImageAttachments.test.ts:174-262` で redirect/HTTP error/Content-Length 超過/Content-Type 欠落の cancel 呼び出しを検証しています。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0020"
+  },
+  {
+    "rawFindingId": "20260708-160716-pr-task-attachments-takt-add-p:reviewers:1:ai-antipattern-review:ai-antipattern-confirm-F-0020",
+    "stepName": "ai-antipattern-review",
+    "reviewer": "ai-antipattern-review",
+    "familyTag": "missing-edge-case",
+    "severity": "medium",
+    "title": "エラー/リダイレクト経路で fetch Response body が解放されることを確認",
+    "location": "src/infra/github/prImageAttachments.ts:109",
+    "description": "Policy Source と Knowledge Source の ## セクションを列挙し、状態整合性、契約全入口、副作用と状態遷移、境界での fail-fast、テストダブルによる見かけ上の修正検出、コンテキスト適合性評価、未使用コード検出の観点で再走査した。src/infra/github/prImageAttachments.ts:109-110 に cancelResponseBody() が追加され、redirect 応答は src/infra/github/prImageAttachments.ts:121-127 で次 hop 検証前に cancel される。HTTP エラーは同:161-163、Content-Length 検証失敗は同:166-170、Content-Type 欠落は同:173-176 で body を cancel してから throw する。同種経路として成功時とサイズ超過時は readResponseBodyWithinLimit() の reader.cancel()/releaseLock()（同:133-156）で閉じることも確認した。回帰テストは src/__tests__/prImageAttachments.test.ts:174-263 で redirect body、HTTP error body、Content-Length 超過、Content-Type 欠落の cancel を検証している。npm run build、npm run lint、npm test はすべて成功した。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0020"
+  },
+  {
+    "rawFindingId": "20260708-160716-pr-task-attachments-takt-add-p:reviewers:1:coding-review:raw-coding-review1-resolve-F0020",
+    "stepName": "coding-review",
+    "reviewer": "coding-review",
+    "familyTag": "state.cleanup",
+    "severity": "medium",
+    "title": "エラー/リダイレクト経路で fetch Response body が解放されない",
+    "location": "src/infra/github/prImageAttachments.ts:109; src/infra/github/prImageAttachments.ts:125; src/infra/github/prImageAttachments.ts:162; src/infra/github/prImageAttachments.ts:169; src/infra/github/prImageAttachments.ts:175",
+    "description": "open finding の対象経路を再確認しました。redirect 応答は Location 取得後に src/infra/github/prImageAttachments.ts:125 で cancelResponseBody(response) を呼んでから次 URL 検証へ進み、HTTP エラー、Content-Length 検証失敗、Content-Type 欠落の各早期 throw 経路も src/infra/github/prImageAttachments.ts:162、169、175 で body cancel を実行しています。関連テストは src/__tests__/prImageAttachments.test.ts:174、196、219、242 で、対象テスト、npm run build、npm run lint、npm test は成功しました。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0020"
+  },
+  {
+    "rawFindingId": "20260708-160716-pr-task-attachments-takt-add-p:reviewers:1:implementation-semantics-review:implementation-semantics-raw-1",
+    "stepName": "implementation-semantics-review",
+    "reviewer": "implementation-semantics-review",
+    "familyTag": "implementation-semantics/resource-cleanup",
+    "severity": "medium",
+    "title": "エラー/リダイレクト経路で fetch Response body が解放されることを確認",
+    "location": "src/infra/github/prImageAttachments.ts:109",
+    "description": "src/infra/github/prImageAttachments.ts:109-110 に cancelResponseBody() が追加され、リダイレクト経路では src/infra/github/prImageAttachments.ts:124-127 で Location を取得した後に response body を cancel してから次URLの解決・検証へ進むことを確認しました。また HTTP エラー、Content-Length 検証失敗、Content-Type 欠落の早期 throw 経路でも src/infra/github/prImageAttachments.ts:161-176 で cancelResponseBody(response) が呼ばれるため、F-0020 の未解放経路は解消されています。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0020"
+  },
+  {
+    "rawFindingId": "20260708-160716-pr-task-attachments-takt-add-p:reviewers:1:contract-lifecycle-review:contract-review-3-resolve-F0020",
+    "stepName": "contract-lifecycle-review",
+    "reviewer": "contract-lifecycle-review",
+    "familyTag": "contract-lifecycle.fetch-response-body-cleanup",
+    "severity": "medium",
+    "title": "エラー/リダイレクト経路で fetch Response body が解放されない",
+    "location": "src/infra/github/prImageAttachments.ts:109; src/infra/github/prImageAttachments.ts:124; src/infra/github/prImageAttachments.ts:161; src/infra/github/prImageAttachments.ts:166; src/infra/github/prImageAttachments.ts:173; src/__tests__/prImageAttachments.test.ts:174",
+    "description": "F-0020 の同欠陥クラスを再走査しました。`cancelResponseBody()` は src/infra/github/prImageAttachments.ts:109-110 に実装され、redirect 経路では Location 取得後の src/infra/github/prImageAttachments.ts:124-126 で response body を cancel してから次 URL 判定へ進みます。HTTP エラーは src/infra/github/prImageAttachments.ts:161-163、Content-Length 事前拒否は src/infra/github/prImageAttachments.ts:166-170、Content-Type 欠落は src/infra/github/prImageAttachments.ts:173-176 で、それぞれ throw 前に cancel されています。成功/読み取り中の上限超過経路は既存の readResponseBodyWithinLimit() 側で reader.cancel()/releaseLock() を維持しています。リダイレクト body、HTTP エラー body、Content-Length 超過 body、Content-Type 欠落 body の cancel は src/__tests__/prImageAttachments.test.ts:174-262 で検証されています。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0020"
+  },
+  {
+    "rawFindingId": "20260708-160716-pr-task-attachments-takt-add-p:reviewers:1:robustness-review:robustness-resolved-f0020",
+    "stepName": "robustness-review",
+    "reviewer": "robustness-review",
+    "familyTag": "contract-lifecycle.resource-release",
+    "severity": "medium",
+    "title": "エラー/リダイレクト経路で fetch Response body が解放されない",
+    "location": "src/infra/github/prImageAttachments.ts:109",
+    "description": "解消確認。現在の `src/infra/github/prImageAttachments.ts:109-111` に `cancelResponseBody()` が追加され、redirect 応答は `src/infra/github/prImageAttachments.ts:124-127` で Location を読む前後の未消費 body を cancel してから次 URL 検証へ進む。HTTP エラーは `src/infra/github/prImageAttachments.ts:161-163`、Content-Length 事前拒否は `src/infra/github/prImageAttachments.ts:166-171`、Content-Type 欠落は `src/infra/github/prImageAttachments.ts:173-176` でそれぞれ body cancel 後に throw する。本文読み取り中のサイズ超過は `src/infra/github/prImageAttachments.ts:147-150` で reader cancel、成功時は読み切りで閉じる。`rg` で PR 画像取得の fetch/readImageResponse 経路を再走査し、同種の未消費 Response body 早期 throw 経路が残っていないことを確認した。関連テスト `npm test -- prImageAttachments prImageAttachmentsSessionCleanup` は 2 files / 9 tests passed。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0020"
+  }
+]

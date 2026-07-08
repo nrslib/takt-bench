@@ -1,0 +1,1446 @@
+diff --git a/src/__tests__/addTask.test.ts b/src/__tests__/addTask.test.ts
+index ed549653..514e3e8c 100644
+--- a/src/__tests__/addTask.test.ts
++++ b/src/__tests__/addTask.test.ts
+@@ -6,6 +6,7 @@ import { parse as parseYaml } from 'yaml';
+ 
+ const mockCheckCliStatus = vi.fn();
+ const mockFetchPrReviewComments = vi.fn();
++const mockResolvePrReviewAttachments = vi.fn();
+ 
+ vi.mock('../features/interactive/index.js', () => ({
+   interactiveMode: vi.fn(),
+@@ -74,6 +75,7 @@ vi.mock('../infra/git/index.js', () => ({
+     createIssue: vi.fn(),
+     checkCliStatus: (...args: unknown[]) => mockCheckCliStatus(...args),
+     fetchPrReviewComments: (...args: unknown[]) => mockFetchPrReviewComments(...args),
++    resolvePrReviewAttachments: (...args: unknown[]) => mockResolvePrReviewAttachments(...args),
+   }),
+   isIssueReference: (...args: unknown[]) => mockIsIssueReference(...args),
+   resolveIssueTask: (...args: unknown[]) => mockResolveIssueTask(...args),
+@@ -124,6 +126,16 @@ function createMockPrReview(overrides: Partial<PrReviewData & { baseRefName?: st
+   } as PrReviewData;
+ }
+ 
++function createTaskAttachment(dir: string, content = 'png-data') {
++  const tempPath = path.join(dir, 'image-1.png');
++  fs.writeFileSync(tempPath, content);
++  return {
++    placeholder: '[Image #1]',
++    tempPath,
++    fileName: 'image-1.png',
++  };
++}
++
+ beforeEach(() => {
+   vi.clearAllMocks();
+   testDir = fs.mkdtempSync(path.join(tmpdir(), 'takt-test-'));
+@@ -132,6 +144,11 @@ beforeEach(() => {
+   mockGetCurrentBranch.mockReturnValue('main');
+   mockBranchExists.mockReturnValue(true);
+   mockCheckCliStatus.mockReturnValue({ available: true });
++  mockResolvePrReviewAttachments.mockImplementation((prReview) => ({
++    prReview,
++    attachments: [],
++    cleanupAttachments: vi.fn(),
++  }));
+ });
+ 
+ afterEach(() => {
+@@ -288,6 +305,40 @@ describe('addTask', () => {
+     expect(readOrderContent(testDir, task.task_dir)).toContain(formattedTask);
+   });
+ 
++  it('should save PR image attachments and formatted placeholders when adding with --pr', async () => {
++    const originalPrReview = createMockPrReview({
++      body: `PR description ![screenshot](https://github.com/user-attachments/assets/abc)`,
++      comments: [],
++      reviews: [],
++    });
++    const rewrittenPrReview = createMockPrReview({
++      body: 'PR description [Image #1]',
++      comments: [],
++      reviews: [],
++    });
++    const attachment = createTaskAttachment(testDir);
++    const cleanupAttachments = vi.fn();
++    const formattedTask = '## PR #456 Review Comments: Fix auth bug\n\nPR description [Image #1]';
++    mockFetchPrReviewComments.mockReturnValue(originalPrReview);
++    mockResolvePrReviewAttachments.mockReturnValue({
++      prReview: rewrittenPrReview,
++      attachments: [attachment],
++      cleanupAttachments,
++    });
++    mockFormatPrReviewAsTask.mockReturnValue(formattedTask);
++
++    await addTaskWithPrOption(testDir, 'placeholder', 456);
++
++    expect(mockResolvePrReviewAttachments).toHaveBeenCalledWith(originalPrReview, testDir);
++    expect(mockFormatPrReviewAsTask).toHaveBeenCalledWith(rewrittenPrReview);
++    const task = loadTasks(testDir).tasks[0]!;
++    const orderContent = readOrderContent(testDir, task.task_dir);
++    expect(orderContent).toContain('PR description [Image #1]');
++    expect(orderContent).toContain('- [Image #1]: `attachments/image-1.png`');
++    expect(fs.readFileSync(path.join(testDir, String(task.task_dir), 'attachments', 'image-1.png'), 'utf-8')).toBe('png-data');
++    expect(cleanupAttachments).toHaveBeenCalledTimes(1);
++  });
++
+   it('should store PR base_ref as base_branch when adding with --pr', async () => {
+     const prReview = createMockPrReview({ baseRefName: 'release/main' });
+     const formattedTask = '## PR #456 Review Comments: Fix auth bug';
+diff --git a/src/__tests__/cli-routing-pr-resolve.test.ts b/src/__tests__/cli-routing-pr-resolve.test.ts
+index 4c1cddff..32621713 100644
+--- a/src/__tests__/cli-routing-pr-resolve.test.ts
++++ b/src/__tests__/cli-routing-pr-resolve.test.ts
+@@ -23,6 +23,7 @@ const {
+   mockCheckCliStatus,
+   mockFetchIssue,
+   mockFetchPrReviewComments,
++  mockResolvePrReviewAttachments,
+   mockGetWorkflowDescription,
+   mockResolveConfigValues,
+   mockResolveAssistantConfigLayers,
+@@ -32,6 +33,7 @@ const {
+   mockCheckCliStatus: vi.fn(),
+   mockFetchIssue: vi.fn(),
+   mockFetchPrReviewComments: vi.fn(),
++  mockResolvePrReviewAttachments: vi.fn(),
+   mockGetWorkflowDescription: vi.fn(() => ({ name: 'default', description: 'test workflow', workflowStructure: '', stepPreviews: [] })),
+   mockResolveConfigValues: vi.fn(() => ({ language: 'en', interactivePreviewSteps: 3, provider: 'claude' })),
+   mockResolveAssistantConfigLayers: vi.fn(() => ({ local: {}, global: {} })),
+@@ -44,13 +46,17 @@ vi.mock('../infra/git/index.js', () => ({
+     checkCliStatus: (...args: unknown[]) => mockCheckCliStatus(...args),
+     fetchIssue: (...args: unknown[]) => mockFetchIssue(...args),
+     fetchPrReviewComments: (...args: unknown[]) => mockFetchPrReviewComments(...args),
++    resolvePrReviewAttachments: (...args: unknown[]) => mockResolvePrReviewAttachments(...args),
+   }),
+   parseIssueNumbers: vi.fn(() => []),
+   formatIssueAsTask: vi.fn(),
+   isIssueReference: vi.fn(),
+   resolveIssueTask: vi.fn(),
+-  formatPrReviewAsTask: vi.fn((pr: { number: number; title: string }) =>
+-    `## PR #${pr.number} Review Comments: ${pr.title}`),
++  formatPrReviewAsTask: vi.fn((pr: { number: number; title: string; body?: string }) =>
++    [
++      `## PR #${pr.number} Review Comments: ${pr.title}`,
++      ...(pr.body ? ['', pr.body] : []),
++    ].join('\n')),
+ }));
+ 
+ vi.mock('../features/tasks/index.js', () => ({
+@@ -191,6 +197,11 @@ beforeEach(() => {
+   mockResolveAssistantConfigLayers.mockReturnValue({ local: {}, global: {} });
+   mockLoadPersonaSessionsFn.mockReturnValue({});
+   mockResolveAgentOverrides.mockReturnValue(undefined);
++  mockResolvePrReviewAttachments.mockImplementation((prReview) => ({
++    prReview,
++    attachments: [],
++    cleanupAttachments: vi.fn(),
++  }));
+ });
+ 
+ describe('interactive image attachment routing', () => {
+@@ -310,6 +321,85 @@ describe('PR resolution in routing', () => {
+       );
+     });
+ 
++    it('should pass resolved PR image attachments to interactive seed input', async () => {
++      // Given
++      mockOpts.pr = 456;
++      const originalPrReview = createMockPrReview({
++        body: 'PR description ![image](https://github.com/user-attachments/assets/abc)',
++      });
++      const rewrittenPrReview = createMockPrReview({
++        body: 'PR description [Image #1]',
++      });
++      const cleanupAttachments = vi.fn();
++      mockCheckCliStatus.mockReturnValue({ available: true });
++      mockFetchPrReviewComments.mockReturnValue(originalPrReview);
++      mockResolvePrReviewAttachments.mockReturnValue({
++        prReview: rewrittenPrReview,
++        attachments: [testAttachment],
++        cleanupAttachments,
++      });
++
++      // When
++      await executeDefaultAction();
++
++      // Then
++      expect(mockResolvePrReviewAttachments).toHaveBeenCalledWith(originalPrReview, undefined);
++      expect(mockInteractiveMode).toHaveBeenCalledWith(
++        '/test/cwd',
++        expect.objectContaining({
++          sourceContext: expect.stringContaining('PR description [Image #1]'),
++          attachments: [testAttachment],
++        }),
++        expect.anything(),
++        undefined,
++        undefined,
++        { excludeActions: ['create_issue'] },
++      );
++      expect(cleanupAttachments).toHaveBeenCalledTimes(1);
++    });
++
++    it('should cleanup resolved PR image attachments when workflow resolution throws', async () => {
++      // Given
++      mockOpts.pr = 456;
++      const cleanupAttachments = vi.fn();
++      const prReview = createMockPrReview({
++        body: 'PR description ![image](https://github.com/user-attachments/assets/abc)',
++      });
++      mockCheckCliStatus.mockReturnValue({ available: true });
++      mockFetchPrReviewComments.mockReturnValue(prReview);
++      mockResolvePrReviewAttachments.mockReturnValue({
++        prReview,
++        attachments: [testAttachment],
++        cleanupAttachments,
++      });
++      mockDetermineWorkflow.mockRejectedValueOnce(new Error('workflow failed'));
++
++      // When/Then
++      await expect(executeDefaultAction()).rejects.toThrow('workflow failed');
++      expect(cleanupAttachments).toHaveBeenCalledTimes(1);
++    });
++
++    it('should cleanup resolved PR image attachments when interactive mode throws', async () => {
++      // Given
++      mockOpts.pr = 456;
++      const cleanupAttachments = vi.fn();
++      const prReview = createMockPrReview({
++        body: 'PR description ![image](https://github.com/user-attachments/assets/abc)',
++      });
++      mockCheckCliStatus.mockReturnValue({ available: true });
++      mockFetchPrReviewComments.mockReturnValue(prReview);
++      mockResolvePrReviewAttachments.mockReturnValue({
++        prReview,
++        attachments: [testAttachment],
++        cleanupAttachments,
++      });
++      mockInteractiveMode.mockRejectedValueOnce(new Error('interactive failed'));
++
++      // When/Then
++      await expect(executeDefaultAction()).rejects.toThrow('interactive failed');
++      expect(cleanupAttachments).toHaveBeenCalledTimes(1);
++    });
++
+     it('should pass PR base branch as baseBranch when interactive save_task is selected', async () => {
+       // Given
+       mockOpts.pr = 456;
+diff --git a/src/__tests__/conversationLoop-resume.test.ts b/src/__tests__/conversationLoop-resume.test.ts
+index 41d8e649..2a2de814 100644
+--- a/src/__tests__/conversationLoop-resume.test.ts
++++ b/src/__tests__/conversationLoop-resume.test.ts
+@@ -174,12 +174,12 @@ afterEach(() => {
+ });
+ 
+ function createOscImagePaste(): string {
+-  const imageData = Buffer.from([0x89, 0x50, 0x4e, 0x47]);
++  const imageData = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+   return `\x1B]1337;File=inline=1;name=reference.png;size=${imageData.length}:${imageData.toString('base64')}\x07`;
+ }
+ 
+ function createInvalidSizeOscImagePaste(): string {
+-  const imageData = Buffer.from([0x89, 0x50, 0x4e, 0x47]);
++  const imageData = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+   return `\x1B]1337;File=inline=1;name=reference.png;size=${imageData.length + 1}:${imageData.toString('base64')}\x07`;
+ }
+ 
+diff --git a/src/__tests__/inlineImagePaste.test.ts b/src/__tests__/inlineImagePaste.test.ts
+index 99792fde..073a9c28 100644
+--- a/src/__tests__/inlineImagePaste.test.ts
++++ b/src/__tests__/inlineImagePaste.test.ts
+@@ -1,7 +1,7 @@
+ import { describe, expect, it } from 'vitest';
+ import { OSC_IMAGE_PREFIX, parseInlineImageSequence } from '../features/interactive/inlineImagePaste.js';
+ 
+-const PNG_DATA = Buffer.from([0x89, 0x50, 0x4e, 0x47]);
++const PNG_DATA = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+ 
+ function buildInlineImageSequence(params: string[], data: Buffer, terminator: string): string {
+   return `${OSC_IMAGE_PREFIX}${params.join(';')}:${data.toString('base64')}${terminator}`;
+diff --git a/src/__tests__/instructMode.test.ts b/src/__tests__/instructMode.test.ts
+index 097a7f8c..97e91146 100644
+--- a/src/__tests__/instructMode.test.ts
++++ b/src/__tests__/instructMode.test.ts
+@@ -106,7 +106,7 @@ afterEach(() => {
+ });
+ 
+ function createOscImagePaste(): string {
+-  const imageData = Buffer.from([0x89, 0x50, 0x4e, 0x47]);
++  const imageData = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+   return `\x1B]1337;File=inline=1;name=reference.png;size=${imageData.length}:${imageData.toString('base64')}\x07`;
+ }
+ 
+diff --git a/src/__tests__/interactive-mode.test.ts b/src/__tests__/interactive-mode.test.ts
+index df1ef5f8..915288ae 100644
+--- a/src/__tests__/interactive-mode.test.ts
++++ b/src/__tests__/interactive-mode.test.ts
+@@ -194,12 +194,12 @@ afterEach(() => {
+ });
+ 
+ function createOscImagePaste(): string {
+-  const imageData = Buffer.from([0x89, 0x50, 0x4e, 0x47]);
++  const imageData = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+   return `\x1B]1337;File=inline=1;name=reference.png;size=${imageData.length}:${imageData.toString('base64')}\x07`;
+ }
+ 
+ function createInvalidSizeOscImagePaste(): string {
+-  const imageData = Buffer.from([0x89, 0x50, 0x4e, 0x47]);
++  const imageData = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+   return `\x1B]1337;File=inline=1;name=reference.png;size=${imageData.length + 1}:${imageData.toString('base64')}\x07`;
+ }
+ 
+diff --git a/src/__tests__/lineEditor.test.ts b/src/__tests__/lineEditor.test.ts
+index 0daceb48..736dde6a 100644
+--- a/src/__tests__/lineEditor.test.ts
++++ b/src/__tests__/lineEditor.test.ts
+@@ -344,7 +344,7 @@ describe('readMultilineInput cursor navigation', () => {
+ 
+   describe('image paste', () => {
+     it('should insert the returned placeholder at the cursor position', async () => {
+-      const imageData = Buffer.from([0x89, 0x50, 0x4e, 0x47]);
++      const imageData = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+       const onImagePaste = vi.fn(async (image: { mimeType: string; data: Buffer }) => {
+         expect(image.mimeType).toBe('image/png');
+         expect(image.data.equals(imageData)).toBe(true);
+@@ -379,7 +379,7 @@ describe('readMultilineInput cursor navigation', () => {
+     });
+ 
+     it('should detect pasted images when the OSC prefix is split across chunks', async () => {
+-      const imageData = Buffer.from([0x89, 0x50, 0x4e, 0x47]);
++      const imageData = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+       const onImagePaste = vi.fn(async (image: { mimeType: string; data: Buffer }) => {
+         expect(image.mimeType).toBe('image/png');
+         expect(image.data.equals(imageData)).toBe(true);
+@@ -438,7 +438,7 @@ describe('readMultilineInput cursor navigation', () => {
+     });
+ 
+     it('should reject pasted inline images above the declared size limit before decoding', async () => {
+-      const imageData = Buffer.from([0x89, 0x50, 0x4e, 0x47]);
++      const imageData = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+       const onImagePaste = vi.fn(async () => '[Image #1]');
+       setupRawStdin([
+         `\x1B]1337;File=inline=1;name=reference.png;size=${MAX_INLINE_IMAGE_BYTES + 1}:${imageData.toString('base64')}\x07`,
+@@ -463,7 +463,7 @@ describe('readMultilineInput cursor navigation', () => {
+     });
+ 
+     it('should process later input after async image placeholder insertion completes', async () => {
+-      const imageData = Buffer.from([0x89, 0x50, 0x4e, 0x47]);
++      const imageData = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+       const onImagePaste = vi.fn(async () => {
+         await Promise.resolve();
+         return '[Image #1]';
+diff --git a/src/__tests__/pipelineExecution.test.ts b/src/__tests__/pipelineExecution.test.ts
+index f38ea8b9..818f704c 100644
+--- a/src/__tests__/pipelineExecution.test.ts
++++ b/src/__tests__/pipelineExecution.test.ts
+@@ -1,5 +1,8 @@
+-import { describe, it, expect, vi, beforeEach } from 'vitest';
+-import { info, error, success, status } from '../shared/ui/index.js';
++import { describe, it, expect, vi, beforeEach } from 'vitest';
++import * as fs from 'node:fs';
++import * as path from 'node:path';
++import { tmpdir } from 'node:os';
++import { info, error, success, status } from '../shared/ui/index.js';
+ 
+ const mockFetchIssue = vi.fn();
+ const mockCheckGhCli = vi.fn().mockReturnValue({ available: true });
+@@ -17,6 +20,7 @@ const mockStripTaktManagedPrMarker = vi.fn((body: string) => body
+   .replace(/\n{3,}/g, '\n\n')
+   .trimEnd());
+ const mockFetchPrReviewComments = vi.fn();
++const mockResolvePrReviewAttachments = vi.fn();
+ const mockFormatPrReviewAsTask = vi.fn((pr: { number: number; title: string }) =>
+   `## PR #${pr.number} Review Comments: ${pr.title}`
+ );
+@@ -25,9 +29,10 @@ vi.mock('../infra/git/index.js', () => ({
+   getGitProvider: () => ({
+     checkCliStatus: (...args: unknown[]) => mockCheckGhCli(...args),
+     fetchIssue: (...args: unknown[]) => mockFetchIssue(...args),
+-    createPullRequest: (...args: unknown[]) => mockCreatePullRequest(...args),
+-    fetchPrReviewComments: (...args: unknown[]) => mockFetchPrReviewComments(...args),
+-  }),
++    createPullRequest: (...args: unknown[]) => mockCreatePullRequest(...args),
++    fetchPrReviewComments: (...args: unknown[]) => mockFetchPrReviewComments(...args),
++    resolvePrReviewAttachments: (...args: unknown[]) => mockResolvePrReviewAttachments(...args),
++  }),
+   formatIssueAsTask: vi.fn((issue: { title: string; body: string; number: number }) =>
+     `## Issue #${issue.number}: ${issue.title}\n\n${issue.body}`
+   ),
+@@ -97,9 +102,19 @@ const { executePipeline } = await import('../features/pipeline/index.js');
+ const mockInfo = vi.mocked(info);
+ const mockError = vi.mocked(error);
+ const mockSuccess = vi.mocked(success);
+-const mockStatus = vi.mocked(status);
+-
+-describe('executePipeline', () => {
++const mockStatus = vi.mocked(status);
++
++function createTaskAttachment(dir: string, content = 'png-data') {
++  const tempPath = path.join(dir, 'image-1.png');
++  fs.writeFileSync(tempPath, content);
++  return {
++    placeholder: '[Image #1]',
++    tempPath,
++    fileName: 'image-1.png',
++  };
++}
++
++describe('executePipeline', () => {
+   beforeEach(() => {
+     vi.clearAllMocks();
+     mockBuildTaktManagedPrOptions.mockImplementation((body: string) => ({
+@@ -120,6 +135,11 @@ describe('executePipeline', () => {
+     mockGetCurrentBranch.mockReturnValue('current/branch');
+     mockResolveConfigValues.mockReturnValue({ pipeline: undefined });
+     mockResolveConfigValue.mockReturnValue(undefined);
++    mockResolvePrReviewAttachments.mockImplementation((prReview) => ({
++      prReview,
++      attachments: [],
++      cleanupAttachments: vi.fn(),
++    }));
+   });
+ 
+   it('should return exit code 2 when neither --issue nor --task is specified', async () => {
+@@ -291,7 +311,7 @@ describe('executePipeline', () => {
+     expect(mockStatus).toHaveBeenCalledWith('Branch', 'feature\\t');
+   });
+ 
+-  it('should sanitize PR titles, branch names, and worktree paths in terminal output', async () => {
++  it('should sanitize PR titles, branch names, and worktree paths in terminal output', async () => {
+     mockFetchPrReviewComments.mockReturnValueOnce({
+       number: 12,
+       title: 'PR\x1b[31m\n',
+@@ -317,10 +337,58 @@ describe('executePipeline', () => {
+ 
+     expect(exitCode).toBe(0);
+     expect(mockSuccess).toHaveBeenCalledWith('PR #12 fetched: "PR\\n"');
+-    expect(mockSuccess).toHaveBeenCalledWith('Worktree created: /tmp/worktree\\tpath');
+-  });
+-
+-  it('passes provider/model overrides to task execution', async () => {
++    expect(mockSuccess).toHaveBeenCalledWith('Worktree created: /tmp/worktree\\tpath');
++  });
++
++  it('should execute pipeline PR review tasks through an attachment-backed task spec', async () => {
++    const projectDir = fs.mkdtempSync(path.join(tmpdir(), 'takt-pipeline-pr-images-'));
++    const originalPrReview = {
++      number: 12,
++      title: 'PR with image',
++      body: 'Please inspect ![image](https://github.com/user-attachments/assets/abc)',
++      url: 'https://github.com/org/repo/pull/12',
++      headRefName: 'feature/pr-images',
++      baseRefName: 'main',
++      comments: [],
++      reviews: [],
++      files: ['src/app.ts'],
++    };
++    const rewrittenPrReview = {
++      ...originalPrReview,
++      body: 'Please inspect [Image #1]',
++    };
++    const cleanupAttachments = vi.fn();
++    mockFetchPrReviewComments.mockReturnValueOnce(originalPrReview);
++    mockResolvePrReviewAttachments.mockReturnValueOnce({
++      prReview: rewrittenPrReview,
++      attachments: [createTaskAttachment(projectDir)],
++      cleanupAttachments,
++    });
++    mockFormatPrReviewAsTask.mockReturnValueOnce('Please inspect [Image #1]');
++    mockExecuteTask.mockResolvedValueOnce(true);
++
++    try {
++      const exitCode = await executePipeline({
++        prNumber: 12,
++        workflow: 'default',
++        autoPr: false,
++        skipGit: true,
++        cwd: projectDir,
++      });
++
++      expect(exitCode).toBe(0);
++      expect(mockResolvePrReviewAttachments).toHaveBeenCalledWith(originalPrReview, projectDir);
++      const executeArg = mockExecuteTask.mock.calls[0]?.[0] as { task?: string };
++      expect(executeArg.task).toContain('Primary spec:');
++      expect(executeArg.task).toContain('context/task/order.md');
++      expect(executeArg.task).not.toBe('Please inspect [Image #1]');
++      expect(cleanupAttachments).toHaveBeenCalledTimes(1);
++    } finally {
++      fs.rmSync(projectDir, { recursive: true, force: true });
++    }
++  });
++
++  it('passes provider/model overrides to task execution', async () => {
+     mockExecuteTask.mockResolvedValueOnce(true);
+ 
+     const exitCode = await executePipeline({
+diff --git a/src/__tests__/projectConfig.test.ts b/src/__tests__/projectConfig.test.ts
+index bbc474a2..0939d019 100644
+--- a/src/__tests__/projectConfig.test.ts
++++ b/src/__tests__/projectConfig.test.ts
+@@ -54,6 +54,19 @@ describe('projectConfig', () => {
+     restoreTaktEnv(taktEnvSnapshot);
+   });
+ 
++  describe('reload behavior', () => {
++    it('should reflect project config file changes without explicit cache invalidation', () => {
++      const configPath = join(testDir, '.takt', 'config.yaml');
++      writeFileSync(configPath, 'language: ja\n', 'utf-8');
++
++      expect(loadProjectConfig(testDir).language).toBe('ja');
++
++      writeFileSync(configPath, 'language: en\n', 'utf-8');
++
++      expect(loadProjectConfig(testDir).language).toBe('en');
++    });
++  });
++
+   describe('assistant init files', () => {
+     it('should load assistant.init_files from project config', () => {
+       const configPath = join(testDir, '.takt', 'config.yaml');
+diff --git a/src/__tests__/retrySlashCommand.test.ts b/src/__tests__/retrySlashCommand.test.ts
+index b7f7fe28..839fc825 100644
+--- a/src/__tests__/retrySlashCommand.test.ts
++++ b/src/__tests__/retrySlashCommand.test.ts
+@@ -111,7 +111,7 @@ function setupProvider(responses: string[]): MockProviderCapture {
+ }
+ 
+ function createOscImagePaste(): string {
+-  const imageData = Buffer.from([0x89, 0x50, 0x4e, 0x47]);
++  const imageData = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+   return `\x1B]1337;File=inline=1;name=reference.png;size=${imageData.length}:${imageData.toString('base64')}\x07`;
+ }
+ 
+diff --git a/src/__tests__/workflow-categories.test.ts b/src/__tests__/workflow-categories.test.ts
+index 322913da..7f47c866 100644
+--- a/src/__tests__/workflow-categories.test.ts
++++ b/src/__tests__/workflow-categories.test.ts
+@@ -6,6 +6,7 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+ import { mkdtempSync, writeFileSync, mkdirSync, rmSync } from 'node:fs';
+ import { join } from 'node:path';
+ import { tmpdir } from 'node:os';
++import { invalidateGlobalConfigCache } from '../infra/config/global/globalConfig.js';
+ import {
+   listWorkflows,
+   listWorkflowEntries,
+@@ -21,6 +22,20 @@ import {
+   type WorkflowSelectionItem,
+ } from '../features/workflowSelection/index.js';
+ 
++function setBuiltinWorkflowsEnabledForTest(enabled: boolean): void {
++  const configDir = process.env.TAKT_CONFIG_DIR;
++  if (!configDir) {
++    throw new Error('TAKT_CONFIG_DIR is required for workflow category tests');
++  }
++  mkdirSync(configDir, { recursive: true });
++  writeFileSync(join(configDir, 'config.yaml'), `enable_builtin_workflows: ${enabled ? 'true' : 'false'}\n`, 'utf-8');
++  invalidateGlobalConfigCache();
++}
++
++afterEach(() => {
++  invalidateGlobalConfigCache();
++});
++
+ const SAMPLE_WORKFLOW = `name: test-workflow
+ description: Test workflow
+ initial_step: step1
+@@ -44,6 +59,7 @@ describe('workflow categories - directory scanning', () => {
+     tempDir = mkdtempSync(join(tmpdir(), 'takt-cat-test-'));
+     workflowsDir = join(tempDir, '.takt', 'workflows');
+     mkdirSync(workflowsDir, { recursive: true });
++    setBuiltinWorkflowsEnabledForTest(false);
+   });
+ 
+   afterEach(() => {
+@@ -108,6 +124,7 @@ describe('workflow categories - listWorkflowEntries', () => {
+     tempDir = mkdtempSync(join(tmpdir(), 'takt-cat-test-'));
+     workflowsDir = join(tempDir, '.takt', 'workflows');
+     mkdirSync(workflowsDir, { recursive: true });
++    setBuiltinWorkflowsEnabledForTest(false);
+   });
+ 
+   afterEach(() => {
+@@ -144,6 +161,7 @@ describe('workflow categories - loadAllWorkflows', () => {
+     tempDir = mkdtempSync(join(tmpdir(), 'takt-cat-test-'));
+     workflowsDir = join(tempDir, '.takt', 'workflows');
+     mkdirSync(workflowsDir, { recursive: true });
++    setBuiltinWorkflowsEnabledForTest(false);
+   });
+ 
+   afterEach(() => {
+@@ -168,6 +186,7 @@ describe('workflow categories - loadWorkflow', () => {
+     tempDir = mkdtempSync(join(tmpdir(), 'takt-cat-test-'));
+     workflowsDir = join(tempDir, '.takt', 'workflows');
+     mkdirSync(workflowsDir, { recursive: true });
++    setBuiltinWorkflowsEnabledForTest(false);
+   });
+ 
+   afterEach(() => {
+diff --git a/src/app/cli/routing-inputs.ts b/src/app/cli/routing-inputs.ts
+index ef06f674..32e6823f 100644
+--- a/src/app/cli/routing-inputs.ts
++++ b/src/app/cli/routing-inputs.ts
+@@ -1,6 +1,8 @@
+ import { withProgress } from '../../shared/ui/index.js';
+-import { formatIssueAsTask, parseIssueNumbers, formatPrReviewAsTask, getGitProvider } from '../../infra/git/index.js';
++import { formatIssueAsTask, parseIssueNumbers, getGitProvider } from '../../infra/git/index.js';
+ import type { PrReviewData } from '../../infra/git/index.js';
++import type { TaskAttachment } from '../../features/tasks/attachments.js';
++import { buildPrReviewTaskInput } from '../../features/tasks/prReviewTaskInput.js';
+ import { isDirectTask } from './helpers.js';
+ 
+ export async function resolveIssueInput(
+@@ -50,7 +52,13 @@ export async function resolveIssueInput(
+ export async function resolvePrInput(
+   prNumber: number,
+   cwd?: string,
+-): Promise<{ initialInput: string; prBranch: string; baseBranch?: string }> {
++): Promise<{
++  initialInput: string;
++  prBranch: string;
++  baseBranch?: string;
++  attachments: TaskAttachment[];
++  cleanupAttachments: () => void;
++}> {
+   const provider = getGitProvider();
+   const cliStatus = provider.checkCliStatus(cwd);
+   if (!cliStatus.available) {
+@@ -62,10 +70,13 @@ export async function resolvePrInput(
+     (pr: PrReviewData) => `PR fetched: #${pr.number} ${pr.title}`,
+     async () => provider.fetchPrReviewComments(prNumber, cwd),
+   );
++  const prTaskInput = await buildPrReviewTaskInput(prReview, provider, cwd);
+ 
+   return {
+-    initialInput: formatPrReviewAsTask(prReview),
+-    prBranch: prReview.headRefName,
+-    baseBranch: prReview.baseRefName,
++    initialInput: prTaskInput.taskContent,
++    prBranch: prTaskInput.prBranch,
++    baseBranch: prTaskInput.prBaseBranch,
++    attachments: prTaskInput.attachments,
++    cleanupAttachments: prTaskInput.cleanupAttachments,
+   };
+ }
+diff --git a/src/app/cli/routing.ts b/src/app/cli/routing.ts
+index 6115d521..6cb21313 100644
+--- a/src/app/cli/routing.ts
++++ b/src/app/cli/routing.ts
+@@ -104,7 +104,13 @@ export async function executeDefaultAction(task?: string): Promise<void> {
+   let sourceContext: string | undefined;
+   let prBranch: string | undefined;
+   let prBaseBranch: string | undefined;
++  let prAttachments: InteractiveModeResult['attachments'] | undefined;
++  let cleanupPrAttachments: (() => void) | undefined;
+   let sourceIssueNumber: number | undefined;
++  const cleanupResolvedPrAttachments = (): void => {
++    cleanupPrAttachments?.();
++    cleanupPrAttachments = undefined;
++  };
+ 
+   if (prNumber) {
+     try {
+@@ -113,6 +119,8 @@ export async function executeDefaultAction(task?: string): Promise<void> {
+       sourceContext = prResult.initialInput;
+       prBranch = prResult.prBranch;
+       prBaseBranch = prResult.baseBranch;
++      prAttachments = prResult.attachments;
++      cleanupPrAttachments = prResult.cleanupAttachments;
+       selectOptions.traceTaskContext = {
+         source: 'pr_review',
+         prNumber,
+@@ -141,152 +149,157 @@ export async function executeDefaultAction(task?: string): Promise<void> {
+     }
+   }
+ 
+-  const globalConfig = resolveConfigValues(
+-    resolvedCwd,
+-    ['language', 'interactivePreviewSteps'],
+-  );
+-  const lang = resolveLanguage(globalConfig.language);
+-
+-  const workflowId = await determineWorkflow(resolvedCwd, selectOptions.workflow);
+-  if (workflowId === null) {
+-    info(getLabel('interactive.ui.cancelled', lang));
+-    return;
+-  }
++  try {
++    const globalConfig = resolveConfigValues(
++      resolvedCwd,
++      ['language', 'interactivePreviewSteps'],
++    );
++    const lang = resolveLanguage(globalConfig.language);
+ 
+-  const previewCount = globalConfig.interactivePreviewSteps;
+-  const workflowDesc = getWorkflowDescription(workflowId, resolvedCwd, previewCount);
++    const workflowId = await determineWorkflow(resolvedCwd, selectOptions.workflow);
++    if (workflowId === null) {
++      info(getLabel('interactive.ui.cancelled', lang));
++      return;
++    }
+ 
+-  const availableInteractiveModes = sourceContext && !directTask
+-    ? INTERACTIVE_MODES.filter((mode) => mode !== 'passthrough')
+-    : INTERACTIVE_MODES;
+-  const selectedMode = await selectInteractiveMode(
+-    lang,
+-    workflowDesc.interactiveMode,
+-    availableInteractiveModes,
+-  );
+-  if (selectedMode === null) {
+-    info(getLabel('interactive.ui.cancelled', lang));
+-    return;
+-  }
++    const previewCount = globalConfig.interactivePreviewSteps;
++    const workflowDesc = getWorkflowDescription(workflowId, resolvedCwd, previewCount);
+ 
+-  const workflowContext = {
+-    name: workflowDesc.name,
+-    description: workflowDesc.description,
+-    workflowStructure: workflowDesc.workflowStructure,
+-    stepPreviews: workflowDesc.stepPreviews,
+-    taskHistory: loadTaskHistory(resolvedCwd, lang),
+-  };
+-  const interactiveSeed = directTask || sourceContext
+-    ? {
+-      ...(directTask ? { userMessage: directTask } : {}),
+-      ...(sourceContext ? { sourceContext } : {}),
++    const availableInteractiveModes = sourceContext && !directTask
++      ? INTERACTIVE_MODES.filter((mode) => mode !== 'passthrough')
++      : INTERACTIVE_MODES;
++    const selectedMode = await selectInteractiveMode(
++      lang,
++      workflowDesc.interactiveMode,
++      availableInteractiveModes,
++    );
++    if (selectedMode === null) {
++      info(getLabel('interactive.ui.cancelled', lang));
++      return;
+     }
+-    : undefined;
+-  let result: InteractiveModeResult;
+ 
+-  switch (selectedMode) {
+-    case 'assistant': {
+-      let selectedSessionId: string | undefined;
+-      if (opts.continue === true) {
+-        const { provider: providerType } = resolveAssistantProviderModelFromConfig(
+-          resolveAssistantConfigLayers(resolvedCwd),
+-          {
+-            provider: agentOverrides?.provider,
+-            model: agentOverrides?.model,
+-          },
+-        );
+-        if (!providerType) {
+-          throw new Error('Provider is not configured.');
+-        }
+-        const savedSessions = loadPersonaSessions(resolvedCwd, providerType);
+-        const savedSessionId = resolvePersonaSessionId(savedSessions, 'interactive', providerType);
+-        if (savedSessionId) {
+-          selectedSessionId = savedSessionId;
+-        } else {
+-          info(getLabel('interactive.continueNoSession', lang));
++    const workflowContext = {
++      name: workflowDesc.name,
++      description: workflowDesc.description,
++      workflowStructure: workflowDesc.workflowStructure,
++      stepPreviews: workflowDesc.stepPreviews,
++      taskHistory: loadTaskHistory(resolvedCwd, lang),
++    };
++    const interactiveSeed = directTask || sourceContext
++      ? {
++        ...(directTask ? { userMessage: directTask } : {}),
++        ...(sourceContext ? { sourceContext } : {}),
++        ...(prAttachments && prAttachments.length > 0 ? { attachments: prAttachments } : {}),
++      }
++      : undefined;
++    let result: InteractiveModeResult;
++
++    switch (selectedMode) {
++      case 'assistant': {
++        let selectedSessionId: string | undefined;
++        if (opts.continue === true) {
++          const { provider: providerType } = resolveAssistantProviderModelFromConfig(
++            resolveAssistantConfigLayers(resolvedCwd),
++            {
++              provider: agentOverrides?.provider,
++              model: agentOverrides?.model,
++            },
++          );
++          if (!providerType) {
++            throw new Error('Provider is not configured.');
++          }
++          const savedSessions = loadPersonaSessions(resolvedCwd, providerType);
++          const savedSessionId = resolvePersonaSessionId(savedSessions, 'interactive', providerType);
++          if (savedSessionId) {
++            selectedSessionId = savedSessionId;
++          } else {
++            info(getLabel('interactive.continueNoSession', lang));
++          }
+         }
++        const interactiveOpts = prBranch ? { excludeActions: ['create_issue'] as const } : undefined;
++        const assistantModeOptions = {
++          ...interactiveOpts,
++          ...(agentOverrides?.provider ? { provider: agentOverrides.provider } : {}),
++          ...(agentOverrides?.model ? { model: agentOverrides.model } : {}),
++        };
++        result = await interactiveMode(
++          resolvedCwd,
++          interactiveSeed,
++          workflowContext,
++          selectedSessionId,
++          undefined,
++          Object.keys(assistantModeOptions).length > 0 ? assistantModeOptions : undefined,
++        );
++        break;
+       }
+-      const interactiveOpts = prBranch ? { excludeActions: ['create_issue'] as const } : undefined;
+-      const assistantModeOptions = {
+-        ...interactiveOpts,
+-        ...(agentOverrides?.provider ? { provider: agentOverrides.provider } : {}),
+-        ...(agentOverrides?.model ? { model: agentOverrides.model } : {}),
+-      };
+-      result = await interactiveMode(
+-        resolvedCwd,
+-        interactiveSeed,
+-        workflowContext,
+-        selectedSessionId,
+-        undefined,
+-        Object.keys(assistantModeOptions).length > 0 ? assistantModeOptions : undefined,
+-      );
+-      break;
+-    }
+ 
+-    case 'passthrough':
+-      result = await passthroughMode(lang, directTask);
+-      break;
++      case 'passthrough':
++        result = await passthroughMode(lang, directTask);
++        break;
+ 
+-    case 'quiet':
+-      result = await quietMode(resolvedCwd, interactiveSeed, workflowContext);
+-      break;
++      case 'quiet':
++        result = await quietMode(resolvedCwd, interactiveSeed, workflowContext);
++        break;
+ 
+-    case 'persona': {
+-      if (!workflowDesc.firstStep) {
+-        info(getLabel('interactive.ui.personaFallback', lang));
+-        result = await interactiveMode(resolvedCwd, interactiveSeed, workflowContext);
+-      } else {
+-        result = await personaMode(resolvedCwd, workflowDesc.firstStep, interactiveSeed, workflowContext);
++      case 'persona': {
++        if (!workflowDesc.firstStep) {
++          info(getLabel('interactive.ui.personaFallback', lang));
++          result = await interactiveMode(resolvedCwd, interactiveSeed, workflowContext);
++        } else {
++          result = await personaMode(resolvedCwd, workflowDesc.firstStep, interactiveSeed, workflowContext);
++        }
++        break;
+       }
+-      break;
+     }
+-  }
+ 
+-  try {
+-    await dispatchConversationAction(result, {
+-      execute: async ({ task: confirmedTask }) => {
+-        if (prBranch) {
+-          info(`Fetching and checking out PR branch: ${prBranch}`);
+-          checkoutBranch(resolvedCwd, prBranch);
+-          success(`Checked out PR branch: ${prBranch}`);
+-        }
+-        selectOptions.interactiveUserInput = true;
+-        selectOptions.workflow = workflowId;
+-        selectOptions.interactiveMetadata = { confirmed: true, task: confirmedTask };
+-        selectOptions.skipTaskList = true;
+-        if (result.attachments) {
+-          selectOptions.attachments = result.attachments;
+-        }
+-        await selectAndExecuteTask(resolvedCwd, confirmedTask, selectOptions, agentOverrides);
+-      },
+-      create_issue: async ({ task: confirmedTask }) => {
+-        const labels = await promptLabelSelection(lang);
+-        await createIssueAndSaveTask(resolvedCwd, confirmedTask, workflowId, {
+-          confirmAtEndMessage: 'Add this issue to tasks?',
+-          labels,
+-          ...(result.attachments ? { attachments: result.attachments } : {}),
+-        });
+-      },
+-      save_task: async ({ task: confirmedTask }) => {
+-        const presetSettings = prBranch
+-          ? {
+-            worktree: true as const,
+-            branch: prBranch,
+-            autoPr: true,
+-            ...(prBaseBranch ? { baseBranch: prBaseBranch } : {}),
++    try {
++      await dispatchConversationAction(result, {
++        execute: async ({ task: confirmedTask }) => {
++          if (prBranch) {
++            info(`Fetching and checking out PR branch: ${prBranch}`);
++            checkoutBranch(resolvedCwd, prBranch);
++            success(`Checked out PR branch: ${prBranch}`);
+           }
+-          : undefined;
+-        await saveTaskFromInteractive(resolvedCwd, confirmedTask, workflowId, {
+-          presetSettings,
+-          ...(prNumber !== undefined ? { prNumber } : {}),
+-          ...(sourceIssueNumber !== undefined ? { issue: sourceIssueNumber } : {}),
+-          ...(result.attachments ? { attachments: result.attachments } : {}),
+-        });
+-      },
+-      cancel: () => undefined,
+-    });
++          selectOptions.interactiveUserInput = true;
++          selectOptions.workflow = workflowId;
++          selectOptions.interactiveMetadata = { confirmed: true, task: confirmedTask };
++          selectOptions.skipTaskList = true;
++          if (result.attachments) {
++            selectOptions.attachments = result.attachments;
++          }
++          await selectAndExecuteTask(resolvedCwd, confirmedTask, selectOptions, agentOverrides);
++        },
++        create_issue: async ({ task: confirmedTask }) => {
++          const labels = await promptLabelSelection(lang);
++          await createIssueAndSaveTask(resolvedCwd, confirmedTask, workflowId, {
++            confirmAtEndMessage: 'Add this issue to tasks?',
++            labels,
++            ...(result.attachments ? { attachments: result.attachments } : {}),
++          });
++        },
++        save_task: async ({ task: confirmedTask }) => {
++          const presetSettings = prBranch
++            ? {
++              worktree: true as const,
++              branch: prBranch,
++              autoPr: true,
++              ...(prBaseBranch ? { baseBranch: prBaseBranch } : {}),
++            }
++            : undefined;
++          await saveTaskFromInteractive(resolvedCwd, confirmedTask, workflowId, {
++            presetSettings,
++            ...(prNumber !== undefined ? { prNumber } : {}),
++            ...(sourceIssueNumber !== undefined ? { issue: sourceIssueNumber } : {}),
++            ...(result.attachments ? { attachments: result.attachments } : {}),
++          });
++        },
++        cancel: () => undefined,
++      });
++    } finally {
++      cleanupInteractiveResultAttachments(result);
++    }
+   } finally {
+-    cleanupInteractiveResultAttachments(result);
++    cleanupResolvedPrAttachments();
+   }
+ }
+ 
+diff --git a/src/features/interactive/imageAttachments.ts b/src/features/interactive/imageAttachments.ts
+index d429a705..7d7fffeb 100644
+--- a/src/features/interactive/imageAttachments.ts
++++ b/src/features/interactive/imageAttachments.ts
+@@ -4,6 +4,7 @@ import * as os from 'node:os';
+ import * as path from 'node:path';
+ import type { ImageAttachmentReference, StoredImageAttachment } from '../../shared/types/image-attachments.js';
+ import { debugLog } from '../../shared/utils/index.js';
++import { fileExtensionForImageMimeType } from '../../shared/utils/imageAttachmentData.js';
+ import { resolveReferencedImageAttachments } from '../../shared/utils/imageAttachmentReferences.js';
+ import type { InteractiveModeResult } from './interactive.js';
+ import type { ImagePasteHandler } from './inlineImagePaste.js';
+@@ -30,21 +31,6 @@ export interface ImageAttachmentStoreOptions {
+ const PRIVATE_DIRECTORY_MODE = 0o700;
+ const PRIVATE_FILE_MODE = 0o600;
+ 
+-function extensionForMimeType(mimeType: string): string {
+-  switch (mimeType) {
+-    case 'image/png':
+-      return 'png';
+-    case 'image/jpeg':
+-      return 'jpg';
+-    case 'image/gif':
+-      return 'gif';
+-    case 'image/webp':
+-      return 'webp';
+-    default:
+-      throw new Error(`Unsupported pasted image type: ${mimeType}`);
+-  }
+-}
+-
+ function ensurePrivateDirectory(directoryPath: string): void {
+   fs.mkdirSync(directoryPath, { recursive: true, mode: PRIVATE_DIRECTORY_MODE });
+   fs.chmodSync(directoryPath, PRIVATE_DIRECTORY_MODE);
+@@ -141,7 +127,7 @@ export function createImageAttachmentStore(
+   return {
+     async saveImage(data: Buffer, mimeType: string): Promise<InteractiveImageAttachment> {
+       const index = attachments.length + 1;
+-      const fileName = `image-${index}.${extensionForMimeType(mimeType)}`;
++      const fileName = `image-${index}.${fileExtensionForImageMimeType(mimeType)}`;
+       const tempPath = path.join(attachmentDir, fileName);
+       const attachment: InteractiveImageAttachment = {
+         placeholder: `[Image #${index}]`,
+diff --git a/src/features/interactive/inlineImagePaste.ts b/src/features/interactive/inlineImagePaste.ts
+index 42926d5e..b6258ecd 100644
+--- a/src/features/interactive/inlineImagePaste.ts
++++ b/src/features/interactive/inlineImagePaste.ts
+@@ -1,3 +1,8 @@
++import {
++  MAX_IMAGE_ATTACHMENT_BYTES,
++  inferImageMimeTypeFromMagicBytes,
++} from '../../shared/utils/imageAttachmentData.js';
++
+ export interface PastedImage {
+   mimeType: string;
+   data: Buffer;
+@@ -6,7 +11,7 @@ export interface PastedImage {
+ export type ImagePasteHandler = (image: PastedImage) => Promise<string>;
+ 
+ export const OSC_IMAGE_PREFIX = '\x1B]1337;File=';
+-export const MAX_INLINE_IMAGE_BYTES = 10 * 1024 * 1024;
++export const MAX_INLINE_IMAGE_BYTES = MAX_IMAGE_ATTACHMENT_BYTES;
+ export const MAX_PENDING_INLINE_IMAGE_CHARS = Math.ceil(MAX_INLINE_IMAGE_BYTES / 3) * 4 + 1024;
+ 
+ export type InlineImageSequence =
+@@ -42,22 +47,6 @@ function inferMimeTypeFromName(nameParam: string | null): string | null {
+   return null;
+ }
+ 
+-function inferMimeTypeFromMagicBytes(data: Buffer): string | null {
+-  if (data.length >= 4 && data[0] === 0x89 && data[1] === 0x50 && data[2] === 0x4e && data[3] === 0x47) {
+-    return 'image/png';
+-  }
+-  if (data.length >= 3 && data[0] === 0xff && data[1] === 0xd8 && data[2] === 0xff) {
+-    return 'image/jpeg';
+-  }
+-  if (data.subarray(0, 6).equals(Buffer.from('GIF87a')) || data.subarray(0, 6).equals(Buffer.from('GIF89a'))) {
+-    return 'image/gif';
+-  }
+-  if (data.length >= 12 && data.subarray(0, 4).equals(Buffer.from('RIFF')) && data.subarray(8, 12).equals(Buffer.from('WEBP'))) {
+-    return 'image/webp';
+-  }
+-  return null;
+-}
+-
+ function validateDeclaredSize(params: string[], encodedData: string): void {
+   const sizeParam = getParamValue(params, 'size');
+   if (!sizeParam) {
+@@ -97,7 +86,7 @@ function decodeImageData(params: string[], encodedData: string): Buffer {
+ }
+ 
+ function resolveInlineImageMimeType(params: string[], data: Buffer): string {
+-  const mimeType = inferMimeTypeFromMagicBytes(data);
++  const mimeType = inferImageMimeTypeFromMagicBytes(data);
+   if (!mimeType) {
+     throw new Error('Unsupported pasted inline image type. Expected PNG, JPEG, GIF, or WebP data.');
+   }
+diff --git a/src/features/pipeline/execute.ts b/src/features/pipeline/execute.ts
+index 8a641629..461d063f 100644
+--- a/src/features/pipeline/execute.ts
++++ b/src/features/pipeline/execute.ts
+@@ -37,55 +37,59 @@ async function runPipeline(options: PipelineExecutionOptions): Promise<PipelineO
+     success: false, workflow, issueNumber: options.issueNumber, ...overrides,
+   });
+ 
+-  const taskContent = resolveTaskContent(options);
++  const taskContent = await resolveTaskContent(options);
+   if (!taskContent) return { exitCode: EXIT_ISSUE_FETCH_FAILED, result: buildResult() };
+ 
+-  let context: ExecutionContext;
+   try {
+-    context = await resolveExecutionContext(
+-      cwd,
+-      taskContent.task,
+-      options,
+-      pipelineConfig,
+-      taskContent.prBranch,
+-      taskContent.prBaseBranch,
+-    );
+-  } catch (err) {
+-    error(`Failed to prepare execution environment: ${getErrorMessage(err)}`);
+-    return { exitCode: EXIT_GIT_OPERATION_FAILED, result: buildResult() };
+-  }
++    let context: ExecutionContext;
++    try {
++      context = await resolveExecutionContext(
++        cwd,
++        taskContent.task,
++        options,
++        pipelineConfig,
++        taskContent.prBranch,
++        taskContent.prBaseBranch,
++      );
++    } catch (err) {
++      error(`Failed to prepare execution environment: ${getErrorMessage(err)}`);
++      return { exitCode: EXIT_GIT_OPERATION_FAILED, result: buildResult() };
++    }
+ 
+-  log.info('Pipeline workflow execution starting', { workflow, branch: context.branch, skipGit, issueNumber: options.issueNumber });
+-  const workflowOk = await runWorkflow(cwd, workflow, taskContent.task, context.execCwd, options, context);
+-  if (!workflowOk) return { exitCode: EXIT_WORKFLOW_FAILED, result: buildResult({ branch: context.branch }) };
++    log.info('Pipeline workflow execution starting', { workflow, branch: context.branch, skipGit, issueNumber: options.issueNumber });
++    const workflowOk = await runWorkflow(cwd, workflow, taskContent.task, context.execCwd, options, context, taskContent.attachments);
++    if (!workflowOk) return { exitCode: EXIT_WORKFLOW_FAILED, result: buildResult({ branch: context.branch }) };
+ 
+-  if (!skipGit && context.branch) {
+-    const commitMessage = buildCommitMessage(pipelineConfig, taskContent.issue, options.task);
+-    if (!commitAndPush(context.execCwd, cwd, context.branch, commitMessage, context.isWorktree)) {
+-      return { exitCode: EXIT_GIT_OPERATION_FAILED, result: buildResult({ branch: context.branch }) };
++    if (!skipGit && context.branch) {
++      const commitMessage = buildCommitMessage(pipelineConfig, taskContent.issue, options.task);
++      if (!commitAndPush(context.execCwd, cwd, context.branch, commitMessage, context.isWorktree)) {
++        return { exitCode: EXIT_GIT_OPERATION_FAILED, result: buildResult({ branch: context.branch }) };
++      }
+     }
+-  }
+ 
+-  let prUrl: string | undefined;
+-  if (autoPr && !skipGit && context.branch) {
+-    prUrl = submitPullRequest(cwd, context.branch, context.baseBranch, taskContent, workflow, pipelineConfig, options);
+-    if (!prUrl) return { exitCode: EXIT_PR_CREATION_FAILED, result: buildResult({ branch: context.branch }) };
+-  } else if (autoPr && skipGit) {
+-    info('--auto-pr is ignored when --skip-git is specified (no push was performed)');
+-  }
++    let prUrl: string | undefined;
++    if (autoPr && !skipGit && context.branch) {
++      prUrl = submitPullRequest(cwd, context.branch, context.baseBranch, taskContent, workflow, pipelineConfig, options);
++      if (!prUrl) return { exitCode: EXIT_PR_CREATION_FAILED, result: buildResult({ branch: context.branch }) };
++    } else if (autoPr && skipGit) {
++      info('--auto-pr is ignored when --skip-git is specified (no push was performed)');
++    }
+ 
+-  blankLine();
+-  const safeWorkflow = sanitizeTerminalText(workflow);
+-  const issueStatus = taskContent.issue
+-    ? `#${taskContent.issue.number} "${sanitizeTerminalText(taskContent.issue.title)}"`
+-    : 'N/A';
+-  const branchStatus = context.branch ? sanitizeTerminalText(context.branch) : '(current)';
+-  status('Issue', issueStatus);
+-  status('Branch', branchStatus);
+-  status('Workflow', safeWorkflow);
+-  status('Result', 'Success', 'green');
+-
+-  return { exitCode: 0, result: buildResult({ success: true, branch: context.branch, prUrl }) };
++    blankLine();
++    const safeWorkflow = sanitizeTerminalText(workflow);
++    const issueStatus = taskContent.issue
++      ? `#${taskContent.issue.number} "${sanitizeTerminalText(taskContent.issue.title)}"`
++      : 'N/A';
++    const branchStatus = context.branch ? sanitizeTerminalText(context.branch) : '(current)';
++    status('Issue', issueStatus);
++    status('Branch', branchStatus);
++    status('Workflow', safeWorkflow);
++    status('Result', 'Success', 'green');
++
++    return { exitCode: 0, result: buildResult({ success: true, branch: context.branch, prUrl }) };
++  } finally {
++    taskContent.cleanupAttachments?.();
++  }
+ }
+ export async function executePipeline(options: PipelineExecutionOptions): Promise<number> {
+   const startTime = Date.now();
+diff --git a/src/features/pipeline/steps.ts b/src/features/pipeline/steps.ts
+index ceb701ed..36d1f3be 100644
+--- a/src/features/pipeline/steps.ts
++++ b/src/features/pipeline/steps.ts
+@@ -1,25 +1,30 @@
+ import { execFileSync } from 'node:child_process';
+ import {
+   formatIssueAsTask,
+-  formatPrReviewAsTask,
+   getGitProvider,
+ } from '../../infra/git/index.js';
+ import type { Issue } from '../../infra/git/index.js';
+ import { resolveConfigValue } from '../../infra/config/index.js';
+ import { stageAndCommit, resolveBaseBranch, resolveBaseBranchName, pushBranch, checkoutBranch, getCurrentBranch } from '../../infra/task/index.js';
+ import { executeTask, confirmAndCreateWorktree, type ExecuteTaskOptions, type TaskExecutionOptions, type PipelineExecutionOptions } from '../tasks/index.js';
++import { prepareTaskSpecDirectory, cleanupPreparedTaskSpec, type TaskAttachment } from '../tasks/attachments.js';
++import { stageTaskSpecForExecution } from '../tasks/execute/taskSpecContext.js';
+ import { info, error, success } from '../../shared/ui/index.js';
+ import { statusLine } from '../../shared/ui/StatusLine.js';
+ import { getErrorMessage } from '../../shared/utils/index.js';
+ import type { PipelineConfig } from '../../core/models/index.js';
++import { generateExecutionReportDir } from '../../core/workflow/run/run-slug.js';
+ import { sanitizeTerminalText } from '../../shared/utils/text.js';
+ import { expandPipelineTemplate } from './templateExpander.js';
++import { buildPrReviewTaskInput } from '../tasks/prReviewTaskInput.js';
+ 
+ export interface TaskContent {
+   task: string;
+   issue?: Issue;
+   prBranch?: string;
+   prBaseBranch?: string;
++  attachments?: TaskAttachment[];
++  cleanupAttachments?: () => void;
+ }
+ 
+ export interface GitExecutionContext {
+@@ -122,11 +127,11 @@ function resolveSkipGitExecutionContext(
+   };
+ }
+ 
+-function fetchVcsResource<T>(
++async function fetchVcsResource<T>(
+   label: string,
+   cwd: string,
+-  fetch: (provider: ReturnType<typeof getGitProvider>) => T,
+-): T | undefined {
++  fetch: (provider: ReturnType<typeof getGitProvider>) => T | Promise<T>,
++): Promise<T | undefined> {
+   const gitProvider = getGitProvider();
+   const cliStatus = gitProvider.checkCliStatus(cwd);
+   if (!cliStatus.available) {
+@@ -134,34 +139,38 @@ function fetchVcsResource<T>(
+     return undefined;
+   }
+   try {
+-    return fetch(gitProvider);
++    return await fetch(gitProvider);
+   } catch (err) {
+     error(`Failed to fetch ${label}: ${getErrorMessage(err)}`);
+     return undefined;
+   }
+ }
+ 
+-export function resolveTaskContent(options: PipelineExecutionOptions): TaskContent | undefined {
++export async function resolveTaskContent(options: PipelineExecutionOptions): Promise<TaskContent | undefined> {
+   const { cwd } = options;
+   if (options.prNumber) {
+     info(`Fetching PR #${options.prNumber} review comments...`);
+-    const prReview = fetchVcsResource(
++    const prTaskInput = await fetchVcsResource(
+       `PR #${options.prNumber}`,
+       cwd,
+-      (provider) => provider.fetchPrReviewComments(options.prNumber!, cwd),
++      async (provider) => {
++        const prReview = provider.fetchPrReviewComments(options.prNumber!, cwd);
++        return buildPrReviewTaskInput(prReview, provider, cwd);
++      },
+     );
+-    if (!prReview) return undefined;
+-    const task = formatPrReviewAsTask(prReview);
+-    success(`PR #${options.prNumber} fetched: "${sanitizeTerminalText(prReview.title)}"`);
++    if (!prTaskInput) return undefined;
++    success(`PR #${options.prNumber} fetched: "${sanitizeTerminalText(prTaskInput.prReviewTitle)}"`);
+     return {
+-      task,
+-      prBranch: prReview.headRefName,
+-      prBaseBranch: prReview.baseRefName,
++      task: prTaskInput.taskContent,
++      prBranch: prTaskInput.prBranch,
++      prBaseBranch: prTaskInput.prBaseBranch,
++      attachments: prTaskInput.attachments,
++      cleanupAttachments: prTaskInput.cleanupAttachments,
+     };
+   }
+   if (options.issueNumber) {
+     info(`Fetching issue #${options.issueNumber}...`);
+-    const issue = fetchVcsResource(
++    const issue = await fetchVcsResource(
+       `issue #${options.issueNumber}`,
+       cwd,
+       (provider) => provider.fetchIssue(options.issueNumber!, cwd),
+@@ -233,6 +242,7 @@ export async function runWorkflow(
+   execCwd: string,
+   options: Pick<PipelineExecutionOptions, 'provider' | 'model' | 'issueNumber' | 'prNumber'>,
+   context: ExecutionContext,
++  attachments?: readonly TaskAttachment[],
+ ): Promise<boolean> {
+   const safeWorkflow = sanitizeTerminalText(workflow);
+   info(`Running workflow: ${safeWorkflow}`);
+@@ -242,17 +252,32 @@ export async function runWorkflow(
+ 
+   statusLine.start('Running...');
+   let taskSuccess: boolean;
++  let preparedSpec: ReturnType<typeof prepareTaskSpecDirectory> | undefined;
+   try {
++    const hasAttachments = attachments !== undefined && attachments.length > 0;
++    preparedSpec = hasAttachments
++      ? prepareTaskSpecDirectory(projectCwd, task, attachments)
++      : undefined;
++    const reportDirName = preparedSpec
++      ? generateExecutionReportDir(execCwd, task)
++      : undefined;
++    const stagedSpec = preparedSpec
++      ? stageTaskSpecForExecution(projectCwd, execCwd, preparedSpec.taskDirRelative, reportDirName!)
++      : undefined;
+     taskSuccess = await executeTask({
+-      task,
++      task: stagedSpec?.taskPrompt ?? task,
+       cwd: execCwd,
+       workflowIdentifier: workflow,
+       projectCwd,
+       agentOverrides,
++      ...(reportDirName ? { reportDirName } : {}),
+       traceTaskContext: buildPipelineTraceTaskContext(options, context),
+     });
+   } finally {
+     statusLine.stop();
++    if (preparedSpec) {
++      cleanupPreparedTaskSpec(preparedSpec.taskDir);
++    }
+   }
+ 
+   if (!taskSuccess) {
+diff --git a/src/features/tasks/add/index.ts b/src/features/tasks/add/index.ts
+index 726d3101..8aa2e67c 100644
+--- a/src/features/tasks/add/index.ts
++++ b/src/features/tasks/add/index.ts
+@@ -12,7 +12,7 @@ import type { Language } from '../../../core/models/types.js';
+ import { saveEnqueuedTaskFile } from '../../../infra/task/enqueuedTaskFile.js';
+ import { determineWorkflow } from '../execute/selectAndExecute.js';
+ import { createLogger, getErrorMessage } from '../../../shared/utils/index.js';
+-import { isIssueReference, resolveIssueTask, parseIssueNumbers, formatPrReviewAsTask, getGitProvider } from '../../../infra/git/index.js';
++import { isIssueReference, resolveIssueTask, parseIssueNumbers, getGitProvider } from '../../../infra/git/index.js';
+ import type { PrReviewData } from '../../../infra/git/index.js';
+ import { extractTitle, createIssueFromTask, createIssueFromTaskResult } from '../../../infra/task/issueTask.js';
+ import { displayTaskCreationResult, promptWorktreeSettings, type WorktreeSettings } from './worktree-settings.js';
+@@ -28,6 +28,12 @@ import {
+   prepareTaskSpecDirectory,
+   type TaskAttachment,
+ } from '../attachments.js';
++import {
++  formatPrReviewTaskInput,
++  resolvePrReviewTaskAttachments,
++  type PrReviewTaskInput,
++  type ResolvedPrReviewTaskAttachments,
++} from '../prReviewTaskInput.js';
+ export { extractTitle, createIssueFromTask, createIssueFromTaskResult };
+ 
+ const log = createLogger('add-task');
+@@ -191,27 +197,47 @@ export async function addTask(
+       return;
+     }
+ 
+-    if (prReview.reviews.length === 0 && prReview.comments.length === 0) {
+-      error(`PR #${prNumber} has no review comments`);
++    let resolvedPrAttachments: ResolvedPrReviewTaskAttachments;
++    try {
++      resolvedPrAttachments = await resolvePrReviewTaskAttachments(prReview, provider, cwd);
++    } catch (e) {
++      error(`Failed to fetch PR image attachments #${prNumber}: ${getErrorMessage(e)}`);
+       return;
+     }
+ 
+-    const taskContent = formatPrReviewAsTask(prReview);
+-    const workflow = await determineWorkflow(cwd, opts?.workflow);
+-    if (workflow === null) {
+-      info('Cancelled.');
+-      return;
+-    }
++    let prTaskInput: PrReviewTaskInput | undefined;
++    try {
++      const hasResolvedImageContext = resolvedPrAttachments.attachments.length > 0
++        || resolvedPrAttachments.prReview.body !== prReview.body;
++      if (prReview.reviews.length === 0 && prReview.comments.length === 0 && !hasResolvedImageContext) {
++        error(`PR #${prNumber} has no review comments`);
++        return;
++      }
++      prTaskInput = formatPrReviewTaskInput(resolvedPrAttachments);
+ 
+-    const settings = {
+-      worktree: true,
+-      branch: prReview.headRefName,
+-      baseBranch: prReview.baseRefName,
+-      autoPr: false,
+-      shouldPublishBranchToOrigin: true,
+-    };
+-    const created = await saveTaskFile(cwd, taskContent, { workflow, ...settings, prNumber });
+-    displayTaskCreationResult(created, settings, workflow);
++      const workflow = await determineWorkflow(cwd, opts?.workflow);
++      if (workflow === null) {
++        info('Cancelled.');
++        return;
++      }
++
++      const settings = {
++        worktree: true,
++        branch: prTaskInput.prBranch,
++        baseBranch: prTaskInput.prBaseBranch,
++        autoPr: false,
++        shouldPublishBranchToOrigin: true,
++      };
++      const created = await saveTaskFile(cwd, prTaskInput.taskContent, {
++        workflow,
++        ...settings,
++        prNumber,
++        ...(prTaskInput.attachments.length > 0 ? { attachments: prTaskInput.attachments } : {}),
++      });
++      displayTaskCreationResult(created, settings, workflow);
++    } finally {
++      resolvedPrAttachments.cleanupAttachments();
++    }
+     return;
+   }
+ 
+diff --git a/src/infra/git/index.ts b/src/infra/git/index.ts
+index 4727abcf..6ec21c85 100644
+--- a/src/infra/git/index.ts
++++ b/src/infra/git/index.ts
+@@ -17,7 +17,7 @@ import { getErrorMessage } from '../../shared/utils/index.js';
+ import type { GitProvider, CreatePrOptions, CreatePrResult } from './types.js';
+ import type { VcsProviderType } from './detect.js';
+ 
+-export type { GitProvider, Issue, CliStatus, ExistingPr, IssueListItem, PrListItem, CreatePrOptions, CreatePrResult, CommentResult, MergeResult, CreateIssueOptions, CreateIssueResult, CloseIssueResult, PrReviewComment, PrReviewData, PrReviewThreadState } from './types.js';
++export type { GitProvider, Issue, CliStatus, ExistingPr, IssueListItem, PrListItem, CreatePrOptions, CreatePrResult, CommentResult, MergeResult, CreateIssueOptions, CreateIssueResult, CloseIssueResult, PrReviewComment, PrReviewData, PrReviewThreadState, PrReviewAttachmentResolution } from './types.js';
+ export {
+   formatIssueAsTask,
+   parseIssueNumbers,
+diff --git a/src/infra/git/types.ts b/src/infra/git/types.ts
+index 20cac010..ccf0dcf4 100644
+--- a/src/infra/git/types.ts
++++ b/src/infra/git/types.ts
+@@ -1,3 +1,5 @@
++import type { StoredImageAttachment } from '../../shared/types/image-attachments.js';
++
+ export type CliStatus =
+   | { available: true }
+   | { available: false; error: string };
+@@ -99,6 +101,12 @@ export interface PrReviewData {
+   files: string[];
+ }
+ 
++export interface PrReviewAttachmentResolution {
++  prReview: PrReviewData;
++  attachments: StoredImageAttachment[];
++  cleanupAttachments: () => void;
++}
++
+ export interface GitProvider {
+   checkCliStatus(cwd?: string): CliStatus;
+ 
+@@ -110,6 +118,8 @@ export interface GitProvider {
+ 
+   fetchPrReviewComments(prNumber: number, cwd?: string): PrReviewData;
+ 
++  resolvePrReviewAttachments?(prReview: PrReviewData, cwd?: string): Promise<PrReviewAttachmentResolution> | PrReviewAttachmentResolution;
++
+   listOpenIssues(cwd?: string): IssueListItem[];
+ 
+   listOpenPrs(cwd?: string): PrListItem[];
+diff --git a/src/infra/github/GitHubProvider.ts b/src/infra/github/GitHubProvider.ts
+index b111acef..24518a4c 100644
+--- a/src/infra/github/GitHubProvider.ts
++++ b/src/infra/github/GitHubProvider.ts
+@@ -8,7 +8,8 @@
+ 
+ import { checkGhCli, fetchIssue, listOpenIssues, createIssue, closeIssue } from './issue.js';
+ import { findExistingPr, commentOnPr, closePr, createPullRequest, fetchPrReviewComments, listOpenPrs, mergePr } from './pr.js';
+-import type { GitProvider, CliStatus, Issue, ExistingPr, IssueListItem, PrListItem, CreateIssueOptions, CreateIssueResult, CloseIssueResult, CreatePrOptions, CreatePrResult, CommentResult, MergeResult, PrReviewData } from '../git/types.js';
++import { resolvePrReviewAttachments } from './prReviewAttachments.js';
++import type { GitProvider, CliStatus, Issue, ExistingPr, IssueListItem, PrListItem, CreateIssueOptions, CreateIssueResult, CloseIssueResult, CreatePrOptions, CreatePrResult, CommentResult, MergeResult, PrReviewData, PrReviewAttachmentResolution } from '../git/types.js';
+ 
+ export class GitHubProvider implements GitProvider {
+   checkCliStatus(cwd?: string): CliStatus {
+@@ -31,6 +32,10 @@ export class GitHubProvider implements GitProvider {
+     return fetchPrReviewComments(prNumber, cwd ?? process.cwd());
+   }
+ 
++  resolvePrReviewAttachments(prReview: PrReviewData, cwd?: string): Promise<PrReviewAttachmentResolution> {
++    return resolvePrReviewAttachments(prReview, cwd ?? process.cwd());
++  }
++
+   listOpenIssues(cwd?: string): IssueListItem[] {
+     return listOpenIssues(cwd ?? process.cwd());
+   }

@@ -1,0 +1,26 @@
+[
+  {
+    "rawFindingId": "20260708-165741-pr-task-attachments-takt-add-p:reviewers:1:arch-review:arch-review-raw-001",
+    "stepName": "arch-review",
+    "reviewer": "arch-review",
+    "familyTag": "contract-entry-consistency",
+    "severity": "medium",
+    "title": "add --pr の PR body 画像失敗経路だけ警告付きタスクが作成されない",
+    "location": "src/features/tasks/add/index.ts:205; src/features/tasks/prReviewImageAttachments.ts:318",
+    "description": "resolvePrReviewImageAttachments() は画像取得・検証失敗を failures と PR body の `PR Image Attachment Warnings` に変換して返すが、add --pr 経路の no-review guard は reviews/comments/attachments の有無だけを判定している。PR 本文だけに GitHub 画像があり、その画像が download/validation 失敗した場合、attachments は空のまま warning 付き body が返っても `PR #... has no review comments` で return するため、失敗理由が order.md に保存されない。同種入口の `takt --pr` と pipeline --pr は formatPrReviewAsTask に進むため、この新しい failure visibility 契約が add --pr だけ欠落している。",
+    "suggestion": "add --pr の no-review guard に `prReviewImages.failures.length` または warning 反映後の `prReviewImages.prReview.body` を含め、PR body 画像の失敗だけでも formatPrReviewAsTask/saveTaskFile に進めて警告を保存してください。あわせて comments/reviews が空、PR body の画像取得が失敗するケースで order.md に warning が残る単体テストを追加してください。",
+    "kind": "issue"
+  },
+  {
+    "rawFindingId": "20260708-165741-pr-task-attachments-takt-add-p:reviewers:1:robustness-review:RR-20260709-165741-001",
+    "stepName": "robustness-review",
+    "reviewer": "robustness-review",
+    "familyTag": "robustness.input_validation.incomplete_magic_bytes",
+    "severity": "medium",
+    "title": "PNGのmagic bytes検証が4バイトだけで不完全",
+    "location": "src/shared/utils/imageMime.ts:32",
+    "description": "`inferMimeTypeFromMagicBytes()` は PNG を `0x89 0x50 0x4e 0x47` の先頭4バイトだけで判定しており、PNG の完全な8バイトシグネチャ `89 50 4E 47 0D 0A 1A 0A` まで検証していません。この検証結果は `src/infra/github/attachmentImage.ts:220` と `src/features/tasks/prReviewImageAttachments.ts:247` の PR 画像検証経路で使われるため、Content-Type が `image/png` で先頭4バイトだけを合わせた任意データが検証を通過し、`attachments/image-*.png` として保存されます。対象タスクの安全要件は Content-Type と magic bytes の検証であり、4バイトだけの省略形検証では仕様の完全形を満たしていません。",
+    "suggestion": "PNG は8バイト完全シグネチャを定数で照合してください。あわせて `89 50 4E 47` だけ一致し残り4バイトが異なる Buffer を `image/png` として渡した場合に拒否される単体テストを `imageMime` または PR 画像添付テストに追加してください。",
+    "kind": "issue"
+  }
+]

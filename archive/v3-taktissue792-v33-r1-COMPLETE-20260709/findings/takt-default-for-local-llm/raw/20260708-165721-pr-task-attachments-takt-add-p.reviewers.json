@@ -1,0 +1,74 @@
+[
+  {
+    "rawFindingId": "20260708-165721-pr-task-attachments-takt-add-p:reviewers:1:arch-review:arch-review-165721-r1-resolved-1",
+    "stepName": "arch-review",
+    "reviewer": "arch-review",
+    "familyTag": "robustness.resource_bounds",
+    "severity": "medium",
+    "title": "ストリーム読み込み失敗時の消費 bytes が合計上限へ算入済み",
+    "location": "src/infra/github/prReviewAttachments.ts:129, src/infra/github/prReviewAttachments.ts:137, src/infra/github/prReviewAttachments.ts:202, src/infra/github/prReviewAttachments.ts:218, src/infra/github/prReviewAttachments.ts:335, src/__tests__/prReviewAttachments.test.ts:453, src/__tests__/prReviewAttachments.test.ts:514",
+    "description": "F-0022 の受入条件と同じ合計ダウンロード量境界の経路を再走査しました。`readResponseBodyWithinLimit()` は stream 読み込み全体を try/catch で囲み、`reader.read()` 失敗時は `createReadStreamError()` により `totalBytes` を保持した `PrReviewImageReadLimitError` を投げます。単体/合計上限超過後の `reader.cancel()` 失敗時も `createCancelStreamError()` が元の `consumedBytes` と `totalLimitReached` を保持します。呼び出し元 catch は `PrReviewImageReadLimitError.consumedBytes` を `totalDownloadedBytes` に加算し、合計上限到達後は後続参照を fetch せず limit failure にします。`prReviewAttachments.test.ts:453` 以降で stream read 失敗、`prReviewAttachments.test.ts:514` 以降で cancel 失敗の両方が合計上限へ算入され、後続 fetch が止まることも固定されています。Policy/Knowledge の全 `##` セクション、外部アクセス・認証・ファイル IO・エラー処理の既存慣例も照合し、同欠陥クラスの残存は確認されませんでした。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0022"
+  },
+  {
+    "rawFindingId": "20260708-165721-pr-task-attachments-takt-add-p:reviewers:1:ai-antipattern-review:ai-r1-resolved-1",
+    "stepName": "ai-antipattern-review",
+    "reviewer": "ai-antipattern-review",
+    "familyTag": "missing-edge-case",
+    "severity": "medium",
+    "title": "ストリーム読み込み失敗時の消費bytesが合計上限に算入されるよう修正済み",
+    "location": "src/infra/github/prReviewAttachments.ts:202",
+    "description": "`src/infra/github/prReviewAttachments.ts:202-223` で stream 読み込み全体が try/catch に入り、`reader.read()` が一部 chunk 読み込み後に reject した場合も `createReadStreamError(error, totalBytes, remainingTotalBytes)` により消費済み `totalBytes` を保持した `PrReviewImageReadLimitError` が投げられます。`reader.cancel()` が reject した場合も `src/infra/github/prReviewAttachments.ts:145-154` の `throwAfterCancel()` が `createCancelStreamError()` で元の `consumedBytes` を保持します。呼び出し元は `src/infra/github/prReviewAttachments.ts:334-342` で `PrReviewImageReadLimitError.consumedBytes` を `totalDownloadedBytes` に加算し、合計上限到達時に後続 fetch を止めます。`src/__tests__/prReviewAttachments.test.ts:453-512` と `src/__tests__/prReviewAttachments.test.ts:514-560` で stream read 失敗・cancel 失敗の両経路が合計上限を消費し、後続 fetch が行われないことも確認されています。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0022"
+  },
+  {
+    "rawFindingId": "20260708-165721-pr-task-attachments-takt-add-p:reviewers:1:coding-review:raw-coding-review-1-confirm-F-0022",
+    "stepName": "coding-review",
+    "reviewer": "coding-review",
+    "familyTag": "robustness.resource_bounds",
+    "severity": "medium",
+    "title": "ストリーム読み込み失敗時の消費bytesが合計上限に算入される",
+    "location": "src/infra/github/prReviewAttachments.ts:129, src/infra/github/prReviewAttachments.ts:202, src/infra/github/prReviewAttachments.ts:335, src/__tests__/prReviewAttachments.test.ts:453",
+    "description": "F-0022 の同種経路を再走査しました。`readResponseBodyWithinLimit()` の stream 経路は `try/catch` で囲まれ、`reader.read()` 失敗時は `createReadStreamError()` が既読 `totalBytes` を `consumedBytes` として持つ `PrReviewImageReadLimitError` を投げます。上限超過後の `reader.cancel()` 失敗も `createCancelStreamError()` により元の `consumedBytes` を保持します。呼び出し元 catch は `PrReviewImageReadLimitError` の `consumedBytes` を `totalDownloadedBytes` に加算し、合計上限到達時に後続 fetch を止めます。`src/__tests__/prReviewAttachments.test.ts:453` と `src/__tests__/prReviewAttachments.test.ts:514` で stream read 失敗・cancel 失敗の両方が合計上限を消費して4件目を fetch しないことも確認しました。`npm run build`、`npm run lint`、関連 Vitest 6 files / 122 tests は成功しました。`npm test` 全体は差分外の `workflow-categories.test.ts` timeout と Vitest worker `onTaskUpdate` timeout で失敗しました。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0022"
+  },
+  {
+    "rawFindingId": "20260708-165721-pr-task-attachments-takt-add-p:reviewers:1:implementation-semantics-review:implsem-1-resolve-0022",
+    "stepName": "implementation-semantics-review",
+    "reviewer": "implementation-semantics-review",
+    "familyTag": "implementation-semantics:state-accounting.resource-bound",
+    "severity": "medium",
+    "title": "ストリーム読み込み失敗時の消費bytesが合計上限に算入されるよう修正済み",
+    "location": "src/infra/github/prReviewAttachments.ts:204",
+    "description": "`src/infra/github/prReviewAttachments.ts:202-223` で stream 読み込み全体が try/catch され、`reader.read()` の通常エラーは `createReadStreamError(error, totalBytes, remainingTotalBytes)` により既読 bytes を保持する `PrReviewImageReadLimitError` に変換されることを確認しました。`src/infra/github/prReviewAttachments.ts:145-154` では `reader.cancel()` 失敗時も元の `consumedBytes` と `totalLimitReached` を保持した専用エラーへ変換されます。呼び出し元の `src/infra/github/prReviewAttachments.ts:334-344` では `PrReviewImageReadLimitError.consumedBytes` を `totalDownloadedBytes` に加算し、合計上限到達時に後続 fetch を止めます。`src/__tests__/prReviewAttachments.test.ts:453-560` で stream read 失敗と cancel 失敗の両方が合計上限を消費し、4件目の fetch が行われないことも固定されています。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0022"
+  },
+  {
+    "rawFindingId": "20260708-165721-pr-task-attachments-takt-add-p:reviewers:1:contract-lifecycle-review:contract-lifecycle-review-raw-001",
+    "stepName": "contract-lifecycle-review",
+    "reviewer": "contract-lifecycle-review",
+    "familyTag": "resource_lifecycle.pr_attachment_total_bytes",
+    "severity": "medium",
+    "title": "ストリーム読み込み失敗時の消費bytesが合計上限へ算入されることを確認",
+    "location": "src/infra/github/prReviewAttachments.ts:129, src/infra/github/prReviewAttachments.ts:137, src/infra/github/prReviewAttachments.ts:202, src/infra/github/prReviewAttachments.ts:218, src/infra/github/prReviewAttachments.ts:335, src/__tests__/prReviewAttachments.test.ts:453, src/__tests__/prReviewAttachments.test.ts:514",
+    "description": "F-0022 の同種経路を再走査しました。`createReadStreamError()` は stream read 失敗時に consumedBytes と totalLimitReached を保持する `PrReviewImageReadLimitError` を生成し、`createCancelStreamError()` も cancel 失敗時に元の consumedBytes と totalLimitReached を維持します。`readResponseBodyWithinLimit()` の stream 読み込み全体は try/catch で囲まれ、reader.read() の reject と reader.cancel() の reject のどちらでも `PrReviewImageReadLimitError` が呼び出し元へ伝播します。呼び出し元 catch は `error instanceof PrReviewImageReadLimitError` の場合に `totalDownloadedBytes += error.consumedBytes` し、合計上限到達時は後続 reference を fetch せず limit failure にしています。`src/__tests__/prReviewAttachments.test.ts:453` で stream read failure が合計上限を消費して4件目 fetch が発生しないこと、`src/__tests__/prReviewAttachments.test.ts:514` で cancel failure 後も消費 byte が合計上限へ算入されることが固定されています。検証として `npx vitest run src/__tests__/prReviewAttachments.test.ts src/__tests__/prReviewImageReferences.test.ts src/__tests__/imageAttachmentData.test.ts src/__tests__/cli-routing-pr-resolve.test.ts src/__tests__/pipelineExecution.test.ts src/__tests__/addTask.test.ts` を実行し、6 files / 122 tests passed を確認しました。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0022"
+  },
+  {
+    "rawFindingId": "20260708-165721-pr-task-attachments-takt-add-p:reviewers:1:robustness-review:robustness-165721-r1-raw-1",
+    "stepName": "robustness-review",
+    "reviewer": "robustness-review",
+    "familyTag": "robustness.resource_bounds",
+    "severity": "medium",
+    "title": "ストリーム読み込み失敗時の消費bytesが合計上限に算入されることを確認",
+    "location": "src/infra/github/prReviewAttachments.ts:129, src/infra/github/prReviewAttachments.ts:202, src/infra/github/prReviewAttachments.ts:335, src/__tests__/prReviewAttachments.test.ts:453",
+    "description": "F-0022 の受入条件に戻り、同じ合計ダウンロード量境界の失敗経路を再走査しました。stream read 失敗は src/infra/github/prReviewAttachments.ts:202-223 で catch され、src/infra/github/prReviewAttachments.ts:129-134 の PrReviewImageReadLimitError に consumedBytes を載せて再送出されます。cancel 失敗も src/infra/github/prReviewAttachments.ts:137-143 で元の consumedBytes と totalLimitReached を保持します。呼び出し元では src/infra/github/prReviewAttachments.ts:335-342 で PrReviewImageReadLimitError の consumedBytes を totalDownloadedBytes に加算し、合計上限到達後は後続画像を fetch しない状態になります。src/__tests__/prReviewAttachments.test.ts:453-560 で stream read 失敗と cancel 失敗の両方について、消費 bytes が合計上限に反映され後続 fetch が止まることも固定されています。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0022"
+  }
+]

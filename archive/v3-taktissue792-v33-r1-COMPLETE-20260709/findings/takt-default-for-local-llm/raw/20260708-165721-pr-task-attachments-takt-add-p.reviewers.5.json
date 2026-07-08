@@ -1,0 +1,14 @@
+[
+  {
+    "rawFindingId": "20260708-165721-pr-task-attachments-takt-add-p:reviewers:5:robustness-review:robustness-165721-r5-raw-1",
+    "stepName": "robustness-review",
+    "reviewer": "robustness-review",
+    "familyTag": "robustness.secret_leakage",
+    "severity": "medium",
+    "title": "拒否したリダイレクトURL全文がタスク本文へ書き込まれる",
+    "location": "src/infra/github/prReviewAttachments.ts:82, src/infra/github/prReviewAttachments.ts:84, src/infra/github/prReviewAttachments.ts:177, src/infra/github/prReviewAttachments.ts:179, src/infra/github/prReviewAttachments.ts:338, src/infra/github/prReviewImageReferences.ts:147, src/infra/github/prReviewImageReferences.ts:150",
+    "description": "許可済み GitHub attachment URL の取得中、3xx 応答の `Location` は `src/infra/github/prReviewAttachments.ts:177-179` で検証されますが、allowlist 外の場合は `assertAllowedAttachmentUrl()` が `Unsupported PR image attachment redirect URL: ${url}` とリダイレクト先 URL 全文を例外メッセージに含めます。その例外は画像単位の失敗として `src/infra/github/prReviewAttachments.ts:338` で `failures` に入り、`src/infra/github/prReviewImageReferences.ts:147-150` で `${failure.reason}` として PR タスク本文へ補足されます。GitHub/private attachment のリダイレクト先が署名付きURLや一時トークン付きURLだった場合、取得前に拒否できても、その秘匿クエリを `order.md` / pipeline task spec に永続化します。",
+    "suggestion": "拒否理由には URL 全文を含めず、少なくとも origin/host と固定文言だけにしてください。外部リダイレクト、初期URL拒否、HTTP/fetch 失敗など failure reason がタスク本文・ログへ入る全経路で、クエリや認証情報を含む URL が出力されないことをテストしてください。",
+    "kind": "issue"
+  }
+]

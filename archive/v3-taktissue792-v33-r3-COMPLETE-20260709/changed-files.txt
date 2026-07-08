@@ -1,0 +1,30 @@
+ M src/__tests__/addTask.test.ts
+ M src/__tests__/cli-routing-pr-resolve.test.ts
+ M src/__tests__/conversationLoop-resume.test.ts
+ M src/__tests__/git-cwd-propagation.test.ts
+ M src/__tests__/inlineImagePaste.test.ts
+ M src/__tests__/instructMode.test.ts
+ M src/__tests__/interactive-mode.test.ts
+ M src/__tests__/lineEditor.test.ts
+ M src/__tests__/pipelineExecution.test.ts
+ M src/__tests__/retrySlashCommand.test.ts
+ M src/app/cli/routing-inputs.ts
+ M src/app/cli/routing.ts
+ M src/features/interactive/imageAttachments.ts
+ M src/features/interactive/inlineImagePaste.ts
+ M src/features/pipeline/execute.ts
+ M src/features/pipeline/steps.ts
+ M src/features/tasks/add/index.ts
+ M src/infra/git/index.ts
+ M src/infra/git/types.ts
+ M src/infra/github/GitHubProvider.ts
+ M src/infra/gitlab/GitLabProvider.ts
+?? src/__tests__/imageAttachmentData.test.ts
+?? src/__tests__/prImageAttachments.test.ts
+?? src/__tests__/prImageAttachmentsSessionCleanup.test.ts
+?? src/__tests__/prImageReferences.test.ts
+?? src/__tests__/prReviewTaskInput.test.ts
+?? src/features/tasks/prReviewTaskInput.ts
+?? src/infra/git/prImageReferences.ts
+?? src/infra/github/prImageAttachments.ts
+?? src/shared/utils/imageAttachmentData.ts
