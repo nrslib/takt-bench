@@ -1,0 +1,20 @@
+# 実装意味論レビュー
+
+## 結果: REJECT
+
+## サマリー
+F-0007 / F-0008 / F-0009 は実コードと回帰テストで解消を確認しました。一方で、`dueDate` が `Invalid Date` の場合に、検証失敗前に `Clock` を消費する経路が残っています。
+
+## 観測した指摘
+| # | family_tag | 重大度 | 場所 | 問題 | 壊れる条件 | 修正案 |
+|---|------------|--------|------|------|-----------|--------|
+| 1 | implementation-semantics/state-side-effect-before-validation | Medium | `src/service.ts:233`, `src/service.ts:234`, `src/service.ts:81`, `src/service.ts:82` | `createTask` / `updateTask` が `dueDate` 自体の有限性を検証する前に `clock.now()` を消費する | `dueDate: new Date('invalid')` の入力で `ValidationError` になるが、保存はされない一方で注入 `Clock` の状態だけが進む | `dueDate` が指定された場合は、まず `validateDateValue(dueDate, ...)` で有限性を検証し、その後に過去判定用の `getValidCurrentTime` を呼ぶ |
+
+## 検証証跡
+- 差分確認: `src/service.ts`, `src/repository.ts`, `src/task-record.ts`, `README.md`, `tests/contract-regression.test.ts` を確認した。
+- 解消確認: F-0007 は `src/service.ts:75-81`, `src/service.ts:119-120`, `tests/contract-regression.test.ts:231-241`, `tests/contract-regression.test.ts:282-291` で確認。F-0008 は `src/service.ts:45-47`, `tests/contract-regression.test.ts:220-228` で確認。F-0009 は `src/service.ts:147`, `src/service.ts:282-284`, `tests/contract-regression.test.ts:532-537` で確認。
+- 再走査証跡: Knowledge の「データ構造の意味選択」「導出値の単一情報源」「命名と意味の整合」「境界での fail-fast」「内部状態の参照漏れ」を累積差分全体に照合した。
+- 検証コマンド: `npm test` は 5 files / 99 tests passed、`npm run typecheck` は成功。
+
+## REJECT判定条件
+- ブロッキング指摘が1件あるため REJECT。

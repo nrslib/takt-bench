@@ -1,0 +1,20 @@
+# 実装意味論レビュー
+
+## 結果: REJECT
+
+## サマリー
+F-0001 / F-0003 / F-0004 / F-0005 は実コードと回帰テストで解消を確認しました。一方で、`dueDate` を伴わない `clock.now()` の `Invalid Date` が `createdAt` / `updatedAt` に保存される経路が残っています。
+
+## 観測した指摘
+| # | family_tag | 重大度 | 場所 | 問題 | 壊れる条件 | 修正案 |
+|---|------------|--------|------|------|-----------|--------|
+| 1 | implementation-semantics/fail-fast/clock-validation | Medium | `src/service.ts:232`, `src/service.ts:75`, `src/service.ts:102`, `src/service.ts:116`, `src/service.ts:130` | `validateDueDate` は `now` の有限性を検証しているが、`dueDate` 未指定の `createTask` や `updateTask` / `changeStatus` / `assign` / `unassign` の `clock.now()` は検証されず、そのまま保存される | 注入された `Clock` が `Invalid Date` を返すと、`TaskRecord` の `createdAt` / `updatedAt` に無効な時刻が入り、`listTasks` の `createdAt` 昇順比較で `NaN` が発生する | `clock.now()` の取得を共通ヘルパーに集約し、全経路で `getTime()` が有限値であることを検証してから保存する |
+
+## 検証証跡
+- 差分確認: `src/service.ts`, `src/repository.ts`, `src/task-record.ts`, `src/index.ts`, `README.md`, `src/types.ts`, `tests/contract-regression.test.ts` を確認した。
+- 解消確認: `src/service.ts:45-48`, `src/service.ts:154-157`, `src/service.ts:250-260`, `tests/contract-regression.test.ts:157-210`, `tests/contract-regression.test.ts:267-274` を確認した。
+- 再走査証跡: Knowledge の「データ構造の意味選択」「導出値の単一情報源」「命名と意味の整合」「境界での fail-fast」「内部状態の参照漏れ」を累積差分全体に照合した。
+- 検証コマンド: `npm test` は 5 files / 91 tests passed、`npm run typecheck` は成功。
+
+## REJECT判定条件
+- ブロッキング指摘が1件あるため REJECT。

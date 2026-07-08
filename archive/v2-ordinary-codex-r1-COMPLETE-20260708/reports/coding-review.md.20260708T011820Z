@@ -1,0 +1,19 @@
+# コーディングレビュー
+
+## 結果: REJECT
+
+## サマリー
+`createTask` が README の「検証後に ID/時刻を取得する」契約に反し、入力検証前に `clock.now()` と `idGenerator.next()` を実行しています。無効入力でも ID が消費されるため差し戻しです。
+
+## 観測した指摘
+| # | family_tag | 重大度 | 場所 | 問題 | 影響 | 修正案 |
+|---|------------|--------|------|------|------|--------|
+| 1 | validation-side-effects | Medium | `src/service.ts:40` | `createTask` が `clock.now()` と `idGenerator.next()` を入力検証前に実行している。README.md:26-27 は「検証後」に ID と時刻を取得する契約。 | 空 title などで `ValidationError` になる入力でも ID が消費され、次の正常作成タスクの ID が進む。 | title/description/priority/assignee/tags を先に正規化・検証し、dueDate 検証後、全検証成功後に `idGenerator.next()` を呼ぶ。ValidationError 後に次の正常 `createTask` の ID が進まない回帰テストも追加する。 |
+
+## 検証証跡
+- 差分確認: `README.md`、`src/types.ts`、`src/service.ts`、`src/repository.ts`、`src/task-record.ts`、`src/index.ts`、既存/追加テストを確認。
+- ビルド: `npm run typecheck` 成功。
+- テスト: `npm test` 成功。5ファイル、86テスト通過。
+
+## REJECT判定条件
+- ブロッキング指摘が1件あるため REJECT。

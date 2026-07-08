@@ -1,0 +1,86 @@
+[
+  {
+    "rawFindingId": "20260708-005125-readme-md-api-src-types-ts:reviewers:3:arch-review:arch-review-3-resolved-F-0006",
+    "stepName": "arch-review",
+    "reviewer": "arch-review",
+    "familyTag": "implementation-semantics/fail-fast/date-validation",
+    "severity": "medium",
+    "title": "clock.now() の Invalid Date 保存経路が共通検証に集約されている",
+    "location": "src/service.ts:261",
+    "description": "F-0006 の受入条件を現在コードで再確認した。src/service.ts:261-265 の getValidCurrentTime が clock.now() の戻り値を validateDateValue で検証し、createTask の dueDate 未指定経路は src/service.ts:231-235、updateTask は src/service.ts:75、changeStatus は src/service.ts:99、assign は src/service.ts:114、unassign は src/service.ts:129 でこの共通ヘルパーを経由している。tests/contract-regression.test.ts:219-278 に各入口の Invalid Date clock 回帰テストがあり、npm test は 96 件成功した。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0006"
+  },
+  {
+    "rawFindingId": "20260708-005125-readme-md-api-src-types-ts:reviewers:3:arch-review:arch-review-3-raw-001",
+    "stepName": "arch-review",
+    "reviewer": "arch-review",
+    "familyTag": "architecture.state-consistency",
+    "severity": "medium",
+    "title": "updateTask / assign が入力検証前に clock を消費している",
+    "location": "src/service.ts:75; src/service.ts:114",
+    "description": "updateTask は src/service.ts:75 で getValidCurrentTime(this.clock) を呼んだ後に src/service.ts:78 で title を normalizeTitle しているため、空 title で ValidationError になる失敗経路でも注入 Clock が消費される。assign も src/service.ts:114 で clock を取得した後に src/service.ts:117 で normalizeAssignee を実行するため、空 assignee の ValidationError 経路で clock が消費される。createTask では同種の副作用順序を修正済みだが、変更操作側に同じ契約が適用されておらず、Policy の状態整合性・契約一貫性、および Knowledge のフェーズ分離に反する。",
+    "suggestion": "updateTask は title/description/priority/tags の正規化・検証を先に行い、dueDate 検証または保存時刻が必要になった時点で getValidCurrentTime を呼ぶ構造にする。assign は normalizeAssignee を getValidCurrentTime より前に移し、入力検証失敗時に Clock を消費しない回帰テストを追加する。",
+    "kind": "issue"
+  },
+  {
+    "rawFindingId": "20260708-005125-readme-md-api-src-types-ts:reviewers:3:ai-antipattern-review:raw-ai-003-resolve-f0006",
+    "stepName": "ai-antipattern-review",
+    "reviewer": "ai-antipattern-review",
+    "familyTag": "implementation-semantics/fail-fast/clock-validation",
+    "severity": "medium",
+    "title": "clock.now() の Invalid Date 保存は解消済み",
+    "location": "src/service.ts:75; src/service.ts:99; src/service.ts:114; src/service.ts:129; src/service.ts:226; src/service.ts:235; src/service.ts:261",
+    "description": "現在の src/service.ts では updateTask/changeStatus/assign/unassign が src/service.ts:75,99,114,129 で getValidCurrentTime(this.clock) を通り、createTask の dueDate あり/なし経路も src/service.ts:226 と src/service.ts:235 で getValidCurrentTime(clock) を通る。src/service.ts:261-264 の getValidCurrentTime は clock.now() の戻り値を validateDateValue で検証し、src/service.ts:267-271 で getTime() が有限値でない場合に ValidationError を投げる。tests/contract-regression.test.ts:220-276 で createTask/updateTask/changeStatus/assign/unassign が Invalid Date の clock.now() を保存しないことを確認し、npm run typecheck と npm test は成功した。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0006"
+  },
+  {
+    "rawFindingId": "20260708-005125-readme-md-api-src-types-ts:reviewers:3:coding-review:raw-coding-review-3-confirm-F-0006",
+    "stepName": "coding-review",
+    "reviewer": "coding-review",
+    "familyTag": "implementation-semantics/fail-fast/clock-validation",
+    "severity": "medium",
+    "title": "Invalid Date の clock.now() が保存される問題は解消済み",
+    "location": "src/service.ts:75",
+    "description": "src/service.ts:75,99,114,129 で updateTask/changeStatus/assign/unassign が getValidCurrentTime(this.clock) を使い、src/service.ts:231-235 で dueDate 未指定 createTask の createdAt/updatedAt も getValidCurrentTime(clock) を通る。src/service.ts:261-264 と src/service.ts:267-272 で clock.now() の getTime() が有限値でない場合は ValidationError になるため、Invalid Date は TaskRecord に保存されない。tests/contract-regression.test.ts:219-277 でも createTask/updateTask/changeStatus/assign/unassign の invalid clock 拒否と保存状態不変を確認している。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0006"
+  },
+  {
+    "rawFindingId": "20260708-005125-readme-md-api-src-types-ts:reviewers:3:coding-review:raw-coding-review-3-issue-001",
+    "stepName": "coding-review",
+    "reviewer": "coding-review",
+    "familyTag": "validation-side-effects",
+    "severity": "medium",
+    "title": "dueDate 未指定の createTask が invalid clock 失敗時に ID を消費する",
+    "location": "src/service.ts:46",
+    "description": "現在の createTask は src/service.ts:45 で dueDate 未指定なら clock を読まずに進み、src/service.ts:46 で idGenerator.next() を呼んだ後、src/service.ts:48 から src/service.ts:235 の getValidCurrentTime(clock) で invalid clock を ValidationError にする。そのため dueDate 未指定かつ clock.now() が Invalid Date の失敗経路では、タスクは保存されない一方で IdGenerator の状態だけが進む。これは前回までに修正した検証失敗時の ID 副作用と同種の状態不整合で、tests/contract-regression.test.ts:220-226 は保存されないことだけを確認し、ID が消費されないことを検証していない。",
+    "suggestion": "createTask では title/description/priority/assignee/tags/dueDate の検証後、ID 採番前に作成時刻も getValidCurrentTime で確定・検証してください。あわせて InvalidClock と CountingIds を組み合わせ、ValidationError 後に idGenerator.next() が呼ばれない回帰テストを追加してください。",
+    "kind": "issue"
+  },
+  {
+    "rawFindingId": "20260708-005125-readme-md-api-src-types-ts:reviewers:3:implementation-semantics-review:impl-sem-raw-3-1",
+    "stepName": "implementation-semantics-review",
+    "reviewer": "implementation-semantics-review",
+    "familyTag": "implementation-semantics/fail-fast/clock-validation",
+    "severity": "medium",
+    "title": "Invalid Date の clock.now() 保存が解消されている",
+    "location": "src/service.ts:75; src/service.ts:99; src/service.ts:114; src/service.ts:128; src/service.ts:231; src/service.ts:261; tests/contract-regression.test.ts:219",
+    "description": "src/service.ts:75,99,114,128 の更新系は getValidCurrentTime(this.clock) を通して updatedAt に保存している。createTask も src/service.ts:231-235 で dueDate 未指定時を含め getValidCurrentTime(clock) を使い、src/service.ts:261-264 で clock.now() の getTime() が有限値であることを検証している。tests/contract-regression.test.ts:219-277 で createTask/updateTask/changeStatus/assign/unassign が Invalid Date の clock.now() を保存しないことも確認されている。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0006"
+  },
+  {
+    "rawFindingId": "20260708-005125-readme-md-api-src-types-ts:reviewers:3:implementation-semantics-review:impl-sem-raw-3-2",
+    "stepName": "implementation-semantics-review",
+    "reviewer": "implementation-semantics-review",
+    "familyTag": "implementation-semantics/fail-fast/filter-date-validation",
+    "severity": "medium",
+    "title": "Invalid Date の overdueAsOf が黙って空結果化される",
+    "location": "src/service.ts:315",
+    "description": "matchesOverdue は filter.overdueAsOf.getTime() を直接比較に使っており、validateDateValue のような有限性検証を通していない。listTasks({ overdueAsOf: new Date('invalid') }) が渡されると getTime() は NaN になり、dueDate < NaN が常に false になるため、期限切れタスクが存在しても呼び出し側に ValidationError などで契約違反を知らせず通常の空結果として返す。",
+    "suggestion": "listTasks の filter.overdueAsOf も境界入力として validateDateValue で検証し、Invalid Date の場合は ValidationError を投げてください。matchesOverdue 内で比較前に検証済み時刻を使うか、filter 正規化ヘルパーを追加して全フィルタ条件の評価前に fail-fast する形が実装しやすいです。",
+    "kind": "issue"
+  }
+]

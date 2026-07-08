@@ -1,0 +1,50 @@
+[
+  {
+    "rawFindingId": "20260708-005125-readme-md-api-src-types-ts:reviewers:5:arch-review:arch-review-5-resolved-F-0010",
+    "stepName": "arch-review",
+    "reviewer": "arch-review",
+    "familyTag": "implementation-semantics/state-side-effect-before-validation",
+    "severity": "medium",
+    "title": "Invalid Date の dueDate 検証前 clock 消費が解消されている",
+    "location": "src/service.ts:230; src/service.ts:81; tests/contract-regression.test.ts:207; tests/contract-regression.test.ts:366",
+    "description": "現行コードでは createTask の dueDate 指定経路が src/service.ts:230-237 の resolveCreateDueDate で dueDate 自体を validateDueDateValue により検証してから src/service.ts:235 で getValidCurrentTime(clock) を呼ぶ順序になっている。updateTask でも src/service.ts:81 の validateUpdatedDueDateInput(input.dueDate) が src/service.ts:82 の getValidCurrentTime(this.clock) より前に実行され、src/service.ts:270-273 で Date 入力の有限性を検証している。tests/contract-regression.test.ts:207-220 と tests/contract-regression.test.ts:366-376 で create/update の Invalid Date dueDate 時に ValidationError となり clock.calls が 0 のままであることを確認し、npm run typecheck と npm test は成功した。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0010"
+  },
+  {
+    "rawFindingId": "20260708-005125-readme-md-api-src-types-ts:reviewers:5:ai-antipattern-review:raw-ai-005-resolve-f0010",
+    "stepName": "ai-antipattern-review",
+    "reviewer": "ai-antipattern-review",
+    "familyTag": "logic-error",
+    "severity": "medium",
+    "title": "Invalid Date の dueDate 検証前 clock 消費は解消済み",
+    "location": "src/service.ts:81; src/service.ts:82; src/service.ts:230; src/service.ts:234; src/service.ts:235; tests/contract-regression.test.ts:207; tests/contract-regression.test.ts:366",
+    "description": "現在の createTask dueDate 指定経路は src/service.ts:230-237 で dueDate undefined を分岐した後、src/service.ts:234 の validateDueDateValue(dueDate) によって Invalid Date を検証してから src/service.ts:235 の getValidCurrentTime(clock) を呼ぶ。updateTask も src/service.ts:81 の validateUpdatedDueDateInput(input.dueDate) で Date 指定時の有限性を検証してから src/service.ts:82 で clock を消費する。tests/contract-regression.test.ts:207-220 では createTask の Invalid Date dueDate で clock.calls と ids.calls が 0 のまま保存されないこと、tests/contract-regression.test.ts:366-376 では updateTask の Invalid Date dueDate で clock.calls が 0 のまま dueDate が保存されないことを確認した。npm run typecheck と npm test は成功し、5ファイル99テストが通過した。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0010"
+  },
+  {
+    "rawFindingId": "20260708-005125-readme-md-api-src-types-ts:reviewers:5:coding-review:raw-coding-review-5-confirm-F-0010",
+    "stepName": "coding-review",
+    "reviewer": "coding-review",
+    "familyTag": "implementation-semantics/state-side-effect-before-validation",
+    "severity": "medium",
+    "title": "Invalid Date の dueDate 検証前 clock 消費が解消された",
+    "location": "src/service.ts:234; src/service.ts:235; src/service.ts:81; src/service.ts:82",
+    "description": "src/service.ts:234-235 の createTask dueDate 指定経路は validateDueDateValue(dueDate) を getValidCurrentTime(clock) より前に実行している。updateTask も src/service.ts:81 で validateUpdatedDueDateInput(input.dueDate) を実行してから src/service.ts:82 で getValidCurrentTime(this.clock) を呼ぶ順序になっている。tests/contract-regression.test.ts:207-220 と tests/contract-regression.test.ts:366-376 で Invalid Date の dueDate 入力時に clock.calls が 0 のままで保存されないことも確認した。npm run typecheck と npm test は成功した。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0010"
+  },
+  {
+    "rawFindingId": "20260708-005125-readme-md-api-src-types-ts:reviewers:5:implementation-semantics-review:impl-sem-raw-5-1",
+    "stepName": "implementation-semantics-review",
+    "reviewer": "implementation-semantics-review",
+    "familyTag": "implementation-semantics/state-side-effect-before-validation",
+    "severity": "medium",
+    "title": "Invalid Date の dueDate 検証前 clock 消費は解消済み",
+    "location": "src/service.ts:230; src/service.ts:234; src/service.ts:235; src/service.ts:81; src/service.ts:82; tests/contract-regression.test.ts:207; tests/contract-regression.test.ts:366",
+    "description": "現行コードでは createTask の dueDate 指定経路が src/service.ts:230-237 で dueDate !== undefined の場合に src/service.ts:234 の validateDueDateValue(dueDate) を実行してから src/service.ts:235 の getValidCurrentTime(clock) を呼ぶため、new Date('invalid') では clock を消費する前に ValidationError になる。updateTask も src/service.ts:81 の validateUpdatedDueDateInput(input.dueDate) で dueDate 自体を検証してから src/service.ts:82 の getValidCurrentTime(this.clock) に進む。tests/contract-regression.test.ts:207-220 と tests/contract-regression.test.ts:366-376 で Invalid Date の dueDate 入力時に clock.calls が 0 のままで保存もされないことを確認した。累積差分全体について、データ構造の意味選択、導出値の単一情報源、命名と意味の整合、境界での fail-fast、内部状態の参照漏れを再走査し、新規の実装意味論 finding は確認しなかった。npm test は 5 files / 99 tests passed、npm run typecheck も成功した。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0010"
+  }
+]

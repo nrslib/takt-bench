@@ -1,0 +1,19 @@
+# コーディングレビュー
+
+## 結果: REJECT
+
+## サマリー
+F-0006 の元の保存不整合は解消済みですが、`dueDate` 未指定の `createTask` で invalid clock 検出前に ID を消費する新しい失敗経路を確認しました。検証失敗時に `IdGenerator` の状態が進むため差し戻しです。
+
+## 観測した指摘
+| # | family_tag | 重大度 | 場所 | 問題 | 影響 | 修正案 |
+|---|------------|--------|------|------|------|--------|
+| 1 | validation-side-effects | Medium | `src/service.ts:46` | `createTask` は `dueDate` 未指定時、ID 採番後に `getValidCurrentTime(clock)` で invalid clock を検出する。 | `ValidationError` で保存されない一方、`idGenerator.next()` だけが消費される。 | ID 採番前に作成時刻も `getValidCurrentTime` で確定・検証し、InvalidClock + CountingIds の回帰テストを追加する。 |
+
+## 検証証跡
+- 差分確認: `README.md`、`src/types.ts`、`src/service.ts`、`src/repository.ts`、`src/task-record.ts`、`src/index.ts`、`tests/contract-regression.test.ts` を確認。
+- ビルド: `npm run typecheck` 成功。
+- テスト: `npm test` 成功。5ファイル、96テスト通過。
+
+## REJECT判定条件
+- ブロッキング指摘が1件あるため REJECT。

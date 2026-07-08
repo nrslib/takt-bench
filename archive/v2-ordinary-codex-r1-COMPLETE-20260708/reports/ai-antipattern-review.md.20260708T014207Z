@@ -1,0 +1,29 @@
+# AI生成コードレビュー
+
+## 結果: APPROVE
+
+## サマリー
+F-0007 / F-0008 / F-0009 は実コードと回帰テストで解消を確認し、新規の AI 生成コード特有のブロッキング問題は検出しませんでした。
+
+## 検証した項目
+| 観点 | 結果 | 備考 |
+|------|------|------|
+| 仮定の妥当性 | ✅ | 検証失敗時の clock / idGenerator 副作用順序を再確認 |
+| API/ライブラリの実在 | ✅ | `npm run typecheck` 成功 |
+| コンテキスト適合 | ✅ | 既存の `ValidationError` / 正規化 helper / 回帰テスト方針に整合 |
+| スコープ | ✅ | open finding の修正範囲内で追加の過剰実装なし |
+
+## 観測した指摘
+| # | family_tag | カテゴリ | 重大度 | 場所 | 問題 | 修正案 |
+|---|------------|---------|--------|------|------|--------|
+| - | - | - | - | - | ブロッキング指摘なし | - |
+
+## 解消確認
+| finding | 確認結果 | 根拠 |
+|---------|----------|------|
+| F-0007 | 解消確認 | `src/service.ts:75-81` と `src/service.ts:119-120` で入力正規化後に clock を消費。`tests/contract-regression.test.ts:231-240,282-290` で検証 |
+| F-0008 | 解消確認 | `src/service.ts:45-47,238-243` で timestamp 検証後に ID 採番。`tests/contract-regression.test.ts:220-228` で検証 |
+| F-0009 | 解消確認 | `src/service.ts:147,282-285` で `overdueAsOf` を fail-fast 検証。`tests/contract-regression.test.ts:532-537` で検証 |
+
+## 再走査証跡
+Policy Source `.takt/runs/20260708-005125-readme-md-api-src-types-ts/context/policy/ai-antipattern-review.4.20260708T013204Z.md` の全 `##` セクション、および Knowledge Source `.takt/runs/20260708-005125-readme-md-api-src-types-ts/context/knowledge/fix.3.20260708T012633Z.md` の全 `##` セクションを列挙し、状態整合性・契約一貫性・フェーズ分離・fail-fast・フォールバック/デッドコード観点を `src/service.ts` と回帰テストへ照合しました。`npm run typecheck` と `npm test` は成功し、5ファイル99テスト通過を確認しました。

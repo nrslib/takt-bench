@@ -1,0 +1,19 @@
+# 実装意味論レビュー
+
+## 結果: REJECT
+
+## サマリー
+`createTask` が生成 ID の衝突を検出せず、repository の upsert により既存タスクを上書きできます。また、`Invalid Date` が `dueDate` として保存され、期限比較とソートの意味が壊れます。
+
+## 観測した指摘
+| # | family_tag | 重大度 | 場所 | 問題 | 壊れる条件 | 修正案 |
+|---|------------|--------|------|------|-----------|--------|
+| 1 | fail-fast-id-collision | High | `src/service.ts:42`, `src/repository.ts:8` | `createTask` が `idGenerator.next()` の戻り値をそのまま保存し、`InMemoryTaskRepository.save` は `Map.set` による upsert のため既存 ID を無言で置き換える | `idGenerator` が既存 ID を返すと、新規作成のつもりで既存タスクが上書きされる | 保存前に `repo.findById(id)` で衝突を確認し、既存なら repository を変更せず明示的なエラーを投げる |
+| 2 | fail-fast-date-validation | Medium | `src/service.ts:222` | `validateDueDate` が `dueDate.getTime() < now.getTime()` だけを見ており、`Invalid Date` を拒否しない | `new Date('invalid')` は `getTime()` が `NaN` になり、過去判定を通過して保存される。後続の overdue 判定や dueDate ソートも `NaN` 比較になる | `Number.isFinite(dueDate.getTime())` と `Number.isFinite(now.getTime())` を確認し、非有限値は `ValidationError` にする |
+
+## 検証証跡
+- 差分確認: `src/service.ts`, `src/repository.ts`, `src/task-record.ts`, `src/index.ts`, `README.md`, `src/types.ts`, 関連テストを確認した。
+- 判定根拠の実在確認: `src/service.ts:42` の ID 生成、`src/repository.ts:8` の upsert 保存、`src/service.ts:222` の dueDate 検証条件を実コードで確認した。
+
+## REJECT判定条件
+- ブロッキング指摘が2件あるため REJECT。

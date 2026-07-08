@@ -1,0 +1,16 @@
+# アーキテクチャレビュー
+
+## 結果: REJECT
+
+## サマリー
+`createTask` が入力検証を完了する前に `idGenerator.next()` を呼んでおり、検証失敗時にも ID 生成の副作用が残ります。README の「検証後に ID を取得する」契約と、状態整合性・フェーズ分離の設計要件に反するため差し戻しです。
+
+## 観測した指摘
+| # | family_tag | スコープ | 重大度 | 場所 | 問題 | 修正案 |
+|---|------------|---------|--------|------|------|--------|
+| 1 | architecture.state-consistency | スコープ内 | medium | `src/service.ts:42` | `createTask` で `idGenerator.next()` を呼んだ後、`src/service.ts:51` で `dueDate` 検証を行っているため、過去日付で `ValidationError` になる失敗経路でも ID が消費される。README.md:26 の「検証後、id = idGenerator.next()」に反し、失敗時の副作用が残る。 | `title` / `description` / `assignee` / `tags` / `dueDate` をすべて正規化・検証してから `idGenerator.next()` を呼ぶ順序に変更する。 |
+
+## 検証証跡
+- ビルド: `npm run typecheck` を実行し、成功を確認。
+- テスト: `npm test` を実行し、5ファイル 86テスト成功を確認。なお、構造上の副作用順序は既存テストでは検出されていない。
+- 動作確認: `README.md`、`src/types.ts`、`src/service.ts`、`src/repository.ts`、`src/index.ts`、関連テストを読み、公開 API・依存方向・状態遷移・防御的コピーの構造を確認。

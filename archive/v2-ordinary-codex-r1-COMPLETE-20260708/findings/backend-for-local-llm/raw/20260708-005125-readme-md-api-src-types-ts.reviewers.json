@@ -1,0 +1,62 @@
+[
+  {
+    "rawFindingId": "20260708-005125-readme-md-api-src-types-ts:reviewers:1:arch-review:arch-raw-001",
+    "stepName": "arch-review",
+    "reviewer": "arch-review",
+    "familyTag": "architecture.state-consistency",
+    "severity": "medium",
+    "title": "createTask が検証完了前に ID を消費している",
+    "location": "src/service.ts:42",
+    "description": "README.md:26 は createTask を「検証後、id = idGenerator.next()」と定義しているが、実装では TaskRecord 構築中に idGenerator.next() を呼んだ後、src/service.ts:51 で dueDate 検証を行っている。そのため dueDate が過去で ValidationError になる失敗経路でも IdGenerator の状態が進み、検証失敗時に副作用が残る。これは Policy の状態整合性、および Knowledge のフェーズ分離に反する。",
+    "suggestion": "createTask では title/description/assignee/tags/dueDate をすべて正規化・検証してから idGenerator.next() を呼び、検証失敗時に ID 生成の副作用が発生しない順序に変更する。",
+    "kind": "issue"
+  },
+  {
+    "rawFindingId": "20260708-005125-readme-md-api-src-types-ts:reviewers:1:ai-antipattern-review:raw-ai-001",
+    "stepName": "ai-antipattern-review",
+    "reviewer": "ai-antipattern-review",
+    "familyTag": "ai-antipattern.state-side-effect-before-validation",
+    "severity": "medium",
+    "title": "createTask が検証前に clock/idGenerator を消費している",
+    "location": "src/service.ts:40; README.md:26",
+    "description": "README.md は createTask について「検証後、id = idGenerator.next()、createdAt = updatedAt = clock.now()」と定義している。しかし現在の実装は src/service.ts:40 で clock.now() を呼び、src/service.ts:42 の idGenerator.next() を title/assignee/tags/dueDate の正規化・検証より前に評価する。空 title や空 assignee などで ValidationError になる入力でも ID が消費され、失敗経路で外部注入依存の状態が進む。これは AI 生成コードで起きやすい「もっともらしいが契約順序を外す」状態副作用の問題で、現行テストも ValidationError 後に次の成功作成の ID が飛ばないことを検証していない。",
+    "suggestion": "createTask ではまず入力を正規化・検証し、検証がすべて成功した後に idGenerator.next() と作成時刻の取得を行う構造に変更してください。ValidationError 後に次の正常 createTask が最初の ID を使うことを確認する回帰テストも追加してください。",
+    "kind": "issue"
+  },
+  {
+    "rawFindingId": "20260708-005125-readme-md-api-src-types-ts:reviewers:1:coding-review:raw-coding-001",
+    "stepName": "coding-review",
+    "reviewer": "coding-review",
+    "familyTag": "validation-side-effects",
+    "severity": "medium",
+    "title": "createTask が検証前に ID と時刻を消費している",
+    "location": "src/service.ts:40",
+    "description": "README.md:26-27 は createTask について「検証後」に idGenerator.next() と clock.now() を使う契約にしていますが、実装は line 40 で clock.now()、line 42 で idGenerator.next() を実行してから line 43 以降の title/assignee/tags/dueDate 検証に入ります。そのため、空 title などで ValidationError になる入力でも ID が消費され、次の正常作成タスクの ID が進む副作用が発生します。",
+    "suggestion": "title/description/priority/assignee/tags を先に正規化・検証し、dueDate 検証に必要な now を取得した後、すべての検証が成功してから idGenerator.next() で ID を採番してください。あわせて、ValidationError 後に次の正常 createTask の ID が進まない回帰テストを追加してください。",
+    "kind": "issue"
+  },
+  {
+    "rawFindingId": "20260708-005125-readme-md-api-src-types-ts:reviewers:1:implementation-semantics-review:impl-sem-raw-1",
+    "stepName": "implementation-semantics-review",
+    "reviewer": "implementation-semantics-review",
+    "familyTag": "implementation-semantics/fail-fast/id-collision",
+    "severity": "high",
+    "title": "createTask が生成 ID の衝突を検出せず既存タスクを上書きする",
+    "location": "src/service.ts:42; src/repository.ts:8",
+    "description": "createTask は idGenerator.next() の戻り値をそのまま task.id に入れて save しています。一方 InMemoryTaskRepository.save は Map.set による upsert なので、idGenerator が既存 ID を返した場合、作成操作のつもりで既存タスクを無言で置き換えます。これは createTask の「新規作成」という意味と衝突し、ID 生成契約の破れを境界で fail-fast できません。",
+    "suggestion": "idGenerator.next() の結果を保存前に repo.findById(id) で確認し、既存ならリポジトリを変更せず明示的なエラーを投げてください。正常時だけ TaskRecord を組み立てて save する形にすると、上書きと部分更新を避けられます。",
+    "kind": "issue"
+  },
+  {
+    "rawFindingId": "20260708-005125-readme-md-api-src-types-ts:reviewers:1:implementation-semantics-review:impl-sem-raw-2",
+    "stepName": "implementation-semantics-review",
+    "reviewer": "implementation-semantics-review",
+    "familyTag": "implementation-semantics/fail-fast/date-validation",
+    "severity": "medium",
+    "title": "Invalid Date が dueDate として保存される",
+    "location": "src/service.ts:222",
+    "description": "validateDueDate は dueDate.getTime() < now.getTime() だけを検証しています。new Date('invalid') の getTime() は NaN で、NaN < now は false になるため createTask/updateTask で ValidationError にならず保存されます。その後、overdue 判定や dueDate 昇順ソートでも NaN 比較になり、期限の意味を持たない値が通常の TaskRecord として流れます。",
+    "suggestion": "validateDueDate で dueDate.getTime() と now.getTime() が有限値かを Number.isFinite などで確認し、Invalid Date は ValidationError にしてください。その後に過去判定を行うと、期限比較の前提が保てます。",
+    "kind": "issue"
+  }
+]

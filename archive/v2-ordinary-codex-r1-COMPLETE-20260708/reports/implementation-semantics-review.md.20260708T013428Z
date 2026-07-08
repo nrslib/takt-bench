@@ -1,0 +1,20 @@
+# 実装意味論レビュー
+
+## 結果: REJECT
+
+## サマリー
+F-0006 は `getValidCurrentTime` 経由で全時刻保存経路が検証されるようになり、解消を確認しました。新たに `listTasks` の `overdueAsOf` が `Invalid Date` の場合、契約違反を通知せず空結果化する経路を検出しました。
+
+## 観測した指摘
+| # | family_tag | 重大度 | 場所 | 問題 | 壊れる条件 | 修正案 |
+|---|------------|--------|------|------|-----------|--------|
+| 1 | implementation-semantics/fail-fast/filter-date-validation | Medium | `src/service.ts:315` | `matchesOverdue` が `filter.overdueAsOf.getTime()` を有限性検証なしで比較に使っている | `listTasks({ overdueAsOf: new Date('invalid') })` を渡すと `getTime()` が `NaN` になり、`dueDate < NaN` が常に false になって期限切れタスクが存在しても通常の空結果として返る | `overdueAsOf` も境界入力として `validateDateValue` で検証し、`Invalid Date` の場合は `ValidationError` を投げる |
+
+## 検証証跡
+- 差分確認: `src/service.ts`, `src/repository.ts`, `src/task-record.ts`, `src/types.ts`, `tests/contract-regression.test.ts` を確認した。
+- 解消確認: F-0006 は `src/service.ts:75`, `src/service.ts:99`, `src/service.ts:114`, `src/service.ts:128`, `src/service.ts:231`, `src/service.ts:261` と `tests/contract-regression.test.ts:219-277` で解消確認。
+- 再走査証跡: Knowledge の「データ構造の意味選択」「導出値の単一情報源」「命名と意味の整合」「境界での fail-fast」「内部状態の参照漏れ」を累積差分全体に照合した。
+- 検証コマンド: `npm test` は 5 files / 96 tests passed、`npm run typecheck` は成功。
+
+## REJECT判定条件
+- ブロッキング指摘が1件あるため REJECT。

@@ -1,0 +1,29 @@
+# AI生成コードレビュー
+
+## 結果: REJECT
+
+## サマリー
+`createTask` が入力検証の完了前に `clock.now()` と `idGenerator.next()` を消費しており、失敗経路で ID 生成の副作用が進むため差し戻しです。
+
+## 検証した項目
+| 観点 | 結果 | 備考 |
+|------|------|------|
+| 仮定の妥当性 | NG | README の「検証後に ID 取得」という順序契約と実装順が不一致 |
+| API/ライブラリの実在 | OK | `structuredClone`、Vitest、TypeScript は型チェック・テストで確認済み |
+| コンテキスト適合 | OK | `TaskService` は repository port に依存し、公開入口も `src/index.ts` に集約 |
+| スコープ | OK | 実装対象は service/repository/index と契約回帰テストに収まっている |
+
+## 観測した指摘
+| # | family_tag | カテゴリ | 重大度 | 場所 | 問題 | 修正案 |
+|---|------------|---------|--------|------|------|--------|
+| 1 | logic-error | 失敗経路の副作用 | medium | `src/service.ts:40`, `src/service.ts:42`, `README.md:26` | README は `createTask` を「検証後、id = idGenerator.next()」と定義しているが、実装は `clock.now()` と `idGenerator.next()` を title/assignee/dueDate 検証より前に評価する。`ValidationError` になる入力でも ID が消費される。 | `createTask` では先に入力を正規化・検証し、成功後に `idGenerator.next()` と作成時刻を取得する。ValidationError 後に次の正常作成で ID が飛ばない回帰テストも追加する。 |
+
+## REJECT判定条件
+- ブロッキング指摘が1件あるため REJECT。
+
+## 再走査証跡
+- Policy Source: `.takt/runs/20260708-005125-readme-md-api-src-types-ts/context/policy/ai-antipattern-review.1.20260708T010719Z.md`
+- Knowledge Source: `.takt/runs/20260708-005125-readme-md-api-src-types-ts/context/knowledge/implement.1.20260708T010251Z.md`
+- 照合した Policy `##`: 原則、スコープ判定、判定基準、振る舞い証跡の判定、ファクトチェック、具体的な指摘の書き方、指摘ID管理、再オープン条件、finding_id の意味固定、テストファイルの扱い、変更履歴ファイルの扱い、ボーイスカウトルール、判定ルール、レビューの基本手順、堂々巡りの検出、仮定の検証、もっともらしいが間違っている検出、スコープクリープ検出、デッドコード検出、フォールバック・デフォルト引数の濫用検出、未使用コードの検出、不要な後方互換コードの検出。
+- 照合した Knowledge `##`: ヘキサゴナルアーキテクチャ、バリデーション戦略、エラーハンドリング、ドメインモデル設計、リポジトリパターン、テスト戦略、構造・設計、境界での解決、コード品質の検出手法、テスタビリティ、アンチパターン検出、仕様準拠の検証、呼び出しチェーン検証、境界での fail-fast、内部状態の参照漏れ。
+- 検証コマンド結果: `npm run typecheck` 成功、`npm test` 成功（5ファイル、86テスト）。

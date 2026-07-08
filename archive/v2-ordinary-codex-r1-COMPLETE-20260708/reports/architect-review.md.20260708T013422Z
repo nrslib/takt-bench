@@ -1,0 +1,16 @@
+# アーキテクチャレビュー
+
+## 結果: REJECT
+
+## サマリー
+F-0006 は現在コードで解消を確認しました。一方、累積差分の再走査で `updateTask` / `assign` が入力検証前に `clock` を消費する同種の状態整合性問題を検出したため、差し戻しです。
+
+## 観測した指摘
+| # | family_tag | スコープ | 重大度 | 場所 | 問題 | 修正案 |
+|---|------------|---------|--------|------|------|--------|
+| 1 | architecture.state-consistency | スコープ内 | medium | `src/service.ts:75; src/service.ts:114` | `updateTask` は `getValidCurrentTime(this.clock)` 後に `normalizeTitle` を実行し、`assign` も `clock` 取得後に `normalizeAssignee` を実行するため、入力 `ValidationError` 経路で注入 `Clock` が消費される。create 側で修正済みの副作用順序契約が更新・担当者操作に適用されていない。 | `updateTask` は入力正規化・検証を先に行い、必要になった時点で `getValidCurrentTime` を呼ぶ。`assign` は `normalizeAssignee` を時刻取得前に移し、入力検証失敗時に `Clock` を消費しない回帰テストを追加する。 |
+
+## 検証証跡
+- ビルド: `npm run typecheck` 成功。
+- テスト: `npm test` 成功。5ファイル、96テスト通過。
+- 動作確認: Policy / Knowledge 全文、`README.md`、`src/types.ts`、`src/service.ts`、`src/repository.ts`、`src/index.ts`、`tests/contract-regression.test.ts` を再読。F-0006 は `src/service.ts:261-265` の共通ヘルパー経由で解消済み。
