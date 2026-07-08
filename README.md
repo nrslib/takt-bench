@@ -6,14 +6,14 @@ Built on [TAKT](https://github.com/nrslib/takt), a multi-agent orchestration CLI
 
 ## The headline experiment
 
-The `qwen-coder_gemma-reviewer-fc` combo runs an event-sourcing inventory task with:
+The current lineup runs two fixed-spec implementation tasks (a task-management service layer and an event-sourcing inventory library) plus a feature-addition task on the TAKT codebase itself (89k lines), with:
 
 - coder: Qwen3-Coder-next (ollama-cloud)
 - reviewers: Gemma 4 31B × 4 in parallel (architecture / AI anti-patterns / coding / implementation semantics)
 - findings ledger (TAKT Finding Contract): every finding is tracked; resolution requires reviewer confirmation evidence; disputes are adjudicated
-- final gate + ledger adjudicator: codex (the only commercial seats — they judge, they never write code)
+- final gate + ledger adjudicator: codex (the only commercial roles — they judge, they never write code)
 
-In the archived run (`archive/deep-fc-gemma-run1-20260705/`), the team worked autonomously for 73 minutes: it found 12 issues, fixed and confirmed 11, caught one reviewer's false "this is fixed" claim through cross-review, and escalated the final unresolved issue to a human with evidence — which turned out to be a real bug worth human eyes.
+Official numbers live in `archive/*-RESULTS.md`; every published score is backed by an archived run (ledger, reports, artifact, judge samples). Early trial-and-error archives from superseded workflow lineages were removed — they remain in git history.
 
 ## How it works
 
