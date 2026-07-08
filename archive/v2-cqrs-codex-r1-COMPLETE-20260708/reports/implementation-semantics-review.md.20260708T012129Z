@@ -1,0 +1,21 @@
+# 実装意味論レビュー
+
+## 結果: REJECT
+
+## サマリー
+内部状態の参照漏れ、外部入力キーを `Record` で扱う際の own property 判定欠如、Projection の不正イベント黙殺を確認しました。いずれもテストを通っても意味的に壊れるため差し戻しです。
+
+## 観測した指摘
+| # | family_tag | 重大度 | 場所 | 問題 | 壊れる条件 | 修正案 |
+|---|------------|--------|------|------|-----------|--------|
+| 1 | internal-state-reference-leak | High | `src/event-store.ts:12`, `src/event-store.ts:24`, `src/event-store.ts:28` | `InMemoryEventStore` が配列だけをコピーし、保存済みイベントオブジェクトの参照を外部に共有している | `append` 後に元イベントを変更する、または `load().events[0]` を変更すると、保存済みイベントが書き換わる | `append` と `load` の両方で各 `DomainEvent` を複製して保存・返却する |
+| 2 | dynamic-key-record | High | `src/domain.ts:39`, `src/domain.ts:78`, `src/domain.ts:133` | `reservationId` を外部入力キーにする `Record` を `state.reservations[id]` で存在判定している | `reservationId: "toString"` などで継承プロパティが予約として扱われ、未使用 ID が重複扱い、未存在予約が存在扱いになる | `Object.hasOwn(state.reservations, reservationId)` に統一し、必要なら null prototype の辞書を使う |
+| 3 | dynamic-key-record | High | `src/projection.ts:39`, `src/projection.ts:99` | Projection 内部の予約辞書も own property 判定なしで `reservationId` を参照している | 予約がない商品に `StockShipped` with `reservationId: "toString"` を適用すると、継承プロパティを数量として扱い `onHand` が `NaN` になり得る | 内部を `Map<string, number>` にするか、Record 継続なら `Object.hasOwn` で own property の値だけを読む |
+| 4 | fail-fast-boundary | Medium | `src/projection.ts:73`, `src/projection.ts:40` | `StockProjection.apply` が存在しない商品・予約へのイベントを黙って無視している | `ProductCreated` 前の `StockReceived` や、存在しない予約への `StockShipped` がログ破損として検出されず、読み取りモデルだけが欠落・不整合になる | Projection 境界では unknown product / unknown reservation を明示的に throw する。無視を仕様にするなら README に契約として明記する |
+
+## 検証証跡
+- 差分確認: `README.md`, `src/types.ts`, `src/domain.ts`, `src/event-store.ts`, `src/projection.ts`, `src/command-handler.ts`, `src/index.ts` と関連テストを確認しました。
+- 判定根拠の実在確認: 上記 `file:line` は実コードを行番号付きで確認済みです。
+
+## REJECT判定条件
+- ブロッキング指摘が4件あります。

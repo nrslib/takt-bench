@@ -1,0 +1,14 @@
+# CQRS+ESレビュー
+
+## 結果: REJECT
+
+## サマリー
+公開された可変 `initialState` が `CommandHandler` の Aggregate replay 初期値として共有されており、イベント履歴以外の外部 mutation が Aggregate 判定へ混入します。CQRS+ES の「イベント履歴が唯一の真実」という前提を壊すため、ブロッキング指摘とします。
+
+## 観測した指摘
+| # | family_tag | 重大度 | スコープ | 場所 | 問題 | 影響 | 修正案 |
+|---|------------|--------|---------|------|------|------|--------|
+| 1 | cqrs-es.aggregate-state.external-mutable-initial-state | High | スコープ内 | `src/domain.ts:3`, `src/command-handler.ts:9` | `initialState` は `src/index.ts` から公開される可変オブジェクトで、`CommandHandler` が同じオブジェクトを replay の初期値に使っている | 利用者が `initialState.exists` や `initialState.reservations` を変更すると、空ストリームの Aggregate 状態がイベント履歴ではなく外部変更から復元され、`ProductCreated` なしで在庫操作イベントを保存できる | 公開 `initialState` を深く freeze するか、`CommandHandler` の replay 初期値には公開オブジェクトを使わず、内部 factory で毎回新しい初期状態を生成する。外部 mutation が Aggregate 判定へ流入しないことをテストで固定する |
+
+## REJECT判定条件
+- ブロッキング指摘が1件以上あるため REJECT。

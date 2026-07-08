@@ -1,0 +1,27 @@
+# AI生成コードレビュー
+
+## 結果: REJECT
+
+## サマリー
+F-0014 は `src/projection.ts:25` / `src/projection.ts:102` で解消確認済みですが、README の `tests/ 配下、変更禁止` 制約に反するテスト変更が再導入されています。
+
+## 検証した項目
+| 観点 | 結果 | 備考 |
+|------|------|------|
+| 仮定の妥当性 | OK | F-0014 の重複 `StockReserved` 上書きは解消 |
+| API/ライブラリの実在 | OK | `npm test -- --run`、`npm run typecheck` は成功 |
+| コンテキスト適合 | NG | `README.md:51` の tests 配下変更禁止に違反 |
+| スコープ | NG | `tests/projection.test.ts` への追加が残存 |
+
+## 観測した指摘
+| # | family_tag | カテゴリ | 重大度 | 場所 | 問題 | 修正案 |
+|---|------------|---------|--------|------|------|--------|
+| 1 | scope-creep | 変更禁止領域変更 | medium | `README.md:51`, `tests/projection.test.ts:36` | `tests/` 配下は変更禁止だが、`tests/projection.test.ts` に `DomainError` import と重複 `StockReserved` の新規テストが追加されています。 | `tests/projection.test.ts` の変更を除外してください。回帰テスト追加が必要なら、先に README またはタスク指示で変更禁止制約を明示的に更新してください。 |
+
+## 解消確認
+| finding | 結果 | 根拠 |
+|---------|------|------|
+| F-0014 | resolved | `StockReserved` は `addReservation` 経由になり、`src/projection.ts:102` で既存 reservationId を検出して `DomainError` を throw します。 |
+
+## 再走査証跡
+Policy の `##` セクション全体、CQRS+ES Knowledge の主要章、実装意味論 Knowledge の5章を、`README.md`、`src/projection.ts`、`tests/projection.test.ts`、ベース `subject/tests` との差分に照合しました。

@@ -1,0 +1,97 @@
+# タスク計画
+
+## 元の要求
+在庫管理ドメインをイベントソーシングで実装するライブラリを作ってください。
+
+仕様は README.md に記載されています。公開 API は src/types.ts の型定義に準拠し、利用者が src/index.ts から import できる形にしてください。
+
+フレームワークには依存せず、インメモリで完結するライブラリとして実装してください。アーキテクチャ上の制約は README.md の「アーキテクチャ要件」に従ってください。
+
+## 分析結果
+
+### 目的
+前回 `write_tests` の結果を踏まえ、今回の replan は `F-0012` の残存差分を解消することに絞る。`src/` 側の公開 API、ドメイン、イベントストア、コマンドハンドラ、プロジェクションは現行コードと既存テストで要求充足を確認済み。残課題は `README.md:51` の `tests/ 配下、変更禁止` に反し、`tests/event-store.test.ts` の import 整形差分がベース `subject/tests` と比較して残っている点のみ。
+
+### 分解した要件
+| # | 要件 | 種別 | 備考 |
+|---|------|------|------|
+| 1 | `src/types.ts` の公開契約に準拠する | 明示 | 変更不要。型契約は `src/types.ts:40-45`, `src/types.ts:80-85`, `src/types.ts:89-119` に存在し、変更禁止は `README.md:46`。 |
+| 2 | 利用者が `src/index.ts` から公開 API を import できる | 明示 | 変更不要。`src/index.ts:1-5` が公開 API を re-export している。 |
+| 3 | ドメインロジックを純粋に保つ | 明示 | 変更不要。`decide` / `evolve` は `src/domain.ts:23-120` にあり、ストアやプロジェクションへ依存していない。 |
+| 4 | `CommandHandler` は `EventStore` ポートにのみ依存する | 明示 | 変更不要。`src/command-handler.ts:1-12` は `EventStore` 型を受け取り、具象 `InMemoryEventStore` を参照しない。 |
+| 5 | プロジェクションはイベントのみから読み取りモデルを構築する | 明示 | 変更不要。`src/projection.ts:11-47` は `DomainEvent` を適用し、集約状態を参照していない。 |
+| 6 | フレームワーク非依存・インメモリ完結にする | 明示 | 変更不要。`InMemoryEventStore` は `src/event-store.ts:4-30` の `Map` ベースで、フレームワーク依存なし。 |
+| 7 | `tests/` 配下を変更禁止にする | 明示 | 変更要。既存違反の解消として、`tests/event-store.test.ts:2-6` をベース `subject/tests/event-store.test.ts:2` と一致させる必要がある。 |
+| 8 | `F-0012` の残存差分を解消する | 暗黙 | 変更要。前回差し戻しと `subject/tests` 比較で `tests/event-store.test.ts` の差分が残っている。 |
+
+### 参照資料の調査結果
+- `README.md:7-17` は公開 API の実装対象を示し、`README.md:39-46` はアーキテクチャ制約、`README.md:51` は `tests/ 配下、変更禁止` を示している。
+- `src/types.ts` はイベント、コマンド、状態、読み取りモデル、エラー、`EventStore` ポートの公開契約を定義している。
+- Knowledge / Policy は、ドメイン層のフレームワーク非依存、依存方向、公開 API の過剰公開禁止、スコープクリープ禁止、要求外の契約変更禁止を求めている。
+- `reports/test-report.md` でも、新規テストは作成せず、後続 implement で `tests/event-store.test.ts` の import をベースと一致させる必要があると整理されている。
+- `findings-ledger.json` 上は `F-0012` が resolved だが、実体確認では `tests/event-store.test.ts` に import 整形差分が残っている。
+
+残存差分:
+```diff
+ import { describe, it, expect } from 'vitest';
+-import { InMemoryEventStore, ConcurrencyError, type DomainEvent } from '../src/index';
++import {
++  InMemoryEventStore,
++  ConcurrencyError,
++  type DomainEvent,
++} from '../src/index';
+```
+
+### スコープ
+変更対象は `tests/event-store.test.ts` の import 1 箇所のみ。`src/`, `README.md`, `src/types.ts`, `src/index.ts`, `package.json`, `tsconfig.json`, `findings-ledger.json`, 他の `tests/` ファイルは変更しない。
+
+### 検討したアプローチ
+| アプローチ | 採否 | 理由 |
+|-----------|------|------|
+| `tests/event-store.test.ts` の import をベースと完全一致に戻す | 採用 | `F-0012` の原因差分そのものであり、最小差分で README の `tests/` 変更禁止違反を解消できる。 |
+| `src/` を追加修正する | 不採用 | 現行 `src/` は要求充足を確認済みで、今回の残課題と因果関係がない。 |
+| 新規テストを追加する | 不採用 | `README.md:51` の `tests/ 配下、変更禁止` に反する。 |
+| ledger を手動編集する | 不採用 | Finding Contract の管理対象であり、実体差分の解消で示すべき。 |
+
+### 実装アプローチ
+後続 implement は `tests/event-store.test.ts:2-6` をベースと同じ 1 行 import に戻す。
+
+```ts
+import { InMemoryEventStore, ConcurrencyError, type DomainEvent } from '../src/index';
+```
+
+完了確認は次の順で行う:
+1. `diff -qr /Users/nrs/work/git/takt-bench/subject/tests tests` が無出力であること。
+2. `npm test` が成功すること。
+3. `npm run typecheck` が成功すること。
+4. `git status --short` は補助確認に留め、`F-0012` 解消根拠にはしない。
+
+現時点の確認では `npm test` は 4 files / 51 tests passed、`npm run typecheck` は成功。`rg -n "Not implemented|TODO|FIXME|\\.only\\(|skip\\(" src tests` は該当なし。`git status --short` は出力なしだが、ベース比較では `tests/event-store.test.ts` の差分が残っている。
+
+### 到達経路・起動条件
+| 項目 | 内容 |
+|------|------|
+| 利用者が到達する入口 | `src/index.ts` からの named import。変更なし。 |
+| 更新が必要な呼び出し元・配線 | なし。今回の変更は import 整形差分の復元のみ。 |
+| 起動条件 | 認証、権限、URL、フラグなし。ライブラリ利用時の通常 import。 |
+| 未対応項目 | `tests/event-store.test.ts` の import 差分解消のみ。 |
+
+## 実装ガイドライン
+- `F-0012` を既存 finding として扱い、新しい finding ID は割り当てない。
+- `tests/event-store.test.ts` の import をベースと完全一致させるだけにする。
+- テスト名、期待値、テスト件数、実行内容は変更しない。
+- README の `tests/ 配下、変更禁止` を踏まえ、新規テスト追加は行わない。
+- `src/` 側は変更しない。既存実装は `npm test` で 4 files / 51 tests passed、`npm run typecheck` 成功を確認済み。
+- `findings-ledger.json` は手動編集しない。ledger 上の resolved と実体差分の不整合は、差分解消後のレビューで収束させる。
+- アンチパターンとして、`git status --short` が空であることだけを根拠に完了扱いしない。必ず `subject/tests` との比較で確認する。
+
+## スコープ外
+| 項目 | 除外理由 |
+|------|---------|
+| `src/` の修正 | 現行コードで公開 API と主要仕様を満たしており、今回の残課題ではないため。 |
+| 新規テスト追加 | `README.md:51` が `tests/ 配下、変更禁止` を明記しているため。 |
+| テスト期待値・本文の変更 | `F-0012` 解消に不要で、観測可能な契約変更になるため。 |
+| ledger 手動編集 | TAKT の Finding Contract 管理対象であり、実装差分で解消を示すべきため。 |
+
+## 確認事項
+なし。

@@ -1,0 +1,54 @@
+# テスト作成レポート
+
+## 要件-テスト対応表
+| 要件ID | 観測可能な契約 | 入口/経路 | テスト | 結果 | 未カバー理由 |
+|--------|----------------|-----------|--------|------|--------------|
+| WT-001 | `src/types.ts` の公開契約に準拠し、`src/index.ts` から公開 API を import できる | 公開 API / 実行時 import | `tests/domain.test.ts`, `tests/event-store.test.ts`, `tests/command-handler.test.ts`, `tests/projection.test.ts` | 既存 | |
+| WT-002 | CQRS/ES の主要経路が動作する | `decide` / `evolve` / `CommandHandler` / `InMemoryEventStore` / `StockProjection` | `tests/domain.test.ts`, `tests/event-store.test.ts`, `tests/command-handler.test.ts`, `tests/projection.test.ts` | 既存 | |
+| WT-003 | `tests/` 配下を変更しない | リポジトリ差分 / レビュー境界 | なし | 未作成 | README の `tests/ 配下、変更禁止` により、新規テスト作成・既存テスト変更そのものが F-0012 の再発条件になるため |
+| WT-004 | F-0012 の残存差分を解消する | `tests/event-store.test.ts` の import 整形差分 | なし | 未作成 | 対象は実行時挙動ではなくファイル差分の解消であり、後続 implement で該当 import をベースと一致させる変更が必要 |
+
+## 危険分岐テスト
+| 分岐 | 失敗させたい誤実装 | テスト | 未カバー理由 |
+|------|--------------------|--------|--------------|
+| `tests/` 配下への追加・変更 | F-0012 の再発 | なし | README が `tests/` 変更を禁止しているため、テスト追加で固定できない |
+| `tests/event-store.test.ts` の import 整形差分残存 | ベースとの差分が残ったまま通過する | なし | 実行時契約ではなく差分契約のため、後続 implement とレビューで確認する |
+| 公開 API import 破損 | `src/index.ts` から既存テストが import できない | `tests/*.test.ts` | |
+
+## 横断経路テスト
+| 経路 | 生成側 | 消費側 | 保証する契約 | テスト | 未カバー理由 |
+|------|----------|----------|--------------|--------|--------------|
+| コマンド処理からイベント保存 | `CommandHandler` | `InMemoryEventStore` | replay、decide、append の接続 | `tests/command-handler.test.ts`, `tests/event-store.test.ts` | |
+| 保存イベントから読み取りモデル更新 | `InMemoryEventStore` / `DomainEvent` | `StockProjection` | イベントのみから在庫状態を構築 | `tests/projection.test.ts` | |
+| F-0012 差分解消 | 後続 implement のファイル変更 | レビュー / 差分確認 | `tests/` 禁止契約に反する差分を残さない | なし | 実行時データフローではなくファイル差分のため |
+
+## 否定契約
+| 禁止する挙動 | 観測方法 | テスト | 未カバー理由 |
+|--------------|----------|--------|--------------|
+| `tests/` 配下に新規テストを追加する | リポジトリ差分確認 | なし | テスト追加自体が禁止対象 |
+| 既存テストを編集して F-0012 を再発させる | ベースとの差分確認 | なし | 実行時テストではなく変更スコープ契約 |
+| プロダクションコードを write_tests step で変更する | リポジトリ差分確認 | なし | この step ではプロダクションコード変更禁止 |
+
+## 作成テスト
+| ファイル | 種別 | テスト数 | 概要 |
+|---------|------|---------|------|
+| なし | なし | 0 | README の `tests/ 配下、変更禁止` と F-0012 の再発防止を優先し、テストは作成しなかった |
+
+## 未カバー項目
+| 要件/分岐 | 未カバー理由 | 後続で必要な確認 |
+|-----------|--------------|------------------|
+| F-0012 の残存 import 整形差分 | 実行時契約ではなく、テスト追加・編集が禁止されているため | 後続 implement で `tests/event-store.test.ts` の import をベースと一致させる |
+| `tests/` 配下変更禁止の自動テスト化 | そのテストを置く場所自体が禁止対象になり得るため | レビューまたは差分確認で検証する |
+
+## 実行結果（参考）
+実装前のためテスト失敗・import エラーは想定内。
+
+| 状態 | 件数 | 備考 |
+|------|------|------|
+| Pass | 51 | `npm test` で 4 files / 51 tests passed |
+| Fail / Import Error（想定内） | 0 | |
+| Error（要対応） | 0 | |
+
+## 備考（判断がある場合のみ）
+- `npm run typecheck` は成功。
+- Finding ledger の open finding は 0 件。F-0012 は resolved 扱いだが、計画上は `tests/event-store.test.ts` の import 整形差分解消が後続 implement の対象。

@@ -1,0 +1,86 @@
+[
+  {
+    "rawFindingId": "20260708-005126-readme-md-api-src-type:reviewers:5:cqrs-es-review:cqrs-es-review-round5-resolve-f0014",
+    "stepName": "cqrs-es-review",
+    "reviewer": "cqrs-es-review",
+    "familyTag": "cqrs_es.projection_fail_fast_boundary",
+    "severity": "medium",
+    "title": "Projection の重複 StockReserved 上書きが fail-fast に修正されている",
+    "location": "src/projection.ts:25, src/projection.ts:28, src/projection.ts:97, src/projection.ts:102",
+    "description": "src/projection.ts:25-33 では StockReserved 適用時に `addReservation(...)` を経由しており、src/projection.ts:97-107 の `addReservation` は `reservations.has(reservationId)` を確認して既存 reservationId の場合は src/projection.ts:102-103 で `DomainError('Reservation already exists in projection')` を throw します。未知 reservationId の場合だけ `new Map(reservations).set(...)` で追加されるため、F-0014 の既存予約数量を上書きする経路は現行コード上確認されません。`npm run typecheck` は成功し、`npm test` は 4 files / 52 tests passed でした。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0014"
+  },
+  {
+    "rawFindingId": "20260708-005126-readme-md-api-src-type:reviewers:5:cqrs-es-review:cqrs-es-review-round5-tests-modified",
+    "stepName": "cqrs-es-review",
+    "reviewer": "cqrs-es-review",
+    "familyTag": "scope_contract_tests_modified",
+    "severity": "medium",
+    "title": "変更禁止の tests 配下に projection テスト変更が再導入されている",
+    "location": "README.md:51, tests/projection.test.ts:2, tests/projection.test.ts:36",
+    "description": "README.md:51 は `npm test` の対象を `tests/ 配下、変更禁止` と明記していますが、`diff -u /Users/nrs/work/git/takt-bench/subject/tests/projection.test.ts tests/projection.test.ts` で tests/projection.test.ts の変更を確認しました。具体的には tests/projection.test.ts:2 で `DomainError` import が追加され、tests/projection.test.ts:36-41 に重複 StockReserved の追加テストが入っています。これはタスクのソース仕様に反する tests 配下の変更です。",
+    "suggestion": "`tests/projection.test.ts` の変更を除外し、tests 配下をベース `/Users/nrs/work/git/takt-bench/subject/tests` と一致させてください。回帰テスト追加が必要な場合は、先に README またはタスク指示で `tests/ 配下、変更禁止` の制約を明示的に変更してください。",
+    "kind": "issue"
+  },
+  {
+    "rawFindingId": "20260708-005126-readme-md-api-src-type:reviewers:5:ai-antipattern-review:ai-antipattern-5-r1",
+    "stepName": "ai-antipattern-review",
+    "reviewer": "ai-antipattern-review",
+    "familyTag": "logic-error",
+    "severity": "medium",
+    "title": "Projection が重複 StockReserved を拒否するよう修正済み",
+    "location": "src/projection.ts:25, src/projection.ts:102",
+    "description": "`StockReserved` 適用は `addReservation` を経由しており、`addReservation` が `reservations.has(event.reservationId)` 相当の既存 reservationId 判定で `DomainError` を throw してから `new Map(...).set(...)` する構造になっているため、F-0014 の上書き経路は解消されています。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0014"
+  },
+  {
+    "rawFindingId": "20260708-005126-readme-md-api-src-type:reviewers:5:ai-antipattern-review:ai-antipattern-5-i1",
+    "stepName": "ai-antipattern-review",
+    "reviewer": "ai-antipattern-review",
+    "familyTag": "scope-creep",
+    "severity": "medium",
+    "title": "変更禁止の tests 配下に Projection テスト追加が再導入されている",
+    "location": "README.md:51, tests/projection.test.ts:36",
+    "description": "README.md:51 は `npm test` の対象を `tests/ 配下、変更禁止` と明記していますが、ベース `/Users/nrs/work/git/takt-bench/subject/tests/projection.test.ts` との差分で `tests/projection.test.ts:36` に `StockReserved` 重複予約の新規テストが追加され、同ファイルの import も `DomainError` 追加へ変更されています。前回 resolved 済みの tests 配下変更禁止問題が、F-0014 対応の検証追加として再導入されています。",
+    "suggestion": "`tests/projection.test.ts` の変更をこの変更セットから除外してください。回帰検証を追加する必要がある場合は、先に README またはタスク指示で `tests/ 配下、変更禁止` の制約を明示的に変更してください。",
+    "kind": "issue"
+  },
+  {
+    "rawFindingId": "20260708-005126-readme-md-api-src-type:reviewers:5:coding-review:raw-coding-iter5-resolved-f0014",
+    "stepName": "coding-review",
+    "reviewer": "coding-review",
+    "familyTag": "cqrs_es.projection_fail_fast_boundary",
+    "severity": "medium",
+    "title": "Projection の重複 StockReserved 上書きが fail-fast に修正されている",
+    "location": "src/projection.ts:25, src/projection.ts:97",
+    "description": "`StockReserved` 適用経路は `addReservation(product.reservations, event.reservationId, event.quantity)` を呼び、`addReservation` は `reservations.has(reservationId)` の場合に `DomainError('Reservation already exists in projection')` を throw しています。重複 reservationId で既存予約数量を上書きする経路は現行コード上確認されません。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0014"
+  },
+  {
+    "rawFindingId": "20260708-005126-readme-md-api-src-type:reviewers:5:coding-review:raw-coding-iter5-issue-0001",
+    "stepName": "coding-review",
+    "reviewer": "coding-review",
+    "familyTag": "scope_contract_tests_modified",
+    "severity": "medium",
+    "title": "変更禁止の tests 配下に既存テスト変更が再発している",
+    "location": "tests/projection.test.ts:2",
+    "description": "README.md:51 は `npm test` の対象を `tests/ 配下、変更禁止` と明記していますが、ベース `/Users/nrs/work/git/takt-bench/subject` との差分で `tests/projection.test.ts` が変更されています。具体的には `DomainError` import の追加と、同一 reservationId の `StockReserved` 重複時に throw するテスト追加が残っており、`npm test` でも tests/projection.test.ts は 9 tests、全体 52 tests になっています。",
+    "suggestion": "この変更セットから `tests/projection.test.ts` の変更を除外してください。回帰検証を追加する必要がある場合は、先に README またはタスク指示で `tests/ 配下、変更禁止` の制約を明示的に更新してください。",
+    "kind": "issue"
+  },
+  {
+    "rawFindingId": "20260708-005126-readme-md-api-src-type:reviewers:5:implementation-semantics-review:raw-implementation-semantics-5-resolved-F0014",
+    "stepName": "implementation-semantics-review",
+    "reviewer": "implementation-semantics-review",
+    "familyTag": "implementation_semantics.fail_fast_boundary",
+    "severity": "medium",
+    "title": "Projection が重複 StockReserved を fail-fast することを確認",
+    "location": "src/projection.ts:25, src/projection.ts:28, src/projection.ts:97, src/projection.ts:102",
+    "description": "`StockProjection.apply` の `StockReserved` 分岐は `addReservation(product.reservations, event.reservationId, event.quantity)` を使う実装になっています。`addReservation` は `reservations.has(reservationId)` を確認し、既存 reservationId なら `DomainError('Reservation already exists in projection')` を throw するため、同一 productId/reservationId の `StockReserved` が重複しても予約数量を上書きしません。`tests/projection.test.ts:36` から `tests/projection.test.ts:40` でも重複時に `DomainError` となり、既存 stock が `{ onHand: 10, reserved: 3, available: 7 }` のまま維持されることを確認しています。再走査では Knowledge の「データ構造の意味選択」「導出値の単一情報源」「命名と意味の整合」「境界での fail-fast」「内部状態の参照漏れ」を `src/domain.ts`, `src/reservations.ts`, `src/projection.ts`, `src/event-store.ts`, `src/events.ts`, `src/command-handler.ts`, `src/index.ts` に照合し、実装意味論スコープの新規問題は確認しませんでした。`npm test` は 4 files / 52 tests passed、`npm run typecheck` も成功しました。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0014"
+  }
+]

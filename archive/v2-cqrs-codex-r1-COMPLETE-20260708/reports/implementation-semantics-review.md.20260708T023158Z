@@ -1,0 +1,7 @@
+# 実装意味論レビュー
+
+## 結果: APPROVE
+
+## サマリー
+F-0014 は `src/projection.ts:25-33` が `addReservation` 経由になり、`src/projection.ts:97-106` で既存 `reservationId` を `DomainError` にするため解消済みです。  
+再走査では、データ構造、導出値、命名、fail-fast、内部状態参照漏れの各観点で新たな実装意味論のブロッキング問題は確認しませんでした。

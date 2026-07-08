@@ -1,0 +1,15 @@
+# CQRS+ESレビュー
+
+## 結果: REJECT
+
+## サマリー
+Projection が `StockReserved` の重複イベントを fail-fast せず、既存予約数量を上書きします。  
+Aggregate では拒否される不可能なイベント列で Read Model が破壊されるため、CQRS+ES観点で差し戻しです。
+
+## 観測した指摘
+| # | family_tag | 重大度 | スコープ | 場所 | 問題 | 影響 | 修正案 |
+|---|------------|--------|---------|------|------|------|--------|
+| 1 | cqrs_es.projection_fail_fast_boundary | Medium | スコープ内 | `src/projection.ts:25` | `StockReserved` 適用時に既存 `reservationId` を確認せず `Map#set` で上書きする | `ReserveStock` の「reservationId は未使用」という不変条件に反するイベント列を検出できず、`reserved` / `available` が壊れる | `product.reservations.has(event.reservationId)` を確認し、既存なら `DomainError` を throw する |
+
+## REJECT判定条件
+- ブロッキング指摘が1件以上ある場合のみ REJECT

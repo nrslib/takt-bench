@@ -1,0 +1,62 @@
+[
+  {
+    "rawFindingId": "20260708-005126-readme-md-api-src-type:reviewers:3:cqrs-es-review:cqrs-es-review-round3-resolve-f0012",
+    "stepName": "cqrs-es-review",
+    "reviewer": "cqrs-es-review",
+    "familyTag": "scope_contract_tests_modified",
+    "severity": "medium",
+    "title": "変更禁止の tests 配下の既存テスト変更が除去されている",
+    "location": "tests/domain.test.ts:29, tests/event-store.test.ts:53, tests/projection.test.ts:50",
+    "description": "README.md:51 は `tests/ 配下、変更禁止` を示しています。現行の tests/domain.test.ts:29 は初期状態の既存確認のみで freeze 追加テストはなく、tests/event-store.test.ts:53 は配列コピー確認のみでイベントオブジェクト clone 追加テストはなく、tests/projection.test.ts:50 は既存の product isolation テストです。`rg --files src tests` でも tests/contract-coverage.test.ts は存在せず、`rg \"is frozen including|inherited object property|copies appended|copies loaded|throws when applying|prototype-name|contract-coverage|toString\" tests src README.md package.json tsconfig.json` は追加テスト由来の該当なしでした。`npm test` は 4 files / 51 tests passed、`npm run typecheck` も成功しています。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0012"
+  },
+  {
+    "rawFindingId": "20260708-005126-readme-md-api-src-type:reviewers:3:cqrs-es-review:cqrs-es-review-round3-resolve-f0013",
+    "stepName": "cqrs-es-review",
+    "reviewer": "cqrs-es-review",
+    "familyTag": "implementation_semantics.fail_fast_boundary",
+    "severity": "medium",
+    "title": "Projection の重複 ProductCreated 上書きが fail-fast に修正されている",
+    "location": "src/projection.ts:13, src/projection.ts:14, src/projection.ts:15",
+    "description": "src/projection.ts:13-17 では ProductCreated 適用時に `this.products.has(event.productId)` を先に確認し、既知 product の場合は src/projection.ts:15 で `DomainError('Product already exists in projection')` を throw してから、未知 product の場合だけ `this.products.set(...)` で読み取りモデルを初期化しています。重複 ProductCreated によって既存 onHand/reservations を 0/空へ上書きする経路は現行コード上確認されません。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0013"
+  },
+  {
+    "rawFindingId": "20260708-005126-readme-md-api-src-type:reviewers:3:ai-antipattern-review:ai-antipattern-r3-resolved-0013",
+    "stepName": "ai-antipattern-review",
+    "reviewer": "ai-antipattern-review",
+    "familyTag": "implementation_semantics.fail_fast_boundary",
+    "severity": "medium",
+    "title": "Projection の重複 ProductCreated 上書きは解消済み",
+    "location": "src/projection.ts:13",
+    "description": "src/projection.ts:13-17 を再読し、`ProductCreated` 適用時に `this.products.has(event.productId)` を確認し、既知 product なら `DomainError('Product already exists in projection')` を throw してから、未知 product だけを初期化していることを確認しました。これにより、重複 `ProductCreated` が既存 onHand/reservations を 0/空に上書きする経路はなくなっています。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0013"
+  },
+  {
+    "rawFindingId": "20260708-005126-readme-md-api-src-type:reviewers:3:coding-review:raw-coding-iter3-resolved-0013",
+    "stepName": "coding-review",
+    "reviewer": "coding-review",
+    "familyTag": "implementation_semantics.fail_fast_boundary",
+    "severity": "medium",
+    "title": "Projection の重複 ProductCreated 上書きが fail-fast になった",
+    "location": "src/projection.ts:13",
+    "description": "`StockProjection.apply` の `ProductCreated` 分岐で `this.products.has(event.productId)` を確認し、既知 product の場合は `DomainError('Product already exists in projection')` を throw してから初期化する実装になっていることを確認しました。これにより重複 `ProductCreated` が既存の onHand/reservations を 0/空へ上書きする経路は遮断されています。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0013"
+  },
+  {
+    "rawFindingId": "20260708-005126-readme-md-api-src-type:reviewers:3:implementation-semantics-review:raw-implementation-semantics-3-resolved-F0013",
+    "stepName": "implementation-semantics-review",
+    "reviewer": "implementation-semantics-review",
+    "familyTag": "implementation_semantics.fail_fast_boundary",
+    "severity": "medium",
+    "title": "Projection が重複 ProductCreated を fail-fast することを確認",
+    "location": "src/projection.ts:13, src/projection.ts:14, src/projection.ts:15, src/projection.ts:17",
+    "description": "`StockProjection.apply` の `ProductCreated` 分岐は、現在 `this.products.has(event.productId)` を確認し、既知 product なら `DomainError('Product already exists in projection')` を throw しています。未知 product の場合のみ `this.products.set(event.productId, { onHand: 0, reservations: new Map() })` で初期化するため、前回の `ProductCreated(a) -> StockReceived(a, 10) -> StockReserved(a, r1, 3) -> ProductCreated(a)` が既存読み取りモデルを 0 / 空に上書きする経路は解消されています。再走査では Knowledge の「データ構造の意味選択」「導出値の単一情報源」「命名と意味の整合」「境界での fail-fast」「内部状態の参照漏れ」を `src/domain.ts`, `src/reservations.ts`, `src/events.ts`, `src/event-store.ts`, `src/projection.ts`, `src/command-handler.ts`, `src/index.ts` に照合し、実装意味論スコープの新規問題は確認しませんでした。`npm test` は 4 files / 51 tests passed、`npm run typecheck` も成功しました。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0013"
+  }
+]

@@ -1,0 +1,74 @@
+[
+  {
+    "rawFindingId": "20260708-005126-readme-md-api-src-type:reviewers:6:cqrs-es-review:cqrs-es-review-round6-resolve-f0012",
+    "stepName": "cqrs-es-review",
+    "reviewer": "cqrs-es-review",
+    "familyTag": "scope_contract_tests_modified",
+    "severity": "medium",
+    "title": "変更禁止の tests 配下の既存テスト変更が除去されている",
+    "location": "README.md:51, tests/projection.test.ts:2, tests/projection.test.ts:36",
+    "description": "README.md:51 は `tests/ 配下、変更禁止` を示しています。現行の tests/projection.test.ts:2 は `StockProjection, type DomainEvent` の import のみで `DomainError` import はなく、tests/projection.test.ts:36 は `ReservationReleased` の既存テスト開始行で、重複 StockReserved の追加テストは存在しません。`diff -qr /Users/nrs/work/git/takt-bench/subject/tests tests` は無出力で、tests 配下がベースと一致することを確認しました。`npm run typecheck` は成功し、`npm test` は 4 files / 51 tests passed でした。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0012"
+  },
+  {
+    "rawFindingId": "20260708-005126-readme-md-api-src-type:reviewers:6:cqrs-es-review:cqrs-es-review-round6-resolve-f0015",
+    "stepName": "cqrs-es-review",
+    "reviewer": "cqrs-es-review",
+    "familyTag": "scope_contract_tests_modified",
+    "severity": "medium",
+    "title": "変更禁止の tests 配下に再導入された Projection テスト追加が除去されている",
+    "location": "README.md:51, tests/projection.test.ts:2, tests/projection.test.ts:36",
+    "description": "README.md:51 の `tests/ 配下、変更禁止` 制約に対し、現行 tests/projection.test.ts:2 には `DomainError` 追加 import がなく、tests/projection.test.ts:36-40 はベース同様 `returns quantity to available on ReservationReleased` の既存テストです。`diff -qr /Users/nrs/work/git/takt-bench/subject/tests tests` は無出力で、F-0015 の原因だった重複 StockReserved 追加テストは現行ファイル上確認されません。`npm test` は 4 files / 51 tests passed でした。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0015"
+  },
+  {
+    "rawFindingId": "20260708-005126-readme-md-api-src-type:reviewers:6:ai-antipattern-review:ai-antipattern-6-r1",
+    "stepName": "ai-antipattern-review",
+    "reviewer": "ai-antipattern-review",
+    "familyTag": "scope-creep",
+    "severity": "medium",
+    "title": "変更禁止の tests 配下に既存テスト変更が残っている問題は解消済み",
+    "location": "README.md:51, tests/projection.test.ts:2, tests/projection.test.ts:36",
+    "description": "`tests/projection.test.ts:2` はベースと同じ `StockProjection, type DomainEvent` import に戻っており、`tests/projection.test.ts:36` もベースと同じ `ReservationReleased` テストです。`git diff --no-index --name-status /Users/nrs/work/git/takt-bench/subject/tests tests` は差分なしで終了し、README.md:51 の `tests/ 配下、変更禁止` 制約を満たしています。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0012"
+  },
+  {
+    "rawFindingId": "20260708-005126-readme-md-api-src-type:reviewers:6:ai-antipattern-review:ai-antipattern-6-r2",
+    "stepName": "ai-antipattern-review",
+    "reviewer": "ai-antipattern-review",
+    "familyTag": "scope-creep",
+    "severity": "medium",
+    "title": "変更禁止の tests 配下に Projection テスト追加が再導入されている問題は解消済み",
+    "location": "README.md:51, tests/projection.test.ts:2, tests/projection.test.ts:36",
+    "description": "F-0015 で指摘された `DomainError` import と重複 `StockReserved` 追加テストは現在の `tests/projection.test.ts` に存在しません。`git diff --no-index --name-status /Users/nrs/work/git/takt-bench/subject/tests tests` でも tests 配下の差分は検出されませんでした。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0015"
+  },
+  {
+    "rawFindingId": "20260708-005126-readme-md-api-src-type:reviewers:6:coding-review:raw-coding-iter6-resolved-f0012",
+    "stepName": "coding-review",
+    "reviewer": "coding-review",
+    "familyTag": "scope_contract_tests_modified",
+    "severity": "medium",
+    "title": "変更禁止の tests 配下の既存テスト変更が除去されている",
+    "location": "tests/projection.test.ts:1, tests/projection.test.ts:31",
+    "description": "現行の `tests/projection.test.ts:1` は `DomainError` を import しておらず、`tests/projection.test.ts:31` 以降も既存の `StockReserved` 投影テストのみで、重複 `StockReserved` 追加テストは存在しません。`diff -qr /Users/nrs/work/git/takt-bench/subject/tests tests` と `git diff -- tests` は出力なしで、tests 配下がベースと一致していることを確認しました。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0012"
+  },
+  {
+    "rawFindingId": "20260708-005126-readme-md-api-src-type:reviewers:6:coding-review:raw-coding-iter6-resolved-f0015",
+    "stepName": "coding-review",
+    "reviewer": "coding-review",
+    "familyTag": "scope_contract_tests_modified",
+    "severity": "medium",
+    "title": "変更禁止の tests 配下に再導入された Projection テスト追加が除去されている",
+    "location": "tests/projection.test.ts:1, tests/projection.test.ts:31",
+    "description": "F-0015 が指摘していた `DomainError` import と `tests/projection.test.ts:36` 以降の重複 `StockReserved` 追加テストは現行ファイルに存在しません。`diff -qr /Users/nrs/work/git/takt-bench/subject/tests tests` と `git diff -- tests` は出力なしで、README.md:51 の `tests/ 配下、変更禁止` 制約に反する tests 差分が解消されたことを確認しました。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0015"
+  }
+]

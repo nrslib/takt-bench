@@ -1,0 +1,15 @@
+# CQRS+ESレビュー
+
+## 結果: REJECT
+
+## サマリー
+F-0014 の `StockReserved` 重複上書きは `src/projection.ts` で fail-fast に修正済みです。  
+ただし、変更禁止の `tests/` 配下に `tests/projection.test.ts` の変更が再導入されているため差し戻しです。
+
+## 観測した指摘
+| # | family_tag | 重大度 | スコープ | 場所 | 問題 | 影響 | 修正案 |
+|---|------------|--------|---------|------|------|------|--------|
+| 1 | scope_contract_tests_modified | Medium | スコープ内 | `README.md:51`, `tests/projection.test.ts:2`, `tests/projection.test.ts:36` | README は `tests/ 配下、変更禁止` としているが、`DomainError` import と重複 `StockReserved` の追加テストが入っている | タスクのソース仕様に反し、前回解消済みの tests 変更問題を再導入している | `tests/projection.test.ts` の変更を除外し、必要なら先に README またはタスク指示で制約を変更する |
+
+## REJECT判定条件
+- ブロッキング指摘が1件以上ある場合のみ REJECT

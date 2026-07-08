@@ -1,0 +1,29 @@
+# AI生成コードレビュー
+
+## 結果: REJECT
+
+## サマリー
+公開状態・イベントストア・予約ID辞書の扱いに、AI生成コードで起きやすい「浅いコピー」「外部入力キーの仮定」「コピペ重複」が残っています。
+
+## 検証した項目
+| 観点 | 結果 | 備考 |
+|------|------|------|
+| 仮定の妥当性 | NG | `reservationId` を通常のオブジェクトキーとして安全に扱える前提が未検証 |
+| API/ライブラリの実在 | OK | 幻覚APIは未検出 |
+| コンテキスト適合 | NG | 公開状態の不変性・内部参照漏れの基準に不適合 |
+| スコープ | NG | 予約削除 helper の同一実装重複が残存 |
+| 検証実行 | OK | `npm test -- --run` と `npm run typecheck` は通過 |
+
+## 観測した指摘
+| # | family_tag | カテゴリ | 重大度 | 場所 | 問題 | 修正案 |
+|---|------------|---------|--------|------|------|--------|
+| 1 | logic-error | 外部入力キーの仮定 | high | `src/domain.ts:78` | `reservationId` を `Record` の添字で存在判定しており、`toString` など継承プロパティ名で未予約なのに予約済み/存在扱いになります。他: `src/domain.ts:39`, `src/domain.ts:133`, `src/projection.ts:39` | `Object.hasOwn` に統一し、予約辞書生成時も `Object.create(null)` 等でプロトタイプ経路を遮断してください |
+| 2 | missing-edge-case | 公開状態の可変性 | high | `src/domain.ts:3` | `initialState` が `src/index.ts` から公開される共有定数なのに freeze されておらず、利用者の変更が以後の replay / `CommandHandler` に波及します | ネストした `reservations` を含めて runtime で変更不能にするか、内部 replay 用の新規初期状態生成を使ってください |
+| 3 | logic-error | 内部状態参照漏れ | high | `src/event-store.ts:12` | `load` は配列だけを浅くコピーし、格納済みイベントオブジェクト参照を返します。`append` も `src/event-store.ts:24`, `src/event-store.ts:28` で受け取ったイベント参照を保存します | `append` / `load` の両方でイベント単位の防御的コピーまたは freeze を行い、オブジェクト変異の回帰テストを追加してください |
+| 4 | scope-creep | コピペ重複 | medium | `src/domain.ts:115` | `removeReservation` が `src/projection.ts:89` に同一実装で重複しており、予約辞書契約の修正漏れを誘発します | 非公開の内部 helper に集約し、`src/index.ts` からは公開しない形で domain / projection の両方から利用してください |
+
+## 再走査証跡
+Policy Source `.takt/runs/20260708-005126-readme-md-api-src-type/context/policy/ai-antipattern-review.1.20260708T010536Z.md` の `原則`, `判定基準`, `ファクトチェック`, `スコープクリープ検出`, `デッドコード検出`, `フォールバック・デフォルト引数の濫用検出`, `未使用コードの検出`, `不要な後方互換コードの検出` を照合しました。Knowledge は `implement.1.20260708T010016Z.md` と `implementation-semantics-revie.1.20260708T010536Z.md` の `データ構造の意味選択`, `公開状態の不変性`, `内部状態の参照漏れ`, `DRY違反の検出`, `境界での fail-fast` を実コードと照合しました。
+
+## REJECT判定条件
+- ブロッキング指摘が1件以上あるため REJECT です。

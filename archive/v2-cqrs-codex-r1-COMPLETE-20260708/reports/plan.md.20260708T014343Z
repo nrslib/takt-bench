@@ -1,0 +1,111 @@
+# タスク計画
+
+## 元の要求
+在庫管理ドメインをイベントソーシングで実装するライブラリを作ってください。
+
+仕様は README.md に記載されています。公開 API は src/types.ts の型定義に準拠し、利用者が src/index.ts から import できる形にしてください。
+
+フレームワークには依存せず、インメモリで完結するライブラリとして実装してください。アーキテクチャ上の制約は README.md の「アーキテクチャ要件」に従ってください。
+
+## 分析結果
+
+### 目的
+現行コードを再確認した結果、在庫管理ドメインのイベントソーシングライブラリ実装そのものは完了しており、`npm test` は 51 件成功、`npm run typecheck` も成功している。
+
+今回の replan の目的は、Previous Response で指摘された `F-0012` の実体残存を解消すること。ledger 上は `F-0012` が resolved だが、現行ファイルをベース `subject/tests` と比較すると、README の `tests/ 配下、変更禁止` に反する `tests/event-store.test.ts` の import 整形差分が残っている。
+
+### 分解した要件
+| # | 要件 | 種別 | 備考 |
+|---|------|------|------|
+| 1 | `src/types.ts` の公開契約に準拠する | 明示 | 現行 `src/types.ts` はイベント、コマンド、状態、エラー、`EventStore` ポートを定義済み。変更不要 |
+| 2 | 利用者が `src/index.ts` から公開 API を import できる | 明示 | `src/index.ts` は `types`、`decide`、`evolve`、`initialState`、`InMemoryEventStore`、`CommandHandler`、`StockProjection` を re-export 済み。変更不要 |
+| 3 | `initialState` は未作成の商品を表す | 明示 | `src/domain.ts` で `exists: false`、`name: ''`、`onHand: 0`、空予約として実装済み。変更不要 |
+| 4 | `evolve(state, event)` はイベントを状態に適用する | 明示 | `src/domain.ts` で実装済み。変更不要 |
+| 5 | `evolve` は throw せず、引数を変更しない | 明示 | `src/domain.ts` は予約 Record を clone/helper 経由で更新し、`StockShipped` の不整合時もコピー状態を返す。変更不要 |
+| 6 | `decide(state, command)` はコマンドから新イベントを導出する | 明示 | `src/domain.ts` で実装済み。変更不要 |
+| 7 | `decide` は不変条件違反時に `DomainError` を throw する | 明示 | `src/domain.ts` で商品存在、数量、予約存在、available を検証済み。変更不要 |
+| 8 | `InMemoryEventStore` は `EventStore` ポートを実装する | 明示 | `src/event-store.ts` で実装済み。変更不要 |
+| 9 | `InMemoryEventStore` は楽観的並行性制御を行う | 明示 | `expectedVersion` 不一致時に `ConcurrencyError`。変更不要 |
+| 10 | `load` 返却値変更がストア内部へ影響しない | 明示 | `src/event-store.ts` と `src/events.ts` でイベント clone 済み。変更不要 |
+| 11 | `CommandHandler` は `load → replay → decide → append` を行う | 明示 | `src/command-handler.ts` で実装済み。変更不要 |
+| 12 | `CommandHandler` は `EventStore` ポートだけに依存する | 明示 | `src/command-handler.ts` は `EventStore` 型に依存し、`InMemoryEventStore` 具象型を参照しない。変更不要 |
+| 13 | `StockProjection` はイベントから読み取りモデルを構築する | 明示 | `src/projection.ts` で実装済み。変更不要 |
+| 14 | `StockProjection` は書き込みモデルを参照しない | 明示 | `src/projection.ts` は `ProductState`、`evolve`、`decide` を import していない。変更不要 |
+| 15 | フレームワーク非依存、インメモリ完結にする | 明示 | `src/` は TypeScript 標準機能のみで、外部フレームワークや DB 依存なし。変更不要 |
+| 16 | `tests/` 配下を変更しない | 明示 | README の `tests/ 配下、変更禁止` に対し、`tests/event-store.test.ts` の import 整形差分が残存。変更要 |
+| 17 | `F-0012` の残存を解消する | 暗黙 | Previous Response と現行 `diff -qr /Users/nrs/work/git/takt-bench/subject/tests tests` の結果から、同じ finding ID として扱う |
+
+### 参照資料の調査結果
+- `README.md` は公開 API、ドメインルール、イベントストア、プロジェクション、アーキテクチャ要件、開発コマンドの唯一の仕様資料。
+- `README.md` は `tests/ 配下、変更禁止` と明記しているため、既存テストの import 整形差分も残せない。
+- `src/types.ts` は公開契約であり変更禁止。現行実装はこの型定義を利用している。
+- Knowledge では、ドメイン層のフレームワーク非依存、ポート依存、読み書き分離、外向き依存禁止を確認した。
+- `coding` スキルのポリシーでは、スコープクリープ禁止、公開契約維持、配線漏れ確認、不要なテスト変更禁止を確認した。
+- `findings-ledger.json` は `F-0012` を resolved としているが、現行ファイル実体では `tests/event-store.test.ts` にベースとの差分が残っている。
+
+現行の残存差分は以下のみ。
+
+```diff
+-import { InMemoryEventStore, ConcurrencyError, type DomainEvent } from '../src/index';
++import {
++  InMemoryEventStore,
++  ConcurrencyError,
++  type DomainEvent,
++} from '../src/index';
+```
+
+`tests/domain.test.ts`、`tests/command-handler.test.ts`、`tests/projection.test.ts` はベースとの差分なし。
+
+### スコープ
+変更対象は `tests/event-store.test.ts` の import 1 箇所のみ。
+
+変更しない:
+- `src/`
+- `src/types.ts`
+- `README.md`
+- `package.json`
+- `tsconfig.json`
+- 他の `tests/` ファイル
+- `findings-ledger.json`
+
+### 検討したアプローチ
+| アプローチ | 採否 | 理由 |
+|-----------|------|------|
+| `src/` を追加修正する | 不採用 | 元要求の実装は `npm test` と `npm run typecheck` で成功しており、今回の残課題と無関係 |
+| `tests/event-store.test.ts` の import をベースと完全一致に戻す | 採用 | README の `tests/ 配下、変更禁止` と `F-0012` の解消に直接対応する最小差分 |
+| ledger を手動修正する | 不採用 | Finding Contract の集約物であり、修正対象は現行ファイル実体 |
+| `git status` の空状態を根拠に完了扱いする | 不採用 | `F-0012` は Git 差分ではなく `subject/tests` との比較で検出される |
+
+### 実装アプローチ
+1. `tests/event-store.test.ts` の複数行 import を、ベースと同じ 1 行 import に戻す。
+2. `diff -qr /Users/nrs/work/git/takt-bench/subject/tests tests` が無出力になることを確認する。
+3. `npm test` を実行し、既存 51 件が成功することを確認する。
+4. `npm run typecheck` を実行し、型検査が成功することを確認する。
+5. `F-0012` は ledger 上 resolved だが、現行ファイル実体に基づき同じ ID の再修正として扱う。
+
+### 到達経路・起動条件
+| 項目 | 内容 |
+|------|------|
+| 利用者が到達する入口 | `src/index.ts` からの named import |
+| 更新が必要な呼び出し元・配線 | なし。公開 API 配線は現状維持 |
+| 起動条件 | ライブラリ利用者が関数・クラスを直接呼び出す |
+| 未対応項目 | `tests/event-store.test.ts` の import 整形差分のみ |
+
+## 実装ガイドライン
+- `src/` は触らない。元要求の実装は現行テストと型検査で成功している。
+- `tests/event-store.test.ts` は内容追加や期待値変更をしない。import 形式だけをベースと完全一致に戻す。
+- `F-0012` の修正証跡は `diff -qr /Users/nrs/work/git/takt-bench/subject/tests tests` の無出力で示す。
+- `git status --short` が空でも、`F-0012` 解消の根拠にはしない。
+- 新規テスト追加、既存テスト変更、README 変更、ledger 手動編集は行わない。
+- 後方互換コード、フォールバック、追加オプション、不要なリファクタリングは計画に含めない。
+
+## スコープ外
+| 項目 | 除外理由 |
+|------|---------|
+| `src/` の追加修正 | 元要求の実装はテスト・型検査で成功済み |
+| 新規テスト追加 | README が `tests/ 配下、変更禁止` としている |
+| 既存テストの期待値変更 | `F-0012` の原因を増やすため |
+| ledger 手動編集 | Finding Contract の集約物であり、実ファイル修正ではない |
+
+## 確認事項
+なし。

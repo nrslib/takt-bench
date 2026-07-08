@@ -1,0 +1,65 @@
+# テスト作成レポート
+
+## 要件-テスト対応表
+| 要件ID | 観測可能な契約 | 入口/経路 | テスト | 結果 | 未カバー理由 |
+|--------|----------------|-----------|--------|------|--------------|
+| R01 | 利用者は `src/index.ts` から公開 API と型を import できる | 公開 API import | 既存 `tests/*.test.ts`、追加 `tests/contract-coverage.test.ts` | 既存/作成 | |
+| R02 | `initialState` は未作成商品を表す | `initialState` | `tests/domain.test.ts` | 既存 | |
+| R03 | `evolve` はイベントを状態へ適用し、入力状態を破壊しない | `evolve(state, event)` | `tests/domain.test.ts` | 既存 | |
+| R04 | `evolve` は replay 中の不整合イベントでも throw せず状態を返す | `evolve(state, event)` | `tests/contract-coverage.test.ts` | 作成 | |
+| R05 | `decide` はコマンドからイベントを返し、不変条件違反は `DomainError` を throw する | `decide(state, command)` | `tests/domain.test.ts` | 既存 | |
+| R06 | `CreateProduct` は trim 後の名前を `ProductCreated.name` に入れる | `decide(initialState, CreateProduct)` | `tests/contract-coverage.test.ts` | 作成 | |
+| R07 | `EventStore` は version、copy 返却、競合時 `ConcurrencyError` を保証する | `InMemoryEventStore.load/append` | `tests/event-store.test.ts` | 既存 | |
+| R08 | `CommandHandler` は `load -> replay -> decide -> append` を `EventStore` ポート経由で実行する | `CommandHandler.handle(command)` | `tests/command-handler.test.ts`、`tests/contract-coverage.test.ts` | 既存/作成 | |
+| R09 | `StockProjection` はイベントから `{ onHand, reserved, available }` と `lowStock` を構築する | `StockProjection.apply/getStock/lowStock` | `tests/projection.test.ts` | 既存 | |
+| R10 | `StockProjection` は `StockShipped` で対象予約数量だけを復元して反映する | `StockProjection.apply(StockShipped)` | `tests/projection.test.ts`、`tests/contract-coverage.test.ts` | 既存/作成 | |
+| R11 | フレームワーク非依存、ドメイン依存方向、プロジェクションが書き込みモデルを参照しない | 実装構造 | 未作成 | 未作成 | 実行時の戻り値だけでは依存方向を十分に固定できないため、実装レビューで確認する |
+| R12 | 保存イベントを読み戻して投影へ流す roundtrip が成立する | `CommandHandler -> InMemoryEventStore -> StockProjection` | `tests/contract-coverage.test.ts` | 作成 | |
+
+## 危険分岐テスト
+| 分岐 | 失敗させたい誤実装 | テスト | 未カバー理由 |
+|------|--------------------|--------|--------------|
+| trim 後 name | 空白付き商品名をそのままイベントへ保存する実装 | `emits ProductCreated with the trimmed product name` | |
+| unknown release during replay | `evolve` が不整合イベントで throw する実装 | `keeps state stable when releasing an unknown reservation during replay` | |
+| unknown ship during replay | `evolve` が存在しない予約数量を `undefined` として計算し状態を壊す実装 | `keeps state stable when shipping an unknown reservation during replay` | |
+| rejected command | `decide` が throw した後も append する実装 | `does not append when decide rejects the command` | |
+| loaded version | append の `expectedVersion` に固定値や最新再計算値を渡す実装 | `orchestrates through the EventStore port using the loaded version` | |
+| multiple reservations shipping | 常に最初の予約、合計予約、またはイベントにない数量で出荷する実装 | `ships only the targeted reservation quantity when multiple reservations exist` | |
+| roundtrip | 保存イベント列と読み取りモデルの整合が崩れる実装 | `rebuilds the read model from events persisted by command handling` | |
+
+## 横断経路テスト
+| 経路 | 生成側 | 消費側 | 保証する契約 | テスト | 未カバー理由 |
+|------|----------|----------|--------------|--------|--------------|
+| `CommandHandler.handle` から `EventStore.append` | `decide` が生成する `DomainEvent[]` | `EventStore.append` | streamId は `command.productId`、expectedVersion は load 結果の version | `orchestrates through the EventStore port using the loaded version` | |
+| `CommandHandler -> InMemoryEventStore -> StockProjection` | `CommandHandler` が保存するイベント列 | `StockProjection.apply` | 保存イベントを読み戻して同じ在庫読み取りモデルを再構築できる | `rebuilds the read model from events persisted by command handling` | |
+
+## 否定契約
+| 禁止する挙動 | 観測方法 | テスト | 未カバー理由 |
+|--------------|----------|--------|--------------|
+| 不変条件違反 command でイベントを保存する | append 呼び出し履歴が空であることを確認 | `does not append when decide rejects the command` | |
+| `CreateProduct.name` に前後空白を残す | 返却イベントが trim 済み name と一致することを確認 | `emits ProductCreated with the trimmed product name` | |
+| `evolve` が replay 中に throw する | 不整合イベント適用後の状態が元状態と等しいことを確認 | `keeps state stable when releasing an unknown reservation during replay`、`keeps state stable when shipping an unknown reservation during replay` | |
+
+## 作成テスト
+| ファイル | 種別 | テスト数 | 概要 |
+|---------|------|---------|------|
+| `tests/contract-coverage.test.ts` | 単体/統合 | 7 | 既存テストで弱かった trim、replay 安定性、ポート依存、append 抑止、複数予約出荷、保存から投影までの roundtrip を追加 |
+
+## 未カバー項目
+| 要件/分岐 | 未カバー理由 | 後続で必要な確認 |
+|-----------|--------------|------------------|
+| R11 フレームワーク非依存/依存方向 | 実行時テストだけでは import 依存方向や外部依存追加を精度高く固定できない | 実装ステップ後に `src/` の import と package 依存をレビューする |
+| `src/types.ts` 変更禁止 | このステップではプロダクションコードを変更しておらず、型ファイル固定テストは仕様本文を固定するだけになりやすい | 実装差分レビューで `src/types.ts` が未変更であることを確認する |
+
+## 実行結果（参考）
+実装前のためテスト失敗・import エラーは想定内。
+
+| 状態 | 件数 | 備考 |
+|------|------|------|
+| Pass | 0 | `npm test` は未実装スタブに到達 |
+| Fail / Import Error（想定内） | 28 | すべて `src/index.ts` の `Not implemented` 起因 |
+| Error（要対応） | 0 | `npm run typecheck` は成功 |
+
+## 備考
+- `npm run typecheck` は成功しており、追加テストの import パスと型利用は現時点で問題なし。
+- `tests/contract-coverage.test.ts` は `src/index.ts` の公開入口のみを使用し、内部モジュール構成を固定しない形にした。

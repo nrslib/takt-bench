@@ -1,0 +1,14 @@
+[
+  {
+    "rawFindingId": "20260708-005126-readme-md-api-src-type:reviewers:4:cqrs-es-review:cqrs-es-review-round4-duplicate-stock-reserved-projection",
+    "stepName": "cqrs-es-review",
+    "reviewer": "cqrs-es-review",
+    "familyTag": "cqrs_es.projection_fail_fast_boundary",
+    "severity": "medium",
+    "title": "Projection が重複 StockReserved で予約数量を上書きする",
+    "location": "src/projection.ts:25",
+    "description": "README.md:23 は `reservationId` が未使用であることを ReserveStock の不変条件としており、src/domain.ts:92-93 でも重複予約は DomainError で拒否されています。一方で StockProjection は src/projection.ts:25-29 の StockReserved 適用時に既存 reservationId を確認せず `new Map(product.reservations).set(event.reservationId, event.quantity)` で上書きします。イベント列に同一 productId/reservationId の StockReserved が重複して混入した場合、Projection はログ破損を検出せず reserved/available を後続イベントの数量へ silently 変更します。CQRS+ES の Read Model はイベント履歴から再構築される投影なので、Aggregate では発生し得ない重複作成イベントを境界で fail-fast せず上書きするのは不整合です。",
+    "suggestion": "StockReserved 適用時に `product.reservations.has(event.reservationId)` を確認し、既存 reservationId なら `DomainError` を throw してください。未知 reservationId の場合だけ予約を追加するようにし、ProductCreated 重複や存在しない予約の release/ship と同じ fail-fast 方針に揃えてください。",
+    "kind": "issue"
+  }
+]

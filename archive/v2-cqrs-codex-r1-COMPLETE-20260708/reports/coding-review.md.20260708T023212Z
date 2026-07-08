@@ -1,0 +1,23 @@
+# コーディングレビュー
+
+## 結果: REJECT
+
+## サマリー
+F-0014 の実装修正は `src/projection.ts` で確認しましたが、README.md:51 の `tests/ 配下、変更禁止` に反する `tests/projection.test.ts` の変更が残っています。
+
+## 観測した指摘
+| # | family_tag | 重大度 | 場所 | 問題 | 影響 | 修正案 |
+|---|------------|--------|------|------|------|--------|
+| 1 | scope_contract_tests_modified | Medium | `tests/projection.test.ts:2` | `DomainError` import と重複 `StockReserved` テスト追加により、変更禁止の `tests/` 配下が変更されている | タスクのソース仕様に反する差分が残る | `tests/projection.test.ts` の変更を除外し、ソース実装修正のみ残す |
+
+## 検証証跡
+- 差分確認: ベースとの差分で `tests/projection.test.ts` の変更を確認。F-0014 は `src/projection.ts:25` と `src/projection.ts:97` で重複予約を `DomainError` にする実装を確認
+- ビルド: `npm run typecheck` 成功
+- テスト: `npm test` 成功（4 files / 52 tests）
+
+## 再走査証跡
+- Policy の「元要件固定」「契約全入口」「状態整合性」「ファクトチェック」を README.md、src、tests 差分へ照合
+- README.md:51 の `tests/ 配下、変更禁止` と現行差分を照合し、テスト変更をブロッキングとして分類
+
+## REJECT判定条件
+- ブロッキング指摘が1件あります。

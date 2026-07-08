@@ -1,0 +1,21 @@
+# コーディングレビュー
+
+## 結果: REJECT
+
+## サマリー
+実装は主要 API の配線とテスト実行は通っていますが、`InMemoryEventStore` が保存済みイベントオブジェクトを外部参照から変更可能にしており、イベントストアの隔離契約を満たしていません。加えて、README の `tests/ 配下、変更禁止` に反して新規テストファイルが追加されています。
+
+## 観測した指摘
+| # | family_tag | 重大度 | 場所 | 問題 | 影響 | 修正案 |
+|---|------------|--------|------|------|------|--------|
+| 1 | event_store_isolation | High | `src/event-store.ts:12` | `load` は配列のみをコピーし、イベントオブジェクト参照をそのまま返している。`append` も受け取ったイベントオブジェクト参照をそのまま保存している。 | `append` 後の元イベント変更、または `load().events[0]` のプロパティ変更で保存済みイベント履歴が書き換わる。イベントソーシングの保存事実が外部から破壊される。 | `append` と `load` の両方で各 `DomainEvent` を clone して保存・返却する。現行イベントはネストがないため `{ ...event }` で足りる。 |
+| 2 | scope_contract_tests_modified | Medium | `tests/contract-coverage.test.ts:1` | README の開発欄は `tests/ 配下、変更禁止` としているが、`tests/contract-coverage.test.ts` が新規追加されている。 | タスクのソース仕様に反する差分になっている。 | この変更セットから新規テストファイルを除外する。テスト追加が必要なら、先に README またはタスク指示で制約を変更する。 |
+
+## 検証証跡
+- 差分確認: ベース `subject` との差分で `src/domain.ts`、`src/event-store.ts`、`src/command-handler.ts`、`src/projection.ts`、`tests/contract-coverage.test.ts` の追加と `src/index.ts` の変更を確認。
+- ビルド: `npm run typecheck` 成功。
+- テスト: `npm test` 成功。5 files / 58 tests passed。
+- 追加確認: コンパイル後の実行で、`append` 後の元イベント変更が `load` 結果へ反映され、さらに `load().events[0]` の変更も次回 `load` に反映されることを確認。
+
+## REJECT判定条件
+- ブロッキング指摘が1件以上あるため REJECT。

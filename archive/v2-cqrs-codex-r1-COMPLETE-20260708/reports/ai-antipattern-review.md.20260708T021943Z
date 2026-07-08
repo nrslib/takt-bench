@@ -1,0 +1,29 @@
+# AI生成コードレビュー
+
+## 結果: REJECT
+
+## サマリー
+F-0013 は解消確認済みですが、F-0012 の `tests/` 配下変更禁止違反がまだ残っています。
+
+## 検証した項目
+| 観点 | 結果 | 備考 |
+|------|------|------|
+| 仮定の妥当性 | OK | `StockProjection` の重複 `ProductCreated` は fail-fast 化済み |
+| API/ライブラリの実在 | OK | 幻覚APIは未検出 |
+| コンテキスト適合 | NG | README.md:51 の `tests/ 配下、変更禁止` に反する差分が残存 |
+| スコープ | NG | `tests/event-store.test.ts` の既存テスト変更が残っている |
+| 検証実行 | OK | `npm test -- --run` と `npm run typecheck` は通過 |
+
+## 観測した指摘
+| # | family_tag | カテゴリ | 重大度 | 場所 | 問題 | 修正案 |
+|---|------------|---------|--------|------|------|--------|
+| F-0012 | scope-creep | 既存テスト変更 | medium | `tests/event-store.test.ts:1` | README.md:51 は `tests/ 配下、変更禁止` としていますが、ベースとの差分で `tests/event-store.test.ts` の import 整形変更が残っています | `tests/` 配下の変更をこの変更セットから除外してください |
+
+## 解消確認
+F-0013 は Phase 1 structured output で `resolution_confirmation` として報告済みです。根拠は `src/projection.ts:13-17` で、既知 product の `ProductCreated` に対して `DomainError` を throw しています。
+
+## 再走査証跡
+Policy Source `.takt/runs/20260708-005126-readme-md-api-src-type/context/policy/ai-antipattern-review.3.20260708T012732Z.md` の全 `##` 章を列挙し、特に `判定基準`, `ファクトチェック`, `契約追加・変更の全入口検証`, `レビュー指摘への不適切な対応検出`, `スコープクリープ検出` を照合しました。Knowledge は `fix.2`, `implementation-semantics-revie.3`, `cqrs-es-review.3` の `プロジェクション設計`, `境界での fail-fast`, `仕様準拠の検証`, `変更スコープの評価` を中心に照合しました。
+
+## REJECT判定条件
+- F-0012 のブロッキング指摘が残っているため REJECT です。

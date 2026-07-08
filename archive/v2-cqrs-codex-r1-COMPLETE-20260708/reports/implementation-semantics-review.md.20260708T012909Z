@@ -1,0 +1,21 @@
+# 実装意味論レビュー
+
+## 結果: REJECT
+
+## サマリー
+前回の実装意味論指摘（イベント参照漏れ、予約 ID の prototype キー混入、Projection の unknown product / unknown reservation 黙殺）は現行コードで解消を確認しました。累積差分を再走査した結果、Projection が重複 `ProductCreated` を fail-fast せず既存読み取りモデルを上書きする問題を新たに確認したため REJECT です。
+
+## 観測した指摘
+| # | family_tag | 重大度 | 場所 | 問題 | 壊れる条件 | 修正案 |
+|---|------------|--------|------|------|-----------|--------|
+| 1 | fail-fast-boundary | Medium | `src/projection.ts:13`, `src/projection.ts:14` | `StockProjection.apply` が `ProductCreated` を受けるたびに `products.set` で既存商品を初期化し直す | `ProductCreated(a) -> StockReceived(a, 10) -> StockReserved(a, r1, 3) -> ProductCreated(a)` のような不正イベント列で、ログ破損を検出せず `onHand` と `reservations` が 0 / 空に戻る | `ProductCreated` 適用時に `this.products.has(event.productId)` を確認し、既知 product なら `DomainError` を throw する |
+
+## 検証証跡
+- 差分確認: `README.md`, `src/types.ts`, `src/domain.ts`, `src/reservations.ts`, `src/events.ts`, `src/event-store.ts`, `src/projection.ts`, `src/command-handler.ts`, `src/index.ts`, 関連テストを確認しました。
+- 既存 finding 確認: F-0001, F-0002, F-0003, F-0004, F-0006, F-0008, F-0009, F-0010, F-0011 は修正済みと確認しました。F-0005 と F-0007 は本レビュアーの主担当外です。
+- 再走査証跡: Knowledge の「データ構造の意味選択」「導出値の単一情報源」「命名と意味の整合」「境界での fail-fast」「内部状態の参照漏れ」を現行コードに照合しました。
+- 実行確認: `npm test` は 4 files / 58 tests passed、`npm run typecheck` は成功しました。
+- 判定根拠の実在確認: 上記 `file:line` は実コードを行番号付きで確認済みです。
+
+## REJECT判定条件
+- ブロッキング指摘が1件あります。

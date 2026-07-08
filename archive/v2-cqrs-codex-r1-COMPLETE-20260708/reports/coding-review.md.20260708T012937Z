@@ -1,0 +1,20 @@
+# コーディングレビュー
+
+## 結果: REJECT
+
+## サマリー
+前回までの EventStore 参照漏れ、initialState 可変性、prototype 継承キー、Projection 黙殺、重複 helper は実コード上で修正済みです。一方で、README の `tests/ 配下、変更禁止` に反して既存テストファイルの変更が残っているため REJECT です。
+
+## 観測した指摘
+| # | family_tag | 重大度 | 場所 | 問題 | 影響 | 修正案 |
+|---|------------|--------|------|------|------|--------|
+| 1 | scope_contract_tests_modified | Medium | `tests/domain.test.ts:36` | README.md:51 は `tests/ 配下、変更禁止` と明記しているが、`tests/domain.test.ts`、`tests/event-store.test.ts`、`tests/projection.test.ts` に追加変更が残っている。 | タスクのソース仕様に反する差分になっている。 | `tests/` 配下の変更を除外する。回帰テスト追加が必要なら、先に README またはタスク指示で制約を明示的に更新する。 |
+
+## 検証証跡
+- 差分確認: ベースとの差分で `tests/domain.test.ts:36`、`tests/event-store.test.ts:62`、`tests/projection.test.ts:50` など既存テスト変更を確認。
+- ビルド: `npm run typecheck` 成功。
+- テスト: `npm test` 成功。4 files / 58 tests passed。
+- 再走査証跡: Policy の原則、スコープ判定、REJECT基準、ファクトチェック、Finding Contract、ボーイスカウト、レビュー基本手順を再確認。Knowledge/Skill の構造、契約維持、状態管理、内部状態参照漏れ、動的キー、Fail Fast、DRY 観点で累積差分を再走査。
+
+## REJECT判定条件
+- ブロッキング指摘が1件以上あるため REJECT。

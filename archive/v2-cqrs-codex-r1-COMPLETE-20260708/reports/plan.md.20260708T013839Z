@@ -1,0 +1,169 @@
+# タスク計画
+
+## 元の要求
+在庫管理ドメインをイベントソーシングで実装するライブラリを作ってください。
+
+仕様は README.md に記載されています。公開 API は src/types.ts の型定義に準拠し、利用者が src/index.ts から import できる形にしてください。
+
+フレームワークには依存せず、インメモリで完結するライブラリとして実装してください。アーキテクチャ上の制約は README.md の「アーキテクチャ要件」に従ってください。
+
+## 分析結果
+
+### 目的
+`README.md` の仕様と `src/types.ts` の公開契約に従い、在庫管理ドメインの CQRS/イベントソーシング型ライブラリを実装する。利用者は `src/index.ts` と `src/types.ts` だけを import して使える状態にする。
+
+現状は `src/index.ts` に公開 API のスタブだけがあり、`evolve`、`decide`、`InMemoryEventStore`、`CommandHandler`、`StockProjection` はすべて `Not implemented` を throw している。`npm test` は未実装により 21 件失敗し、`npm run typecheck` は成功しているため、型定義とテスト配線は成立している。
+
+### 分解した要件
+| # | 要件 | 種別 | 備考 |
+|---|------|------|------|
+| 1 | `src/types.ts` の公開契約に準拠する | 明示 | `src/types.ts` は変更禁止。型、エラー、ポートをそのまま使う |
+| 2 | 利用者が `src/index.ts` から公開 API を import できる | 明示 | `src/index.ts` の公開 API シグネチャは変更禁止 |
+| 3 | `initialState` は未作成の商品を表す | 明示 | 現状 `exists: false`, `name: ''`, `onHand: 0`, `reservations: {}` で要件を満たすため変更不要 |
+| 4 | `evolve(state, event)` はイベントを状態に適用する | 明示 | 現状未実装のため変更要 |
+| 5 | `evolve` は純粋関数である | 明示 | throw しない、引数を変更しない |
+| 6 | `decide(state, command)` はコマンドから新イベントを導出する | 明示 | 現状未実装のため変更要 |
+| 7 | `decide` は不変条件違反時に `DomainError` を throw する | 明示 | `src/types.ts` の `DomainError` を使う |
+| 8 | `CreateProduct` は既存商品の再作成を拒否する | 明示 | `state.exists` で判定 |
+| 9 | `CreateProduct` は trim 後の名前が空なら拒否する | 明示 | 発行する `ProductCreated.name` も trim 後の値にする |
+| 10 | `ReceiveStock` は商品が存在することを要求する | 明示 | 存在しない場合 `DomainError` |
+| 11 | `ReceiveStock` は正の整数数量のみ許可する | 明示 | `0`、負数、小数を拒否 |
+| 12 | `ReserveStock` は商品が存在することを要求する | 明示 | 存在しない場合 `DomainError` |
+| 13 | `ReserveStock` は正の整数数量のみ許可する | 明示 | `0`、負数、小数を拒否 |
+| 14 | `ReserveStock` は available 以内のみ許可する | 明示 | available は `onHand - 予約数量合計` |
+| 15 | `ReserveStock` は未使用 `reservationId` のみ許可する | 明示 | 重複予約 ID を拒否 |
+| 16 | `ReleaseReservation` は既存予約のみ許可する | 明示 | 在庫は変えず予約だけ削除するイベントを返す |
+| 17 | `ShipStock` は既存予約のみ許可する | 明示 | 予約数量ぶん `onHand` が減り予約が消える |
+| 18 | `InMemoryEventStore` は `EventStore` ポートを実装する | 明示 | 現状未実装のため変更要 |
+| 19 | 空ストリームの `load` は `{ events: [], version: 0 }` を返す | 明示 | version は保存済みイベント数 |
+| 20 | `append` は `expectedVersion` 不一致時に `ConcurrencyError` を throw する | 明示 | 競合時は何も保存しない |
+| 21 | `load` の返却配列を変更しても内部状態に影響しない | 明示 | 配列コピーを返す |
+| 22 | `CommandHandler` は `load → replay → decide → append` を実行する | 明示 | 現状未実装のため変更要 |
+| 23 | `CommandHandler` は `EventStore` ポートにのみ依存する | 明示 | `InMemoryEventStore` 具象型に依存しない |
+| 24 | `StockProjection` はイベントから在庫読み取りモデルを構築する | 明示 | 現状未実装のため変更要 |
+| 25 | `StockProjection.getStock(productId)` は未知商品なら `undefined` を返す | 明示 | 既知商品は `{ onHand, reserved, available }` |
+| 26 | `StockProjection` は `StockShipped` で予約数量ぶん `onHand` と `reserved` を減らす | 明示 | `StockShipped` イベント自体は数量を持たないため、投影内部で reservationId ごとの数量保持が必要 |
+| 27 | `StockProjection.lowStock(threshold)` は `available < threshold` の productId を昇順で返す | 明示 | productId ソート |
+| 28 | ドメインロジックはストアやプロジェクションに依存しない | 明示 | `domain` モジュールから外向き依存を作らない |
+| 29 | プロジェクションは書き込みモデルを参照しない | 明示 | `ProductState` や `evolve` で再生しない |
+| 30 | フレームワーク非依存、インメモリ完結にする | 明示 | 依存追加、DB、HTTP、イベントバスは不要 |
+| 31 | 既存テストを変更しない | 明示 | README の開発欄に `tests/ 配下、変更禁止` とあるため、テスト追加・変更は計画に含めない |
+
+### 参照資料の調査結果
+- `README.md` は公開 API、ドメインルール、イベントストア、プロジェクション、アーキテクチャ要件のソース・オブ・トゥルース。
+  - 公開 API は `initialState`、`evolve`、`decide`、`InMemoryEventStore`、`CommandHandler`、`StockProjection`。
+  - ドメインロジックは純粋に保つ必要がある。
+  - `CommandHandler` は `EventStore` ポートだけに依存する必要がある。
+  - プロジェクションはイベントのみから構築する必要がある。
+  - `src/types.ts` と `src/index.ts` の公開 API シグネチャは変更禁止。
+- `src/types.ts` はイベント、コマンド、状態、読み取りモデル、`DomainError`、`ConcurrencyError`、`EventStore` ポートを定義済み。
+- `src/index.ts` は `initialState` 以外が未実装。`export * from './types.js'` は既に存在するため、型の公開配線は維持する。
+- `tests/` は公開 API の期待動作を具体化しているが、README に変更禁止とあるため実装判断の補助として読むだけにする。
+- Knowledge/Policy から適用する制約:
+  - ドメイン層はフレームワーク非依存。
+  - 書き込みと読み取りの責務を分ける。
+  - 1 モジュール 1 責務を優先する。
+  - 後方互換コード、未使用コード、過剰抽象化、フォールバック濫用は禁止。
+  - 公開契約を要求外で変更しない。
+
+### スコープ
+影響範囲は `src/` 配下のみ。
+
+変更対象:
+- `src/index.ts`
+- 新規作成候補: `src/domain.ts`
+- 新規作成候補: `src/event-store.ts`
+- 新規作成候補: `src/command-handler.ts`
+- 新規作成候補: `src/projection.ts`
+
+変更しない:
+- `src/types.ts`
+- `tests/`
+- `README.md`
+- `package.json`
+- `tsconfig.json`
+- lockfile
+
+### 検討したアプローチ
+| アプローチ | 採否 | 理由 |
+|-----------|------|------|
+| すべて `src/index.ts` に直接実装する | 不採用 | 公開 API は保てるが、ドメイン、ストア、ハンドラ、プロジェクションの複数責務が 1 ファイルに同居する |
+| 責務別モジュールに分割し、`src/index.ts` から re-export する | 採用 | README が内部モジュール分割を許容しており、1 モジュール 1 責務、依存方向、公開入口維持を両立できる |
+| 汎用 handler map や Strategy でイベント/コマンド処理を抽象化する | 不採用 | イベント種別・コマンド種別は少数で、業務ルールを `switch` で明示した方が読みやすい。過剰抽象化を避ける |
+| `StockProjection` で `ProductState` と `evolve` を再利用する | 不採用 | README が「プロジェクションは書き込みモデルを参照せず、イベントのみから構築」と明記しているため不可 |
+| `CommandHandler` が `InMemoryEventStore` を直接受ける | 不採用 | README が `EventStore` ポートのみへの依存を要求しているため不可 |
+
+### 実装アプローチ
+1. `src/domain.ts` を作成し、`initialState`、`evolve`、`decide` を実装する。
+   - `evolve` は `DomainEvent.type` の `switch` で新しい `ProductState` を返す。
+   - `ReservationReleased` と `StockShipped` では予約を削除した新しい `reservations` を作る。
+   - `StockShipped` では現在の予約数量を使って `onHand` を減らす。イベント履歴が正しい前提で、`evolve` は throw しない。
+   - `decide` は `Command.type` の `switch` でドメインルールを検証し、違反時は `DomainError` を throw する。
+2. `src/event-store.ts` を作成し、`InMemoryEventStore` を実装する。
+   - 内部状態は `Map<string, DomainEvent[]>`。
+   - `load` は存在しないストリームなら空配列と version 0 を返す。
+   - `load` は内部配列のコピーを返す。
+   - `append` は現在 version を append 前に検証し、不一致なら `ConcurrencyError` を throw して保存しない。
+3. `src/command-handler.ts` を作成し、`CommandHandler` を実装する。
+   - constructor は `EventStore` を受け取り private field に保持する。
+   - `handle(command)` は `command.productId` を streamId として使う。
+   - `load` したイベントを `initialState` から `evolve` で再生する。
+   - `decide` で得たイベントを、読み込んだ version を expectedVersion として append する。
+   - append 後、発行イベント配列を返す。
+4. `src/projection.ts` を作成し、`StockProjection` を実装する。
+   - 内部状態は productId ごとの `onHand` と reservationId ごとの数量。
+   - `ProductCreated` で既知商品として初期化する。
+   - `StockReceived` で `onHand` を加算する。
+   - `StockReserved` で予約数量を保持する。
+   - `ReservationReleased` で予約だけ削除する。
+   - `StockShipped` で予約数量を取得し、`onHand` から減算し、予約を削除する。
+   - `getStock` は予約合計から `reserved` と `available` を計算して返す。
+   - `lowStock` は既知商品のうち `available < threshold` の productId を昇順で返す。
+5. `src/index.ts` を公開入口として整理する。
+   - `export * from './types.js';` は維持する。
+   - `domain`、`event-store`、`command-handler`、`projection` から公開 API を re-export する。
+   - 公開 API 名とシグネチャは変更しない。
+6. 検証は `npm test` と `npm run typecheck` を使う。
+
+### 到達経路・起動条件
+| 項目 | 内容 |
+|------|------|
+| 利用者が到達する入口 | `src/index.ts` からの named import |
+| 更新が必要な呼び出し元・配線 | `src/index.ts` で新規実装モジュールを re-export する |
+| 起動条件 | 認証、権限、URL、フラグなし。ライブラリ利用者が関数・クラスを直接呼び出す |
+| 未対応項目 | なし |
+
+## 実装ガイドライン
+- `src/types.ts` は変更しない。
+- `src/index.ts` の公開 API 名と引数・戻り値の型を変更しない。
+- 既存に同種の実装はない。参照すべき既存パターンは、`src/index.ts` の `export * from './types.js'` による公開入口と、`src/types.ts` の公開契約。
+- `initialState` は現状の値が仕様を満たしているため、同じ構造を `domain` 側に移す場合も値を変えない。
+- `evolve` は入力 `state` と `state.reservations` を破壊しない。`delete` する場合は必ずコピーに対して行う。
+- `evolve` は throw しない。存在しない予約の release/ship など、通常は `decide` が防ぐ不整合イベントでも、実装上は安全に状態を返す。
+- `decide` はドメイン不変条件だけを扱い、ストアやプロジェクションを import しない。
+- 正の整数チェックは helper 関数に切り出して重複を避ける。ただし汎用バリデーションフレームワークは不要。
+- `CreateProduct` の名前は `command.name.trim()` を検証し、イベントにも trim 後の名前を入れる。
+- available 計算は `onHand - Object.values(reservations).reduce(...)`。同じ計算を複数箇所で使うなら小さな helper にする。
+- `CommandHandler` は `EventStore` インターフェースだけを型として参照する。`InMemoryEventStore` を import しない。
+- `CommandHandler.handle` は rejected command で append しない。`decide` が throw したらそのまま伝播する。
+- `InMemoryEventStore.load` は `{ events: [...stored], version: stored.length }` を返す。
+- `InMemoryEventStore.append` は `expectedVersion` チェックを append 前に行う。競合時は内部状態を変更しない。
+- `StockProjection` は `ProductState`、`initialState`、`evolve`、`decide` を使わない。イベントのみで内部読み取りモデルを更新する。
+- `StockProjection` では `StockShipped` の数量復元に予約 map が必要。`StockReserved` で reservationId ごとの数量を保存する。
+- 仕様外の API、非同期化、永続化、ロギング、設定オプション、後方互換マッピングは追加しない。
+- tests 配下は README に変更禁止とあるため編集しない。
+- 実装後は `npm test` と `npm run typecheck` を実行する。
+
+## スコープ外
+| 項目 | 除外理由 |
+|------|---------|
+| `src/types.ts` の変更 | README で変更禁止 |
+| `tests/` の追加・変更 | README の開発欄で tests 配下変更禁止 |
+| 外部 DB・永続化アダプター | インメモリ完結が明示要求 |
+| HTTP Controller / REST API | フレームワーク非依存ライブラリが明示要求 |
+| イベントバス、非同期処理、購読機構 | README の公開 API に含まれない |
+| 後方互換コード | 明示要求なし |
+| package 依存追加 | TypeScript 標準機能だけで実装可能 |
+
+## 確認事項
+なし。

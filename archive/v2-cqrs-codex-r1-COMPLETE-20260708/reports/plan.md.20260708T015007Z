@@ -1,0 +1,114 @@
+# タスク計画
+
+## 元の要求
+在庫管理ドメインをイベントソーシングで実装するライブラリを作ってください。
+
+仕様は README.md に記載されています。公開 API は src/types.ts の型定義に準拠し、利用者が src/index.ts から import できる形にしてください。
+
+フレームワークには依存せず、インメモリで完結するライブラリとして実装してください。アーキテクチャ上の制約は README.md の「アーキテクチャ要件」に従ってください。
+
+## 分析結果
+
+### 目的
+write_tests step の結果を踏まえ、今回の plan は `F-0012` の残存差分解消に絞る。
+
+現行の CQRS/ES ライブラリ実装は `src/index.ts` から公開 API を re-export 済みで、`npm test` は 4 files / 51 tests passed、`npm run typecheck` も成功している。したがって `src/` の追加修正は計画しない。
+
+残課題は、README の `tests/ 配下、変更禁止` に反して `tests/event-store.test.ts` の import 整形差分がベース `subject/tests` との比較で残っている点のみ。
+
+### 分解した要件
+| # | 要件 | 種別 | 備考 |
+|---|------|------|------|
+| 1 | `src/types.ts` の公開契約に準拠する | 明示 | 現行 `src/types.ts` はイベント、コマンド、状態、エラー、`EventStore` ポートを定義済み。変更不要 |
+| 2 | 利用者が `src/index.ts` から公開 API を import できる | 明示 | `src/index.ts:1-5` で公開 API を re-export 済み。変更不要 |
+| 3 | ドメインロジック（`decide` / `evolve`）は純粋に保ち、ストアやプロジェクションに依存しない | 明示 | 現行 `src/domain.ts` で分離済み。変更不要 |
+| 4 | `CommandHandler` は `EventStore` ポートにのみ依存する | 明示 | 現行 `src/command-handler.ts` は具象 store を import していない。変更不要 |
+| 5 | プロジェクションは書き込みモデルを参照せず、イベントのみから構築する | 明示 | 現行 `src/projection.ts` は `ProductState`、`evolve`、`decide` を import していない。変更不要 |
+| 6 | フレームワークに依存せず、インメモリで完結する | 明示 | 現行 `src/` は TypeScript 標準機能のみで外部フレームワーク・DB 依存なし。変更不要 |
+| 7 | `tests/` 配下を変更しない | 明示 | README の `tests/ 配下、変更禁止` に対し、`tests/event-store.test.ts` に import 整形差分が残存。変更要 |
+| 8 | `F-0012` の残存を解消する | 暗黙 | Previous Response、write_tests report、現行 diff の結果から、同じ finding ID として扱う |
+
+### 参照資料の調査結果
+- `README.md` は公開 API、ドメインルール、イベントストア、プロジェクション、アーキテクチャ要件、開発コマンドの唯一の仕様資料。
+- `README.md` は `tests/ 配下、変更禁止` と明記しているため、既存テストの import 整形差分も残せない。
+- `src/types.ts` は公開契約であり変更禁止。現行実装はこの型定義を利用している。
+- Knowledge では、ドメイン層のフレームワーク非依存、ポート依存、読み書き分離、外向き依存禁止を確認した。
+- `coding` スキルのポリシーでは、スコープクリープ禁止、公開契約維持、配線漏れ確認、不要なテスト変更禁止を確認した。
+- `reports/test-report.md` は write_tests で新規テストを作成しない判断を記録しており、後続 implement の対象を `tests/event-store.test.ts` の import 整形差分に限定している。
+- `findings-ledger.json` は `F-0012` を resolved としているが、現行ファイル実体では `tests/event-store.test.ts` にベースとの差分が残っている。
+
+現行の残存差分は以下のみ。
+
+```diff
+-import { InMemoryEventStore, ConcurrencyError, type DomainEvent } from '../src/index';
++import {
++  InMemoryEventStore,
++  ConcurrencyError,
++  type DomainEvent,
++} from '../src/index';
+```
+
+### スコープ
+変更対象は `tests/event-store.test.ts` の import 1 箇所のみ。
+
+変更しない:
+- `src/`
+- `src/types.ts`
+- `README.md`
+- `package.json`
+- `tsconfig.json`
+- 他の `tests/` ファイル
+- `findings-ledger.json`
+
+### 検討したアプローチ
+小規模タスクのため、設計セクションは省略する。
+
+| アプローチ | 採否 | 理由 |
+|-----------|------|------|
+| `src/` を追加修正する | 不採用 | 元要求の実装は `npm test` と `npm run typecheck` で成功しており、今回の残課題と無関係 |
+| 新規テストを追加する | 不採用 | README の `tests/ 配下、変更禁止` と write_tests report の判断に反する |
+| `tests/event-store.test.ts` の import をベースと完全一致に戻す | 採用 | README の `tests/ 配下、変更禁止` と `F-0012` の解消に直接対応する最小差分 |
+| ledger を手動修正する | 不採用 | Finding Contract の集約物であり、修正対象は現行ファイル実体 |
+| `git status` の空状態を根拠に完了扱いする | 不採用 | `F-0012` は Git 差分ではなく `subject/tests` との比較で検出される |
+
+### 実装アプローチ
+1. `tests/event-store.test.ts:2-6` の複数行 import を、ベースと同じ 1 行 import に戻す。
+2. 戻す行は以下と完全一致させる。
+
+```ts
+import { InMemoryEventStore, ConcurrencyError, type DomainEvent } from '../src/index';
+```
+
+3. `diff -qr /Users/nrs/work/git/takt-bench/subject/tests tests` が無出力になることを確認する。
+4. `npm test` を実行し、51 tests passed を確認する。
+5. `npm run typecheck` を実行し、成功を確認する。
+6. `git status --short` が空でも、それだけを `F-0012` 解消根拠にしない。必ず `subject/tests` との diff を根拠にする。
+
+### 到達経路・起動条件
+| 項目 | 内容 |
+|------|------|
+| 利用者が到達する入口 | `src/index.ts` からの named import |
+| 更新が必要な呼び出し元・配線 | なし |
+| 起動条件 | ライブラリ利用者が公開 API を直接呼び出す |
+| 未対応項目 | `tests/event-store.test.ts` の import 整形差分のみ |
+
+## 実装ガイドライン
+- `F-0012` を対象にする。新しい finding ID は作らない。
+- `tests/event-store.test.ts` の import 整形だけをベースに戻す。
+- 既存テストの内容、期待値、テスト数は変更しない。
+- `src/` は触らない。
+- 新規テストは追加しない。README の `tests/ 配下、変更禁止` に反するため。
+- ledger は編集しない。
+- 検証は `diff -qr /Users/nrs/work/git/takt-bench/subject/tests tests`、`npm test`、`npm run typecheck` の 3 点で行う。
+- `git status --short` は補助情報に留める。
+
+## スコープ外
+| 項目 | 除外理由 |
+|------|---------|
+| `src/` の修正 | 元要求実装はテスト・型検査で成功済み |
+| 新規テスト追加 | README が `tests/ 配下、変更禁止` と明記 |
+| 既存テストの期待値変更 | `F-0012` の再発につながる |
+| ledger 手動編集 | 実ファイル差分の修正ではない |
+
+## 確認事項
+なし。

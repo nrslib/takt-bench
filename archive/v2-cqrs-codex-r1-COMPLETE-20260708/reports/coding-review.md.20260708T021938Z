@@ -1,0 +1,20 @@
+# コーディングレビュー
+
+## 結果: REJECT
+
+## サマリー
+F-0013 は `src/projection.ts:13` の重複 `ProductCreated` 検出により修正済みです。F-0012 は `tests/event-store.test.ts` に変更が残っており、README の `tests/ 配下、変更禁止` にまだ反しています。
+
+## 観測した指摘
+| # | family_tag | 重大度 | 場所 | 問題 | 影響 | 修正案 |
+|---|------------|--------|------|------|------|--------|
+| F-0012 | scope_contract_tests_modified | Medium | `tests/event-store.test.ts:2` | README.md:51 は `tests/ 配下、変更禁止` と明記しているが、`tests/event-store.test.ts` の import 整形差分が残っている。 | タスクのソース仕様に反する差分が残る。 | `tests/event-store.test.ts` をベースと同一に戻し、`tests/` 配下の差分をゼロにする。 |
+
+## 検証証跡
+- 差分確認: ベースとの差分で `tests/event-store.test.ts` の import 部分のみ変更が残っていることを確認。`tests/domain.test.ts` と `tests/projection.test.ts` の追加テスト差分は解消済み。
+- ビルド: `npm run typecheck` 成功。
+- テスト: `npm test` 成功。4 files / 51 tests passed。
+- 再走査証跡: Policy の原則、スコープ判定、REJECT基準、ファクトチェック、Finding Contract、ボーイスカウト、レビュー基本手順を再確認。累積差分をベースから再走査し、実装側の open finding F-0013 は修正済み、テスト変更禁止の F-0012 は未解消と判定。
+
+## REJECT判定条件
+- ブロッキング指摘 F-0012 が未解消のため REJECT。
