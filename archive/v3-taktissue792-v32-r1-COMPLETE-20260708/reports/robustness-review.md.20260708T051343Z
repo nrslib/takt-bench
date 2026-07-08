@@ -1,0 +1,11 @@
+# コーディングレビュー
+
+## 結果: APPROVE
+
+## サマリー
+ロバストネス観点で再確認し、前回指摘したサイズ上限、途中失敗 cleanup、単一画像失敗の隔離、PR body-only 入力、magic bytes、認証ヘッダー伝播はいずれも修正済みでした。新規のブロッキング指摘はありません。
+
+## 検証証跡
+- 差分確認: `attachmentDownload.ts`、`prReviewImageAttachments.ts`、`imageMime.ts`、`add/index.ts`、`routing-inputs.ts`、`pipeline/steps.ts` と関連テスト・docs を確認
+- ビルド: 未実行
+- テスト: 未実行

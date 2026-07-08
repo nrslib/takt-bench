@@ -1,0 +1,14 @@
+[
+  {
+    "rawFindingId": "20260708-024900-pr-task-attachments-takt-add-p:reviewers:5:implementation-semantics-review:raw-impl-sem-5-1",
+    "stepName": "implementation-semantics-review",
+    "reviewer": "implementation-semantics-review",
+    "familyTag": "implementation-semantics/failure-cleanup",
+    "severity": "medium",
+    "title": "PR画像添付取得後のワークフロー選択/説明生成失敗で一時画像が残る",
+    "location": "src/app/cli/routing.ts:154",
+    "description": "`executeDefaultAction()` は `resolvePrInput()` 成功後に `cleanupSourceAttachments` を受け取りますが、その後の `determineWorkflow()`（line 154）や `getWorkflowDescription()`（line 162）など、interactive 実行用の `try/finally`（line 194-305）へ入る前の処理が例外を投げた場合に `cleanupInteractiveResultAttachments({ cleanupAttachments: cleanupSourceAttachments })` が呼ばれません。例えば PR 画像を一時ディレクトリへ保存した後、指定 workflow の読み込み・説明生成が例外になると、取得済みの private PR 画像が tmp 配下に残ります。キャンセル時（line 155-158, 172-175）と interactive 後（line 300-305）は cleanup されていますが、例外経路の所有権が閉じていません。",
+    "suggestion": "`cleanupSourceAttachments` を取得した後から interactive 終了までを外側の `try/finally` で囲み、`determineWorkflow()`、`getWorkflowDescription()`、`selectInteractiveMode()` の例外時にも source attachment cleanup が必ず実行される構造にしてください。あわせて PR 画像添付ありで workflow 説明生成または workflow 選択が失敗した場合に cleanup が呼ばれる単体テストを追加してください。",
+    "kind": "issue"
+  }
+]

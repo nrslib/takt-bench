@@ -1,0 +1,20 @@
+# コーディングレビュー
+
+## 結果: REJECT
+
+## サマリー
+PR コメント画像 attachment 実装は主要経路に配線されていますが、外部画像取得のサイズ上限と失敗時 cleanup にブロッキング問題があります。特に private PR 画像を扱うため、失敗経路で一時ファイルが残る点は修正が必要です。
+
+## 観測した指摘
+| # | family_tag | 重大度 | 場所 | 問題 | 影響 | 修正案 |
+|---|------------|--------|------|------|------|--------|
+| 1 | security.unbounded_attachment_download | High | `src/infra/github/attachmentDownload.ts:172` | `Content-Length` が無い場合、`await response.arrayBuffer()` で本文全体を読み込んでからサイズ検証している | タスク要件の「サイズ上限」が読み込み境界で効かず、大きな GitHub attachment によりメモリを過剰消費する | `response.body` をストリームで読み、累積サイズが `MAX_IMAGE_ATTACHMENT_BYTES` を超えた時点で中断する。未対応 `Content-Type` も本文読み込み前に拒否する |
+| 2 | state.cleanup_on_prepare_failure | Medium | `src/features/tasks/prReviewImageAttachments.ts:151` | 複数画像の途中で後続ダウンロード・検証が失敗すると、先に保存した一時画像を削除する `cleanupAttachments` が返らない | `/tmp/takt-pr-review-images-*` 配下に private PR 画像が残る | PR body/comments/reviews の置換処理全体を `try/catch` で囲み、例外時に作成済み一時ディレクトリを削除してから再 throw する。2枚目失敗時の cleanup テストを追加する |
+
+## 検証証跡
+- 差分確認: PR 画像抽出、GitHub attachment ダウンロード、`takt add --pr`、interactive、pipeline `--pr` 経路の累積差分を確認
+- ビルド: 未実行
+- テスト: `npm run lint` 成功。関連テスト7件は成功。`npm test` は workflow/config 系の既存領域でタイムアウト・文言不一致があり失敗したが、今回差分起因とは未確認
+
+## REJECT判定条件
+- ブロッキング指摘が2件あります。

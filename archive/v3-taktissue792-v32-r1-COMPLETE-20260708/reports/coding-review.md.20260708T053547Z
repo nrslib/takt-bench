@@ -1,0 +1,14 @@
+# コーディングレビュー
+
+## 結果: REJECT
+
+## サマリー
+F-0021〜F-0023 は解消済みですが、F-0022 修正後に到達不能な token hostname 分岐が残っています。
+
+## 観測した指摘
+| # | family_tag | 重大度 | 場所 | 問題 | 影響 | 修正案 |
+|---|------------|--------|------|------|------|--------|
+| 1 | ai_antipattern.dead_code | Low | `src/infra/github/attachmentDownload.ts:112` | `resolveAuthTokenHostname()` の asset host 分岐は、`shouldSendAuthorizationToHost()` が `github.com` の場合だけ呼ぶため到達不能です。 | 認証経路の読み取りを誤らせる未使用ロジックが残ります。 | `resolveAuthTokenHostname()` を削除し、`resolveAuthToken(GITHUB_HOSTNAME, options.cwd)` を直接呼ぶか、到達不能分岐を削除してください。 |
+
+## REJECT判定条件
+- ブロッキング指摘が1件以上あります。

@@ -1,0 +1,74 @@
+[
+  {
+    "rawFindingId": "20260708-024900-pr-task-attachments-takt-add-p:reviewers:6:arch-review:arch-review-6-resolution-001",
+    "stepName": "arch-review",
+    "reviewer": "arch-review",
+    "familyTag": "implementation-semantics/failure-cleanup",
+    "severity": "medium",
+    "title": "PR画像添付取得後の失敗経路でsource attachment cleanupが実行される",
+    "location": "src/app/cli/routing.ts:159",
+    "description": "`src/app/cli/routing.ts:159` で `cleanupSourceAttachments` を単一実行cleanupに包み、`src/app/cli/routing.ts:160-318` の外側 `try/finally` により `determineWorkflow()`、`getWorkflowDescription()`、`selectInteractiveMode()`、interactive実行後の全経路で `cleanupResolvedSourceAttachments()` が呼ばれることを確認しました。回帰テストは `src/__tests__/cli-routing-pr-resolve.test.ts:397`、`src/__tests__/cli-routing-pr-resolve.test.ts:419`、`src/__tests__/cli-routing-pr-resolve.test.ts:443` で workflow決定失敗、説明生成失敗、mode選択失敗時の cleanup を検証しています。`npm run build`、`npm run lint`、関連6テスト126件も成功しました。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0026"
+  },
+  {
+    "rawFindingId": "20260708-024900-pr-task-attachments-takt-add-p:reviewers:6:ai-antipattern-review:raw-ai-006-confirm-F-0026",
+    "stepName": "ai-antipattern-review",
+    "reviewer": "ai-antipattern-review",
+    "familyTag": "missing-edge-case",
+    "severity": "medium",
+    "title": "PR画像添付取得後のワークフロー選択/説明生成失敗で一時画像が残る",
+    "location": "src/app/cli/routing.ts:159",
+    "description": "src/app/cli/routing.ts:159-318 で cleanupSourceAttachments 取得後の処理全体が createSingleUseSourceAttachmentCleanup(...) と外側の try/finally に包まれ、determineWorkflow()、getWorkflowDescription()、selectInteractiveMode()、interactive 実行、dispatch の成功・return・例外経路で cleanupResolvedSourceAttachments() が必ず呼ばれることを確認しました。src/__tests__/cli-routing-pr-resolve.test.ts:397-463 では workflow 決定失敗、workflow description 生成失敗、interactive mode 選択失敗の各経路で cleanup が1回呼ばれ、interactive mode が起動しないことも検証されています。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0026"
+  },
+  {
+    "rawFindingId": "20260708-024900-pr-task-attachments-takt-add-p:reviewers:6:coding-review:coding-review-6-001",
+    "stepName": "coding-review",
+    "reviewer": "coding-review",
+    "familyTag": "state-consistency",
+    "severity": "medium",
+    "title": "PR画像添付取得後のワークフロー選択/説明生成失敗で一時画像が残る",
+    "location": "src/app/cli/routing.ts:159",
+    "description": "F-0026 は修正済みです。`src/app/cli/routing.ts:159-318` で `cleanupSourceAttachments` 取得後の `determineWorkflow()`、`getWorkflowDescription()`、`selectInteractiveMode()`、interactive 実行までが外側の `try/finally` に入り、例外・キャンセル・正常終了のいずれでも `cleanupResolvedSourceAttachments()` が呼ばれることを確認しました。回帰テストも `src/__tests__/cli-routing-pr-resolve.test.ts:397`、`:419`、`:443` で workflow determination、workflow description、interactive mode selection 失敗時の cleanup を検証しています。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0026"
+  },
+  {
+    "rawFindingId": "20260708-024900-pr-task-attachments-takt-add-p:reviewers:6:implementation-semantics-review:raw-impl-sem-6-1",
+    "stepName": "implementation-semantics-review",
+    "reviewer": "implementation-semantics-review",
+    "familyTag": "implementation-semantics/failure-cleanup",
+    "severity": "medium",
+    "title": "PR画像添付取得後のワークフロー選択/説明生成失敗時 cleanup が保護された",
+    "location": "src/app/cli/routing.ts:159",
+    "description": "`src/app/cli/routing.ts:159` で `cleanupSourceAttachments` を単一実行 cleanup に包み、`src/app/cli/routing.ts:160-318` の外側 `try/finally` で `determineWorkflow()`、`getWorkflowDescription()`、`selectInteractiveMode()`、interactive 実行後まで必ず `cleanupResolvedSourceAttachments()` を呼ぶ構造になっていることを確認しました。`src/__tests__/cli-routing-pr-resolve.test.ts:397`、`src/__tests__/cli-routing-pr-resolve.test.ts:419`、`src/__tests__/cli-routing-pr-resolve.test.ts:443` で workflow 決定失敗、workflow description 生成失敗、interactive mode 選択失敗時に cleanup が1回呼ばれることも検証されています。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0026"
+  },
+  {
+    "rawFindingId": "20260708-024900-pr-task-attachments-takt-add-p:reviewers:6:contract-lifecycle-review:contract-lifecycle-raw-001",
+    "stepName": "contract-lifecycle-review",
+    "reviewer": "contract-lifecycle-review",
+    "familyTag": "resource_lifecycle",
+    "severity": "medium",
+    "title": "PR画像添付取得後のワークフロー選択/説明生成失敗で一時画像が残る問題は解消済み",
+    "location": "src/app/cli/routing.ts:159",
+    "description": "`src/app/cli/routing.ts:159` で `cleanupSourceAttachments` を単回 cleanup に包み、`src/app/cli/routing.ts:160` から `try` に入り、`determineWorkflow()` は `src/app/cli/routing.ts:167`、`getWorkflowDescription()` は `src/app/cli/routing.ts:174`、`selectInteractiveMode()` は `src/app/cli/routing.ts:179` でこの try 内にあります。対応する解放は `src/app/cli/routing.ts:316-318` の outer `finally` で `cleanupResolvedSourceAttachments()` を呼ぶ実コードとして確認しました。これにより F-0026 の指摘対象だった workflow 選択・説明生成・モード選択の例外経路でも PR 画像一時添付の cleanup 所有権が閉じています。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0026"
+  },
+  {
+    "rawFindingId": "20260708-024900-pr-task-attachments-takt-add-p:reviewers:6:robustness-review:robustness-review-6-001",
+    "stepName": "robustness-review",
+    "reviewer": "robustness-review",
+    "familyTag": "state_consistency",
+    "severity": "medium",
+    "title": "PR画像添付取得後の例外経路で一時画像が cleanup されることを確認",
+    "location": "src/app/cli/routing.ts:159",
+    "description": "`cleanupSourceAttachments` は `createSingleUseSourceAttachmentCleanup()` で単一実行化され、line 160 の外側 `try` が `determineWorkflow()`（line 167）、`getWorkflowDescription()`（line 174）、`selectInteractiveMode()`（line 179-183）を含み、line 316-318 の `finally` で `cleanupResolvedSourceAttachments()` を必ず呼びます。テストでも `src/__tests__/cli-routing-pr-resolve.test.ts:397`、`:419`、`:443` で workflow determination、workflow description generation、interactive mode selection の各失敗時に `cleanupAttachments` が1回呼ばれることを確認しています。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0026"
+  }
+]

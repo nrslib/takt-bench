@@ -1,0 +1,31 @@
+# AI生成コードレビュー
+
+## 結果: REJECT
+
+## サマリー
+PR画像添付の主要経路は実装されていますが、認証付きリダイレクト処理と pipeline 失敗経路にブロッキング問題があります。
+
+## 検証した項目
+| 観点 | 結果 | 備考 |
+|------|------|------|
+| 仮定の妥当性 | ❌ | GitHub attachment のリダイレクト先と外部画像の扱いに未検証の仮定あり |
+| API/ライブラリの実在 | ✅ | build/lint は成功 |
+| コンテキスト適合 | ❌ | pipeline の既存 fetch failure 経路に新しい画像解決失敗が配線されていない |
+| スコープ | ❌ | GitHub attachment 以外の https 画像まで失敗対象にしている |
+
+## 観測した指摘
+| # | family_tag | カテゴリ | 重大度 | 場所 | 問題 | 修正案 |
+|---|------------|---------|--------|------|------|--------|
+| 1 | unvalidated-assumption | 外部契約 | high | `src/infra/github/attachmentDownloads.ts:80` | リダイレクト時に `{...request}` で `Authorization: Bearer <gh token>` を任意 HTTPS リダイレクト先へ引き継ぐ。`resolveRedirectUrl()` は https しか検証しておらず、PRコメント由来URL処理で認証情報を外部ホストへ送る可能性がある。 | リダイレクト先ホストも allowlist で検証し、ホスト変更時は Authorization を引き継がない。必要な GitHub/CDN ホストだけを明示し、リダイレクト時のトークン非送信テストを追加する。 |
+| 2 | missing-edge-case | 配線漏れ | medium | `src/features/pipeline/steps.ts:163` | `resolvePrReviewImageAttachments()` が `fetchVcsResource()` の catch 外にあり、画像拒否・MIME不一致・サイズ超過で `executePipeline()` が例外化する。既存の `EXIT_ISSUE_FETCH_FAILED` 経路に落ちない。 | pipeline の PR 画像解決を try/catch で包み、既存 fetch failure と同様に error 表示後 `undefined` を返す。画像解決失敗時に exit code 2 を返すテストを追加する。 |
+| 3 | unvalidated-assumption | 対象URL判定 | medium | `src/features/tasks/prReviewImageAttachments.ts:26` | 正規表現が全 https 画像を収集し、後段の GitHub attachment allowlist で対象外URLを例外にするため、外部画像が1つあるだけで PR task 作成や pipeline が失敗する。 | 抽出または download 前に GitHub attachment URL だけを attachment 対象にし、対象外の画像 markup は本文に残す。外部画像混在時に GitHub attachment だけ保存されるテストを追加する。 |
+
+## 検証コマンド
+- `npm run build`: 成功
+- `npm run lint`: 成功
+- 関連テスト個別実行: 成功
+- `npm test`: 失敗（既存設定/タイムアウト系の失敗を含むため、今回差分起因かは未確認）
+
+## 再走査証跡
+- Policy Source の全 `##` セクションを確認し、特に「外部契約検証」「契約全入口」「副作用と状態遷移」「仮定の検証」「もっともらしいが間違っている検出」「スコープクリープ検出」「フォールバック・デフォルト引数の濫用検出」を差分へ照合した。
+- Knowledge Source は Report Directory 配下の knowledge ファイル群を確認し、特に「境界での解決」「仕様準拠の検証」「呼び出しチェーン検証」「境界での fail-fast」を pipeline/add/interactive の入口差分へ照合した。

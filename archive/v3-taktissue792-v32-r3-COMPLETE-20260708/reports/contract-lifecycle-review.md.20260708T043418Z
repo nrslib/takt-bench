@@ -1,0 +1,21 @@
+# コーディングレビュー
+
+## 結果: REJECT
+
+## サマリー
+PR コメント画像添付の一時ファイル/ディレクトリ取得と認証付き取得境界を確認した結果、解放漏れの例外経路と、リダイレクト時に GitHub トークンを未検証ホストへ転送し得る境界不備がありました。
+
+## 観測した指摘
+| # | family_tag | 重大度 | 場所 | 問題 | 影響 | 修正案 |
+|---|------------|--------|------|------|------|--------|
+| 1 | credential_boundary.github_attachment_redirect_auth_forwarding | High | `src/infra/github/attachmentDownloads.ts:80` | 初回 URL は allowlist 検証されますが、リダイレクト先は HTTPS だけを確認し、`Authorization: Bearer ...` を含む同じ headers を再利用しています。 | GitHub 添付 URL から外部 HTTPS へ 3xx された場合、GitHub トークンを未許可ホストへ送信できます。 | 各リダイレクト先にも GitHub attachment allowlist を適用してください。GitHub 管理外ホストを許す必要がある場合は、ホスト変更時に `Authorization` を除去して署名付き URL として取得する経路に分けてください。 |
+| 2 | resource_lifecycle.pr_image_temp_cleanup_before_return | Medium | `src/app/cli/routing-inputs.ts:76` | `resolvePrReviewImageAttachments()` が一時ディレクトリを作成して cleanup を返した後、`formatPrReviewAsTask()` や戻り値構築で例外が出ると cleanup が呼ばれません。同じ未解放経路は `src/features/pipeline/steps.ts:163` から `src/features/pipeline/steps.ts:172` にもあります。 | PR 画像添付の一時ディレクトリが `/tmp` 配下に残ります。 | 画像解決成功直後から cleanup を呼び出し元へ渡すまでを `try/catch` で囲み、例外時は `cleanupAttachments()` を実行してから再 throw してください。 |
+| 3 | resource_lifecycle.routing_source_attachment_cleanup_gap | Medium | `src/app/cli/routing.ts:113` | `resolvePrInput()` 後に `cleanupSourceAttachments` を保持していますが、`determineWorkflow()`、`getWorkflowDescription()`、`loadTaskHistory()`、`selectInteractiveMode()` など、interactive 実行の `try/finally` に入る前の例外経路では cleanup が実行されません。 | `takt --pr` 経路で、画像添付取得後の例外時に一時添付ディレクトリが残ります。 | PR 添付取得後の処理全体を外側の `try/finally` で囲み、通常終了・キャンセル・例外の全経路で `cleanupSourceAttachments?.()` が一度だけ実行される構造にしてください。 |
+
+## 検証証跡
+- 差分確認: `src/infra/github/attachmentDownloads.ts`、`src/features/tasks/prReviewImageAttachments.ts`、`src/app/cli/routing-inputs.ts`、`src/app/cli/routing.ts`、`src/features/pipeline/steps.ts`、既存の attachment cleanup 経路を確認
+- ビルド: 未実行
+- テスト: 未実行
+
+## REJECT判定条件
+- ブロッキング指摘が1件以上あるため REJECT

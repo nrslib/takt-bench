@@ -1,0 +1,21 @@
+# 契約・ライフサイクルレビュー
+
+## 結果: REJECT
+
+## サマリー
+PR画像添付の一時ファイルと認証付き fetch のライフサイクルに未解放経路があります。成功経路の cleanup は確認できましたが、準備途中の失敗・所有権移譲前の例外・Response body 未消費のエラー経路が閉じていません。
+
+## 観測した指摘
+| # | family_tag | 重大度 | 場所 | 問題 | 影響 | 修正案 |
+|---|------------|--------|------|------|------|--------|
+| 1 | contract-lifecycle.pr-review-image-temp-cleanup-on-prepare-failure | Medium | `src/features/tasks/prReviewImageAttachments.ts:75` | `fs.mkdtempSync` と `fs.writeFileSync` で作成した一時画像の cleanup は `cleanupAttachments` 返却後にしか呼べない。2枚目以降の download/mime/write 失敗時は呼び出し元が cleanup を受け取れない。 | private PR 画像が tmp 配下に残る。 | `preparePrReviewImageAttachments()` 全体を try/catch で囲み、途中失敗時に作成済み temp root を `fs.rmSync(..., { recursive: true, force: true })` してから再 throw する。 |
+| 2 | contract-lifecycle.pr-review-image-temp-ownership-transfer | Medium | `src/app/cli/routing-inputs.ts:74` | `preparePrReviewImageAttachments()` 後、cleanup を返す前に `formatPrReviewAsTask()` を実行している。同様に pipeline は `src/features/pipeline/steps.ts:162-174` で所有権返却前の例外経路がある。 | 整形処理が例外を投げると、一時画像 cleanup が呼べない。 | prepare 成功後から返却完了までを try/catch で保護し、例外時は `preparedPrReview.cleanupAttachments()` を呼ぶ。`addTask` の try/finally（`src/features/tasks/add/index.ts:209-232`）と同じ契約に揃える。 |
+| 3 | contract-lifecycle.github-attachment-response-body-release | Medium | `src/infra/github/attachmentDownload.ts:157` | `fetch` で取得した Response は成功時のみ `arrayBuffer()` で消費される。`!response.ok`、Content-Length 超過、Content-Type 欠落では body を cancel/consume せず throw している。 | 認証付き外部接続/ストリームがエラー経路で未解放になる。 | body 読み取り前に throw する経路では `await response.body?.cancel()` を実行する helper を通す。 |
+
+## 検証証跡
+- 差分確認: `prReviewImageAttachments.ts`、`attachmentDownload.ts`、`routing-inputs.ts`、`pipeline/steps.ts`、既存の `addTask` cleanup 経路を確認。
+- ビルド: 未確認。
+- テスト: 未確認。
+
+## REJECT判定条件
+- ブロッキング指摘が1件以上あるため REJECT。

@@ -1,0 +1,44 @@
+# Merge Readiness Review
+
+## 結果: REJECT
+
+## サマリー
+実装差分自体の PR 画像添付配線は主要要件を満たしており、直結テストも通過しています。ただし品質要件の `npm test` が exit code 1 で失敗しているため、現時点ではマージ不可です。
+
+## 保守前提のマージ品質チェック
+| # | 観点 | 状態 | 根拠（ファイル:行 / テスト / 実行証跡） | コメント |
+|---|------|------|---------------------------------------|----------|
+| 1 | 要求充足 | 充足 | `src/features/tasks/prReviewImageAttachments.ts:44`, `:59`, `:194`; `src/features/tasks/add/index.ts:224`; `src/features/pipeline/steps.ts:150`, `:249` | PR body/comment/review thread、add、pipeline 経路を確認 |
+| 2 | 既存契約・既存フローへの影響 | 問題なし | `src/features/tasks/attachments.ts:26`; `src/infra/task/enqueueService.ts:162` | 既存 task attachment の `order.md` / `attachments/` 契約を利用 |
+| 3 | テスト・検証 | 不足 | `npm test` exit code 1 | 全体テスト失敗が品質要件未達 |
+| 4 | 要求外変更・スコープクリープ | 問題なし | `README.md:262`; `docs/cli-reference.md:240` | PR画像添付契約の docs 追記は要件内 |
+| 5 | 保守可能性・将来変更容易性 | 問題なし | `src/infra/github/attachmentDownload.ts:45`; `src/shared/utils/imageMime.ts:80` | URL許可、MIME検証、download処理が分離されている |
+| 6 | 明白なセキュリティ・データ保護・運用リスク | 問題なし | `src/infra/github/attachmentDownload.ts:127`, `:180`; `src/features/tasks/prReviewImageAttachments.ts:186` | Authorization転送制限、stream上限、cleanup を確認 |
+
+## 横断監査証跡
+| # | 変更カテゴリ | 抽出した項目 | 確認した検索語・ファイル | 判定 | コメント |
+|---|--------------|--------------|--------------------------|------|----------|
+| 1 | helper / 出力契約 | `preparePrReviewImageAttachments`, `TaskAttachment`, `cleanupAttachments` | `preparePrReviewImageAttachments`, `attachments`, `cleanupAttachments` / `src/features/tasks/add/index.ts`, `src/app/cli/routing.ts`, `src/features/pipeline/steps.ts` | 問題なし | add / interactive / pipeline へ配線済み |
+| 2 | 外部取得境界 | `isAllowedGitHubAttachmentUrl`, `downloadGitHubImageAttachment`, token送信 | `resolveAuthTokenHostname`, `shouldSendAuthorizationToHost`, `resolveAuthToken(` / `src/infra/github/attachmentDownload.ts` | 問題なし | 到達不能 helper は残存せず、token は `github.com` のみに送信 |
+| 3 | 検証契約 | `MAX_IMAGE_ATTACHMENT_BYTES`, `validateImageDataMime` | `MAX_IMAGE_ATTACHMENT_BYTES`, `validateImageDataMime` / `src/shared/utils/imageMime.ts`, `src/__tests__/imageMime.test.ts` | 問題なし | PNG/JPEG/GIF/WebP、10MiB、magic bytes を確認 |
+
+## 要求照合
+| # | 要求（タスクから抽出） | 状態 | 根拠（ファイル:行 / テスト） | コメント |
+|---|-------------------|------|-------------------|----------|
+| 1 | PR本文・通常コメント・review thread コメント内画像URLを検出 | 充足 | `src/features/tasks/prReviewImageAttachments.ts:44`, `:59`, `:194`; `src/__tests__/prReviewImageAttachments.test.ts:61` | Markdown / HTML img 対応 |
+| 2 | 対応画像をダウンロードし安全検証する | 充足 | `src/infra/github/attachmentDownload.ts:208`; `src/shared/utils/imageMime.ts:80`; `src/__tests__/githubAttachmentDownload.test.ts:91` | Content-Type / magic bytes / サイズ上限 |
+| 3 | `.takt/tasks/<slug>/attachments/` に保存し `order.md` に追記 | 充足 | `src/features/tasks/attachments.ts:26`, `:79`; `src/__tests__/addTaskPrImageAttachments.test.ts:132` | 既存 attachment 形式 |
+| 4 | 本文中の参照を `[Image #N]` に置換または補足 | 充足 | `src/features/tasks/prReviewImageAttachments.ts:105`; `src/__tests__/prReviewImageAttachments.test.ts:75` | 失敗画像は元参照を保持 |
+| 5 | pipeline `--pr` でも画像参照可能 | 充足 | `src/features/pipeline/steps.ts:267`; `src/__tests__/pipelineExecution.test.ts:360` | run context に task spec を stage |
+| 6 | `npm run build`、`npm run lint`、`npm test` 成功 | 未充足 | `npm test` exit code 1 | build/lint は成功、全体 test は失敗 |
+
+## 観測した指摘
+| # | family_tag | カテゴリ | 重大度 | 場所 | 問題 | 修正案 |
+|---|------------|---------|--------|------|------|--------|
+| 1 | merge-readiness.full-test-suite | テスト不足 | high | `src/__tests__/config.test.ts:327`, `:725`; `src/__tests__/workflow-categories.test.ts:53`, `:62`, `:73`; `src/__tests__/workflowLoader.test.ts:914`; `src/__tests__/for-local-llm-replan-wiring.test.ts:56` | `npm test` が timeout 複数件と locale 期待値不一致で失敗し、品質要件を満たしていない | workflow/config 系 timeout と `for-local-llm-replan-wiring` の英日 condition 期待値不一致を修正し、`npm test` を exit 0 にしてください |
+
+## 検証証跡
+- ビルド: `npm run build` 成功
+- lint: `npm run lint` 成功
+- テスト: PR画像添付直結の絞り込み `npm test -- --run ...` は 6 files / 123 tests 成功
+- 全体テスト: `npm test` は exit code 1。上記のため REJECT。

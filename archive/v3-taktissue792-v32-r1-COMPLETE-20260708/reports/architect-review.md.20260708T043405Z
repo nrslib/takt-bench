@@ -1,0 +1,35 @@
+# アーキテクチャレビュー
+
+## 結果: REJECT
+
+## サマリー
+PR画像添付の主要配線は追加されていますが、`takt add --pr` の入口不整合、失敗時 cleanup 漏れ、外部HTTP取得のサイズ上限不備があり、設計・境界契約として差し戻しです。
+
+## 確認した観点
+- [x] 構造・設計
+- [x] コード品質
+- [x] 変更スコープ
+- [x] テストカバレッジ
+- [x] デッドコード
+- [x] 呼び出しチェーン検証
+
+## 観測した指摘
+| # | family_tag | スコープ | 重大度 | 場所 | 問題 | 修正案 |
+|---|------------|---------|--------|------|------|--------|
+| 1 | contract.entry_consistency | スコープ内 | medium | `src/features/tasks/add/index.ts:195` | `takt add --pr` は review/comment が0件だと return するため、PR本文だけに画像がある場合に `preparePrReviewImageAttachments()` が呼ばれない。pipeline/interactive と入口契約が不一致。 | PR本文も含めてタスク化可否を判定し、本文のみ画像のPRでも添付処理へ進める。本文のみケースのテストを追加する。 |
+| 2 | state.cleanup_on_failure | スコープ内 | medium | `src/features/tasks/prReviewImageAttachments.ts:151` | 複数画像の処理中に後続 download/write が失敗すると、先に作成した一時添付ファイルを削除する cleanup が返却前のため呼べず、`/tmp` に画像が残る。 | `preparePrReviewImageAttachments()` 内で例外時に作成済み temp root を削除してから再 throw する。途中失敗時の cleanup テストを追加する。 |
+| 3 | external_io.size_limit | スコープ内 | high | `src/infra/github/attachmentDownload.ts:172` | `Content-Length` がないレスポンスを `arrayBuffer()` で全量読み込んだ後にサイズ判定しており、外部HTTP境界でメモリ使用量の上限が保証されない。 | body stream を上限+1 byte まで読み、超過時点で中断する。`Content-Length` なしの上限超過テストを追加する。 |
+| 4 | spec.documentation_consistency | スコープ内 | low | `docs/cli-reference.md:16` | `--pr` の画像自動取得、対応形式、サイズ上限、対象URL、失敗条件、`order.md` 追記形式が利用者向け docs に反映されていない。 | `docs/cli-reference.md` / `.ja.md` と README 系の画像添付説明を更新する。 |
+
+## 再走査証跡
+- Knowledge `##`: 構造・設計、境界での解決、コード品質の検出手法、セキュリティ、テスタビリティ、アンチパターン検出、抽象化レベルの評価、その場しのぎの検出、未完成コードの検出、DRY違反の検出、仕様準拠の検証、呼び出しチェーン検証、公開状態の不変性、品質特性、大局観、変更スコープの評価。
+- Policy `##`: 原則、スコープ判定、判定基準、振る舞い証跡の判定、ファクトチェック、具体的な指摘の書き方、指摘ID管理、再オープン条件、finding_id の意味固定、テストファイルの扱い、変更履歴ファイルの扱い、ボーイスカウトルール、判定ルール、レビューの基本手順、堂々巡りの検出。
+
+## 既存慣例との照合
+- 検索語: `execFileSync('gh'`, `gh api`, `fetch(`, `mkdtempSync`, `rmSync`, `cleanupAttachments`, `prepareTaskSpecDirectory`, `stageTaskSpecForExecution`。
+- 参照: `src/infra/github/pr.ts`, `src/infra/github/issue.ts`, `src/features/interactive/imageAttachments.ts`, `src/features/tasks/attachments.ts`, `src/features/tasks/execute/selectAndExecute.ts`, `src/features/tasks/resume/index.ts`。
+
+## 検証証跡
+- ビルド: 未実行（このフェーズではツール使用不可）。
+- テスト: 未実行（このフェーズではツール使用不可）。
+- 動作確認: 実コード差分の読み取りで入口・cleanup・外部取得境界を確認。

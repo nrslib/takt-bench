@@ -1,0 +1,23 @@
+# コーディングレビュー
+
+## 結果: REJECT
+
+## サマリー
+PR画像添付の主要経路は追加されていますが、認証トークン漏洩リスク、非GitHub画像URLでの既存挙動リグレッション、レイヤー依存違反があるため差し戻しです。
+
+## 観測した指摘
+| # | family_tag | 重大度 | 場所 | 問題 | 影響 | 修正案 |
+|---|------------|--------|------|------|------|--------|
+| 1 | security_github_attachment_redirect_auth_leak | High | `src/infra/github/attachmentDownloads.ts:80` | 3xx リダイレクト時に `Authorization: Bearer <token>` を保持したまま任意の HTTPS Location へ再リクエストしている | GitHub トークンがリダイレクト先の外部ホストへ送信される | リダイレクト先も許可済み GitHub attachment ホストに限定するか、origin 変更時は Authorization を削除する。クロスホストリダイレクトのテストを追加する |
+| 2 | pr_image_attachment_url_scope_regression | Medium | `src/features/tasks/prReviewImageAttachments.ts:25` | すべての HTTPS 画像URLを抽出して downloader に渡すが、downloader は GitHub attachment URL 以外を reject する | PRコメントに外部画像が含まれるだけで `takt add --pr` / pipeline `--pr` が失敗し、従来の本文取り込みも壊れる | 抽出時またはダウンロード前に GitHub attachment URL のみ対象にし、非対応URLは元本文のまま残す。外部画像混在時のテストを追加する |
+| 3 | architecture_infra_depends_on_feature | Medium | `src/infra/github/attachmentDownloads.ts:6` | infra/github 層が `features/tasks/attachments.js` の `TaskAttachment` 型に依存している | 下位層が上位 feature のタスク保存実装を知る構造になり、責務境界が崩れる | `shared/types/image-attachments.ts` の `StoredImageAttachment` を使うか、infra は中立なダウンロード結果を返し、TaskAttachment 化は features/tasks 側で行う |
+
+## 検証証跡
+- 差分確認: `git status --short`、変更ファイル、新規ファイル、PR取得・添付保存・pipeline経路、既存 attachment 経路を確認
+- 再走査証跡: Source Path のレビューポリシー、coding skill の Coder / AI Antipattern / Architecture / Coding Policy / AI Antipattern Policy / Architecture Knowledge を確認
+- ビルド: `npm run build` 成功
+- Lint: `npm run lint` 成功
+- テスト: 新規関連テスト3件は成功。`npm test` は失敗（config/workflow discovery 系タイムアウトと `for-local-llm-replan-wiring` 期待値不一致。今回差分起因かは未確認）
+
+## REJECT判定条件
+- ブロッキング指摘が3件あるため REJECT。

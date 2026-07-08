@@ -1,0 +1,11 @@
+# コーディングレビュー
+
+## 結果: APPROVE
+
+## サマリー
+ロバストネス観点で F-0024、F-0025 の解消を確認しました。`resolveAuthTokenHostname()` の到達不能な asset host 分岐は削除され、token 解決は `github.com` へ直接行う形に整理済みです。
+
+## 検証証跡
+- 差分確認: `src/infra/github/attachmentDownload.ts` と `src/__tests__/githubAttachmentDownload.test.ts` を確認
+- ビルド: 未実行
+- テスト: 未実行

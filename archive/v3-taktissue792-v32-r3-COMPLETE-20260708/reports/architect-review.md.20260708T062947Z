@@ -1,0 +1,31 @@
+# アーキテクチャレビュー
+
+## 結果: REJECT
+
+## サマリー
+F-0020〜F-0024 は現行コード上で解消を確認しました。  
+ただし、GitHub attachment の response stream error が Promise 境界で処理されない新規のスコープ内問題を検出したため REJECT です。
+
+## 観測した指摘
+| # | family_tag | スコープ | 重大度 | 場所 | 問題 | 修正案 |
+|---|------------|---------|--------|------|------|--------|
+| 1 | robustness.github_attachment_response_stream_error_boundary | スコープ内 | medium | `src/infra/github/attachmentDownloads.ts:82` | `https.get()` の request error は `src/infra/github/attachmentDownloads.ts:137` で `req.on('error', reject)` されていますが、response 側は `data` / `end` だけを購読しており `res.on('error', ...)` がありません。body 受信中に `IncomingMessage` が error を emit すると、PR コメント画像由来の外部ネットワークエラーが `downloadGitHubImageAttachment()` の rejection として入口境界へ戻らず、unhandled error になり得ます。 | response callback 内で `res.on('error', reject)` を登録してください。mock response が `error` を emit した場合に process 例外ではなく Promise rejection になる単体テストも追加してください。 |
+
+## 解消確認
+- F-0020: `src/infra/git/types.ts:104` で provider 契約は `url/cwd` 入力、`data/contentType` 出力に中立化済み。task attachment 生成は `src/features/tasks/prReviewImageAttachments.ts:139` に移動。
+- F-0021: `src/infra/github/attachmentDownloads.ts:91` で redirect request 構築が `try/catch` され、`reject(error)` に変換済み。
+- F-0022: `src/infra/github/attachmentDownloads.ts:44` の URL redaction helper が各 URL 付きエラーで使用済み。
+- F-0023: `src/infra/github/attachmentDownloads.ts:108` で body 読み込み前に Content-Type を検証済み。
+- F-0024: `src/infra/github/attachmentDownloads.ts:134` で request timeout を設定済み。
+
+## 検証証跡
+- ビルド: `npm run build` 成功。
+- lint: `npm run lint` 成功。
+- テスト: `npx vitest run src/__tests__/githubAttachmentDownloads.test.ts src/__tests__/prReviewImageAttachments.test.ts src/__tests__/git-cwd-propagation.test.ts src/__tests__/cli-routing-pr-resolve.test.ts src/__tests__/addTask.test.ts src/__tests__/pipelineExecution.test.ts src/__tests__/github-provider.test.ts src/__tests__/gitlab-provider.test.ts --maxWorkers=1` 成功、8 files / 205 tests。
+- 動作確認: コード読解で `add --pr`、interactive `--pr`、pipeline `--pr` の attachment 配線・cleanup・失敗境界を確認。
+
+## 再走査証跡
+Policy 全章と Knowledge 全章を累積差分へ照合し、外部アクセス・認証・ファイル IO・エラー処理の既存慣例として `src/infra/git/paginated-api.ts`、`src/features/interactive/imageAttachments.ts`、`src/features/interactive/inlineImagePaste.ts`、timeout 実装群を参照しました。
+
+## REJECT判定条件
+- スコープ内のブロッキング指摘が1件あります。

@@ -1,0 +1,20 @@
+# コーディングレビュー
+
+## 結果: REJECT
+
+## サマリー
+`F-0019` は `resolvePrInput()` が `cwd ?? process.cwd()` を使って PR fetch と attachment download の cwd 契約を揃えており、解消済みです。  
+ただし、リダイレクト先 allowlist 拒否の例外が `Promise` rejection にならず、response callback から uncaught exception として漏れる新規の境界不備があります。
+
+## 観測した指摘
+| # | family_tag | 重大度 | 場所 | 問題 | 影響 | 修正案 |
+|---|------------|--------|------|------|------|--------|
+| 1 | resource_lifecycle.redirect_allowlist_rejection_unhandled | Medium | `src/infra/github/attachmentDownloads.ts:92` | `fetchBinaryOverHttps()` の 3xx 処理で `buildRedirectedGitHubAttachmentRequest()` が allowlist 拒否を同期 throw しますが、response callback 内に `try/catch` がなく `reject()` に渡されません。 | 未許可 `Location` が通常の download 失敗ではなく uncaught exception となり、呼び出し元の失敗処理境界を迂回します。 | `buildRedirectedGitHubAttachmentRequest()` を `try/catch` し、catch では `reject(error); return;` してください。未許可リダイレクトが rejection になるテストも追加してください。 |
+
+## 検証証跡
+- 差分確認: `src/app/cli/routing-inputs.ts`、`src/features/tasks/prReviewImageAttachments.ts`、`src/infra/github/attachmentDownloads.ts` を確認
+- ビルド: 未実行
+- テスト: 未実行
+
+## REJECT判定条件
+- ブロッキング指摘が1件以上あるため REJECT

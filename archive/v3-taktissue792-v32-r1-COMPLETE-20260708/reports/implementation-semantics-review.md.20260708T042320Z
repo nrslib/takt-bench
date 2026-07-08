@@ -1,0 +1,21 @@
+# 実装意味論レビュー
+
+## 結果: REJECT
+
+## サマリー
+`add --pr` の PR 本文画像経路が既存の「コメントなしなら中断」条件で欠落しており、発注書の入口契約を満たしていません。加えて、画像準備失敗時の一時ファイル残存、Content-Length 不在時のサイズ上限、PNG magic bytes 検証に意味論上の境界不備があります。
+
+## 観測した指摘
+| # | family_tag | 重大度 | 場所 | 問題 | 壊れる条件 | 修正案 |
+|---|------------|--------|------|------|-----------|--------|
+| 1 | implementation-semantics/contract-entry-pr-body | High | `src/features/tasks/add/index.ts:195`, `src/__tests__/addTask.test.ts:304` | `addTask()` が `reviews` と `comments` が空だと PR 本文を見ずに return するため、PR 本文内画像の attachment 化に到達しない。テストも旧挙動を期待値として固定している。 | PR 本文に `![screenshot](https://github.com/user-attachments/assets/...)` があり、通常コメント・review thread が空の PR に対して `takt add --pr` を実行する。 | 早期 return 条件を PR 本文も含めた「本当に入力が空」の判定に変更し、本文だけに GitHub 画像があるケースで task directory と `attachments/image-1.*` が作られるテストへ更新する。 |
+| 2 | implementation-semantics/failure-cleanup | Medium | `src/features/tasks/prReviewImageAttachments.ts:151` | `preparePrReviewImageAttachments()` が一時ファイル作成後、後続画像のダウンロード・検証失敗で reject すると、cleanup 関数が返る前なので既存の一時 attachment が残る。 | PR 本文の 1 枚目は成功し、通常コメントや review の 2 枚目が Content-Type 不一致などで失敗する。 | 正規化処理全体を `try/catch` で囲み、返却前に例外が出た場合は作成済みの一時ディレクトリを削除してから再 throw する。 |
+| 3 | implementation-semantics/size-limit-boundary | Medium | `src/infra/github/attachmentDownload.ts:172` | Content-Length が無い場合、`response.arrayBuffer()` で全 body をメモリに読み込んだ後にサイズ上限を確認しているため、読み込み中の上限境界が成立していない。 | 許可済み GitHub attachment URL が Content-Length なしで 10MiB 超の巨大 body を返す。 | `response.body` を chunk 単位で読み、累積サイズが `MAX_IMAGE_ATTACHMENT_BYTES` を超えた時点で cancel して失敗させる。 |
+| 4 | implementation-semantics/magic-bytes-validation | Medium | `src/shared/utils/imageMime.ts:35`, `src/__tests__/imageMime.test.ts:7` | PNG 判定が先頭 4 バイト `89 50 4E 47` のみで、完全な PNG signature を検証していない。テストも 4 バイトだけのデータを正常系として固定している。 | `89 50 4E 47 00 00 00 00` のような完全な PNG signature ではないデータが `Content-Type: image/png` で返る。 | PNG は 8 バイトの完全な signature `89 50 4E 47 0D 0A 1A 0A` を照合し、不完全 signature を拒否するテストを追加する。 |
+
+## 検証証跡
+- 差分確認: PR 画像 attachment 追加に関係する `add` 経路、pipeline 経路、画像抽出・ダウンロード・MIME 検証の累積差分を確認。
+- 判定根拠の実在確認: 上表の `file:line` は実コードを読み直して確認済み。
+
+## REJECT判定条件
+- ブロッキング指摘が1件以上あるため REJECT。

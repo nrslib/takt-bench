@@ -1,0 +1,20 @@
+# 実装意味論レビュー
+
+## 結果: REJECT
+
+## サマリー
+PR 画像 attachment の主要配線は確認しましたが、redirect 境界で認証ヘッダーを外部 HTTPS へ引き継げる問題と、失敗経路での状態 cleanup / pipeline 境界処理の不整合があります。
+
+## 観測した指摘
+| # | family_tag | 重大度 | 場所 | 問題 | 壊れる条件 | 修正案 |
+|---|------------|--------|------|------|-----------|--------|
+| 1 | implementation-semantics/boundary-validation | High | `src/infra/github/attachmentDownloads.ts:80` | redirect 追跡時に `...request` で元の `Authorization: Bearer <token>` を保持したまま、`resolveRedirectUrl()` は `https:` だけを検証している | 許可済み GitHub attachment URL が `https://example.com/...` など別ホストへ 3xx redirect した場合、gh token 付きで外部 URL を取得する | redirect 先ホストを明示的な GitHub attachment / asset 配信ホストに限定し、ホスト変更時は `Authorization` を引き継がない。未許可ホストは fail-fast する |
+| 2 | implementation-semantics/fail-fast-boundary | Medium | `src/features/pipeline/steps.ts:161` | pipeline `--pr` で画像解決が `fetchVcsResource()` の catch 境界外にあり、検証失敗が既存の fetch failure 経路に正規化されない | Content-Type 不一致、magic bytes 不一致、サイズ超過、不許可 URL などで `resolvePrReviewImageAttachments()` が throw すると、`executePipeline()` が既存の `EXIT_ISSUE_FETCH_FAILED` ではなく未処理例外経路になる | PR fetch と画像解決を同じ境界で扱い、画像解決失敗もエラー表示後に `undefined` を返すか、`runPipeline()` で捕捉して fetch failure exit code に正規化する |
+| 3 | implementation-semantics/state-cleanup | Medium | `src/app/cli/routing.ts:154` | `resolvePrInput()` 後に `cleanupSourceAttachments` が設定されても、workflow/config 解決は外側 `try/finally` の前に実行される | PR 画像を temp に取得した後、`resolveConfigValues()`、`determineWorkflow()`、`getWorkflowDescription()`、`selectInteractiveMode()` の途中で例外が出ると temp attachment が cleanup されない | `cleanupSourceAttachments` 設定後の処理全体を外側 `try/finally` に入れ、通常終了・キャンセル・例外の全経路で一度だけ cleanup する |
+
+## 検証証跡
+- 差分確認: 変更済みファイルと新規ファイルを確認し、PR 画像抽出、GitHub attachment download、`takt add --pr`、interactive `--pr`、pipeline `--pr` の累積差分を確認しました。
+- 判定根拠の実在確認: `src/infra/github/attachmentDownloads.ts:80`、`src/features/pipeline/steps.ts:161`、`src/app/cli/routing.ts:154` を実コードで確認しました。
+
+## REJECT判定条件
+- ブロッキング指摘が3件あります。

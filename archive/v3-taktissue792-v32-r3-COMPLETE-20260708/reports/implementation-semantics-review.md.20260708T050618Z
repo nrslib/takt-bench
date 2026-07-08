@@ -1,0 +1,20 @@
+# 実装意味論レビュー
+
+## 結果: REJECT
+
+## サマリー
+前回の実装意味論指摘（F-0010, F-0011, F-0012）は解消を確認しました。再走査で、`resolvePrInput()` の `cwd` optional 契約と画像付き PR の処理が不一致になる新規問題を1件確認しました。
+
+## 観測した指摘
+| # | family_tag | 重大度 | 場所 | 問題 | 壊れる条件 | 修正案 |
+|---|------------|--------|------|------|-----------|--------|
+| 1 | implementation-semantics/optional-argument-contract | Medium | `src/app/cli/routing-inputs.ts:76` | `resolvePrInput(prNumber, cwd?: string)` は `cwd` 省略を許容しているが、`cwd === undefined` の場合は `isSupportedImageUrl` だけを渡し、`downloadImage` を渡さない | `resolvePrInput(100)` のように cwd 省略で呼び、PR 本文・コメントに supported 画像 URL があると、`resolvePrReviewImageAttachments()` が `downloadImage is required` で失敗する。画像なし PR だけ成功し、画像付き PR だけ optional cwd 契約が壊れる | `cwd ?? process.cwd()` などで cwd を正規化し、cwd 省略時も `createProviderPrReviewImageAttachmentOptions()` 相当の downloader を渡す。もしくは `cwd` を必須契約に変更し、既存呼び出しとテストを更新する |
+
+## 検証証跡
+- 差分確認: ベースからの累積差分として、PR 画像抽出、GitProvider attachment capability、GitHub download、`takt add --pr`、interactive `--pr`、pipeline `--pr` の配線を再確認しました。
+- 判定根拠の実在確認: `src/app/cli/routing-inputs.ts:60-81` と `src/features/tasks/prReviewImageAttachments.ts:149-151` を実コードで確認しました。
+- 解消確認: F-0010 は `src/infra/github/attachmentDownloads.ts:62-68` と `:92-95`、F-0011 は `src/features/pipeline/steps.ts:153-188`、F-0012 は `src/app/cli/routing.ts:148-306` で解消を確認しました。
+- 再走査証跡: Knowledge の「データ構造の意味選択」「導出値の単一情報源」「命名と意味の整合」「境界での fail-fast」「内部状態の参照漏れ」を照合しました。動的キーは `Set` / `Map` 中心で継承経路問題は確認せず、導出値の二重管理と内部状態の生参照漏れも新規指摘対象は確認しませんでした。境界契約の再走査で上記 optional cwd 不整合を検出しました。
+
+## REJECT判定条件
+- ブロッキング指摘が1件あります。

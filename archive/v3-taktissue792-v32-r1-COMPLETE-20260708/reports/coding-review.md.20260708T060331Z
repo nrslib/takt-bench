@@ -1,0 +1,7 @@
+# コーディングレビュー
+
+## 結果: APPROVE
+
+## サマリー
+F-0024 / F-0025 は解消済みです。`resolveAuthTokenHostname` は削除され、`src/infra/github/attachmentDownload.ts:156-157` で `github.com` の場合だけ `resolveAuthToken(GITHUB_HOSTNAME, options.cwd)` を直接呼ぶ形になっています。  
+再走査では新規ブロッキング指摘はありません。検証は `npm run build`、`npm run lint`、関連 Vitest 123件が成功しています。

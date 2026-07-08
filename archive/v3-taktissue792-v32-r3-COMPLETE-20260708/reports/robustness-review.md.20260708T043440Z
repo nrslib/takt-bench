@@ -1,0 +1,21 @@
+# ロバストネスレビュー
+
+## 結果: REJECT
+
+## サマリー
+PR コメント画像の取得経路で、リダイレクト時の認証情報漏出、非 GitHub 画像 1 件による全体失敗、PNG magic bytes の不完全検証を確認しました。いずれも今回追加された外部入力・ネットワーク・添付ファイル保存の境界に関するブロッキング指摘です。
+
+## 観測した指摘
+| # | family_tag | 重大度 | 場所 | 問題 | 影響 | 修正案 |
+|---|------------|--------|------|------|------|--------|
+| 1 | robustness.secret_hygiene.redirect_token_leak | High | `src/infra/github/attachmentDownloads.ts:80` | 3xx リダイレクト時に `...request` で `Authorization: Bearer <token>` を維持したまま、HTTPS であれば任意の Location へ追従する。 | 許可済み GitHub 添付 URL が外部 HTTPS にリダイレクトした場合、GitHub 認証トークンが外部ホストへ漏出する。 | リダイレクト先も GitHub 添付 URL allowlist で再検証する。ホスト変更時は Authorization を引き継がない、または送信先ホストを明示的に限定する。 |
+| 2 | robustness.partial_failure.input_url_scope | Medium | `src/features/tasks/prReviewImageAttachments.ts:25` | 抽出 regex は任意の `https://...` 画像を収集するが、ダウンロード側は GitHub 添付 URL 以外を例外にし、その 1 件の例外をループ全体へ再 throw する。 | PR 本文に `![badge](https://example.com/a.png)` が 1 件混じるだけで、`takt add --pr` のタスク保存や pipeline の PR 取り込み全体が失敗する。 | 抽出段階で GitHub 添付 URL のみをダウンロード対象にし、対象外 URL は元本文のまま残す。ダウンロード失敗を全体失敗にするなら `takt add --pr` と pipeline で同じ失敗表示・終了コードに統一する。 |
+| 3 | robustness.input_validation.magic_bytes_completeness | Medium | `src/shared/utils/imageMime.ts:29` | PNG 判定が先頭 4 バイト `89 50 4E 47` のみで、完全な 8 バイト署名を確認していない。 | `Content-Type: image/png` かつ先頭 4 バイトだけ PNG 風の任意データが `image-*.png` として保存される。形式検証が仕様の完全形ではない。 | PNG は 8 バイト署名まで確認する。JPEG/GIF/WebP も許容する最小ヘッダー範囲をテストで明示し、短い偽装データを拒否する回帰テストを追加する。 |
+
+## 検証証跡
+- 差分確認: `attachmentDownloads.ts`、`prReviewImageAttachments.ts`、`imageMime.ts`、`add/index.ts`、`pipeline/steps.ts`、関連テストを確認。
+- ビルド: 未実行。
+- テスト: 未実行。
+
+## REJECT判定条件
+- ブロッキング指摘が3件あります。

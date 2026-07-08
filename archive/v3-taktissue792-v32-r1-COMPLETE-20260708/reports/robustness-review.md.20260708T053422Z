@@ -1,0 +1,11 @@
+# コーディングレビュー
+
+## 結果: APPROVE
+
+## サマリー
+ロバストネス観点で F-0021、F-0022、F-0023 の解消を確認しました。Response body cleanup 失敗の可観測化、asset host の token 遅延解決、redirect / Content-Length 例外時の body cancel は修正済みで、新規のブロッキング指摘はありません。
+
+## 検証証跡
+- 差分確認: `src/infra/github/attachmentDownload.ts` と `src/__tests__/githubAttachmentDownload.test.ts` を確認
+- ビルド: 未実行
+- テスト: 未実行

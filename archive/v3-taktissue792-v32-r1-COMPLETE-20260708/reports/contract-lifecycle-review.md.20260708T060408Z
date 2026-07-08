@@ -1,0 +1,7 @@
+# 契約・ライフサイクルレビュー
+
+## 結果: APPROVE
+
+## サマリー
+F-0024 / F-0025 は、到達不能だった `resolveAuthTokenHostname()` の削除と、`resolveAuthToken(GITHUB_HOSTNAME, options.cwd)` への直接化を実コードで確認しました。  
+契約・ライフサイクル観点で新規のブロッキング指摘はありません。

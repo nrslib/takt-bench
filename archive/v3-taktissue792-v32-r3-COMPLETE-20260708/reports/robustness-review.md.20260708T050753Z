@@ -1,0 +1,11 @@
+# ロバストネスレビュー
+
+## 結果: APPROVE
+
+## サマリー
+前回ロバストネス観点で指摘した認証ヘッダー付きリダイレクト、非 GitHub 画像混在時の全体失敗、PNG magic bytes 不完全検証は、現在の実コード上で解消を確認しました。追加のブロッキング指摘はありません。
+
+## 検証証跡
+- 差分確認: `attachmentDownloads.ts`、`prReviewImageAttachments.ts`、`imageMime.ts`、`pipeline/steps.ts`、`routing.ts`、関連テストを確認。
+- ビルド: 未実行。
+- テスト: `npm test -- --run src/__tests__/githubAttachmentDownloads.test.ts src/__tests__/prReviewImageAttachments.test.ts src/__tests__/imageMime.test.ts src/__tests__/pipelineExecution.test.ts src/__tests__/cli-routing-pr-resolve.test.ts src/__tests__/addTask.test.ts` 成功（6 files / 113 tests）。

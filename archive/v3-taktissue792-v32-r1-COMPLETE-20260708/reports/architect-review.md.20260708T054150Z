@@ -1,0 +1,32 @@
+# アーキテクチャレビュー
+
+## 結果: REJECT
+
+## サマリー
+F-0021〜F-0023 は実コードとテストで解消を確認しました。追加修正後に、認証 host 解決 helper に到達不能な分岐が残っており、変更箇所内のデッドコードとして差し戻します。
+
+## 確認した観点
+- [x] 構造・設計
+- [x] コード品質
+- [x] 変更スコープ
+- [x] テストカバレッジ
+- [x] デッドコード
+- [x] 呼び出しチェーン検証
+
+## 観測した指摘
+| # | family_tag | スコープ | 重大度 | 場所 | 問題 | 修正案 |
+|---|------------|---------|--------|------|------|--------|
+| 1 | code_quality.dead_code | スコープ内 | low | `src/infra/github/attachmentDownload.ts:112` | `resolveAuthTokenHostname()` は asset host を `github.com` に変換する分岐を持つが、唯一の呼び出し元は `shouldSendAuthorizationToHost(...)` が true の場合だけで、この関数は `github.com` のみ true にするため asset host 分岐へ到達できない。 | helper を削除し、呼び出し元で `resolveAuthToken(GITHUB_HOSTNAME, options.cwd)` を直接呼ぶ、または Authorization 判定と一体の到達可能な helper に整理する。 |
+
+## 解消確認
+- F-0021: `cancelResponseBody()` は cleanup 失敗を `debugLog` に記録し、対応テストも確認済み。
+- F-0022: direct asset host では未使用 token resolver を呼ばず、redirect 先にも Authorization を転送しないことを確認済み。
+- F-0023: redirect Location 欠落時と Content-Length 解析失敗時に Response body を cancel することを確認済み。
+
+## 検証証跡
+- ビルド: `npm run build` 成功。
+- テスト: 対象テスト5ファイル111件成功。`npm test` は `for-local-llm-replan-wiring.test.ts` の既存文言期待値差分で1件失敗（今回の attachment 変更との直接関係は未確認）。
+- 動作確認: 実コード再読で PR body/comment/review thread、`add --pr`、interactive `--pr`、pipeline `--pr` の配線を確認。
+
+## REJECT判定条件
+- スコープ内のブロッキング指摘が1件あるため REJECT。

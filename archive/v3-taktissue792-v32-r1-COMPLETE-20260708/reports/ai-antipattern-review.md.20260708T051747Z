@@ -1,0 +1,27 @@
+# AI生成コードレビュー
+
+## 結果: REJECT
+
+## サマリー
+前回の一時ファイル cleanup 指摘は修正済みですが、asset host 直接 URL で送信しない GitHub token の解決だけが必須になるロジック不整合を新たに確認しました。
+
+## 検証した項目
+| 観点 | 結果 | 備考 |
+|------|------|------|
+| 仮定の妥当性 | ❌ | `user-images.githubusercontent.com` / `private-user-images.githubusercontent.com` で token を取得すれば認証対応になる前提が、実際の送信ヘッダーと一致していない |
+| API/ライブラリの実在 | ✅ | 使用 API 自体は実在 |
+| コンテキスト適合 | ❌ | 許可 URL と認証取得契約がずれている |
+| スコープ | ✅ | PR 画像 attachment ダウンロード経路の範囲内 |
+
+## 解消確認
+| finding_id | 判定 | 根拠 |
+|------------|------|------|
+| F-0005 | resolved | `src/features/tasks/prReviewImageAttachments.ts:194-225` で正規化全体が try/catch され、例外時に `cleanupAttachments()` が呼ばれる。`src/__tests__/prReviewImageAttachments.test.ts:190-214` で途中失敗時の一時 workspace 削除も検証済み。 |
+
+## 観測した指摘
+| # | family_tag | カテゴリ | 重大度 | 場所 | 問題 | 修正案 |
+|---|------------|---------|--------|------|------|--------|
+| 1 | logic-error | 認証契約不整合 | medium | `src/infra/github/attachmentDownload.ts:153` | `isAllowedGitHubAttachmentUrl()` は `user-images.githubusercontent.com` と `private-user-images.githubusercontent.com` を許可しているが、`fetchGitHubAttachmentResponse()` は初期 URL の host に関係なく `resolveAuthToken(...)` を実行する。一方、`createRequestInitForUrl()` は `github.com` 以外に Authorization を付けないため、asset host 直接 URL では送信しない token のために `gh auth token` が必須になる。未認証環境では public attachment も失敗し、private host でも取得した token が認証に使われない。 | Authorization を送る host の場合だけ token を遅延取得する。asset host を直接取得する経路では token resolver を呼ばない。private asset host に認証が必要なら、GitHub API / `gh` 経由で署名済み URL を取得するなど、token 取得と実際の認証利用を一致させる。 |
+
+## REJECT判定条件
+- ブロッキング指摘が1件あるため REJECT。

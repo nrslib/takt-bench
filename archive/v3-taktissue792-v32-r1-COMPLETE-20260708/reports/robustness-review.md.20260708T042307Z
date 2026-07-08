@@ -1,0 +1,24 @@
+# コーディングレビュー
+
+## 結果: REJECT
+
+## サマリー
+PR コメント内画像 attachment 実装の失敗経路を確認し、サイズ上限、部分失敗、入力検証、magic bytes 検証、認証ヘッダー伝播にブロッキング問題があります。特に Content-Length 不在時の全量読み込みと、1枚の画像失敗で PR タスク作成全体が失敗する経路は修正が必要です。
+
+## 観測した指摘
+| # | family_tag | 重大度 | 場所 | 問題 | 影響 | 修正案 |
+|---|------------|--------|------|------|------|--------|
+| 1 | robustness.resource-limit-before-consumption | High | `src/infra/github/attachmentDownload.ts:172` | `Content-Length` がない場合に `await response.arrayBuffer()` で全本文を読み切ってからサイズ上限判定する | 10MiB 超の chunked 応答で、拒否前にメモリを消費する | `response.body` を逐次読み込みし、累積バイト数が上限を超えた時点で中断する |
+| 2 | robustness.cleanup-on-partial-failure | Medium | `src/features/tasks/prReviewImageAttachments.ts:151` | 複数画像処理中に後続画像が失敗すると、先に作った一時 attachment ディレクトリを cleanup できない | 途中失敗で temp ファイルが残る | 正規化処理全体を `try` で囲み、失敗時は作成済み temp root を削除する |
+| 3 | robustness.single-item-failure-isolation | Medium | `src/features/tasks/prReviewImageAttachments.ts:100` | 1枚の画像取得・検証失敗が `preparePrReviewImageAttachments()` 全体へ伝播する | 画像1枚の 404 / 認証不可 / MIME 不一致で `takt add --pr` や pipeline の PR タスク作成全体が失敗する | 画像単位で失敗を隔離し、元参照を残すなどして他画像と PR タスク作成を継続する |
+| 4 | robustness.input-validation-contract | Medium | `src/features/tasks/add/index.ts:195` | `reviews` と `comments` が空だと、PR body に画像があっても処理前に拒否する | 要件対象の「PR本文内画像」だけを持つ PR で `takt add --pr` が機能しない | 空判定に `prReview.body` を含めるか、body だけの PR タスク作成を許可する |
+| 5 | robustness.mime-validation-completeness | Medium | `src/shared/utils/imageMime.ts:35` | PNG は先頭4バイト、JPEG は先頭3バイトだけで magic bytes 検証を通す | 短い接頭辞だけの不正画像が attachment として保存され得る | 各形式の完全なシグネチャと最低限の構造を検証する |
+| 6 | security.auth-header-redirect-scope | Medium | `src/infra/github/attachmentDownload.ts:124` | 初期 URL 用の GitHub token を同じ `requestInit` で redirect 先ホストにも送る | `user-images.githubusercontent.com` 等の別ホストへ Authorization ヘッダーが伝播する | redirect ごとに送信先ホストを判定し、Authorization 送信先を必要最小限に限定する |
+
+## 検証証跡
+- 差分確認: `routing-inputs.ts`、`routing.ts`、`pipeline/execute.ts`、`pipeline/steps.ts`、`tasks/add/index.ts`、`prReviewImageAttachments.ts`、`attachmentDownload.ts`、`imageMime.ts` と関連テストを確認
+- ビルド: 未実行
+- テスト: 未実行
+
+## REJECT判定条件
+- ブロッキング指摘が1件以上あるため REJECT

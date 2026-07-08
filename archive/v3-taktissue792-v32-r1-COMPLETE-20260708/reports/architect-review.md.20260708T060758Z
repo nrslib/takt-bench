@@ -1,0 +1,7 @@
+# アーキテクチャレビュー
+
+## 結果: APPROVE
+
+F-0024 / F-0025 は現行コードで解消済みです。`resolveAuthTokenHostname()` は存在せず、token 解決は `resolveAuthToken(GITHUB_HOSTNAME, options.cwd)` へ直接整理されています。
+
+新規のスコープ内ブロッキング指摘はありません。対象テスト・build・lint は成功、`npm test` 全体は既存の workflow/config 系 timeout と replan 文言期待値差分で失敗しています。

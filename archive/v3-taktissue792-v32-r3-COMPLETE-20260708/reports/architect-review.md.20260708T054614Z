@@ -1,0 +1,24 @@
+# アーキテクチャレビュー
+
+## 結果: REJECT
+
+## サマリー
+F-0019 は `resolvePrInput()` で `cwd ?? process.cwd()` を入口正規化し、PR fetch と画像 download の両方へ同じ cwd を渡す形になっており解消を確認しました。  
+ただし累積差分の再走査で、GitProvider 公開契約に task attachment の保存形式が漏れている新規のスコープ内設計問題を検出したため REJECT です。
+
+## 観測した指摘
+| # | family_tag | スコープ | 重大度 | 場所 | 問題 | 修正案 |
+|---|------------|---------|--------|------|------|--------|
+| 1 | architecture.git_provider_task_attachment_storage_leak | スコープ内 | medium | `src/infra/git/types.ts:102` | `GitProvider` の `PrImageAttachmentDownloadOptions` が `tempRoot` / `imageNumber` を受け取り、戻り値が `placeholder` / `tempPath` / `fileName` を返している。これらは VCS provider ではなく task attachment の保存先・採番・本文置換形式であり、`src/infra/git/index.ts:20` から git 抽象の公開 API として再エクスポートされている。既存の同種機能では `src/features/interactive/imageAttachments.ts:135` 以降で placeholder と fileName 生成を feature 側に閉じている。 | GitProvider / GitHub provider は認証付き取得と URL 許可判定に限定し、戻り値を `{ data: Buffer, contentType: ImageMimeType }` など provider-neutral な download result にする。`tempRoot`、`imageNumber`、`placeholder`、`fileName`、`tempPath` の生成と `TaskAttachment` 変換は `features/tasks/prReviewImageAttachments.ts` 側へ移す。 |
+
+## 解消確認
+- F-0019: `src/app/cli/routing-inputs.ts:64` で `effectiveCwd` を確定し、`src/app/cli/routing-inputs.ts:74` と `src/app/cli/routing-inputs.ts:79` で同じ cwd を渡していることを確認。`src/__tests__/git-cwd-propagation.test.ts:159` で cwd 省略かつ画像付き PR の download cwd も検証済み。
+
+## 検証証跡
+- ビルド: `npm run build` 成功。
+- lint: `npm run lint` 成功。
+- 直結テスト: `npx vitest run src/__tests__/git-cwd-propagation.test.ts src/__tests__/cli-routing-pr-resolve.test.ts src/__tests__/prReviewImageAttachments.test.ts src/__tests__/githubAttachmentDownloads.test.ts src/__tests__/pipelineExecution.test.ts --maxWorkers=1` 成功、5 files / 101 tests。
+- 全体テスト: `npm test` は失敗。失敗は workflow/analytics/config 系で、今回の PR attachment 直結の新規設計問題とは別に記録。
+
+## REJECT判定条件
+- スコープ内のブロッキング指摘が1件あります。

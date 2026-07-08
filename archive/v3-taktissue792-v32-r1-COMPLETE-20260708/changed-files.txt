@@ -1,0 +1,28 @@
+ M README.md
+ M docs/README.ja.md
+ M docs/cli-reference.ja.md
+ M docs/cli-reference.md
+ M src/__tests__/addTask.test.ts
+ M src/__tests__/cli-routing-pr-resolve.test.ts
+ M src/__tests__/conversationLoop-resume.test.ts
+ M src/__tests__/for-local-llm-replan-wiring.test.ts
+ M src/__tests__/git-cwd-propagation.test.ts
+ M src/__tests__/inlineImagePaste.test.ts
+ M src/__tests__/instructMode.test.ts
+ M src/__tests__/interactive-mode.test.ts
+ M src/__tests__/lineEditor.test.ts
+ M src/__tests__/pipelineExecution.test.ts
+ M src/__tests__/retrySlashCommand.test.ts
+ M src/app/cli/routing-inputs.ts
+ M src/app/cli/routing.ts
+ M src/features/interactive/inlineImagePaste.ts
+ M src/features/pipeline/execute.ts
+ M src/features/pipeline/steps.ts
+ M src/features/tasks/add/index.ts
+?? src/__tests__/addTaskPrImageAttachments.test.ts
+?? src/__tests__/githubAttachmentDownload.test.ts
+?? src/__tests__/imageMime.test.ts
+?? src/__tests__/prReviewImageAttachments.test.ts
+?? src/features/tasks/prReviewImageAttachments.ts
+?? src/infra/github/attachmentDownload.ts
+?? src/shared/utils/imageMime.ts

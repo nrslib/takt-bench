@@ -1,0 +1,21 @@
+# ロバストネスレビュー
+
+## 結果: REJECT
+
+## サマリー
+F-0019 は `resolvePrInput()` が `effectiveCwd = cwd ?? process.cwd()` を使う形になっており、解消を確認しました。一方で、添付画像ダウンロードの失敗経路にログ漏出、検証順序、タイムアウト不備の新規ブロッキング指摘があります。
+
+## 観測した指摘
+| # | family_tag | 重大度 | 場所 | 問題 | 影響 | 修正案 |
+|---|------------|--------|------|------|------|--------|
+| 1 | robustness.secret_hygiene.attachment_url_logging | Medium | `src/infra/github/attachmentDownloads.ts:101` | HTTP 失敗時に `request.url` 全体を例外へ含め、そのまま `add --pr` / pipeline / interactive のエラー表示へ伝播する。 | `private-user-images.githubusercontent.com` などの署名クエリ付き URL が失敗時ログへ漏出する。 | エラー用 URL は `origin + pathname` に正規化し、query/hash を削除する共通 helper を使う。 |
+| 2 | robustness.input_validation.content_type_order | Medium | `src/infra/github/attachmentDownloads.ts:115` | `Content-Type` 検証が body 全取得後の `parseImageContentType()` まで遅延している。 | `text/html` や欠落ヘッダーの応答でも最大 10MB まで読み込んでから拒否する。 | 2xx 応答直後、`data` handler 登録前に `Content-Type` を検証し、未対応なら即 reject する。 |
+| 3 | robustness.network_timeout.github_attachment_download | Medium | `src/infra/github/attachmentDownloads.ts:82` | `https.get()` に timeout / AbortSignal がなく、`response` / `data` / `end` / `error` だけで完了を待つ。 | 1 件の画像ダウンロードがヘッダーまたは body で停止すると、`takt add --pr` や pipeline 全体がハングする。 | 接続・ヘッダー待ち・body 無通信にタイムアウトを設け、超過時は request/response を destroy して既存のエラー境界へ伝播させる。 |
+
+## 検証証跡
+- 差分確認: `routing-inputs.ts`、`prReviewImageAttachments.ts`、`attachmentDownloads.ts`、`imageMime.ts`、`pipeline/steps.ts`、関連テストを確認。
+- ビルド: 未実行。
+- テスト: `npm test -- --run src/__tests__/git-cwd-propagation.test.ts src/__tests__/githubAttachmentDownloads.test.ts src/__tests__/prReviewImageAttachments.test.ts src/__tests__/imageMime.test.ts src/__tests__/pipelineExecution.test.ts src/__tests__/cli-routing-pr-resolve.test.ts src/__tests__/addTask.test.ts` 成功（7 files / 126 tests）。
+
+## REJECT判定条件
+- ブロッキング指摘が3件あります。

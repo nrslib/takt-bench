@@ -1,0 +1,18 @@
+# 実装意味論レビュー
+
+## 結果: REJECT
+
+## サマリー
+PR 画像添付の取得後、interactive 実行用の `try/finally` に入る前の workflow 解決・説明生成が例外になると、一時画像 cleanup の所有権が失われます。
+
+## 観測した指摘
+| # | family_tag | 重大度 | 場所 | 問題 | 壊れる条件 | 修正案 |
+|---|------------|--------|------|------|-----------|--------|
+| 1 | implementation-semantics/failure-cleanup | Medium | `src/app/cli/routing.ts:154` | `resolvePrInput()` 成功後に `cleanupSourceAttachments` を受け取るが、`determineWorkflow()` や `getWorkflowDescription()` が例外を投げる経路では cleanup が呼ばれない | PR 画像を一時保存した後、workflow 読み込み・説明生成・mode 選択前処理が例外になると private PR 画像が tmp 配下に残る | `cleanupSourceAttachments` 取得後から interactive 終了までを外側の `try/finally` で囲み、workflow 解決/説明生成失敗時も cleanup する。該当失敗時の単体テストを追加する |
+
+## 検証証跡
+- 差分確認: PR 画像添付の取得・cleanup 配線、add/pipeline/routing 経路、関連テストを確認
+- 判定根拠の実在確認: `src/app/cli/routing.ts:119` で cleanup を受け取り、`154`/`162` の例外経路が `300-305` の finally 外にあることを実コードで確認
+
+## REJECT判定条件
+- ブロッキング指摘が1件あります。

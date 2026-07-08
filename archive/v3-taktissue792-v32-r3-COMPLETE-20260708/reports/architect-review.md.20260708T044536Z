@@ -1,0 +1,30 @@
+# アーキテクチャレビュー
+
+## 結果: REJECT
+
+## サマリー
+PR 画像 attachment 取得の配線は主要入口へ追加されていますが、外部 HTTP リダイレクト時の認証情報境界、VCS provider 抽象、pipeline 入口の失敗契約にブロッキングな設計問題があります。
+
+## 確認した観点
+- [x] 構造・設計
+- [x] コード品質
+- [x] 変更スコープ
+- [x] テストカバレッジ
+- [x] デッドコード
+- [x] 呼び出しチェーン検証
+
+## 観測した指摘
+| # | family_tag | スコープ | 重大度 | 場所 | 問題 | 修正案 |
+|---|------------|---------|--------|------|------|--------|
+| 1 | security.github_attachment_redirect_auth_leak | スコープ内 | high | `src/infra/github/attachmentDownloads.ts:80` | 初回 URL だけ GitHub attachment allowlist を検証し、3xx `Location` は HTTPS かだけ確認して同じ `Authorization: Bearer <gh token>` を転送しているため、外部 HTTPS リダイレクト先へ GitHub トークンを送信し得る。 | リダイレクトごとにホスト allowlist を再検証し、許可外ホストを拒否する。少なくとも cross-host redirect では Authorization を送らない。可能なら既存慣例に合わせて `gh api` / `gh` 管理の取得経路へ寄せる。 |
+| 2 | architecture.vcs_provider_abstraction_leak | スコープ内 | medium | `src/features/tasks/prReviewImageAttachments.ts:5` | 汎用 `PrReviewData` を扱う feature 層が `infra/github/attachmentDownloads.js` を直接 import している。`getGitProvider()` 経由の GitLab 等の PR 経路にも GitHub 固有実装が混入する。 | GitHub 画像 attachment 取得を GitHub provider 境界へ移すか、GitProvider 抽象に attachment 解決 capability を追加する。feature 層は provider から渡された resolver を使う。 |
+| 3 | architecture.pipeline_pr_attachment_error_boundary | スコープ内 | medium | `src/features/pipeline/steps.ts:163` | pipeline `--pr` では PR fetch 失敗は `fetchVcsResource()` で終了コードへ変換されるが、画像 attachment 解決はその外側で呼ばれ、失敗時に `executePipeline()` から例外として漏れる。`add --pr` とは失敗契約が不一致。 | pipeline の attachment 解決も PR fetch と同じ境界で捕捉し、既存の `--pr` fetch 失敗と同じ exit code / エラーメッセージ契約へ変換する。失敗時の回帰テストを追加する。 |
+
+## 検証証跡
+- ビルド: 未確認
+- テスト: 未確認
+- 動作確認: 未確認
+- 既存慣例照合: `rg "infra/github" src/features src/app src/shared src/core`、`rg "child_process|execFile|gh api|https|get\\(|fetch\\(|mkdirSync|writeFileSync|rmSync"` を確認。既存 PR/API 取得は `gh` / `gh api` 境界、既存画像保存は private temp directory と `wx` 書き込みが慣例。
+
+## REJECT判定条件
+- スコープ内のブロッキング指摘が3件あるため REJECT。

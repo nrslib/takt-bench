@@ -1,0 +1,11 @@
+# ロバストネスレビュー
+
+## 結果: APPROVE
+
+## サマリー
+F-0021〜F-0024 は現在の実コード上で解消を確認しました。ロバストネス観点の追加ブロッキング指摘はありません。
+
+## 検証証跡
+- 差分確認: `attachmentDownloads.ts`、`prReviewImageAttachments.ts`、`infra/git/types.ts`、関連テストを確認。
+- ビルド: 未実行。
+- テスト: `npm test -- --run src/__tests__/githubAttachmentDownloads.test.ts src/__tests__/prReviewImageAttachments.test.ts src/__tests__/imageMime.test.ts src/__tests__/pipelineExecution.test.ts src/__tests__/cli-routing-pr-resolve.test.ts src/__tests__/addTask.test.ts src/__tests__/git-cwd-propagation.test.ts` 成功（7 files / 131 tests）。

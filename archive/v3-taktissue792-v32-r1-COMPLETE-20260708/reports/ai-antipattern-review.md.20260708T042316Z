@@ -1,0 +1,22 @@
+# AI生成コードレビュー
+
+## 結果: REJECT
+
+## サマリー
+PR画像添付の準備中に途中失敗した場合、既に保存した一時画像ファイルを削除できず、private PR画像が `/tmp` 配下に残る経路があります。
+
+## 検証した項目
+| 観点 | 結果 | 備考 |
+|------|------|------|
+| 仮定の妥当性 | ❌ | 失敗時も cleanup 関数が呼べる前提になっているが、throw 時は呼び出し元に cleanup が返らない |
+| API/ライブラリの実在 | ✅ | `fs.rmSync`, `fs.writeFileSync`, `fetch`, `Response`, `gh auth token` の利用自体は実在 |
+| コンテキスト適合 | ❌ | 既存 attachment の副作用管理に対して、PR画像ダウンロードの途中失敗経路だけ cleanup が不足 |
+| スコープ | ✅ | 指摘は今回追加された PR コメント画像 attachment 機能の範囲内 |
+
+## 観測した指摘
+| # | family_tag | カテゴリ | 重大度 | 場所 | 問題 | 修正案 |
+|---|------------|---------|--------|------|------|--------|
+| 1 | missing-edge-case | 失敗時副作用 | medium | `src/features/tasks/prReviewImageAttachments.ts:132` | `preparePrReviewImageAttachments()` は画像を順次ダウンロードし、成功した画像を一時ディレクトリへ書き込んだ後に処理を継続するが、後続の `downloadGitHubImageAttachment()` または `fs.writeFileSync()` が失敗した場合に、既に作成済みの `attachmentDir` を削除する `try/catch` / `finally` がない。呼び出し元の `src/features/tasks/add/index.ts:202` と `src/features/pipeline/steps.ts:162` は、この関数が throw すると cleanup 関数を受け取れないため、途中まで取得した private PR 画像が `/tmp` 配下に残る。 | `preparePrReviewImageAttachments()` 全体を失敗時 cleanup 付きの構造にし、`attachmentDir` 作成後に例外が出た場合は `fs.rmSync(path.dirname(attachmentDir), { recursive: true, force: true })` を実行してから再throwする。あわせて「1枚目の保存後、2枚目のダウンロードまたは書き込みが失敗した場合に一時ファイルが削除される」単体テストを追加する。 |
+
+## REJECT判定条件
+- ブロッキング指摘が1件あるため REJECT。

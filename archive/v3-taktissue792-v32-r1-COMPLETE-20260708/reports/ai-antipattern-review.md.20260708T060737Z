@@ -1,0 +1,20 @@
+# AI生成コードレビュー
+
+## 結果: APPROVE
+
+## サマリー
+F-0024/F-0025 は修正済みと確認し、AI特有の新規ブロッキング問題は検出しませんでした。
+
+## 検証した項目
+| 観点 | 結果 | 備考 |
+|------|------|------|
+| 仮定の妥当性 | ✅ | asset host では token resolver を呼ばない契約を確認 |
+| API/ライブラリの実在 | ✅ | `resolveAuthToken(GITHUB_HOSTNAME, options.cwd)` の実呼び出しを確認 |
+| コンテキスト適合 | ✅ | `githubAttachmentDownload.test.ts` で直接 asset host 経路を確認 |
+| スコープ | ✅ | open finding 2件の解消確認のみ、新規指摘なし |
+
+## 観測した指摘
+なし。
+
+## 再走査証跡
+Policy全`##`章とKnowledge全`##`章を再走査し、`src/infra/github/attachmentDownload.ts` と `src/__tests__/githubAttachmentDownload.test.ts` の実コード・テスト根拠に照合しました。

@@ -1,0 +1,20 @@
+# 契約・ライフサイクルレビュー
+
+## 結果: REJECT
+
+## サマリー
+一時画像 workspace の cleanup、所有権移譲前 cleanup、stream 読み込み上限、magic bytes、redirect 先への Authorization 伝播は修正を確認しました。  
+ただし、取得済み Response の一部検証例外で `body.cancel()` に到達しない経路が残っています。
+
+## 観測した指摘
+| # | family_tag | 重大度 | 場所 | 問題 | 影響 | 修正案 |
+|---|------------|--------|------|------|------|--------|
+| 1 | contract-lifecycle.github-attachment-response-body-release.remaining-prevalidation-throws | Medium | `src/infra/github/attachmentDownload.ts:163` | redirect 応答取得後、`resolveRedirectUrl()` が Location 欠落で throw すると `cancelResponseBody(response)` に到達しない。同様に `getResponseContentLength(response)` が不正 Content-Length で throw すると cancel 経路に入らない。 | 認証付き外部 fetch の Response body/stream が検証エラー経路で未解放になる。 | redirect Location 解析と Content-Length 解析を try/finally または try/catch で囲み、例外時も取得済み Response に対して `cancelResponseBody(response)` を実行してから再 throw する。 |
+
+## 検証証跡
+- 差分確認: `prReviewImageAttachments.ts`、`attachmentDownload.ts`、`imageMime.ts`、`routing-inputs.ts`、`pipeline/steps.ts`、関連テストを再読。
+- ビルド: 未確認。
+- テスト: `npm test -- --run src/__tests__/prReviewImageAttachments.test.ts src/__tests__/githubAttachmentDownload.test.ts src/__tests__/imageMime.test.ts src/__tests__/addTaskPrImageAttachments.test.ts` 成功（4 files / 41 tests）。
+
+## REJECT判定条件
+- ブロッキング指摘が1件以上あるため REJECT。
