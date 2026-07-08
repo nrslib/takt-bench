@@ -44,6 +44,6 @@ Requirements: `takt` on PATH, provider credentials via environment (`codex` CLI 
 
 ## Archive
 
-`archive/` keeps the evidence behind published numbers: full-matrix baselines (5 combos, same-day conditions), the deep-lineup adoption run, and the Finding Contract lifecycle run described above — ledgers, reports, and final artifacts included.
+`archive/` keeps the evidence behind published numbers for the current lineages: the v2 baselines on both subjects, the refresh-arm experiment, and the v3 feature-addition runs on the TAKT codebase — ledgers, reports, artifacts, and judge samples included. Superseded lineages live only in git history.
 
 日本語の詳細ドキュメントは [README.ja.md](README.ja.md) を参照してください。
