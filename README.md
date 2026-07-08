@@ -44,6 +44,8 @@ Requirements: `takt` on PATH, provider credentials via environment (`codex` CLI 
 
 ## Archive
 
+Archive directory naming: `{generation}-{subject}-{lineup}-r{rep}[a{attempt}]-{OUTCOME}-{date}`. Outcomes form a closed vocabulary: `COMPLETE` (autonomous finish), `ESCALATION` (reviewer conflict, escalated to a human with evidence), `JUDGEABORT` (loop-monitor judge called the run unproductive), `GUARD` (an environment guard killed the attempt — not a result), `CAP` (step budget exhausted). `aN` marks non-final attempts only.
+
 `archive/` keeps the evidence behind published numbers for the current lineages: the v2 baselines on both subjects, the refresh-arm experiment, and the v3 feature-addition runs on the TAKT codebase — ledgers, reports, artifacts, and judge samples included. Superseded lineages live only in git history.
 
 日本語の詳細ドキュメントは [README.ja.md](README.ja.md) を参照してください。
