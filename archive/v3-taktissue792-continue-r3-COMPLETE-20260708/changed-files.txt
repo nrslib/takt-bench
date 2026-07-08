@@ -1,0 +1,24 @@
+ M src/__tests__/addTask.test.ts
+ M src/__tests__/cli-routing-pr-resolve.test.ts
+ M src/__tests__/config.test.ts
+ M src/__tests__/git-cwd-propagation.test.ts
+ M src/__tests__/pipelineExecution.test.ts
+ M src/__tests__/workflow-categories.test.ts
+ M src/__tests__/workflowDiscovery.test.ts
+ M src/__tests__/workflowLoader.test.ts
+ M src/app/cli/routing-inputs.ts
+ M src/app/cli/routing.ts
+ M src/features/interactive/imageAttachments.ts
+ M src/features/interactive/inlineImagePaste.ts
+ M src/features/pipeline/execute.ts
+ M src/features/pipeline/steps.ts
+ M src/features/tasks/add/index.ts
+ M src/infra/config/loaders/workflowCallContractValidator.ts
+ M src/infra/config/loaders/workflowDiscovery.ts
+ M src/infra/config/loaders/workflowResolver.ts
+?? src/__tests__/imageTypes.test.ts
+?? src/__tests__/pipelineRunWorkflowTaskSpec.test.ts
+?? src/__tests__/prReviewTaskInput.test.ts
+?? src/__tests__/workflowCallContractValidator.test.ts
+?? src/features/tasks/prReviewTaskInput.ts
+?? src/shared/utils/imageTypes.ts

@@ -1,0 +1,38 @@
+[
+  {
+    "rawFindingId": "20260708-100701-pr-task-attachments-takt-add-p:reviewers:2:arch-review:arch-review-2-resolution-f0020",
+    "stepName": "arch-review",
+    "reviewer": "arch-review",
+    "familyTag": "bug",
+    "severity": "high",
+    "title": "F-0020 は解消済み",
+    "location": "src/infra/config/loaders/workflowDiscovery.ts:195; src/__tests__/workflowLoader.test.ts:72; src/__tests__/workflowLoader.test.ts:1322",
+    "description": "F-0020 の受入条件に戻って確認した。src/infra/config/loaders/workflowDiscovery.ts:195-238 で collectValidatedWorkflowEntries() が同名 workflow 候補を名前単位に集約し、高優先度候補から検証して、有効な project-local override がある場合は shadow 済み builtin を runtime load/validation しない構造になっている。src/__tests__/workflowLoader.test.ts:72-95 は下位 builtin がロードされないこと、同:98-123 は上位候補が invalid の場合に下位へフォールバックすること、同:1322-1340 は F-0020 の再現条件だった loadAllWorkflows(tempDir) の project-local default override を検証している。実行確認として `npm test -- --run src/__tests__/workflowLoader.test.ts src/__tests__/config.test.ts src/__tests__/workflowCallContractValidator.test.ts` は 3 files / 196 tests 成功、`npm test` は 125 files / 全 shard 成功、`npm run build` と `npm run lint` も成功した。Policy の全 ## セクション（原則、スコープ判定、判定基準、振る舞い証跡の判定、ファクトチェック、具体的な指摘の書き方、指摘ID管理、再オープン条件、finding_id の意味固定、テストファイルの扱い、変更履歴ファイルの扱い、ボーイスカウトルール、判定ルール、レビューの基本手順、堂々巡りの検出）と Knowledge の全 ## セクション（構造・設計、境界での解決、コード品質の検出手法、セキュリティ、テスタビリティ、アンチパターン検出、抽象化レベルの評価、その場しのぎの検出、未完成コードの検出、DRY違反の検出、仕様準拠の検証、呼び出しチェーン検証、公開状態の不変性、品質特性、大局観、変更スコープの評価）を累積差分と照合し、追加のブロッキング指摘は検出しなかった。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0020"
+  },
+  {
+    "rawFindingId": "20260708-100701-pr-task-attachments-takt-add-p:reviewers:2:ai-antipattern-review:ai-antipattern-review-r2-confirm-f0020",
+    "stepName": "ai-antipattern-review",
+    "reviewer": "ai-antipattern-review",
+    "familyTag": "logic-error",
+    "severity": "high",
+    "title": "npm test が builtin workflow listing/loading の timeout で失敗する問題は解消済み",
+    "location": "src/infra/config/loaders/workflowDiscovery.ts:195; src/__tests__/workflowLoader.test.ts:69",
+    "description": "`collectValidatedWorkflowEntries()` は workflow 名ごとに候補をまとめ、優先順位の高い候補から検証する実装になっており、project-local が builtin を shadow する場合に不要な builtin runtime load/validation を避ける構造になっていることを確認しました。`workflowLoader.test.ts:69` 付近には、shadow された builtin workflow がロードされないことを検証する回帰テストも追加されています。さらに `npm run build`、`npm run lint`、`npm test -- --run src/__tests__/workflowLoader.test.ts`、`npm test` が成功しており、F-0020 の受入条件であるフルテスト成功と timeout 解消を確認しました。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0020"
+  },
+  {
+    "rawFindingId": "20260708-100701-pr-task-attachments-takt-add-p:reviewers:2:coding-review:coding-review-2-1",
+    "stepName": "coding-review",
+    "reviewer": "coding-review",
+    "familyTag": "bug",
+    "severity": "high",
+    "title": "npm test が builtin workflow listing/loading の timeout で失敗する",
+    "location": "src/infra/config/loaders/workflowDiscovery.ts:195; src/__tests__/workflowLoader.test.ts:1260",
+    "description": "F-0020 の受入条件を再確認しました。`collectValidatedWorkflowEntries()` は workflow 名ごとに候補をまとめ、同名候補を高優先度側から検証するため、project-local `default.yaml` が builtin `default` を shadow する経路で不要な lower-priority builtin load/validation を避けています。再現対象の `npm test -- --run src/__tests__/workflowLoader.test.ts -t 'should have project-local override builtin when same name'` は 1 passed、さらに `npm test` は exit=0 で 4 shard すべて成功しました。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0020"
+  }
+]

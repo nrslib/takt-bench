@@ -1,0 +1,74 @@
+[
+  {
+    "rawFindingId": "20260708-100701-pr-task-attachments-takt-add-p:reviewers:4:arch-review:arch-review-4-resolved-F-0037",
+    "stepName": "arch-review",
+    "reviewer": "arch-review",
+    "familyTag": "state-exposure.internal-reference",
+    "severity": "medium",
+    "title": "一時画像添付ストアの内部添付オブジェクト参照漏れは解消済み",
+    "location": "src/shared/utils/tempImageAttachmentStore.ts:21; src/shared/utils/tempImageAttachmentStore.ts:54; src/shared/utils/tempImageAttachmentStore.ts:75; src/shared/utils/tempImageAttachmentStore.ts:78; src/__tests__/tempImageAttachmentStore.test.ts:24",
+    "description": "`createTempImageAttachmentStore()` は `cloneStoredImageAttachment()` を追加し、`initialAttachments` を受け取る時点で要素コピーし、`saveImage()` の返却値と `listAttachments()` の各要素もコピーして返しています。`src/__tests__/tempImageAttachmentStore.test.ts:24`、`:43`、`:63` で saveImage 返却値、listAttachments 返却値、initialAttachments の外部 mutation が内部状態へ伝播しないことを確認しました。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0037"
+  },
+  {
+    "rawFindingId": "20260708-100701-pr-task-attachments-takt-add-p:reviewers:4:ai-antipattern-review:AI4-RES-0037",
+    "stepName": "ai-antipattern-review",
+    "reviewer": "ai-antipattern-review",
+    "familyTag": "logic-error",
+    "severity": "medium",
+    "title": "F-0037 の解消確認: 一時画像添付ストアが内部添付オブジェクト参照を返さない",
+    "location": "src/shared/utils/tempImageAttachmentStore.ts:21; src/shared/utils/tempImageAttachmentStore.ts:54; src/shared/utils/tempImageAttachmentStore.ts:75; src/shared/utils/tempImageAttachmentStore.ts:79; src/__tests__/tempImageAttachmentStore.test.ts:24",
+    "description": "createTempImageAttachmentStore() は cloneStoredImageAttachment() を追加し、initialAttachments 受け取り時は各要素をコピーし、saveImage() の返却値と listAttachments() の各要素もコピーして返す実装になっています。tempImageAttachmentStore.test.ts では saveImage() の返却オブジェクト、listAttachments() の返却オブジェクト、initialAttachments の外部参照を変更しても内部状態が変わらないことを確認しています。npm run build、npm run lint、npm test は成功しました。なお F-0023 は現在も差分上未解消のため、解消確認は出していません。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0037"
+  },
+  {
+    "rawFindingId": "20260708-100701-pr-task-attachments-takt-add-p:reviewers:4:coding-review:coding-review-4-confirm-1",
+    "stepName": "coding-review",
+    "reviewer": "coding-review",
+    "familyTag": "state-encapsulation.reference-leak",
+    "severity": "medium",
+    "title": "一時画像添付ストアの内部添付オブジェクト参照漏れ解消を確認",
+    "location": "src/shared/utils/tempImageAttachmentStore.ts:21",
+    "description": "src/shared/utils/tempImageAttachmentStore.ts:21-23 に cloneStoredImageAttachment() が追加され、initialAttachments は src/shared/utils/tempImageAttachmentStore.ts:54-56 で要素コピー、saveImage() は src/shared/utils/tempImageAttachmentStore.ts:75 でコピーを返却、listAttachments() は src/shared/utils/tempImageAttachmentStore.ts:78-80 で各要素をコピーして返す構造になっている。src/__tests__/tempImageAttachmentStore.test.ts:24-85 で saveImage 返却値、listAttachments 返却値、initialAttachments の外部変更が内部状態へ伝播しないことも検証している。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0037"
+  },
+  {
+    "rawFindingId": "20260708-100701-pr-task-attachments-takt-add-p:reviewers:4:implementation-semantics-review:raw-implementation-semantics-4-resolved-F-0037",
+    "stepName": "implementation-semantics-review",
+    "reviewer": "implementation-semantics-review",
+    "familyTag": "state-exposure.internal-reference",
+    "severity": "medium",
+    "title": "一時画像添付ストアの内部添付オブジェクト参照漏れ解消を確認",
+    "location": "src/shared/utils/tempImageAttachmentStore.ts:21; src/shared/utils/tempImageAttachmentStore.ts:54; src/shared/utils/tempImageAttachmentStore.ts:75; src/shared/utils/tempImageAttachmentStore.ts:79; src/__tests__/tempImageAttachmentStore.test.ts:24",
+    "description": "前回指摘の受入条件に戻って確認しました。`cloneStoredImageAttachment()` が `src/shared/utils/tempImageAttachmentStore.ts:21` で導入され、`initialAttachments` は `src/shared/utils/tempImageAttachmentStore.ts:54-55` で要素コピー、`saveImage()` は `src/shared/utils/tempImageAttachmentStore.ts:75` で内部配列の object ではなく clone を返し、`listAttachments()` は `src/shared/utils/tempImageAttachmentStore.ts:79` で各要素を clone して返しています。`src/__tests__/tempImageAttachmentStore.test.ts:24` 以降で saveImage 返却 object、listAttachments 返却 object、initialAttachments 元 object を変更しても store 内部状態が変わらないことを確認しています。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0037"
+  },
+  {
+    "rawFindingId": "20260708-100701-pr-task-attachments-takt-add-p:reviewers:4:contract-lifecycle-review:contract-lifecycle-1",
+    "stepName": "contract-lifecycle-review",
+    "reviewer": "contract-lifecycle-review",
+    "familyTag": "resource_lifecycle",
+    "severity": "medium",
+    "title": "一時画像添付ストアが内部の添付オブジェクト参照をそのまま返している問題は解消済み",
+    "location": "src/shared/utils/tempImageAttachmentStore.ts:21; src/shared/utils/tempImageAttachmentStore.ts:54; src/shared/utils/tempImageAttachmentStore.ts:75; src/shared/utils/tempImageAttachmentStore.ts:78; src/__tests__/tempImageAttachmentStore.test.ts:24",
+    "description": "`cloneStoredImageAttachment()` が src/shared/utils/tempImageAttachmentStore.ts:21-22 に追加され、initialAttachments は同54-56で要素コピーされます。`saveImage()` は内部配列へ保存した object そのものではなく同75でコピーを返し、`listAttachments()` も同78-79で各要素をコピーして返します。src/__tests__/tempImageAttachmentStore.test.ts:24-85 で saveImage 返却値、listAttachments 返却値、initialAttachments の外部変更が store 内部状態へ伝播しないことを確認しており、F-0037 の内部状態参照漏れは解消されています。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0037"
+  },
+  {
+    "rawFindingId": "20260708-100701-pr-task-attachments-takt-add-p:reviewers:4:robustness-review:robustness-review-4-resolve-F0037",
+    "stepName": "robustness-review",
+    "reviewer": "robustness-review",
+    "familyTag": "robustness.state_isolation",
+    "severity": "medium",
+    "title": "一時画像添付ストアが内部添付オブジェクト参照を漏らさないことを確認",
+    "location": "src/shared/utils/tempImageAttachmentStore.ts:21; src/shared/utils/tempImageAttachmentStore.ts:54; src/shared/utils/tempImageAttachmentStore.ts:75; src/shared/utils/tempImageAttachmentStore.ts:78; src/__tests__/tempImageAttachmentStore.test.ts:24",
+    "description": "`cloneStoredImageAttachment()` が追加され、`initialAttachments` は受け取り時に `map(cloneStoredImageAttachment)` で内部配列へコピーされます。`saveImage()` も内部配列に追加した object そのものではなく clone を返し、`listAttachments()` も各要素を clone して返すため、呼び出し側が返却 object を変更してもストア内部の placeholder/fileName/tempPath へ伝播しません。`src/__tests__/tempImageAttachmentStore.test.ts:24-85` で saveImage返却値、listAttachments返却値、initialAttachments の外部変更が内部状態を変えないことを確認しました。関連テスト `npx vitest run src/__tests__/tempImageAttachmentStore.test.ts src/__tests__/imageAttachments.test.ts src/__tests__/prReviewImageAttachments.test.ts src/__tests__/prImageDownload.test.ts src/__tests__/pipelinePrImageAttachments.test.ts src/__tests__/pipelineExecutePrImageAttachments.test.ts` は 6 files / 61 tests passed でした。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0037"
+  }
+]

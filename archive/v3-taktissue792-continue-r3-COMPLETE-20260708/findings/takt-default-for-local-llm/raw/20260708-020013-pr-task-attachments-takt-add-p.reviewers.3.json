@@ -1,0 +1,50 @@
+[
+  {
+    "rawFindingId": "20260708-020013-pr-task-attachments-takt-add-p:reviewers:3:arch-review:arch-review-3-001",
+    "stepName": "arch-review",
+    "reviewer": "arch-review",
+    "familyTag": "arch-resolution-order",
+    "severity": "medium",
+    "title": "listWorkflowEntries が builtin と project/user の同名 workflow を重複公開する",
+    "location": "src/infra/config/loaders/workflowResolver.ts:363",
+    "description": "今回の差分で listWorkflowEntries() は builtinEntries と entriesToValidate を分離し、line 367 で [...builtinEntries, ...validatedEntries] をそのまま返す構造になっています。getWorkflowDirs() は builtin→user→project の順で候補を列挙し、既存の collectValidatedWorkflowEntries() は Map#set により後勝ちで同名 workflow を1件に畳み込む設計です。新構造では builtin の default と project-local の default が同時に存在する場合、listWorkflowEntries()/listWorkflows() が同名を重複公開し、loadWorkflowByIdentifier()/loadAllWorkflowsWithSources() の project-local 優先契約と一覧 API の契約がずれます。これは Policy の「候補解決と値合成の分離」「契約全入口」に反する配線不整合です。なお npm run build、npm run lint、npm test は成功しましたが、同名 builtin/project の listWorkflowEntries 重複は既存テストで検出されていません。",
+    "suggestion": "builtin の軽量ロード最適化は維持しても、listWorkflowEntries() の最終結果は従来と同じ名前単位の後勝ち統合を通してください。例として、元の entries 順を保ったまま builtin だけ軽量判定する entry loader を collectValidatedWorkflowEntries に渡す、または builtin/user/project/repertoire を同一 Map に投入して project/user が builtin を上書きする構造にしてください。あわせて project-local default が builtin default を上書きしたとき listWorkflowEntries()/listWorkflows() に default が1件だけ出るテストを追加してください。",
+    "kind": "issue"
+  },
+  {
+    "rawFindingId": "20260708-020013-pr-task-attachments-takt-add-p:reviewers:3:ai-antipattern-review:ai-antipattern-r3-001",
+    "stepName": "ai-antipattern-review",
+    "reviewer": "ai-antipattern-review",
+    "familyTag": "scope-creep",
+    "severity": "medium",
+    "title": "PR添付機能と無関係に builtin workflow の契約検証を迂回している",
+    "location": "src/infra/config/loaders/workflowResolver.ts:180",
+    "description": "`loadValidatedWorkflowEntry()` は `entry.source === 'builtin'` の場合に `buildWorkflowDiscoveryConfig(loadWorkflowForDiscovery(...))` を返し、`validateWorkflowCallContracts()` を通る `loadValidatedWorkflowDiscoveryEntry()` を迂回しています。同じ変更で `loadValidatedWorkflowConfigEntry()` も builtin では `validateLoadedWorkflowEntryContracts()` を実行せず、`listWorkflowEntries()` も builtin entries を未検証のまま返します。PRコメント画像の attachment 化とは別契約の workflow call validation を広く変更しており、builtin workflow の不整合を discovery / runtime / list 経路で検出できなくするスコープクリープです。",
+    "suggestion": "builtin 全体の validation bypass を戻してください。internal callable builtin を一覧から隠す必要がある場合は、その絞り込みだけを validation 前後の最小範囲に限定し、公開・実行される builtin workflow は従来どおり `validateWorkflowCallContracts()` / `validateLoadedWorkflowEntryContracts()` を通す構造にしてください。あわせて builtin workflow の workflow_call 契約不整合が discovery / runtime 経路で検出される回帰テストを追加してください。",
+    "kind": "issue"
+  },
+  {
+    "rawFindingId": "20260708-020013-pr-task-attachments-takt-add-p:reviewers:3:coding-review:coding-review-3-1",
+    "stepName": "coding-review",
+    "reviewer": "coding-review",
+    "familyTag": "bug",
+    "severity": "medium",
+    "title": "listWorkflows が project-local override と builtin を重複表示する",
+    "location": "src/infra/config/loaders/workflowResolver.ts:367",
+    "description": "今回の変更で listWorkflowEntries() が builtinEntries と validatedEntries を単純連結するようになり、同名 workflow の既存優先順位による重複排除が失われています。実行確認でも、builtin 有効かつ .takt/workflows/default.yaml がある環境で listWorkflows(project) の defaultCount が 2、listWorkflowEntries(project) の default source が [\"builtin\",\"project\"] になりました。loadAllWorkflows() / loadWorkflowByIdentifier() は project-local override を優先する契約を持つため、公開 listing API だけが同じ名前を重複して返すリグレッションです。",
+    "suggestion": "builtin の内部 workflow を除外しつつ、従来どおり entry.name 単位で Map に集約して後勝ちの優先順位を維持してください。例えば visible builtin と non-builtin を同じ順序で結合してから name で de-dupe し、project/user override が builtin を置き換えることを listWorkflowEntries/listWorkflows のテストに追加してください。",
+    "kind": "issue"
+  },
+  {
+    "rawFindingId": "20260708-020013-pr-task-attachments-takt-add-p:reviewers:3:implementation-semantics-review:implementation-semantics-raw-3-1",
+    "stepName": "implementation-semantics-review",
+    "reviewer": "implementation-semantics-review",
+    "familyTag": "implementation-semantics:meaning-contract",
+    "severity": "medium",
+    "title": "listWorkflowEntries が shadow された builtin workflow も同名で返す",
+    "location": "src/infra/config/loaders/workflowResolver.ts:363",
+    "description": "`listWorkflowEntries()` は `entries` を `builtinEntries` と `entriesToValidate` に分け、最後に `return [...builtinEntries, ...validatedEntries]` しています。このため project-local の `.takt/workflows/default.yaml` が builtin `default` を上書きする状態でも、`listWorkflowEntries()` は builtin と project の同名 `default` を両方返します。実確認では `loadAllWorkflowsWithSources(root).get('default')?.source` は `project` なのに、`listWorkflowEntries(root).filter(e => e.name === 'default')` は builtin と project の2件を返しました。`WorkflowDirEntry.source` が「その名前を選んだときに実行されるworkflowの出所」という意味と一致しなくなり、下流の workflow selection では builtin/custom の分類と実際に `loadWorkflowByIdentifier('default')` で解決される project workflow がズレます。",
+    "suggestion": "builtin と非builtinを分離した後も、workflow名単位で有効な1件に正規化してください。既存の `collectValidatedWorkflowEntries()` と同じく後勝ちの優先順位を維持するか、validated non-builtin 名の集合で同名 builtin を除外してから返してください。あわせて project-local `default.yaml` が builtin `default` をshadowする場合に `listWorkflowEntries()` が project 1件だけを返すテストを追加してください。",
+    "kind": "issue"
+  }
+]

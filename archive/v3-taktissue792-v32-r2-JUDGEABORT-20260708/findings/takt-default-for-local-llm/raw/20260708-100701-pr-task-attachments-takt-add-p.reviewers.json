@@ -1,0 +1,50 @@
+[
+  {
+    "rawFindingId": "20260708-100701-pr-task-attachments-takt-add-p:reviewers:1:arch-review:arch-review-raw-1",
+    "stepName": "arch-review",
+    "reviewer": "arch-review",
+    "familyTag": "architecture.dry.temp-attachment-store",
+    "severity": "medium",
+    "title": "PR画像添付用の一時保存処理が既存の画像添付ストアと重複している",
+    "location": "src/features/tasks/prReviewImageAttachments.ts:193; src/features/interactive/imageAttachments.ts:120",
+    "description": "PR画像添付の createAttachmentWriter() は、既存の createImageAttachmentStore() と同じ責務である sessionId 検証、700/600 権限のディレクトリ・ファイル作成、image-N.ext 採番、attachments 配列管理、cleanup を別実装として持っています。同種のファイル IO / cleanup 契約が2箇所に分岐しており、今後片方だけに権限・検証・cleanup 修正が入る構造です。既存慣例照合では `rg \"tmpRoot|createImageAttachmentStore|PRIVATE_DIRECTORY_MODE\" src/features src/__tests__` により、同種実装が src/features/interactive/imageAttachments.ts に既に存在することを確認しました。",
+    "suggestion": "一時画像添付ストアを provider 非依存の共有モジュールへ抽出し、interactive paste と PR review image attachments の両方から同じ実装を使ってください。features/tasks から features/interactive へ依存させず、StoredImageAttachment を扱う shared か attachment 専用の共通境界に置くのが自然です。",
+    "kind": "issue"
+  },
+  {
+    "rawFindingId": "20260708-100701-pr-task-attachments-takt-add-p:reviewers:1:arch-review:arch-review-raw-2",
+    "stepName": "arch-review",
+    "reviewer": "arch-review",
+    "familyTag": "file-io.tmp-root-validation",
+    "severity": "medium",
+    "title": "PR画像添付の tmpRoot が空文字でも相対パスとして受理される",
+    "location": "src/features/tasks/prReviewImageAttachments.ts:242",
+    "description": "preparePrReviewImageAttachments() は `options.tmpRoot ?? os.tmpdir()` をそのまま createAttachmentWriter() に渡すため、呼び出し側が `tmpRoot: ''` を渡すと `path.join('', 'takt', sessionId)` によりカレントディレクトリ相対の `takt/...` へ画像を書き込みます。既存の同種実装 createImageAttachmentStore() は src/features/interactive/imageAttachments.ts:123 で空の tmpRoot を拒否しており、今回のファイル IO 境界だけ既存慣例から外れています。",
+    "suggestion": "PR画像添付側でも tmpRoot を解決済みの非空パスとして検証してください。上記の共通一時画像添付ストアへ寄せる場合は、その共通境界で `tmpRoot.length === 0` を拒否する契約にしてください。",
+    "kind": "issue"
+  },
+  {
+    "rawFindingId": "20260708-100701-pr-task-attachments-takt-add-p:reviewers:1:robustness-review:robustness-review-1-001",
+    "stepName": "robustness-review",
+    "reviewer": "robustness-review",
+    "familyTag": "robustness.network_timeout",
+    "severity": "medium",
+    "title": "画像取得の gh/fetch/stream 待機にタイムアウトがなく単一画像でPR処理が停止する",
+    "location": "src/infra/github/prImageDownload.ts:115; src/infra/github/prImageDownload.ts:148; src/infra/github/prImageDownload.ts:75; src/features/tasks/prReviewImageAttachments.ts:263",
+    "description": "`readGhAuthToken()` は `execFileSync('gh', ['auth', 'token'], ...)` に timeout を渡しておらず、`fetchGitHubImageWithGhAuth()` の `fetchWithAuth()` も AbortSignal なしで待機し、body 読み取りも `reader.read()` を期限なしで待ちます。GitHub添付URLが応答を返さない、または途中でストリームを止めると `options.downloadImage()` が reject せず、`preparePrReviewImageAttachments()` の1画像処理で止まるため、`takt add --pr` / pipeline のPRタスク作成全体が単一画像で無期限停止します。",
+    "suggestion": "`gh auth token` 実行には `timeout` を設定し、fetch/body 読み取りには `AbortController` または `AbortSignal.timeout()` を適用してください。タイムアウトは画像単位の download 失敗として `preparePrReviewImageAttachments()` の既存 catch に流し、該当画像だけ skipped warning にしてください。",
+    "kind": "issue"
+  },
+  {
+    "rawFindingId": "20260708-100701-pr-task-attachments-takt-add-p:reviewers:1:robustness-review:robustness-review-1-002",
+    "stepName": "robustness-review",
+    "reviewer": "robustness-review",
+    "familyTag": "robustness.resource_limit",
+    "severity": "medium",
+    "title": "PR画像の合計サイズ上限が対象画像を全量ダウンロードした後に判定される",
+    "location": "src/features/tasks/prReviewImageAttachments.ts:263; src/features/tasks/prReviewImageAttachments.ts:269; src/infra/github/GitHubProvider.ts:40",
+    "description": "`preparePrReviewImageAttachments()` は各URLを `options.downloadImage()` で取得し終えた後、`totalBytes + image.data.length` で合計上限を判定します。一方、GitHubProvider の downloader は常に1画像上限 `MAX_IMAGE_ATTACHMENT_BYTES` だけを渡すため、既に9.9MB保存済みの状態で次の9.9MB画像が来ると、上限超過で保存しない画像でも本文を全量読み込みます。件数上限はダウンロード前に効いていますが、合計サイズ上限は資源消費前の検証になっていません。",
+    "suggestion": "downloader に残り許容量を渡せる契約を追加し、Content-Length とストリーム読み取り上限を `MAX_PR_REVIEW_IMAGE_ATTACHMENT_TOTAL_BYTES - totalBytes` で検証してください。残り容量が0以下ならダウンロード前に skip し、現在の「2枚目を取得してから捨てる」テスト期待値も更新してください。",
+    "kind": "issue"
+  }
+]

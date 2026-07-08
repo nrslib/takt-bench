@@ -1,0 +1,2124 @@
+{
+  "version": 1,
+  "workflowName": "takt-default-for-local-llm",
+  "nextId": 25,
+  "updatedAt": "2026-07-08T11:14:14.345Z",
+  "findings": [
+    {
+      "id": "F-0001",
+      "status": "resolved",
+      "lifecycle": "resolved",
+      "severity": "medium",
+      "title": "PR添付画像の一時ファイル cleanup が対話モード開始前の例外経路で漏れる",
+      "location": "src/app/cli/routing.ts:155",
+      "description": "`resolvePrInput()` 後に `cleanupPrAttachments` を保持していますが、cleanup は workflow 選択キャンセル時、mode 選択キャンセル時、または `dispatchConversationAction()` 以降の finally でしか呼ばれていません。`determineWorkflow()`、`getWorkflowDescription()`、`interactiveMode()` / `quietMode()` / `personaMode()` が throw した場合は、PR画像を保存した temp attachment store が解放されません。これは副作用導入後の失敗経路で状態解放が欠落しており、Policy の「副作用と状態遷移の確認」に反します。",
+      "suggestion": "PR attachment cleanup を、`resolvePrInput()` 成功後から対話処理全体を覆う単一の `try/finally` に移動してください。既存のキャンセル分岐で個別 cleanup する場合も二重呼び出しに耐える形を維持し、interactive mode 自体が throw するテストも追加してください。",
+      "reviewers": [
+        "arch-review"
+      ],
+      "rawFindingIds": [
+        "20260708-020013-pr-task-attachments-takt-add-p:reviewers:1:arch-review:arch-raw-1"
+      ],
+      "firstSeen": {
+        "runId": "20260708-020013-pr-task-attachments-takt-add-p",
+        "stepName": "arch-review",
+        "timestamp": "2026-07-08T02:47:32.161Z"
+      },
+      "lastSeen": {
+        "runId": "20260708-020013-pr-task-attachments-takt-add-p",
+        "stepName": "reviewers",
+        "timestamp": "2026-07-08T02:47:32.161Z"
+      },
+      "resolvedAt": "2026-07-08T03:13:04.197Z",
+      "resolvedEvidence": "いずれも kind=resolution_confirmation で targetFindingId が F-0001 を指し、PR 添付画像 cleanup の例外経路が try/finally により解消されたことを確認しているため。"
+    },
+    {
+      "id": "F-0002",
+      "status": "resolved",
+      "lifecycle": "resolved",
+      "severity": "medium",
+      "title": "画像サイズ上限が download 後にしか評価されず、大きなレスポンスを丸ごと読み込む",
+      "location": "src/features/tasks/prReviewTaskInput.ts:119",
+      "description": "`downloadGithubImageAttachment()` は `await response.arrayBuffer()` でレスポンス全体をメモリへ読み込んだ後、`validateDownloadedImage()` の `data.length > MAX_IMAGE_ATTACHMENT_BYTES` で拒否しています。タスク要件はサイズ上限と外部 URL の無制限取得禁止を求めており、GitHub allowlist 内でもレスポンスサイズは信頼境界外です。現状は巨大レスポンスを読み切るまで上限が効かないため、境界での入力制限として成立していません。",
+      "suggestion": "`Content-Length` が上限超過なら本文を読まずに拒否し、ヘッダーがない場合も `response.body` を chunk で読みながら `MAX_IMAGE_ATTACHMENT_BYTES` 超過時点で中断してください。その後に magic bytes と Content-Type の一致を検証する構造にしてください。",
+      "reviewers": [
+        "arch-review"
+      ],
+      "rawFindingIds": [
+        "20260708-020013-pr-task-attachments-takt-add-p:reviewers:1:arch-review:arch-raw-2"
+      ],
+      "firstSeen": {
+        "runId": "20260708-020013-pr-task-attachments-takt-add-p",
+        "stepName": "arch-review",
+        "timestamp": "2026-07-08T02:47:32.161Z"
+      },
+      "lastSeen": {
+        "runId": "20260708-020013-pr-task-attachments-takt-add-p",
+        "stepName": "reviewers",
+        "timestamp": "2026-07-08T02:47:32.161Z"
+      },
+      "resolvedAt": "2026-07-08T03:13:04.197Z",
+      "resolvedEvidence": "いずれも kind=resolution_confirmation で targetFindingId が F-0002 を指し、Content-Length 事前検証と stream 上限読込により画像サイズ境界が解消されたことを確認しているため。"
+    },
+    {
+      "id": "F-0003",
+      "status": "resolved",
+      "lifecycle": "resolved",
+      "severity": "medium",
+      "title": "pipeline --pr の staged task context を実行直後に削除しており、run artifact として残らない",
+      "location": "src/features/pipeline/steps.ts:303",
+      "description": "attachment 付き pipeline 実行では `stageTaskSpecForExecution()` が `.takt/runs/<report>/context/task/order.md` と attachments を作成し、`executeTask()` にはその `reportDirName` と staged prompt を渡しています。しかし finally で `cleanupTransientTaskSpecs(preparedSpec?.taskDir, stagedSpec)` を呼び、`cleanupStagedTaskSpec()` が run context 側の `context/task` を削除します。既存の task spec 実行経路は実行コンテキストを run artifact として残す設計で、plan でも「prepared spec は cleanup、run context 側は実行証跡として残す」と明記されています。実行後に primary spec と attachments が消えるため、後続の検証・再実行・トレース参照で attachment 付き task spec を確認できません。",
+      "suggestion": "pipeline では prepared task spec だけを cleanup し、`stageTaskSpecForExecution()` が作成した run context は成功・失敗いずれでも実行証跡として残してください。staging 途中で失敗した場合だけ staged context を削除する責務に分け、既存の `selectAndExecuteTask()` の保持契約に合わせてください。",
+      "reviewers": [
+        "arch-review"
+      ],
+      "rawFindingIds": [
+        "20260708-020013-pr-task-attachments-takt-add-p:reviewers:1:arch-review:arch-raw-3"
+      ],
+      "firstSeen": {
+        "runId": "20260708-020013-pr-task-attachments-takt-add-p",
+        "stepName": "arch-review",
+        "timestamp": "2026-07-08T02:47:32.161Z"
+      },
+      "lastSeen": {
+        "runId": "20260708-020013-pr-task-attachments-takt-add-p",
+        "stepName": "reviewers",
+        "timestamp": "2026-07-08T02:47:32.161Z"
+      },
+      "resolvedAt": "2026-07-08T03:13:04.197Z",
+      "resolvedEvidence": "いずれも kind=resolution_confirmation で targetFindingId が F-0003 を指し、pipeline の staged run context を cleanup 対象から外したことを確認しているため。"
+    },
+    {
+      "id": "F-0004",
+      "status": "resolved",
+      "lifecycle": "resolved",
+      "severity": "high",
+      "title": "未追跡のローカル workflow が builtin の英語 workflow を上書きして npm test を失敗させている",
+      "location": ".takt/workflows/takt-default-for-local-llm.yaml:277",
+      "description": "`.takt/workflows/takt-default-for-local-llm.yaml` が未追跡ファイルとして追加されており、fix->plan 条件が日本語のままです。`npm test` では `for-local-llm-replan-wiring.test.ts` の英語ケースが builtin 英語 workflow ではなくこのローカル workflow を読み、期待値 `Cannot proceed with fixes, or human judgment is required` に対して実値 `修正を進められない、または人間の判断が必要` となり失敗しました。PR 画像添付機能に不要なローカル workflow 追加であり、品質要件の `npm test` 成功も満たしていません。",
+      "suggestion": "このタスクに不要な `.takt/workflows/takt-default-for-local-llm.yaml` を差分から除外するか、ローカル workflow を追加する必然性があるなら言語別 builtin と同じ契約を満たすよう修正し、`npm test` を再実行してください。",
+      "reviewers": [
+        "ai-antipattern-review"
+      ],
+      "rawFindingIds": [
+        "20260708-020013-pr-task-attachments-takt-add-p:reviewers:1:ai-antipattern-review:ai-antipattern-raw-1"
+      ],
+      "firstSeen": {
+        "runId": "20260708-020013-pr-task-attachments-takt-add-p",
+        "stepName": "ai-antipattern-review",
+        "timestamp": "2026-07-08T02:47:32.161Z"
+      },
+      "lastSeen": {
+        "runId": "20260708-020013-pr-task-attachments-takt-add-p",
+        "stepName": "reviewers",
+        "timestamp": "2026-07-08T02:47:32.161Z"
+      },
+      "resolvedAt": "2026-07-08T03:13:04.197Z",
+      "resolvedEvidence": "いずれも kind=resolution_confirmation で targetFindingId が F-0004 を指し、未追跡ローカル workflow が存在せず npm test 失敗原因が解消されたことを確認しているため。"
+    },
+    {
+      "id": "F-0005",
+      "status": "resolved",
+      "lifecycle": "resolved",
+      "severity": "medium",
+      "title": "pipeline の PR 添付実行後に run context の添付画像を削除している",
+      "location": "src/features/pipeline/steps.ts:201",
+      "description": "PR 添付つき pipeline 実行では `stageTaskSpecForExecution()` が `.takt/runs/<run>/context/task/order.md` と `attachments/` を作り、`executionTask` はその order.md を読むプロンプトになります。しかし `finally` で `cleanupTransientTaskSpecs(preparedSpec?.taskDir, stagedSpec)` を呼ぶため、`cleanupStagedTaskSpec()` が run context の task ディレクトリを削除します。既存の `selectAndExecuteTask` は同じ staging 後も run context 側は残し、transient な prepared spec だけを片付けています。pipeline 経路だけ実行後の run 証跡と添付参照が壊れるため、同等に画像を参照できるという要件と実行資産の消費境界に反しています。",
+      "suggestion": "pipeline でも成功・失敗後に run context の staged task spec は残し、削除対象は一時的に作った prepared task spec に限定してください。テストも `cleanupStagedTaskSpec` 呼び出しを期待する形ではなく、run context の order.md と attachments が残ることを検証してください。",
+      "reviewers": [
+        "ai-antipattern-review"
+      ],
+      "rawFindingIds": [
+        "20260708-020013-pr-task-attachments-takt-add-p:reviewers:1:ai-antipattern-review:ai-antipattern-raw-2"
+      ],
+      "firstSeen": {
+        "runId": "20260708-020013-pr-task-attachments-takt-add-p",
+        "stepName": "ai-antipattern-review",
+        "timestamp": "2026-07-08T02:47:32.161Z"
+      },
+      "lastSeen": {
+        "runId": "20260708-020013-pr-task-attachments-takt-add-p",
+        "stepName": "reviewers",
+        "timestamp": "2026-07-08T02:47:32.161Z"
+      },
+      "resolvedAt": "2026-07-08T03:13:04.197Z",
+      "resolvedEvidence": "いずれも kind=resolution_confirmation で targetFindingId が F-0005 を指し、pipeline PR 添付実行後に run context の添付画像を削除しないことを確認しているため。"
+    },
+    {
+      "id": "F-0006",
+      "status": "resolved",
+      "lifecycle": "resolved",
+      "severity": "medium",
+      "title": "--pr interactive 経路で mode 実行が例外を投げると PR 添付の一時ファイルが cleanup されない",
+      "location": "src/app/cli/routing.ts:193",
+      "description": "`cleanupPrAttachments` は PR 画像をダウンロードした後、workflow 選択キャンセル・mode 選択キャンセル・dispatch 後の `finally` では呼ばれます。一方で `interactiveMode` / `quietMode` / `personaMode` を呼ぶ switch は `try/finally` の外側にあるため、これらが例外を投げると `cleanupPrAttachments?.()` に到達せず、`resolvePrReviewTaskInput()` が作った一時画像ディレクトリが残ります。新しい外部取得・一時ファイル副作用に対する例外経路の cleanup 漏れです。",
+      "suggestion": "mode 実行から dispatch までを PR 添付 cleanup の `try/finally` に含め、`result` 未設定時でも PR 添付だけは必ず cleanup される構造にしてください。例外時に cleanup が呼ばれる単体テストも追加してください。",
+      "reviewers": [
+        "ai-antipattern-review"
+      ],
+      "rawFindingIds": [
+        "20260708-020013-pr-task-attachments-takt-add-p:reviewers:1:ai-antipattern-review:ai-antipattern-raw-3"
+      ],
+      "firstSeen": {
+        "runId": "20260708-020013-pr-task-attachments-takt-add-p",
+        "stepName": "ai-antipattern-review",
+        "timestamp": "2026-07-08T02:47:32.161Z"
+      },
+      "lastSeen": {
+        "runId": "20260708-020013-pr-task-attachments-takt-add-p",
+        "stepName": "reviewers",
+        "timestamp": "2026-07-08T02:47:32.161Z"
+      },
+      "resolvedAt": "2026-07-08T03:13:04.197Z",
+      "resolvedEvidence": "いずれも kind=resolution_confirmation で targetFindingId が F-0006 を指し、interactive mode 例外時も PR 添付 cleanup が実行されることを確認しているため。"
+    },
+    {
+      "id": "F-0007",
+      "status": "resolved",
+      "lifecycle": "resolved",
+      "severity": "medium",
+      "title": "画像サイズ上限を arrayBuffer 後にしか検証しておらず大きなレスポンスを丸ごと読み込む",
+      "location": "src/features/tasks/prReviewTaskInput.ts:119",
+      "description": "`downloadGithubImageAttachment()` は `Buffer.from(await response.arrayBuffer())` でレスポンス全体をメモリに読み込んだ後、`validateDownloadedImage()` で `MAX_IMAGE_ATTACHMENT_BYTES` を超えているか確認しています。これではサイズ上限は保存可否の検証にしかならず、巨大レスポンスのダウンロードとメモリ確保を止められません。要件の「サイズ上限を設ける」「外部 URL を無制限に取得しない」に対し、境界での制限が実装されていません。",
+      "suggestion": "`Content-Length` が上限超過なら読む前に拒否し、`response.body` をストリームで読みながら累積サイズが上限を超えた時点で abort してください。そのうえで既存の Content-Type と magic bytes 検証を維持してください。",
+      "reviewers": [
+        "ai-antipattern-review"
+      ],
+      "rawFindingIds": [
+        "20260708-020013-pr-task-attachments-takt-add-p:reviewers:1:ai-antipattern-review:ai-antipattern-raw-4"
+      ],
+      "firstSeen": {
+        "runId": "20260708-020013-pr-task-attachments-takt-add-p",
+        "stepName": "ai-antipattern-review",
+        "timestamp": "2026-07-08T02:47:32.161Z"
+      },
+      "lastSeen": {
+        "runId": "20260708-020013-pr-task-attachments-takt-add-p",
+        "stepName": "reviewers",
+        "timestamp": "2026-07-08T02:47:32.161Z"
+      },
+      "resolvedAt": "2026-07-08T03:13:04.197Z",
+      "resolvedEvidence": "いずれも kind=resolution_confirmation で targetFindingId が F-0007 を指し、arrayBuffer 後のサイズ検証ではなく stream 境界検証へ変更されたことを確認しているため。"
+    },
+    {
+      "id": "F-0008",
+      "status": "resolved",
+      "lifecycle": "resolved",
+      "severity": "medium",
+      "title": "対話モード生成中の例外でPR画像一時ファイルがcleanupされない",
+      "location": "src/app/cli/routing.ts:223",
+      "description": "PR画像は resolvePrInput() で先にダウンロードされ cleanupPrAttachments に保持されますが、interactiveMode/quietMode/personaMode の呼び出しは cleanup 用 finally が始まる src/app/cli/routing.ts:253 より前にあります。そのため、対話モードが例外を投げると src/app/cli/routing.ts:296 の cleanupPrAttachments が実行されず、PRコメント由来の画像一時ファイルが残ります。これは今回追加されたダウンロード副作用の例外経路漏れです。",
+      "suggestion": "result 生成を含む範囲を try/finally に入れ、result が作成済みの場合だけ cleanupInteractiveResultAttachments(result) を呼び、常に cleanupPrAttachments?.() が走る構造にしてください。対話モードが throw した場合の cleanup テストも追加してください。",
+      "reviewers": [
+        "coding-review"
+      ],
+      "rawFindingIds": [
+        "20260708-020013-pr-task-attachments-takt-add-p:reviewers:1:coding-review:raw-coding-review-1"
+      ],
+      "firstSeen": {
+        "runId": "20260708-020013-pr-task-attachments-takt-add-p",
+        "stepName": "coding-review",
+        "timestamp": "2026-07-08T02:47:32.161Z"
+      },
+      "lastSeen": {
+        "runId": "20260708-020013-pr-task-attachments-takt-add-p",
+        "stepName": "reviewers",
+        "timestamp": "2026-07-08T02:47:32.161Z"
+      },
+      "resolvedAt": "2026-07-08T03:13:04.197Z",
+      "resolvedEvidence": "いずれも kind=resolution_confirmation で targetFindingId が F-0008 を指し、対話モード生成前後の例外でも PR 画像 cleanup が行われることを確認しているため。"
+    },
+    {
+      "id": "F-0009",
+      "status": "resolved",
+      "lifecycle": "resolved",
+      "severity": "medium",
+      "title": "サイズ上限検証の前に画像レスポンス全体をメモリへ読み込んでいる",
+      "location": "src/features/tasks/prReviewTaskInput.ts:119",
+      "description": "downloadGithubImageAttachment() は await response.arrayBuffer() でレスポンス全体を読み込んだ後、validateDownloadedImage() で MAX_IMAGE_ATTACHMENT_BYTES を検証しています。ユーザー要件の「サイズ上限を設ける」は保存拒否だけでなく取得時の境界として必要ですが、この実装では上限超過レスポンスを丸ごとメモリに載せるため、大きな GitHub attachment でメモリ消費を抑止できません。",
+      "suggestion": "Content-Length が上限超過なら読む前に拒否し、body stream を読む場合も累積 byte 数が MAX_IMAGE_ATTACHMENT_BYTES を超えた時点で中断してください。Content-Length なしの上限超過を再現するテストを追加してください。",
+      "reviewers": [
+        "coding-review"
+      ],
+      "rawFindingIds": [
+        "20260708-020013-pr-task-attachments-takt-add-p:reviewers:1:coding-review:raw-coding-review-2"
+      ],
+      "firstSeen": {
+        "runId": "20260708-020013-pr-task-attachments-takt-add-p",
+        "stepName": "coding-review",
+        "timestamp": "2026-07-08T02:47:32.161Z"
+      },
+      "lastSeen": {
+        "runId": "20260708-020013-pr-task-attachments-takt-add-p",
+        "stepName": "reviewers",
+        "timestamp": "2026-07-08T02:47:32.161Z"
+      },
+      "resolvedAt": "2026-07-08T03:13:04.197Z",
+      "resolvedEvidence": "いずれも kind=resolution_confirmation で targetFindingId が F-0009 を指し、画像レスポンス全体をメモリに読み込む前に上限を適用する構造になったことを確認しているため。"
+    },
+    {
+      "id": "F-0010",
+      "status": "resolved",
+      "lifecycle": "resolved",
+      "severity": "medium",
+      "title": "pipeline --pr の実行後にstaged task contextごと添付画像を削除している",
+      "location": "src/features/pipeline/steps.ts:304",
+      "description": "pipeline の attachment 経路では src/features/pipeline/steps.ts:285 で stageTaskSpecForExecution() により run context へ order.md と attachments を配置しますが、finally で cleanupTransientTaskSpecs(preparedSpec?.taskDir, stagedSpec) を呼ぶため stagedSpec も cleanup されます。cleanupStagedTaskSpec() は contextTaskDir を削除する実装なので、実行完了後の .takt/runs/<slug>/context/task 配下から order.md と attachments が消え、pipeline --pr の実行記録から画像参照を辿れなくなります。既存の task spec 実行経路は run context を証跡として残しており、この差分は pipeline 経路だけ契約がずれています。",
+      "suggestion": "pipeline では一時 prepared task spec だけを削除し、run context に stage した task/order.md/attachments は実行証跡として残してください。実行後に context/task/order.md と attachments/image-1.png が残ることを検証するテストを追加してください。",
+      "reviewers": [
+        "coding-review"
+      ],
+      "rawFindingIds": [
+        "20260708-020013-pr-task-attachments-takt-add-p:reviewers:1:coding-review:raw-coding-review-3"
+      ],
+      "firstSeen": {
+        "runId": "20260708-020013-pr-task-attachments-takt-add-p",
+        "stepName": "coding-review",
+        "timestamp": "2026-07-08T02:47:32.161Z"
+      },
+      "lastSeen": {
+        "runId": "20260708-020013-pr-task-attachments-takt-add-p",
+        "stepName": "reviewers",
+        "timestamp": "2026-07-08T02:47:32.161Z"
+      },
+      "resolvedAt": "2026-07-08T03:13:04.197Z",
+      "resolvedEvidence": "いずれも kind=resolution_confirmation で targetFindingId が F-0010 を指し、pipeline 実行後に staged task context と添付画像が保持されることを確認しているため。"
+    },
+    {
+      "id": "F-0011",
+      "status": "resolved",
+      "lifecycle": "resolved",
+      "severity": "medium",
+      "title": "画像サイズ上限がダウンロード後にしか適用されない",
+      "location": "src/features/tasks/prReviewTaskInput.ts:119",
+      "description": "PRコメント内の許可済みGitHub画像URLを取得するとき、`Buffer.from(await response.arrayBuffer())` でレスポンス全体をメモリに読み込んだ後、`validateDownloadedImage()` の `MAX_IMAGE_ATTACHMENT_BYTES` 判定に進んでいます。10MiBを超える、または非常に大きいレスポンスの場合、上限違反を検出する前に無制限に近いネットワーク読み込みとメモリ確保が発生し、サイズ上限という境界契約が fail-fast になっていません。",
+      "suggestion": "`Content-Length` が上限超過なら本文を読まずに拒否し、ヘッダがない場合も `response.body` の reader で累積バイト数を数えながら読み、`MAX_IMAGE_ATTACHMENT_BYTES` を超えた時点で中断してください。その後にContent-Typeとmagic bytes検証へ進めてください。",
+      "reviewers": [
+        "implementation-semantics-review"
+      ],
+      "rawFindingIds": [
+        "20260708-020013-pr-task-attachments-takt-add-p:reviewers:1:implementation-semantics-review:implementation-semantics-raw-1"
+      ],
+      "firstSeen": {
+        "runId": "20260708-020013-pr-task-attachments-takt-add-p",
+        "stepName": "implementation-semantics-review",
+        "timestamp": "2026-07-08T02:47:32.161Z"
+      },
+      "lastSeen": {
+        "runId": "20260708-020013-pr-task-attachments-takt-add-p",
+        "stepName": "reviewers",
+        "timestamp": "2026-07-08T02:47:32.161Z"
+      },
+      "resolvedAt": "2026-07-08T03:13:04.197Z",
+      "resolvedEvidence": "いずれも kind=resolution_confirmation で targetFindingId が F-0011 を指し、画像サイズ上限が本文取得前および stream 読込中に適用されることを確認しているため。"
+    },
+    {
+      "id": "F-0012",
+      "status": "resolved",
+      "lifecycle": "resolved",
+      "severity": "medium",
+      "title": "PR添付画像の一時ファイルが例外経路で解放されない",
+      "location": "src/app/cli/routing.ts:155",
+      "description": "`resolvePrInput()` が画像をダウンロードすると `cleanupPrAttachments` が設定されますが、その後の `determineWorkflow()`、`getWorkflowDescription()`、`selectInteractiveMode()`、または各interactive mode呼び出しが例外を投げた場合、cleanupを呼ぶ `finally` は `dispatchConversationAction()` の後ろにしかないため到達しません。PRコメント画像にはprivate repository由来のスクリーンショットが入り得るため、失敗経路で一時ディレクトリが残る状態不整合になります。",
+      "suggestion": "`cleanupPrAttachments` を取得した後のワークフロー選択からinteractive mode実行、dispatchまでを1つの `try/finally` で囲み、正常・キャンセル・例外の全経路で一度だけcleanupされる構造にしてください。既存のnullキャンセル分岐は早期returnしても外側finallyで解放される形に寄せるのが安全です。",
+      "reviewers": [
+        "implementation-semantics-review"
+      ],
+      "rawFindingIds": [
+        "20260708-020013-pr-task-attachments-takt-add-p:reviewers:1:implementation-semantics-review:implementation-semantics-raw-2"
+      ],
+      "firstSeen": {
+        "runId": "20260708-020013-pr-task-attachments-takt-add-p",
+        "stepName": "implementation-semantics-review",
+        "timestamp": "2026-07-08T02:47:32.161Z"
+      },
+      "lastSeen": {
+        "runId": "20260708-020013-pr-task-attachments-takt-add-p",
+        "stepName": "reviewers",
+        "timestamp": "2026-07-08T02:47:32.161Z"
+      },
+      "resolvedAt": "2026-07-08T03:13:04.197Z",
+      "resolvedEvidence": "いずれも kind=resolution_confirmation で targetFindingId が F-0012 を指し、PR 添付画像一時ファイルの例外経路 cleanup 漏れが解消されたことを確認しているため。"
+    },
+    {
+      "id": "F-0013",
+      "status": "resolved",
+      "lifecycle": "resolved",
+      "severity": "medium",
+      "title": "listWorkflowEntries が builtin と project/user の同名 workflow を重複公開する",
+      "location": "src/infra/config/loaders/workflowResolver.ts:363",
+      "description": "今回の差分で listWorkflowEntries() は builtinEntries と entriesToValidate を分離し、line 367 で [...builtinEntries, ...validatedEntries] をそのまま返す構造になっています。getWorkflowDirs() は builtin→user→project の順で候補を列挙し、既存の collectValidatedWorkflowEntries() は Map#set により後勝ちで同名 workflow を1件に畳み込む設計です。新構造では builtin の default と project-local の default が同時に存在する場合、listWorkflowEntries()/listWorkflows() が同名を重複公開し、loadWorkflowByIdentifier()/loadAllWorkflowsWithSources() の project-local 優先契約と一覧 API の契約がずれます。これは Policy の「候補解決と値合成の分離」「契約全入口」に反する配線不整合です。なお npm run build、npm run lint、npm test は成功しましたが、同名 builtin/project の listWorkflowEntries 重複は既存テストで検出されていません。",
+      "suggestion": "builtin の軽量ロード最適化は維持しても、listWorkflowEntries() の最終結果は従来と同じ名前単位の後勝ち統合を通してください。例として、元の entries 順を保ったまま builtin だけ軽量判定する entry loader を collectValidatedWorkflowEntries に渡す、または builtin/user/project/repertoire を同一 Map に投入して project/user が builtin を上書きする構造にしてください。あわせて project-local default が builtin default を上書きしたとき listWorkflowEntries()/listWorkflows() に default が1件だけ出るテストを追加してください。",
+      "reviewers": [
+        "arch-review"
+      ],
+      "rawFindingIds": [
+        "20260708-020013-pr-task-attachments-takt-add-p:reviewers:3:arch-review:arch-review-3-001"
+      ],
+      "firstSeen": {
+        "runId": "20260708-020013-pr-task-attachments-takt-add-p",
+        "stepName": "arch-review",
+        "timestamp": "2026-07-08T04:13:31.893Z"
+      },
+      "lastSeen": {
+        "runId": "20260708-020013-pr-task-attachments-takt-add-p",
+        "stepName": "reviewers",
+        "timestamp": "2026-07-08T04:13:31.893Z"
+      },
+      "resolvedAt": "2026-07-08T05:12:42.882Z",
+      "resolvedEvidence": "複数の resolution_confirmation が F-0013 を targetFindingId としており、listWorkflowEntries が collectValidatedWorkflowEntries に戻って同名 workflow を Map 集約するため重複公開が解消されたと確認している。"
+    },
+    {
+      "id": "F-0014",
+      "status": "resolved",
+      "lifecycle": "resolved",
+      "severity": "medium",
+      "title": "PR添付機能と無関係に builtin workflow の契約検証を迂回している",
+      "location": "src/infra/config/loaders/workflowResolver.ts:180",
+      "description": "`loadValidatedWorkflowEntry()` は `entry.source === 'builtin'` の場合に `buildWorkflowDiscoveryConfig(loadWorkflowForDiscovery(...))` を返し、`validateWorkflowCallContracts()` を通る `loadValidatedWorkflowDiscoveryEntry()` を迂回しています。同じ変更で `loadValidatedWorkflowConfigEntry()` も builtin では `validateLoadedWorkflowEntryContracts()` を実行せず、`listWorkflowEntries()` も builtin entries を未検証のまま返します。PRコメント画像の attachment 化とは別契約の workflow call validation を広く変更しており、builtin workflow の不整合を discovery / runtime / list 経路で検出できなくするスコープクリープです。",
+      "suggestion": "builtin 全体の validation bypass を戻してください。internal callable builtin を一覧から隠す必要がある場合は、その絞り込みだけを validation 前後の最小範囲に限定し、公開・実行される builtin workflow は従来どおり `validateWorkflowCallContracts()` / `validateLoadedWorkflowEntryContracts()` を通す構造にしてください。あわせて builtin workflow の workflow_call 契約不整合が discovery / runtime 経路で検出される回帰テストを追加してください。",
+      "reviewers": [
+        "ai-antipattern-review"
+      ],
+      "rawFindingIds": [
+        "20260708-020013-pr-task-attachments-takt-add-p:reviewers:3:ai-antipattern-review:ai-antipattern-r3-001"
+      ],
+      "firstSeen": {
+        "runId": "20260708-020013-pr-task-attachments-takt-add-p",
+        "stepName": "ai-antipattern-review",
+        "timestamp": "2026-07-08T04:13:31.893Z"
+      },
+      "lastSeen": {
+        "runId": "20260708-020013-pr-task-attachments-takt-add-p",
+        "stepName": "reviewers",
+        "timestamp": "2026-07-08T04:13:31.893Z"
+      },
+      "resolvedAt": "2026-07-08T05:12:42.882Z",
+      "resolvedEvidence": "複数の resolution_confirmation が F-0014 を targetFindingId としており、builtin 分岐の検証 bypass がなくなり discovery/runtime 経路で validateLoadedWorkflowEntryContracts が呼ばれると確認している。"
+    },
+    {
+      "id": "F-0015",
+      "status": "resolved",
+      "lifecycle": "resolved",
+      "severity": "medium",
+      "title": "listWorkflows が project-local override と builtin を重複表示する",
+      "location": "src/infra/config/loaders/workflowResolver.ts:367",
+      "description": "今回の変更で listWorkflowEntries() が builtinEntries と validatedEntries を単純連結するようになり、同名 workflow の既存優先順位による重複排除が失われています。実行確認でも、builtin 有効かつ .takt/workflows/default.yaml がある環境で listWorkflows(project) の defaultCount が 2、listWorkflowEntries(project) の default source が [\"builtin\",\"project\"] になりました。loadAllWorkflows() / loadWorkflowByIdentifier() は project-local override を優先する契約を持つため、公開 listing API だけが同じ名前を重複して返すリグレッションです。",
+      "suggestion": "builtin の内部 workflow を除外しつつ、従来どおり entry.name 単位で Map に集約して後勝ちの優先順位を維持してください。例えば visible builtin と non-builtin を同じ順序で結合してから name で de-dupe し、project/user override が builtin を置き換えることを listWorkflowEntries/listWorkflows のテストに追加してください。",
+      "reviewers": [
+        "coding-review"
+      ],
+      "rawFindingIds": [
+        "20260708-020013-pr-task-attachments-takt-add-p:reviewers:3:coding-review:coding-review-3-1"
+      ],
+      "firstSeen": {
+        "runId": "20260708-020013-pr-task-attachments-takt-add-p",
+        "stepName": "coding-review",
+        "timestamp": "2026-07-08T04:13:31.893Z"
+      },
+      "lastSeen": {
+        "runId": "20260708-020013-pr-task-attachments-takt-add-p",
+        "stepName": "reviewers",
+        "timestamp": "2026-07-08T04:13:31.893Z"
+      },
+      "resolvedAt": "2026-07-08T05:12:42.882Z",
+      "resolvedEvidence": "複数の resolution_confirmation が F-0015 を targetFindingId としており、listWorkflows が collectValidatedWorkflowEntries の名前単位 Map 集約結果から名前を返すため project-local override と builtin の重複表示が解消されたと確認している。"
+    },
+    {
+      "id": "F-0016",
+      "status": "resolved",
+      "lifecycle": "resolved",
+      "severity": "medium",
+      "title": "listWorkflowEntries が shadow された builtin workflow も同名で返す",
+      "location": "src/infra/config/loaders/workflowResolver.ts:363",
+      "description": "`listWorkflowEntries()` は `entries` を `builtinEntries` と `entriesToValidate` に分け、最後に `return [...builtinEntries, ...validatedEntries]` しています。このため project-local の `.takt/workflows/default.yaml` が builtin `default` を上書きする状態でも、`listWorkflowEntries()` は builtin と project の同名 `default` を両方返します。実確認では `loadAllWorkflowsWithSources(root).get('default')?.source` は `project` なのに、`listWorkflowEntries(root).filter(e => e.name === 'default')` は builtin と project の2件を返しました。`WorkflowDirEntry.source` が「その名前を選んだときに実行されるworkflowの出所」という意味と一致しなくなり、下流の workflow selection では builtin/custom の分類と実際に `loadWorkflowByIdentifier('default')` で解決される project workflow がズレます。",
+      "suggestion": "builtin と非builtinを分離した後も、workflow名単位で有効な1件に正規化してください。既存の `collectValidatedWorkflowEntries()` と同じく後勝ちの優先順位を維持するか、validated non-builtin 名の集合で同名 builtin を除外してから返してください。あわせて project-local `default.yaml` が builtin `default` をshadowする場合に `listWorkflowEntries()` が project 1件だけを返すテストを追加してください。",
+      "reviewers": [
+        "implementation-semantics-review"
+      ],
+      "rawFindingIds": [
+        "20260708-020013-pr-task-attachments-takt-add-p:reviewers:3:implementation-semantics-review:implementation-semantics-raw-3-1"
+      ],
+      "firstSeen": {
+        "runId": "20260708-020013-pr-task-attachments-takt-add-p",
+        "stepName": "implementation-semantics-review",
+        "timestamp": "2026-07-08T04:13:31.893Z"
+      },
+      "lastSeen": {
+        "runId": "20260708-020013-pr-task-attachments-takt-add-p",
+        "stepName": "reviewers",
+        "timestamp": "2026-07-08T04:13:31.893Z"
+      },
+      "resolvedAt": "2026-07-08T05:12:42.882Z",
+      "resolvedEvidence": "複数の resolution_confirmation が F-0016 を targetFindingId としており、listWorkflowEntries が全 entry を collectValidatedWorkflowEntries に渡して shadow された builtin を同名で返さないことを確認している。"
+    },
+    {
+      "id": "F-0017",
+      "status": "resolved",
+      "lifecycle": "resolved",
+      "severity": "high",
+      "title": "builtin workflow 一覧・一括ロードが timeout し品質ゲートを満たしていない",
+      "location": "src/infra/config/loaders/workflowResolver.ts:432",
+      "description": "open findings の重複排除と validation bypass は解消されていますが、現在の `listWorkflows()` は名前一覧を返すだけの経路で `getWorkflowDirs()` から全 entry を作り、`collectValidatedWorkflowEntries(entries, cwd, options, loadWorkflowNameEntry)` を実行します。`loadWorkflowNameEntry()` は `loadWorkflowForDiscovery()` で全 builtin YAML を正規化するため、builtin 有効時の一覧取得が 15 秒制限を超えます。実行証跡として `npm test -- --run src/__tests__/workflowLoader.test.ts src/__tests__/workflowCallContractValidator.test.ts src/__tests__/config.test.ts` は失敗し、`config.test.ts:728` の `listWorkflows(testDir)`、`config.test.ts:779` の `loadAllWorkflows(testDir)`、`workflowLoader.test.ts:914` の `listWorkflows(tempDir)`、`workflowLoader.test.ts:1260` の builtin override テストが timeout しました。ユーザー要件の `npm test` 成功を満たしておらず、一覧 API の設計としても名前取得が全 workflow 正規化・契約検証に引きずられています。",
+      "suggestion": "名前一覧・entry 一覧・runtime 一括ロードの責務を分けてください。`listWorkflows()` は workflow 名と visibility 判定に必要な最小 metadata だけを読む経路にし、同名 shadowing は名前単位 Map で維持してください。runtime の `loadAllWorkflows()` は validation を維持しつつ、builtin の繰り返しロード・検証がテスト timeout を超えない粒度で cache するか、検証済み builtin metadata を再利用してください。修正後に今回失敗した3テストファイルと `npm test` を再実行してください。",
+      "reviewers": [
+        "arch-review"
+      ],
+      "rawFindingIds": [
+        "20260708-020013-pr-task-attachments-takt-add-p:reviewers:4:arch-review:arch-review-4-issue-001"
+      ],
+      "firstSeen": {
+        "runId": "20260708-020013-pr-task-attachments-takt-add-p",
+        "stepName": "arch-review",
+        "timestamp": "2026-07-08T05:12:42.882Z"
+      },
+      "lastSeen": {
+        "runId": "20260708-020013-pr-task-attachments-takt-add-p",
+        "stepName": "reviewers",
+        "timestamp": "2026-07-08T05:12:42.882Z"
+      },
+      "resolvedAt": "2026-07-08T06:04:22.583Z",
+      "resolvedEvidence": "resolution_confirmation が targetFindingId=F-0017 を明示し、builtin workflow 一覧・一括ロードの timeout 解消を確認しているため。"
+    },
+    {
+      "id": "F-0018",
+      "status": "resolved",
+      "lifecycle": "resolved",
+      "severity": "medium",
+      "title": "builtin workflow cache が project/global 設定差を無視して正規化済み config を再利用する",
+      "location": "src/infra/config/loaders/workflowResolver.ts:81",
+      "description": "今回追加された `builtinWorkflowCache` は cache key を `mode`, `resolve(filePath)`, `callableArgs` だけで作り、`projectCwd`, global config, project config を含めていません。一方で実際の loader は `src/infra/config/loaders/workflowFileLoader.ts:47` で project ごとの language/context を作り、`src/infra/config/loaders/workflowFileLoader.ts:53` 以降で project/global の `workflowOverrides`, runtime prepare, arpeggio, MCP servers, command gates policy を使って `normalizeWorkflowConfig()` します。そのため同じ builtin workflow path を別プロジェクトで読み込むと、先に読まれたプロジェクトの設定で正規化された `WorkflowConfig` が後続プロジェクトにも返り得ます。PR添付画像機能とは無関係な早すぎるキャッシュ導入で、設定境界の意味契約を壊しています。",
+      "suggestion": "このタスクでは builtin workflow cache を削除し、従来どおり project/global 設定ごとに loader を通してください。性能対策が必要なら別タスクで、cache key に project/global 設定の有効入力を含めるか、設定依存しない raw parse だけを cache する設計に分離し、異なる project `.takt/config.yaml` の `workflow_overrides` が builtin workflow に混入しない回帰テストを追加してください。",
+      "reviewers": [
+        "ai-antipattern-review"
+      ],
+      "rawFindingIds": [
+        "20260708-020013-pr-task-attachments-takt-add-p:reviewers:4:ai-antipattern-review:ai-antipattern-r4-001"
+      ],
+      "firstSeen": {
+        "runId": "20260708-020013-pr-task-attachments-takt-add-p",
+        "stepName": "ai-antipattern-review",
+        "timestamp": "2026-07-08T05:12:42.882Z"
+      },
+      "lastSeen": {
+        "runId": "20260708-020013-pr-task-attachments-takt-add-p",
+        "stepName": "reviewers",
+        "timestamp": "2026-07-08T05:12:42.882Z"
+      },
+      "resolvedAt": "2026-07-08T06:04:22.583Z",
+      "resolvedEvidence": "複数の resolution_confirmation が targetFindingId=F-0018 を明示し、旧 builtinWorkflowCache の削除と projectCwd/lookupCwd を含む scoped cache により project/global 設定差の混入が解消したことを確認しているため。"
+    },
+    {
+      "id": "F-0019",
+      "status": "resolved",
+      "lifecycle": "resolved",
+      "severity": "medium",
+      "title": "builtin workflow cache が project/global config を無視して別プロジェクトへ漏れる",
+      "location": "src/infra/config/loaders/workflowResolver.ts:81",
+      "description": "新規追加された buildBuiltinWorkflowCacheKey() は mode、filePath、callableArgs だけで key を作り、projectCwd/lookupCwd や project/global config を含めていません。しかし loadWorkflowFromFileInternal() は projectDir から language、workflow_overrides、workflow_runtime_prepare、workflow_mcp_servers、workflow_command_gates などを読み込んで WorkflowConfig を正規化します。実行確認では project1 の .takt/config.yaml に workflow_overrides.personas.coder.quality_gates: [P1 gate] を設定して loadWorkflow('default', project1) した後、設定なしの project2 で loadWorkflow('default', project2) しても write_tests.qualityGates が [P1 gate] となり、w1 === w2 も true でした。",
+      "suggestion": "builtin workflow cache を削除するか、少なくとも projectCwd/lookupCwd と正規化に影響する config 世代を cache key に含め、invalidateGlobalConfigCache()/invalidateAllResolvedConfigCache() と同じタイミングで破棄してください。project ごとの workflow_overrides が builtin workflow に混入しない回帰テストを追加してください。",
+      "reviewers": [
+        "coding-review"
+      ],
+      "rawFindingIds": [
+        "20260708-020013-pr-task-attachments-takt-add-p:reviewers:4:coding-review:coding-review-4-1"
+      ],
+      "firstSeen": {
+        "runId": "20260708-020013-pr-task-attachments-takt-add-p",
+        "stepName": "coding-review",
+        "timestamp": "2026-07-08T05:12:42.882Z"
+      },
+      "lastSeen": {
+        "runId": "20260708-020013-pr-task-attachments-takt-add-p",
+        "stepName": "reviewers",
+        "timestamp": "2026-07-08T05:12:42.882Z"
+      },
+      "resolvedAt": "2026-07-08T06:04:22.583Z",
+      "resolvedEvidence": "複数の resolution_confirmation が targetFindingId=F-0019 を明示し、loadAllWorkflowsWithSources の per-call cache と projectCwd/lookupCwd を含む key により別 project への混入が解消したことを確認しているため。"
+    },
+    {
+      "id": "F-0020",
+      "status": "resolved",
+      "lifecycle": "resolved",
+      "severity": "high",
+      "title": "npm test が builtin workflow listing/loading の timeout で失敗する",
+      "location": "src/infra/config/loaders/workflowResolver.ts:536",
+      "description": "品質要件の `npm test` を再実行したところ exit=1 でした。さらに失敗 shard を単独で `npm run test:unit:parallel -- --shard=1/4 --maxWorkers=1` として再実行しても exit=1 で、どちらも全 Test Files / Tests は passed 表示の後に Vitest の unhandled error `Error: [vitest-worker]: Timeout calling \"onTaskUpdate\"` が発生しています。現状の差分は品質要件の `npm test` 成功を満たしていません。",
+      "suggestion": "`npm run test:unit:parallel -- --shard=1/4 --maxWorkers=1` が worker timeout を出さずに exit=0 になるよう、該当 shard の長時間化・大量出力・workflow loading/listing の性能退行を解消してください。修正後に `npm run build`、`npm run lint`、`npm test` を再実行して成功を確認してください。",
+      "reviewers": [
+        "coding-review"
+      ],
+      "rawFindingIds": [
+        "20260708-020013-pr-task-attachments-takt-add-p:reviewers:4:coding-review:coding-review-4-2",
+        "20260708-100701-pr-task-attachments-takt-add-p:reviewers:1:coding-review:coding-review-1",
+        "20260708-100701-pr-task-attachments-takt-add-p:reviewers:3:coding-review:coding-review-3-1"
+      ],
+      "firstSeen": {
+        "runId": "20260708-020013-pr-task-attachments-takt-add-p",
+        "stepName": "coding-review",
+        "timestamp": "2026-07-08T05:12:42.882Z"
+      },
+      "lastSeen": {
+        "runId": "20260708-100701-pr-task-attachments-takt-add-p",
+        "stepName": "reviewers",
+        "timestamp": "2026-07-08T10:50:49.538Z"
+      },
+      "reopenedEvidence": "既存 F-0020 は familyTag=bug、location=src/infra/config/loaders/workflowResolver.ts:536 を含む npm test timeout / Vitest worker timeout による品質ゲート失敗であり、今回 raw も同一 familyTag と同一 location で npm test の Vitest worker timeout 失敗を報告しているため再発と判断。",
+      "resolvedAt": "2026-07-08T11:14:14.345Z",
+      "resolvedEvidence": "current raw findings contain resolution_confirmation entries targeting existing F-0020. The confirmations address the same prior workflow listing/loading timeout issue and cite the current lightweight/high-priority candidate validation path plus successful relevant test runs."
+    },
+    {
+      "id": "F-0021",
+      "status": "resolved",
+      "lifecycle": "resolved",
+      "severity": "medium",
+      "title": "builtin workflow cache が projectCwd を含まず project 固有の正規化・検証結果を再利用する",
+      "location": "src/infra/config/loaders/workflowResolver.ts:81; src/infra/config/loaders/workflowCallContractValidator.ts:56",
+      "description": "`buildBuiltinWorkflowCacheKey()` は `mode`、workflow file path、callable args だけで key を作り、`projectCwd` や project/global config の正規化結果を含めていません。しかし `loadWorkflowFromFileInternal()` は `projectDir` に基づいて `workflow_overrides`、`workflow_command_gates`、facet resolution context などを適用して `WorkflowConfig` を作ります。実確認では project A の `.takt/config.yaml` に `workflow_overrides.quality_gates: [\"A gate\"]`、project B に `[\"B gate\"]` を置いて同一プロセスで builtin `default` をロードすると、B 側の最初の quality gate も `A gate` になり、`workflowA === workflowB` も `true` でした。さらに `validatedBuiltinWorkflowCallContracts` も key に `projectCwd` を含めないため、project A で builtin `default` を検証した後、project B が project-local `default-draft` で `need_replan` return を消しても、単独ロードなら `workflow_call step \"draft\" cannot route on unsupported child result \"need_replan\"` で失敗する設定が、A 後の B ロードでは `ok` になりました。これは project ごとに導出される workflow 正規化状態と検証状態を単一 cache に混在させ、境界での fail-fast も失わせています。",
+      "suggestion": "builtin workflow の cache key と builtin validation cache key に、少なくとも `projectCwd` と `lookupCwd`、および正規化へ影響する config 世代を含めるか、project 固有の正規化・検証を受ける `WorkflowConfig` は共有 cache しない構造にしてください。あわせて同一プロセス内で別 project の `workflow_overrides` が混ざらないこと、project-local child workflow が builtin workflow_call の return contract に違反する場合は前に別 project をロードしていても fail-fast することをテストしてください。",
+      "reviewers": [
+        "implementation-semantics-review"
+      ],
+      "rawFindingIds": [
+        "20260708-020013-pr-task-attachments-takt-add-p:reviewers:4:implementation-semantics-review:implementation-semantics-raw-4-5"
+      ],
+      "firstSeen": {
+        "runId": "20260708-020013-pr-task-attachments-takt-add-p",
+        "stepName": "implementation-semantics-review",
+        "timestamp": "2026-07-08T05:12:42.882Z"
+      },
+      "lastSeen": {
+        "runId": "20260708-020013-pr-task-attachments-takt-add-p",
+        "stepName": "reviewers",
+        "timestamp": "2026-07-08T05:12:42.882Z"
+      },
+      "resolvedAt": "2026-07-08T07:01:23.483Z",
+      "resolvedEvidence": "current raw findings contain resolution_confirmation entries targeting F-0021. They consistently state that the former builtin workflow cache / validation cache boundary issue is addressed by cache keys including project/lookup context and validation state, with cited locations around workflowResolver.ts:106 and workflowCallContractValidator.ts:146."
+    },
+    {
+      "id": "F-0022",
+      "status": "resolved",
+      "lifecycle": "resolved",
+      "severity": "medium",
+      "title": "builtin workflow call validation cache が同一 project 内の workflow 変更後も古い成功を再利用する",
+      "location": "src/infra/config/loaders/workflowCallContractValidator.ts:31",
+      "description": "`validatedBuiltinWorkflowCallContracts` は module-level の `Set` で、key は `projectCwd`, `lookupCwd`, parent workflow path, `allowPathBasedCalls` だけです。`invalidateAllResolvedConfigCache()` は config caches だけを clear し、この validation Set を clear しません。実確認では、同一 project で一度 `loadWorkflow('default', project)` を成功させた後、project-local `.takt/workflows/default-draft.yaml` を `need_replan` を返さない invalid child に差し替え、`invalidateGlobalConfigCache()` / `invalidateAllResolvedConfigCache()` 後に再度 `loadWorkflow('default', project)` しても `ok` になりました。一方、同じ invalid child を最初から置いた project を fresh に load すると `workflow_call step \"draft\" cannot route on unsupported child result \"need_replan\"` で失敗します。契約違反が境界で fail-fast せず、過去の成功状態が現在の workflow graph に漏れています。",
+      "suggestion": "builtin workflow call validation の成功 cache を module-global に残す場合は、project workflow/config の世代または child resolution 結果を key に含め、`invalidateAllResolvedConfigCache()` と同じタイミングで clear してください。より単純には、`workflowConfigCache` と同じく単一 load/list operation に閉じた validation cache にして、workflow ファイル変更後に contract 違反が再検出されるテストを追加してください。",
+      "reviewers": [
+        "implementation-semantics-review"
+      ],
+      "rawFindingIds": [
+        "20260708-020013-pr-task-attachments-takt-add-p:reviewers:5:implementation-semantics-review:implementation-semantics-raw-5-3"
+      ],
+      "firstSeen": {
+        "runId": "20260708-020013-pr-task-attachments-takt-add-p",
+        "stepName": "implementation-semantics-review",
+        "timestamp": "2026-07-08T06:04:22.583Z"
+      },
+      "lastSeen": {
+        "runId": "20260708-020013-pr-task-attachments-takt-add-p",
+        "stepName": "reviewers",
+        "timestamp": "2026-07-08T06:04:22.583Z"
+      },
+      "resolvedAt": "2026-07-08T07:01:23.483Z",
+      "resolvedEvidence": "current raw findings contain resolution_confirmation entries targeting F-0022. They consistently state that stale builtin workflow call validation success is no longer reused after project workflow changes because validation keys include project/global config and workflow file state, with cited locations around workflowCallContractValidator.ts:88 and config.test.ts:586."
+    },
+    {
+      "id": "F-0023",
+      "status": "resolved",
+      "lifecycle": "resolved",
+      "severity": "high",
+      "title": "npm test が workflowDiscovery の builtin discovery timeout で失敗する",
+      "location": "src/infra/config/loaders/workflowDiscovery.ts:240; src/__tests__/workflowDiscovery.test.ts:10",
+      "description": "品質要件の `npm test` を判断直前に再実行したところ exit=1 でした。失敗は `src/__tests__/workflowDiscovery.test.ts:10` の `repo 直下でも builtin の privileged workflow を discovery で skip しない` が 15000ms timeout し、Vitest の `Timeout calling \"onTaskUpdate\"` unhandled error も発生しています。該当テストは `loadAllWorkflowsWithSourcesFromDirs(process.cwd(), [{ dir: builtins/ja/workflows, source: 'builtin' }])` を直接呼び、現在の `loadAllWorkflowsWithSourcesFromDirs()` は default loader で builtin workflow 全体を `loadWorkflowFileWithResolutionOptions()` 経由で読み込むため、F-0020 類似の builtin listing/loading timeout が別入口で残っています。単体 `npm test -- --run src/__tests__/workflowDiscovery.test.ts` は通りますが tests 7.64s と重く、フルスイート条件では品質ゲートを満たしていません。",
+      "suggestion": "`loadAllWorkflowsWithSourcesFromDirs()` の discovery/listing 用入口でも、builtin の名前・visibility 判定に必要な最小 metadata だけを読む loader を使うか、呼び出し元に lightweight loader を渡す構造へ分けてください。少なくとも builtin discovery がフル `npm test` の shard 内で 15 秒 timeout しないことを再確認してください。",
+      "reviewers": [
+        "ai-antipattern-review"
+      ],
+      "rawFindingIds": [
+        "20260708-100701-pr-task-attachments-takt-add-p:reviewers:3:ai-antipattern-review:ai-antipattern-review-r3-raw-1"
+      ],
+      "firstSeen": {
+        "runId": "20260708-100701-pr-task-attachments-takt-add-p",
+        "stepName": "ai-antipattern-review",
+        "timestamp": "2026-07-08T10:50:49.538Z"
+      },
+      "lastSeen": {
+        "runId": "20260708-100701-pr-task-attachments-takt-add-p",
+        "stepName": "reviewers",
+        "timestamp": "2026-07-08T10:50:49.538Z"
+      },
+      "resolvedAt": "2026-07-08T11:14:14.345Z",
+      "resolvedEvidence": "current raw findings contain resolution_confirmation entries targeting existing F-0023. The confirmations address the same builtin discovery timeout issue and cite the metadata-only builtin discovery loader path."
+    },
+    {
+      "id": "F-0024",
+      "status": "resolved",
+      "lifecycle": "resolved",
+      "severity": "high",
+      "title": "フルスイート条件で worktree parent の相対 workflow_call 解決が不安定になっている",
+      "location": "src/__tests__/engine-workflow-call.test.ts:2203; src/infra/config/loaders/workflowResolver.ts:434",
+      "description": "`npm test` を再実行すると exit=1 となり、`default worktree root 上の parent path は worktree workflow を non-project trust として解決する` で `resolveWorkflowCallTarget(parentWorkflow!, './takt/coding.yaml', 'delegate', tmpDir, worktreeDir)` の結果が `undefined` になりました。単独実行では同テストが通るため、現在の workflow 解決はフルスイート内の先行状態に依存しており、`lookupCwd` 配下の worktree workflow を non-project trust として解決するという意味契約が安定していません。あわせて同じ `npm test` では `workflowDiscovery.test.ts:10` も 15000ms timeout しており、品質要件の `npm test` 成功も満たしていません。",
+      "suggestion": "`resolveWorkflowCallTarget()` から `loadWorkflowByIdentifierForWorkflowCall()` へ渡す `basePath`/`lookupCwd`/`parentTrustInfo` と、workflow/config/validation のキャッシュ状態を見直し、worktree parent の相対 path call が他テストや先行ロード状態に依存せず常に worktree 配下を解決する構造にしてください。修正後に `npm test` を再実行し、該当 assertion と discovery timeout の両方が再発しないことを確認してください。",
+      "reviewers": [
+        "implementation-semantics-review"
+      ],
+      "rawFindingIds": [
+        "20260708-100701-pr-task-attachments-takt-add-p:reviewers:3:implementation-semantics-review:implementation-semantics-review-raw-001"
+      ],
+      "firstSeen": {
+        "runId": "20260708-100701-pr-task-attachments-takt-add-p",
+        "stepName": "implementation-semantics-review",
+        "timestamp": "2026-07-08T10:50:49.538Z"
+      },
+      "lastSeen": {
+        "runId": "20260708-100701-pr-task-attachments-takt-add-p",
+        "stepName": "reviewers",
+        "timestamp": "2026-07-08T10:50:49.538Z"
+      },
+      "resolvedAt": "2026-07-08T11:14:14.345Z",
+      "resolvedEvidence": "current raw findings contain resolution_confirmation entries targeting existing F-0024. The confirmations address the same worktree parent relative workflow_call resolution issue and cite source-path/basePath/lookupCwd handling plus the targeted test."
+    }
+  ],
+  "rawFindings": [
+    {
+      "rawFindingId": "20260708-020013-pr-task-attachments-takt-add-p:reviewers:1:arch-review:arch-raw-1",
+      "stepName": "arch-review",
+      "reviewer": "arch-review",
+      "familyTag": "arch-state-cleanup",
+      "severity": "medium",
+      "title": "PR添付画像の一時ファイル cleanup が対話モード開始前の例外経路で漏れる",
+      "location": "src/app/cli/routing.ts:155",
+      "description": "`resolvePrInput()` 後に `cleanupPrAttachments` を保持していますが、cleanup は workflow 選択キャンセル時、mode 選択キャンセル時、または `dispatchConversationAction()` 以降の finally でしか呼ばれていません。`determineWorkflow()`、`getWorkflowDescription()`、`interactiveMode()` / `quietMode()` / `personaMode()` が throw した場合は、PR画像を保存した temp attachment store が解放されません。これは副作用導入後の失敗経路で状態解放が欠落しており、Policy の「副作用と状態遷移の確認」に反します。",
+      "suggestion": "PR attachment cleanup を、`resolvePrInput()` 成功後から対話処理全体を覆う単一の `try/finally` に移動してください。既存のキャンセル分岐で個別 cleanup する場合も二重呼び出しに耐える形を維持し、interactive mode 自体が throw するテストも追加してください。",
+      "kind": "issue"
+    },
+    {
+      "rawFindingId": "20260708-020013-pr-task-attachments-takt-add-p:reviewers:1:arch-review:arch-raw-2",
+      "stepName": "arch-review",
+      "reviewer": "arch-review",
+      "familyTag": "arch-boundary-size-limit",
+      "severity": "medium",
+      "title": "画像サイズ上限が download 後にしか評価されず、大きなレスポンスを丸ごと読み込む",
+      "location": "src/features/tasks/prReviewTaskInput.ts:119",
+      "description": "`downloadGithubImageAttachment()` は `await response.arrayBuffer()` でレスポンス全体をメモリへ読み込んだ後、`validateDownloadedImage()` の `data.length > MAX_IMAGE_ATTACHMENT_BYTES` で拒否しています。タスク要件はサイズ上限と外部 URL の無制限取得禁止を求めており、GitHub allowlist 内でもレスポンスサイズは信頼境界外です。現状は巨大レスポンスを読み切るまで上限が効かないため、境界での入力制限として成立していません。",
+      "suggestion": "`Content-Length` が上限超過なら本文を読まずに拒否し、ヘッダーがない場合も `response.body` を chunk で読みながら `MAX_IMAGE_ATTACHMENT_BYTES` 超過時点で中断してください。その後に magic bytes と Content-Type の一致を検証する構造にしてください。",
+      "kind": "issue"
+    },
+    {
+      "rawFindingId": "20260708-020013-pr-task-attachments-takt-add-p:reviewers:1:arch-review:arch-raw-3",
+      "stepName": "arch-review",
+      "reviewer": "arch-review",
+      "familyTag": "arch-run-context-lifecycle",
+      "severity": "medium",
+      "title": "pipeline --pr の staged task context を実行直後に削除しており、run artifact として残らない",
+      "location": "src/features/pipeline/steps.ts:303",
+      "description": "attachment 付き pipeline 実行では `stageTaskSpecForExecution()` が `.takt/runs/<report>/context/task/order.md` と attachments を作成し、`executeTask()` にはその `reportDirName` と staged prompt を渡しています。しかし finally で `cleanupTransientTaskSpecs(preparedSpec?.taskDir, stagedSpec)` を呼び、`cleanupStagedTaskSpec()` が run context 側の `context/task` を削除します。既存の task spec 実行経路は実行コンテキストを run artifact として残す設計で、plan でも「prepared spec は cleanup、run context 側は実行証跡として残す」と明記されています。実行後に primary spec と attachments が消えるため、後続の検証・再実行・トレース参照で attachment 付き task spec を確認できません。",
+      "suggestion": "pipeline では prepared task spec だけを cleanup し、`stageTaskSpecForExecution()` が作成した run context は成功・失敗いずれでも実行証跡として残してください。staging 途中で失敗した場合だけ staged context を削除する責務に分け、既存の `selectAndExecuteTask()` の保持契約に合わせてください。",
+      "kind": "issue"
+    },
+    {
+      "rawFindingId": "20260708-020013-pr-task-attachments-takt-add-p:reviewers:1:ai-antipattern-review:ai-antipattern-raw-1",
+      "stepName": "ai-antipattern-review",
+      "reviewer": "ai-antipattern-review",
+      "familyTag": "ai_scope_creep",
+      "severity": "high",
+      "title": "未追跡のローカル workflow が builtin の英語 workflow を上書きして npm test を失敗させている",
+      "location": ".takt/workflows/takt-default-for-local-llm.yaml:277",
+      "description": "`.takt/workflows/takt-default-for-local-llm.yaml` が未追跡ファイルとして追加されており、fix->plan 条件が日本語のままです。`npm test` では `for-local-llm-replan-wiring.test.ts` の英語ケースが builtin 英語 workflow ではなくこのローカル workflow を読み、期待値 `Cannot proceed with fixes, or human judgment is required` に対して実値 `修正を進められない、または人間の判断が必要` となり失敗しました。PR 画像添付機能に不要なローカル workflow 追加であり、品質要件の `npm test` 成功も満たしていません。",
+      "suggestion": "このタスクに不要な `.takt/workflows/takt-default-for-local-llm.yaml` を差分から除外するか、ローカル workflow を追加する必然性があるなら言語別 builtin と同じ契約を満たすよう修正し、`npm test` を再実行してください。",
+      "kind": "issue"
+    },
+    {
+      "rawFindingId": "20260708-020013-pr-task-attachments-takt-add-p:reviewers:1:ai-antipattern-review:ai-antipattern-raw-2",
+      "stepName": "ai-antipattern-review",
+      "reviewer": "ai-antipattern-review",
+      "familyTag": "ai_contract_miswire",
+      "severity": "medium",
+      "title": "pipeline の PR 添付実行後に run context の添付画像を削除している",
+      "location": "src/features/pipeline/steps.ts:201",
+      "description": "PR 添付つき pipeline 実行では `stageTaskSpecForExecution()` が `.takt/runs/<run>/context/task/order.md` と `attachments/` を作り、`executionTask` はその order.md を読むプロンプトになります。しかし `finally` で `cleanupTransientTaskSpecs(preparedSpec?.taskDir, stagedSpec)` を呼ぶため、`cleanupStagedTaskSpec()` が run context の task ディレクトリを削除します。既存の `selectAndExecuteTask` は同じ staging 後も run context 側は残し、transient な prepared spec だけを片付けています。pipeline 経路だけ実行後の run 証跡と添付参照が壊れるため、同等に画像を参照できるという要件と実行資産の消費境界に反しています。",
+      "suggestion": "pipeline でも成功・失敗後に run context の staged task spec は残し、削除対象は一時的に作った prepared task spec に限定してください。テストも `cleanupStagedTaskSpec` 呼び出しを期待する形ではなく、run context の order.md と attachments が残ることを検証してください。",
+      "kind": "issue"
+    },
+    {
+      "rawFindingId": "20260708-020013-pr-task-attachments-takt-add-p:reviewers:1:ai-antipattern-review:ai-antipattern-raw-3",
+      "stepName": "ai-antipattern-review",
+      "reviewer": "ai-antipattern-review",
+      "familyTag": "ai_state_cleanup",
+      "severity": "medium",
+      "title": "--pr interactive 経路で mode 実行が例外を投げると PR 添付の一時ファイルが cleanup されない",
+      "location": "src/app/cli/routing.ts:193",
+      "description": "`cleanupPrAttachments` は PR 画像をダウンロードした後、workflow 選択キャンセル・mode 選択キャンセル・dispatch 後の `finally` では呼ばれます。一方で `interactiveMode` / `quietMode` / `personaMode` を呼ぶ switch は `try/finally` の外側にあるため、これらが例外を投げると `cleanupPrAttachments?.()` に到達せず、`resolvePrReviewTaskInput()` が作った一時画像ディレクトリが残ります。新しい外部取得・一時ファイル副作用に対する例外経路の cleanup 漏れです。",
+      "suggestion": "mode 実行から dispatch までを PR 添付 cleanup の `try/finally` に含め、`result` 未設定時でも PR 添付だけは必ず cleanup される構造にしてください。例外時に cleanup が呼ばれる単体テストも追加してください。",
+      "kind": "issue"
+    },
+    {
+      "rawFindingId": "20260708-020013-pr-task-attachments-takt-add-p:reviewers:1:ai-antipattern-review:ai-antipattern-raw-4",
+      "stepName": "ai-antipattern-review",
+      "reviewer": "ai-antipattern-review",
+      "familyTag": "ai_underengineered_safety",
+      "severity": "medium",
+      "title": "画像サイズ上限を arrayBuffer 後にしか検証しておらず大きなレスポンスを丸ごと読み込む",
+      "location": "src/features/tasks/prReviewTaskInput.ts:119",
+      "description": "`downloadGithubImageAttachment()` は `Buffer.from(await response.arrayBuffer())` でレスポンス全体をメモリに読み込んだ後、`validateDownloadedImage()` で `MAX_IMAGE_ATTACHMENT_BYTES` を超えているか確認しています。これではサイズ上限は保存可否の検証にしかならず、巨大レスポンスのダウンロードとメモリ確保を止められません。要件の「サイズ上限を設ける」「外部 URL を無制限に取得しない」に対し、境界での制限が実装されていません。",
+      "suggestion": "`Content-Length` が上限超過なら読む前に拒否し、`response.body` をストリームで読みながら累積サイズが上限を超えた時点で abort してください。そのうえで既存の Content-Type と magic bytes 検証を維持してください。",
+      "kind": "issue"
+    },
+    {
+      "rawFindingId": "20260708-020013-pr-task-attachments-takt-add-p:reviewers:1:coding-review:raw-coding-review-1",
+      "stepName": "coding-review",
+      "reviewer": "coding-review",
+      "familyTag": "cleanup-leak",
+      "severity": "medium",
+      "title": "対話モード生成中の例外でPR画像一時ファイルがcleanupされない",
+      "location": "src/app/cli/routing.ts:223",
+      "description": "PR画像は resolvePrInput() で先にダウンロードされ cleanupPrAttachments に保持されますが、interactiveMode/quietMode/personaMode の呼び出しは cleanup 用 finally が始まる src/app/cli/routing.ts:253 より前にあります。そのため、対話モードが例外を投げると src/app/cli/routing.ts:296 の cleanupPrAttachments が実行されず、PRコメント由来の画像一時ファイルが残ります。これは今回追加されたダウンロード副作用の例外経路漏れです。",
+      "suggestion": "result 生成を含む範囲を try/finally に入れ、result が作成済みの場合だけ cleanupInteractiveResultAttachments(result) を呼び、常に cleanupPrAttachments?.() が走る構造にしてください。対話モードが throw した場合の cleanup テストも追加してください。",
+      "kind": "issue"
+    },
+    {
+      "rawFindingId": "20260708-020013-pr-task-attachments-takt-add-p:reviewers:1:coding-review:raw-coding-review-2",
+      "stepName": "coding-review",
+      "reviewer": "coding-review",
+      "familyTag": "download-size-limit",
+      "severity": "medium",
+      "title": "サイズ上限検証の前に画像レスポンス全体をメモリへ読み込んでいる",
+      "location": "src/features/tasks/prReviewTaskInput.ts:119",
+      "description": "downloadGithubImageAttachment() は await response.arrayBuffer() でレスポンス全体を読み込んだ後、validateDownloadedImage() で MAX_IMAGE_ATTACHMENT_BYTES を検証しています。ユーザー要件の「サイズ上限を設ける」は保存拒否だけでなく取得時の境界として必要ですが、この実装では上限超過レスポンスを丸ごとメモリに載せるため、大きな GitHub attachment でメモリ消費を抑止できません。",
+      "suggestion": "Content-Length が上限超過なら読む前に拒否し、body stream を読む場合も累積 byte 数が MAX_IMAGE_ATTACHMENT_BYTES を超えた時点で中断してください。Content-Length なしの上限超過を再現するテストを追加してください。",
+      "kind": "issue"
+    },
+    {
+      "rawFindingId": "20260708-020013-pr-task-attachments-takt-add-p:reviewers:1:coding-review:raw-coding-review-3",
+      "stepName": "coding-review",
+      "reviewer": "coding-review",
+      "familyTag": "pipeline-attachment-context",
+      "severity": "medium",
+      "title": "pipeline --pr の実行後にstaged task contextごと添付画像を削除している",
+      "location": "src/features/pipeline/steps.ts:304",
+      "description": "pipeline の attachment 経路では src/features/pipeline/steps.ts:285 で stageTaskSpecForExecution() により run context へ order.md と attachments を配置しますが、finally で cleanupTransientTaskSpecs(preparedSpec?.taskDir, stagedSpec) を呼ぶため stagedSpec も cleanup されます。cleanupStagedTaskSpec() は contextTaskDir を削除する実装なので、実行完了後の .takt/runs/<slug>/context/task 配下から order.md と attachments が消え、pipeline --pr の実行記録から画像参照を辿れなくなります。既存の task spec 実行経路は run context を証跡として残しており、この差分は pipeline 経路だけ契約がずれています。",
+      "suggestion": "pipeline では一時 prepared task spec だけを削除し、run context に stage した task/order.md/attachments は実行証跡として残してください。実行後に context/task/order.md と attachments/image-1.png が残ることを検証するテストを追加してください。",
+      "kind": "issue"
+    },
+    {
+      "rawFindingId": "20260708-020013-pr-task-attachments-takt-add-p:reviewers:1:implementation-semantics-review:implementation-semantics-raw-1",
+      "stepName": "implementation-semantics-review",
+      "reviewer": "implementation-semantics-review",
+      "familyTag": "implementation-semantics:fail-fast-resource-boundary",
+      "severity": "medium",
+      "title": "画像サイズ上限がダウンロード後にしか適用されない",
+      "location": "src/features/tasks/prReviewTaskInput.ts:119",
+      "description": "PRコメント内の許可済みGitHub画像URLを取得するとき、`Buffer.from(await response.arrayBuffer())` でレスポンス全体をメモリに読み込んだ後、`validateDownloadedImage()` の `MAX_IMAGE_ATTACHMENT_BYTES` 判定に進んでいます。10MiBを超える、または非常に大きいレスポンスの場合、上限違反を検出する前に無制限に近いネットワーク読み込みとメモリ確保が発生し、サイズ上限という境界契約が fail-fast になっていません。",
+      "suggestion": "`Content-Length` が上限超過なら本文を読まずに拒否し、ヘッダがない場合も `response.body` の reader で累積バイト数を数えながら読み、`MAX_IMAGE_ATTACHMENT_BYTES` を超えた時点で中断してください。その後にContent-Typeとmagic bytes検証へ進めてください。",
+      "kind": "issue"
+    },
+    {
+      "rawFindingId": "20260708-020013-pr-task-attachments-takt-add-p:reviewers:1:implementation-semantics-review:implementation-semantics-raw-2",
+      "stepName": "implementation-semantics-review",
+      "reviewer": "implementation-semantics-review",
+      "familyTag": "implementation-semantics:state-cleanup",
+      "severity": "medium",
+      "title": "PR添付画像の一時ファイルが例外経路で解放されない",
+      "location": "src/app/cli/routing.ts:155",
+      "description": "`resolvePrInput()` が画像をダウンロードすると `cleanupPrAttachments` が設定されますが、その後の `determineWorkflow()`、`getWorkflowDescription()`、`selectInteractiveMode()`、または各interactive mode呼び出しが例外を投げた場合、cleanupを呼ぶ `finally` は `dispatchConversationAction()` の後ろにしかないため到達しません。PRコメント画像にはprivate repository由来のスクリーンショットが入り得るため、失敗経路で一時ディレクトリが残る状態不整合になります。",
+      "suggestion": "`cleanupPrAttachments` を取得した後のワークフロー選択からinteractive mode実行、dispatchまでを1つの `try/finally` で囲み、正常・キャンセル・例外の全経路で一度だけcleanupされる構造にしてください。既存のnullキャンセル分岐は早期returnしても外側finallyで解放される形に寄せるのが安全です。",
+      "kind": "issue"
+    },
+    {
+      "rawFindingId": "20260708-020013-pr-task-attachments-takt-add-p:reviewers:2:arch-review:arch-r2-resolve-F-0001",
+      "stepName": "arch-review",
+      "reviewer": "arch-review",
+      "familyTag": "arch-state-cleanup",
+      "severity": "medium",
+      "title": "解消確認: PR添付画像の一時ファイル cleanup が対話モード開始前の例外経路で漏れる",
+      "location": "src/app/cli/routing.ts:149",
+      "description": "`src/app/cli/routing.ts:149` で `result` を try 外に定義し、`src/app/cli/routing.ts:150` から `determineWorkflow()`、`getWorkflowDescription()`、`selectInteractiveMode()`、各 interactive mode 呼び出し、`dispatchConversationAction()` までを単一の try で覆っています。`src/app/cli/routing.ts:295` の finally で `result` がある場合だけ interactive result cleanup を行い、`src/app/cli/routing.ts:299` で常に `cleanupPrAttachments?.()` を呼ぶため、元 finding の例外経路 cleanup 漏れは解消されています。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0001"
+    },
+    {
+      "rawFindingId": "20260708-020013-pr-task-attachments-takt-add-p:reviewers:2:arch-review:arch-r2-resolve-F-0002",
+      "stepName": "arch-review",
+      "reviewer": "arch-review",
+      "familyTag": "arch-boundary-size-limit",
+      "severity": "medium",
+      "title": "解消確認: 画像サイズ上限が download 後にしか評価されず、大きなレスポンスを丸ごと読み込む",
+      "location": "src/features/tasks/prReviewTaskInput.ts:88",
+      "description": "`src/features/tasks/prReviewTaskInput.ts:88` の `validateContentLength()` が Content-Length を本文読込前に検証し、`src/features/tasks/prReviewTaskInput.ts:105` の `readLimitedResponseBody()` が `response.body.getReader()` で chunk 読みし、`src/features/tasks/prReviewTaskInput.ts:120` で累積サイズ超過時に `reader.cancel()` して拒否しています。`src/features/tasks/prReviewTaskInput.ts:159` では `arrayBuffer()` ではなく `readLimitedResponseBody()` を使っており、元 finding の丸ごと読込は解消されています。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0002"
+    },
+    {
+      "rawFindingId": "20260708-020013-pr-task-attachments-takt-add-p:reviewers:2:arch-review:arch-r2-resolve-F-0003",
+      "stepName": "arch-review",
+      "reviewer": "arch-review",
+      "familyTag": "arch-run-context-lifecycle",
+      "severity": "medium",
+      "title": "解消確認: pipeline --pr の staged task context を実行直後に削除しており、run artifact として残らない",
+      "location": "src/features/pipeline/steps.ts:198",
+      "description": "`src/features/pipeline/steps.ts:198` の `cleanupTransientTaskSpecs()` は `preparedSpecTaskDir` のみを cleanup する実装になっています。`src/features/pipeline/steps.ts:273` から `stageTaskSpecForExecution()` で staged context を作成しますが、`src/features/pipeline/steps.ts:294` の finally では `cleanupTransientTaskSpecs(preparedSpec?.taskDir)` のみを呼び、staged context を渡していません。元 finding の run context 削除は解消されています。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0003"
+    },
+    {
+      "rawFindingId": "20260708-020013-pr-task-attachments-takt-add-p:reviewers:2:arch-review:arch-r2-resolve-F-0004",
+      "stepName": "arch-review",
+      "reviewer": "arch-review",
+      "familyTag": "ai_scope_creep",
+      "severity": "high",
+      "title": "解消確認: 未追跡のローカル workflow が builtin の英語 workflow を上書きして npm test を失敗させている",
+      "description": "`git status --short` と `git ls-files --others --exclude-standard` の現在出力に `.takt/workflows/takt-default-for-local-llm.yaml` は存在せず、`find .takt -maxdepth 3 -type f` でも `.takt/workflows/` 配下の workflow ファイルは確認されませんでした。元 finding の不要なローカル workflow 差分は解消されています。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0004"
+    },
+    {
+      "rawFindingId": "20260708-020013-pr-task-attachments-takt-add-p:reviewers:2:arch-review:arch-r2-resolve-F-0005",
+      "stepName": "arch-review",
+      "reviewer": "arch-review",
+      "familyTag": "ai_contract_miswire",
+      "severity": "medium",
+      "title": "解消確認: pipeline の PR 添付実行後に run context の添付画像を削除している",
+      "location": "src/features/pipeline/steps.ts:198",
+      "description": "`src/features/pipeline/steps.ts:198` の cleanup 対象は prepared task spec のみに縮小され、`src/features/pipeline/steps.ts:294` の finally でも `cleanupTransientTaskSpecs(preparedSpec?.taskDir)` だけが呼ばれます。`src/__tests__/pipelineExecution.test.ts:415` では `cleanupStagedTaskSpec` が呼ばれないことを固定し、`src/__tests__/pipelineRunWorkflowTaskSpec.test.ts:93` から `context/task/order.md` と `attachments/image-1.png` が残ることを検証しています。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0005"
+    },
+    {
+      "rawFindingId": "20260708-020013-pr-task-attachments-takt-add-p:reviewers:2:arch-review:arch-r2-resolve-F-0006",
+      "stepName": "arch-review",
+      "reviewer": "arch-review",
+      "familyTag": "ai_state_cleanup",
+      "severity": "medium",
+      "title": "解消確認: --pr interactive 経路で mode 実行が例外を投げると PR 添付の一時ファイルが cleanup されない",
+      "location": "src/app/cli/routing.ts:149",
+      "description": "`src/app/cli/routing.ts:149` で `result` を optional として保持し、`src/app/cli/routing.ts:194` からの mode 実行 switch も `src/app/cli/routing.ts:150` の try 内に入りました。`src/app/cli/routing.ts:295` の finally は mode 実行が throw して `result` 未設定でも `src/app/cli/routing.ts:299` の `cleanupPrAttachments?.()` を実行します。`src/__tests__/cli-routing-pr-resolve.test.ts:678` でも interactive mode throw 時の cleanup が追加されています。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0006"
+    },
+    {
+      "rawFindingId": "20260708-020013-pr-task-attachments-takt-add-p:reviewers:2:arch-review:arch-r2-resolve-F-0007",
+      "stepName": "arch-review",
+      "reviewer": "arch-review",
+      "familyTag": "ai_underengineered_safety",
+      "severity": "medium",
+      "title": "解消確認: 画像サイズ上限を arrayBuffer 後にしか検証しておらず大きなレスポンスを丸ごと読み込む",
+      "location": "src/features/tasks/prReviewTaskInput.ts:105",
+      "description": "`src/features/tasks/prReviewTaskInput.ts:105` の `readLimitedResponseBody()` が response stream を上限付きで読み、`src/features/tasks/prReviewTaskInput.ts:120` で上限超過を検出した時点で cancel します。`src/__tests__/prReviewTaskInput.test.ts:273` は Content-Length 超過時に body reader が呼ばれないこと、`src/__tests__/prReviewTaskInput.test.ts:291` は Content-Length なしの stream 超過で `arrayBuffer` が呼ばれないことを確認しています。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0007"
+    },
+    {
+      "rawFindingId": "20260708-020013-pr-task-attachments-takt-add-p:reviewers:2:arch-review:arch-r2-resolve-F-0008",
+      "stepName": "arch-review",
+      "reviewer": "arch-review",
+      "familyTag": "cleanup-leak",
+      "severity": "medium",
+      "title": "解消確認: 対話モード生成中の例外でPR画像一時ファイルがcleanupされない",
+      "location": "src/app/cli/routing.ts:295",
+      "description": "`src/app/cli/routing.ts:222` からの `interactiveMode()` 呼び出し、`src/app/cli/routing.ts:238` の `quietMode()`、`src/app/cli/routing.ts:244` と `src/app/cli/routing.ts:246` の persona 経路は、すべて `src/app/cli/routing.ts:150` の try 内にあります。`src/app/cli/routing.ts:295` の finally で `result` 有無に関係なく `src/app/cli/routing.ts:299` の PR cleanup が走るため、元 finding の cleanup 漏れは解消されています。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0008"
+    },
+    {
+      "rawFindingId": "20260708-020013-pr-task-attachments-takt-add-p:reviewers:2:arch-review:arch-r2-resolve-F-0009",
+      "stepName": "arch-review",
+      "reviewer": "arch-review",
+      "familyTag": "download-size-limit",
+      "severity": "medium",
+      "title": "解消確認: サイズ上限検証の前に画像レスポンス全体をメモリへ読み込んでいる",
+      "location": "src/features/tasks/prReviewTaskInput.ts:105",
+      "description": "`src/features/tasks/prReviewTaskInput.ts:105` の `readLimitedResponseBody()` は `response.body.getReader()` を使う stream 読込に変わっており、`src/features/tasks/prReviewTaskInput.ts:120` で累積 byte 数が `MAX_IMAGE_ATTACHMENT_BYTES` を超えた時点で中断します。`src/features/tasks/prReviewTaskInput.ts:159` の download 経路はこの関数を使用しており、`arrayBuffer()` による全体読込は本番コードから除去されています。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0009"
+    },
+    {
+      "rawFindingId": "20260708-020013-pr-task-attachments-takt-add-p:reviewers:2:arch-review:arch-r2-resolve-F-0010",
+      "stepName": "arch-review",
+      "reviewer": "arch-review",
+      "familyTag": "pipeline-attachment-context",
+      "severity": "medium",
+      "title": "解消確認: pipeline --pr の実行後にstaged task contextごと添付画像を削除している",
+      "location": "src/features/pipeline/steps.ts:294",
+      "description": "`src/features/pipeline/steps.ts:294` の finally は `cleanupTransientTaskSpecs(preparedSpec?.taskDir)` だけを呼び、`stagedSpec` を cleanup 対象にしていません。`src/__tests__/pipelineRunWorkflowTaskSpec.test.ts:93` から `context/task/order.md` と `context/task/attachments/image-1.png` が実行後に読めることを検証しており、pipeline 経路だけ run context が消える契約ずれは解消されています。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0010"
+    },
+    {
+      "rawFindingId": "20260708-020013-pr-task-attachments-takt-add-p:reviewers:2:arch-review:arch-r2-resolve-F-0011",
+      "stepName": "arch-review",
+      "reviewer": "arch-review",
+      "familyTag": "implementation-semantics:fail-fast-resource-boundary",
+      "severity": "medium",
+      "title": "解消確認: 画像サイズ上限がダウンロード後にしか適用されない",
+      "location": "src/features/tasks/prReviewTaskInput.ts:88",
+      "description": "`src/features/tasks/prReviewTaskInput.ts:88` の Content-Length 検証は本文読込前に走り、`src/features/tasks/prReviewTaskInput.ts:100` で上限超過を即時拒否します。Content-Length がない場合も `src/features/tasks/prReviewTaskInput.ts:111` から reader を使って読み、`src/features/tasks/prReviewTaskInput.ts:120` で上限超過時点に中断します。その後 `src/features/tasks/prReviewTaskInput.ts:160` で Content-Type と magic bytes の検証へ進む構造です。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0011"
+    },
+    {
+      "rawFindingId": "20260708-020013-pr-task-attachments-takt-add-p:reviewers:2:arch-review:arch-r2-resolve-F-0012",
+      "stepName": "arch-review",
+      "reviewer": "arch-review",
+      "familyTag": "implementation-semantics:state-cleanup",
+      "severity": "medium",
+      "title": "解消確認: PR添付画像の一時ファイルが例外経路で解放されない",
+      "location": "src/app/cli/routing.ts:150",
+      "description": "`src/app/cli/routing.ts:150` の try は workflow 選択、workflow description 取得、mode 選択、interactive mode 実行、dispatch を含みます。`src/app/cli/routing.ts:295` の finally は正常終了、早期 return、例外のいずれでも実行され、`src/app/cli/routing.ts:299` で `cleanupPrAttachments?.()` を呼びます。`src/__tests__/cli-routing-pr-resolve.test.ts:678` から mode 例外時の cleanup テストも追加されています。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0012"
+    },
+    {
+      "rawFindingId": "20260708-020013-pr-task-attachments-takt-add-p:reviewers:2:ai-antipattern-review:ai-antipattern-r2-resolved-f0001",
+      "stepName": "ai-antipattern-review",
+      "reviewer": "ai-antipattern-review",
+      "familyTag": "missing-edge-case",
+      "severity": "medium",
+      "title": "PR添付画像cleanup漏れの解消確認",
+      "location": "src/app/cli/routing.ts:150",
+      "description": "`resolvePrInput()` 後の処理全体が `try/finally` に入り、`src/app/cli/routing.ts:295` の finally で `result` の有無にかかわらず `cleanupPrAttachments?.()` が実行されます。`src/__tests__/cli-routing-pr-resolve.test.ts:678` で interactive mode が throw した場合の cleanup も検証されています。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0001"
+    },
+    {
+      "rawFindingId": "20260708-020013-pr-task-attachments-takt-add-p:reviewers:2:ai-antipattern-review:ai-antipattern-r2-resolved-f0002",
+      "stepName": "ai-antipattern-review",
+      "reviewer": "ai-antipattern-review",
+      "familyTag": "missing-edge-case",
+      "severity": "medium",
+      "title": "画像サイズ上限の事前・ストリーム検証の解消確認",
+      "location": "src/features/tasks/prReviewTaskInput.ts:105",
+      "description": "`validateContentLength()` が `src/features/tasks/prReviewTaskInput.ts:88` から本文読取前に上限超過を拒否し、`readLimitedResponseBody()` が `src/features/tasks/prReviewTaskInput.ts:119` から累積 byte 数を監視して上限超過時に reader を cancel します。`src/__tests__/prReviewTaskInput.test.ts:273` と `src/__tests__/prReviewTaskInput.test.ts:291` で本文未読・ストリーム境界の拒否が検証されています。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0002"
+    },
+    {
+      "rawFindingId": "20260708-020013-pr-task-attachments-takt-add-p:reviewers:2:ai-antipattern-review:ai-antipattern-r2-resolved-f0003",
+      "stepName": "ai-antipattern-review",
+      "reviewer": "ai-antipattern-review",
+      "familyTag": "logic-error",
+      "severity": "medium",
+      "title": "pipeline run context削除の解消確認",
+      "location": "src/features/pipeline/steps.ts:294",
+      "description": "`runWorkflow()` の finally は `cleanupTransientTaskSpecs(preparedSpec?.taskDir)` のみを呼び、`cleanupTransientTaskSpecs()` は `src/features/pipeline/steps.ts:198` で prepared spec だけを削除します。`stagedSpec` は削除対象から外れ、`src/__tests__/pipelineRunWorkflowTaskSpec.test.ts:64` で run context の `order.md` と `attachments/image-1.png` が実行後に残ることを検証しています。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0003"
+    },
+    {
+      "rawFindingId": "20260708-020013-pr-task-attachments-takt-add-p:reviewers:2:ai-antipattern-review:ai-antipattern-r2-resolved-f0004",
+      "stepName": "ai-antipattern-review",
+      "reviewer": "ai-antipattern-review",
+      "familyTag": "scope-creep",
+      "severity": "high",
+      "title": "不要なローカルworkflow追加の解消確認",
+      "description": "`git status --short -uall` に `.takt/workflows/takt-default-for-local-llm.yaml` は含まれず、`find .takt/workflows -maxdepth 2 -type f -print` も出力なしでした。さらに `npm test` は 125 files / 2104 tests passed で完了しており、前回のローカル workflow 起因の失敗は再現しません。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0004"
+    },
+    {
+      "rawFindingId": "20260708-020013-pr-task-attachments-takt-add-p:reviewers:2:ai-antipattern-review:ai-antipattern-r2-resolved-f0005",
+      "stepName": "ai-antipattern-review",
+      "reviewer": "ai-antipattern-review",
+      "familyTag": "logic-error",
+      "severity": "medium",
+      "title": "pipeline添付画像run artifact削除の解消確認",
+      "location": "src/features/pipeline/steps.ts:295",
+      "description": "`src/features/pipeline/steps.ts:295` は prepared task spec の cleanup のみを行い、run context 側の staged task spec は削除していません。`src/__tests__/pipelineRunWorkflowTaskSpec.test.ts:93` 以降で `.takt/runs/<run>/context/task/order.md` と `attachments/image-1.png` が残ることを確認しています。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0005"
+    },
+    {
+      "rawFindingId": "20260708-020013-pr-task-attachments-takt-add-p:reviewers:2:ai-antipattern-review:ai-antipattern-r2-resolved-f0006",
+      "stepName": "ai-antipattern-review",
+      "reviewer": "ai-antipattern-review",
+      "familyTag": "missing-edge-case",
+      "severity": "medium",
+      "title": "--pr interactive例外時cleanup漏れの解消確認",
+      "location": "src/app/cli/routing.ts:222",
+      "description": "`interactiveMode()` 呼び出しを含む mode 実行 switch は `src/app/cli/routing.ts:150` からの try 範囲内にあり、例外時も `src/app/cli/routing.ts:295` の finally で `cleanupPrAttachments?.()` が実行されます。`src/__tests__/cli-routing-pr-resolve.test.ts:678` で例外時 cleanup が検証されています。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0006"
+    },
+    {
+      "rawFindingId": "20260708-020013-pr-task-attachments-takt-add-p:reviewers:2:ai-antipattern-review:ai-antipattern-r2-resolved-f0007",
+      "stepName": "ai-antipattern-review",
+      "reviewer": "ai-antipattern-review",
+      "familyTag": "missing-edge-case",
+      "severity": "medium",
+      "title": "arrayBuffer後サイズ検証の解消確認",
+      "location": "src/features/tasks/prReviewTaskInput.ts:159",
+      "description": "`downloadGithubImageAttachment()` は `arrayBuffer()` を使わず、`src/features/tasks/prReviewTaskInput.ts:159` で `readLimitedResponseBody()` を呼んでいます。`src/__tests__/prReviewTaskInput.test.ts:269`、`:286`、`:308` で上限超過時に `arrayBuffer` が呼ばれないことを検証しています。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0007"
+    },
+    {
+      "rawFindingId": "20260708-020013-pr-task-attachments-takt-add-p:reviewers:2:ai-antipattern-review:ai-antipattern-r2-resolved-f0008",
+      "stepName": "ai-antipattern-review",
+      "reviewer": "ai-antipattern-review",
+      "familyTag": "missing-edge-case",
+      "severity": "medium",
+      "title": "対話モード生成中例外のcleanup解消確認",
+      "location": "src/app/cli/routing.ts:295",
+      "description": "`result` 生成前に例外が発生しても finally に到達し、`result !== undefined` の場合だけ interactive result を cleanup したうえで、常に `cleanupPrAttachments?.()` を呼ぶ構造になっています。`src/__tests__/cli-routing-pr-resolve.test.ts:691` で throw を期待しつつ `cleanupAttachments` 1回呼び出しを検証しています。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0008"
+    },
+    {
+      "rawFindingId": "20260708-020013-pr-task-attachments-takt-add-p:reviewers:2:ai-antipattern-review:ai-antipattern-r2-resolved-f0009",
+      "stepName": "ai-antipattern-review",
+      "reviewer": "ai-antipattern-review",
+      "familyTag": "missing-edge-case",
+      "severity": "medium",
+      "title": "サイズ上限前の全体読込の解消確認",
+      "location": "src/features/tasks/prReviewTaskInput.ts:111",
+      "description": "`readLimitedResponseBody()` は `response.body.getReader()` で chunk を読み、`src/features/tasks/prReviewTaskInput.ts:119` で累積サイズを加算して上限超過時点で中断します。`src/__tests__/prReviewTaskInput.test.ts:291` が Content-Length なしの上限超過を検証しています。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0009"
+    },
+    {
+      "rawFindingId": "20260708-020013-pr-task-attachments-takt-add-p:reviewers:2:ai-antipattern-review:ai-antipattern-r2-resolved-f0010",
+      "stepName": "ai-antipattern-review",
+      "reviewer": "ai-antipattern-review",
+      "familyTag": "logic-error",
+      "severity": "medium",
+      "title": "pipeline staged task context保持の解消確認",
+      "location": "src/features/pipeline/steps.ts:198",
+      "description": "`cleanupTransientTaskSpecs()` は `preparedSpecTaskDir` だけを受け取り、`cleanupStagedTaskSpec` を呼びません。`src/features/pipeline/steps.ts:276` で stage した run context は、`src/features/pipeline/steps.ts:295` の cleanup 後も残る契約に戻っています。`src/__tests__/pipelineRunWorkflowTaskSpec.test.ts:96` で `order.md` と添付パスを実ファイルで確認しています。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0010"
+    },
+    {
+      "rawFindingId": "20260708-020013-pr-task-attachments-takt-add-p:reviewers:2:ai-antipattern-review:ai-antipattern-r2-resolved-f0011",
+      "stepName": "ai-antipattern-review",
+      "reviewer": "ai-antipattern-review",
+      "familyTag": "missing-edge-case",
+      "severity": "medium",
+      "title": "画像サイズ上限fail-fastの解消確認",
+      "location": "src/features/tasks/prReviewTaskInput.ts:88",
+      "description": "`validateContentLength()` が `src/features/tasks/prReviewTaskInput.ts:100` で上限超過 Content-Length を本文読取前に拒否し、`src/features/tasks/prReviewTaskInput.ts:120` で Content-Length なしの streamed bytes 超過も拒否します。該当テストは `src/__tests__/prReviewTaskInput.test.ts:273` と `src/__tests__/prReviewTaskInput.test.ts:291` です。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0011"
+    },
+    {
+      "rawFindingId": "20260708-020013-pr-task-attachments-takt-add-p:reviewers:2:ai-antipattern-review:ai-antipattern-r2-resolved-f0012",
+      "stepName": "ai-antipattern-review",
+      "reviewer": "ai-antipattern-review",
+      "familyTag": "missing-edge-case",
+      "severity": "medium",
+      "title": "PR添付画像一時ファイル例外経路cleanupの解消確認",
+      "location": "src/app/cli/routing.ts:149",
+      "description": "`cleanupPrAttachments` 取得後の workflow 選択、mode 選択、mode 実行、dispatch は `src/app/cli/routing.ts:150` からの単一 try/finally に含まれています。`src/app/cli/routing.ts:299` で PR 添付 cleanup が必ず呼ばれ、`src/__tests__/cli-routing-pr-resolve.test.ts:678` で mode 例外時の cleanup が確認されています。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0012"
+    },
+    {
+      "rawFindingId": "20260708-020013-pr-task-attachments-takt-add-p:reviewers:2:coding-review:coding-review-2-resolve-F-0001",
+      "stepName": "coding-review",
+      "reviewer": "coding-review",
+      "familyTag": "arch-state-cleanup",
+      "severity": "medium",
+      "title": "PR添付画像 cleanup 例外経路の解消を確認",
+      "location": "src/app/cli/routing.ts:149",
+      "description": "`src/app/cli/routing.ts:149` から `result` 生成、workflow 選択、mode 選択、interactive mode 実行、dispatch までが単一の `try` に入り、`src/app/cli/routing.ts:295` の `finally` で `cleanupPrAttachments?.()` が必ず呼ばれることを確認しました。`src/__tests__/cli-routing-pr-resolve.test.ts` には interactive mode が throw した場合に cleanup が1回呼ばれるテストも追加されています。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0001"
+    },
+    {
+      "rawFindingId": "20260708-020013-pr-task-attachments-takt-add-p:reviewers:2:coding-review:coding-review-2-resolve-F-0002",
+      "stepName": "coding-review",
+      "reviewer": "coding-review",
+      "familyTag": "arch-boundary-size-limit",
+      "severity": "medium",
+      "title": "画像サイズ上限の読み込み前・stream中検証を確認",
+      "location": "src/features/tasks/prReviewTaskInput.ts:88",
+      "description": "`src/features/tasks/prReviewTaskInput.ts:88` の `validateContentLength()` で `Content-Length` 超過を本文読み込み前に拒否し、`src/features/tasks/prReviewTaskInput.ts:105` の `readLimitedResponseBody()` が `response.body` を chunk 読みしながら `MAX_IMAGE_ATTACHMENT_BYTES` 超過時点で cancel/throw することを確認しました。`arrayBuffer()` は使用されていません。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0002"
+    },
+    {
+      "rawFindingId": "20260708-020013-pr-task-attachments-takt-add-p:reviewers:2:coding-review:coding-review-2-resolve-F-0003",
+      "stepName": "coding-review",
+      "reviewer": "coding-review",
+      "familyTag": "arch-run-context-lifecycle",
+      "severity": "medium",
+      "title": "pipeline staged run context 保持の解消を確認",
+      "location": "src/features/pipeline/steps.ts:198",
+      "description": "`src/features/pipeline/steps.ts:198` の cleanup は prepared task spec のみを削除する実装になり、`cleanupStagedTaskSpec()` の import/呼び出しがなくなっていることを確認しました。`src/__tests__/pipelineRunWorkflowTaskSpec.test.ts` では実行後に run context の `context/task/order.md` と `attachments/image-1.png` が残ることを検証しています。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0003"
+    },
+    {
+      "rawFindingId": "20260708-020013-pr-task-attachments-takt-add-p:reviewers:2:coding-review:coding-review-2-resolve-F-0004",
+      "stepName": "coding-review",
+      "reviewer": "coding-review",
+      "familyTag": "ai_scope_creep",
+      "severity": "high",
+      "title": "不要なローカル workflow 差分の除去を確認",
+      "location": ".takt/workflows/takt-default-for-local-llm.yaml",
+      "description": "`git status --short` に `.takt/workflows/` が出ておらず、`test -e .takt/workflows/takt-default-for-local-llm.yaml` が存在しないことを示す終了値 1 を返すことを確認しました。さらに `npm test` は全 shard 成功し、前回の英語 workflow 上書きによる失敗は再現しませんでした。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0004"
+    },
+    {
+      "rawFindingId": "20260708-020013-pr-task-attachments-takt-add-p:reviewers:2:coding-review:coding-review-2-resolve-F-0005",
+      "stepName": "coding-review",
+      "reviewer": "coding-review",
+      "familyTag": "ai_contract_miswire",
+      "severity": "medium",
+      "title": "pipeline run context 添付画像削除の解消を確認",
+      "location": "src/features/pipeline/steps.ts:295",
+      "description": "`src/features/pipeline/steps.ts:295` の finally は `cleanupTransientTaskSpecs(preparedSpec?.taskDir)` のみを呼び、staged run context を削除しないことを確認しました。`src/__tests__/pipelineExecution.test.ts` でも `cleanupStagedTaskSpec` が呼ばれないことを検証しています。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0005"
+    },
+    {
+      "rawFindingId": "20260708-020013-pr-task-attachments-takt-add-p:reviewers:2:coding-review:coding-review-2-resolve-F-0006",
+      "stepName": "coding-review",
+      "reviewer": "coding-review",
+      "familyTag": "ai_state_cleanup",
+      "severity": "medium",
+      "title": "--pr interactive mode 例外時 cleanup 漏れの解消を確認",
+      "location": "src/app/cli/routing.ts:222",
+      "description": "`src/app/cli/routing.ts:222` の `interactiveMode()` 呼び出しは外側の `try/finally` 内に移動しており、mode 実行中に例外が発生しても `src/app/cli/routing.ts:299` の `cleanupPrAttachments?.()` に到達します。`src/__tests__/cli-routing-pr-resolve.test.ts` の throw ケースで cleanup 呼び出しが確認されています。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0006"
+    },
+    {
+      "rawFindingId": "20260708-020013-pr-task-attachments-takt-add-p:reviewers:2:coding-review:coding-review-2-resolve-F-0007",
+      "stepName": "coding-review",
+      "reviewer": "coding-review",
+      "familyTag": "ai_underengineered_safety",
+      "severity": "medium",
+      "title": "arrayBuffer 後サイズ検証の解消を確認",
+      "location": "src/features/tasks/prReviewTaskInput.ts:159",
+      "description": "`src/features/tasks/prReviewTaskInput.ts:159` では `readLimitedResponseBody()` の結果を使っており、旧実装の `Buffer.from(await response.arrayBuffer())` は残っていません。`src/__tests__/prReviewTaskInput.test.ts` では `arrayBuffer` が呼ばれないこと、Content-Length なしの stream 超過も拒否することを確認しています。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0007"
+    },
+    {
+      "rawFindingId": "20260708-020013-pr-task-attachments-takt-add-p:reviewers:2:coding-review:coding-review-2-resolve-F-0008",
+      "stepName": "coding-review",
+      "reviewer": "coding-review",
+      "familyTag": "cleanup-leak",
+      "severity": "medium",
+      "title": "対話モード生成中例外の PR 画像 cleanup を確認",
+      "location": "src/app/cli/routing.ts:295",
+      "description": "`src/app/cli/routing.ts:295` の `finally` で、`result` 未生成時でも `cleanupPrAttachments?.()` が実行される構造になっています。`result` 作成済みの場合のみ `cleanupInteractiveResultAttachments(result)` を呼ぶため、interactive mode throw 経路でも PR 由来一時ファイルの cleanup が維持されます。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0008"
+    },
+    {
+      "rawFindingId": "20260708-020013-pr-task-attachments-takt-add-p:reviewers:2:coding-review:coding-review-2-resolve-F-0009",
+      "stepName": "coding-review",
+      "reviewer": "coding-review",
+      "familyTag": "download-size-limit",
+      "severity": "medium",
+      "title": "画像レスポンス全体読み込み前の上限検証を確認",
+      "location": "src/features/tasks/prReviewTaskInput.ts:105",
+      "description": "`src/features/tasks/prReviewTaskInput.ts:105` の `readLimitedResponseBody()` は `response.body.getReader()` で逐次読み込みし、累積 byte 数が `MAX_IMAGE_ATTACHMENT_BYTES` を超えた時点で `reader.cancel()` 後に throw します。`src/__tests__/prReviewTaskInput.test.ts` では `arrayBuffer` 非呼び出しも検証されています。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0009"
+    },
+    {
+      "rawFindingId": "20260708-020013-pr-task-attachments-takt-add-p:reviewers:2:coding-review:coding-review-2-resolve-F-0010",
+      "stepName": "coding-review",
+      "reviewer": "coding-review",
+      "familyTag": "pipeline-attachment-context",
+      "severity": "medium",
+      "title": "pipeline 実行後 staged task context 保持を確認",
+      "location": "src/features/pipeline/steps.ts:273",
+      "description": "`src/features/pipeline/steps.ts:273` で `stageTaskSpecForExecution()` により run context を作成し、`src/features/pipeline/steps.ts:295` では prepared spec だけを cleanup するため、staged task context は削除されません。`src/__tests__/pipelineRunWorkflowTaskSpec.test.ts` で実行後の `context/task/order.md` と添付画像ファイルの存在を確認しています。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0010"
+    },
+    {
+      "rawFindingId": "20260708-020013-pr-task-attachments-takt-add-p:reviewers:2:coding-review:coding-review-2-resolve-F-0011",
+      "stepName": "coding-review",
+      "reviewer": "coding-review",
+      "familyTag": "implementation-semantics:fail-fast-resource-boundary",
+      "severity": "medium",
+      "title": "画像サイズ上限 fail-fast 境界の解消を確認",
+      "location": "src/features/tasks/prReviewTaskInput.ts:88",
+      "description": "`src/features/tasks/prReviewTaskInput.ts:88` の `validateContentLength()` と `src/features/tasks/prReviewTaskInput.ts:105` の stream 読み込み上限により、Content-Length 超過時は本文を読まず、ヘッダーなしでも累積 byte 超過時点で中断する実装を確認しました。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0011"
+    },
+    {
+      "rawFindingId": "20260708-020013-pr-task-attachments-takt-add-p:reviewers:2:coding-review:coding-review-2-resolve-F-0012",
+      "stepName": "coding-review",
+      "reviewer": "coding-review",
+      "familyTag": "implementation-semantics:state-cleanup",
+      "severity": "medium",
+      "title": "PR添付画像一時ファイルの例外経路解放を確認",
+      "location": "src/app/cli/routing.ts:149",
+      "description": "`src/app/cli/routing.ts:149` から対話処理全体を覆う `try/finally` により、`determineWorkflow()`、`getWorkflowDescription()`、`selectInteractiveMode()`、各 interactive mode、dispatch のどこで例外または早期 return が起きても `src/app/cli/routing.ts:299` の `cleanupPrAttachments?.()` が実行されることを確認しました。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0012"
+    },
+    {
+      "rawFindingId": "20260708-020013-pr-task-attachments-takt-add-p:reviewers:2:implementation-semantics-review:implementation-semantics-confirm-F-0001",
+      "stepName": "implementation-semantics-review",
+      "reviewer": "implementation-semantics-review",
+      "familyTag": "implementation-semantics:state-cleanup",
+      "severity": "medium",
+      "title": "PR添付画像cleanupの例外経路は解消済み",
+      "location": "src/app/cli/routing.ts:149",
+      "description": "`resolvePrInput()` 成功後の処理が `try` に入り、`src/app/cli/routing.ts:295-300` の `finally` で `result` が未生成でも `cleanupPrAttachments?.()` が必ず呼ばれることを確認しました。`determineWorkflow()`、`getWorkflowDescription()`、interactive mode 実行、dispatch の例外経路を同じ cleanup 範囲が覆っています。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0001"
+    },
+    {
+      "rawFindingId": "20260708-020013-pr-task-attachments-takt-add-p:reviewers:2:implementation-semantics-review:implementation-semantics-confirm-F-0002",
+      "stepName": "implementation-semantics-review",
+      "reviewer": "implementation-semantics-review",
+      "familyTag": "implementation-semantics:fail-fast-resource-boundary",
+      "severity": "medium",
+      "title": "画像サイズ上限のstream境界検証は解消済み",
+      "location": "src/features/tasks/prReviewTaskInput.ts:105",
+      "description": "`src/features/tasks/prReviewTaskInput.ts:88-102` で `Content-Length` 上限超過を本文読み込み前に拒否し、`src/features/tasks/prReviewTaskInput.ts:105-129` で `response.body` をchunk読みしながら `MAX_IMAGE_ATTACHMENT_BYTES` 超過時点で `reader.cancel()` して失敗させることを確認しました。`arrayBuffer()` の全体読み込み経路は使われていません。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0002"
+    },
+    {
+      "rawFindingId": "20260708-020013-pr-task-attachments-takt-add-p:reviewers:2:implementation-semantics-review:implementation-semantics-confirm-F-0003",
+      "stepName": "implementation-semantics-review",
+      "reviewer": "implementation-semantics-review",
+      "familyTag": "implementation-semantics:state-cleanup",
+      "severity": "medium",
+      "title": "pipeline run context削除は解消済み",
+      "location": "src/features/pipeline/steps.ts:294",
+      "description": "`src/features/pipeline/steps.ts:273-277` でrun contextへstageした後、`finally` は `src/features/pipeline/steps.ts:294-295` で `cleanupTransientTaskSpecs(preparedSpec?.taskDir)` のみを呼びます。`cleanupTransientTaskSpecs()` は `src/features/pipeline/steps.ts:198-201` でprepared task specだけを削除し、staged run contextを削除しないことを確認しました。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0003"
+    },
+    {
+      "rawFindingId": "20260708-020013-pr-task-attachments-takt-add-p:reviewers:2:implementation-semantics-review:implementation-semantics-confirm-F-0005",
+      "stepName": "implementation-semantics-review",
+      "reviewer": "implementation-semantics-review",
+      "familyTag": "implementation-semantics:state-cleanup",
+      "severity": "medium",
+      "title": "pipeline添付画像のrun context保持は解消済み",
+      "location": "src/features/pipeline/steps.ts:198",
+      "description": "`cleanupTransientTaskSpecs()` は `src/features/pipeline/steps.ts:198-201` でprepared specディレクトリだけをcleanupします。`runWorkflow()` の `finally` も `src/features/pipeline/steps.ts:294-295` でprepared specだけを渡しており、`stageTaskSpecForExecution()` が作成した `.takt/runs/.../context/task` とattachmentsを削除しない現在コードを確認しました。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0005"
+    },
+    {
+      "rawFindingId": "20260708-020013-pr-task-attachments-takt-add-p:reviewers:2:implementation-semantics-review:implementation-semantics-confirm-F-0006",
+      "stepName": "implementation-semantics-review",
+      "reviewer": "implementation-semantics-review",
+      "familyTag": "implementation-semantics:state-cleanup",
+      "severity": "medium",
+      "title": "interactive mode throw時のPR添付cleanup漏れは解消済み",
+      "location": "src/app/cli/routing.ts:222",
+      "description": "interactive mode呼び出しは `src/app/cli/routing.ts:149-300` の `try/finally` 内にあり、assistant mode の `src/app/cli/routing.ts:222-229`、quiet mode の `src/app/cli/routing.ts:237-239`、persona mode の `src/app/cli/routing.ts:241-247` がthrowしても `src/app/cli/routing.ts:295-300` の `cleanupPrAttachments?.()` に到達することを確認しました。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0006"
+    },
+    {
+      "rawFindingId": "20260708-020013-pr-task-attachments-takt-add-p:reviewers:2:implementation-semantics-review:implementation-semantics-confirm-F-0007",
+      "stepName": "implementation-semantics-review",
+      "reviewer": "implementation-semantics-review",
+      "familyTag": "implementation-semantics:fail-fast-resource-boundary",
+      "severity": "medium",
+      "title": "画像サイズ上限の事前・stream検証は解消済み",
+      "location": "src/features/tasks/prReviewTaskInput.ts:119",
+      "description": "現在の実装は `response.arrayBuffer()` を使わず、`src/features/tasks/prReviewTaskInput.ts:105-129` でstreamを読みながら累積サイズを検査しています。`src/features/tasks/prReviewTaskInput.ts:119-124` で上限超過時点にcancelしてthrowするため、巨大レスポンスを丸ごと読み切る問題は解消済みです。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0007"
+    },
+    {
+      "rawFindingId": "20260708-020013-pr-task-attachments-takt-add-p:reviewers:2:implementation-semantics-review:implementation-semantics-confirm-F-0008",
+      "stepName": "implementation-semantics-review",
+      "reviewer": "implementation-semantics-review",
+      "familyTag": "implementation-semantics:state-cleanup",
+      "severity": "medium",
+      "title": "対話モード生成中例外のPR画像cleanup漏れは解消済み",
+      "location": "src/app/cli/routing.ts:149",
+      "description": "`result` 生成前を含む対話処理全体が `src/app/cli/routing.ts:149-300` の `try/finally` に移され、`src/app/cli/routing.ts:295-300` で `result !== undefined` の場合だけinteractive resultをcleanupしつつ、常に `cleanupPrAttachments?.()` を呼ぶ構造になっていることを確認しました。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0008"
+    },
+    {
+      "rawFindingId": "20260708-020013-pr-task-attachments-takt-add-p:reviewers:2:implementation-semantics-review:implementation-semantics-confirm-F-0009",
+      "stepName": "implementation-semantics-review",
+      "reviewer": "implementation-semantics-review",
+      "familyTag": "implementation-semantics:fail-fast-resource-boundary",
+      "severity": "medium",
+      "title": "サイズ上限前の全体メモリ読み込みは解消済み",
+      "location": "src/features/tasks/prReviewTaskInput.ts:158",
+      "description": "`downloadGithubImageAttachment()` は `src/features/tasks/prReviewTaskInput.ts:158-160` でContent-Type取得後に `readLimitedResponseBody()` を呼び、同関数が `src/features/tasks/prReviewTaskInput.ts:105-129` でstream境界のサイズ検証を行います。全体を `arrayBuffer()` で読み込んでから検証する処理は現在コードにありません。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0009"
+    },
+    {
+      "rawFindingId": "20260708-020013-pr-task-attachments-takt-add-p:reviewers:2:implementation-semantics-review:implementation-semantics-confirm-F-0010",
+      "stepName": "implementation-semantics-review",
+      "reviewer": "implementation-semantics-review",
+      "familyTag": "implementation-semantics:state-cleanup",
+      "severity": "medium",
+      "title": "pipeline staged task context削除は解消済み",
+      "location": "src/features/pipeline/steps.ts:295",
+      "description": "`src/features/pipeline/steps.ts:294-295` の `finally` はprepared specだけをcleanup対象にし、staged contextを受け取るcleanup関数を呼びません。`src/features/pipeline/steps.ts:10-11` のimportにも `cleanupStagedTaskSpec` は含まれておらず、実行後のrun context task/order.md/attachmentsを保持する構造を確認しました。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0010"
+    },
+    {
+      "rawFindingId": "20260708-020013-pr-task-attachments-takt-add-p:reviewers:2:implementation-semantics-review:implementation-semantics-confirm-F-0011",
+      "stepName": "implementation-semantics-review",
+      "reviewer": "implementation-semantics-review",
+      "familyTag": "implementation-semantics:fail-fast-resource-boundary",
+      "severity": "medium",
+      "title": "画像サイズ上限がダウンロード後のみ適用される問題は解消済み",
+      "location": "src/features/tasks/prReviewTaskInput.ts:88",
+      "description": "`src/features/tasks/prReviewTaskInput.ts:88-102` で `Content-Length` を検証し、上限超過ならbody取得前にthrowします。`Content-Length` がない、または実体がヘッダより大きい場合も `src/features/tasks/prReviewTaskInput.ts:105-129` のstream読み取りで累積サイズを検査し、上限超過時点で中断するため、元findingの受入条件を満たしています。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0011"
+    },
+    {
+      "rawFindingId": "20260708-020013-pr-task-attachments-takt-add-p:reviewers:2:implementation-semantics-review:implementation-semantics-confirm-F-0012",
+      "stepName": "implementation-semantics-review",
+      "reviewer": "implementation-semantics-review",
+      "familyTag": "implementation-semantics:state-cleanup",
+      "severity": "medium",
+      "title": "PR添付画像一時ファイルの例外経路解放漏れは解消済み",
+      "location": "src/app/cli/routing.ts:295",
+      "description": "`src/app/cli/routing.ts:149-300` でPR添付取得後のworkflow選択、mode選択、interactive mode実行、dispatchが単一の `try/finally` に含まれ、`src/app/cli/routing.ts:295-300` で `cleanupPrAttachments?.()` が必ず実行されます。キャンセル分岐もこの `finally` を通るため、元findingの解放漏れは解消済みです。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0012"
+    },
+    {
+      "rawFindingId": "20260708-020013-pr-task-attachments-takt-add-p:reviewers:3:arch-review:arch-review-3-001",
+      "stepName": "arch-review",
+      "reviewer": "arch-review",
+      "familyTag": "arch-resolution-order",
+      "severity": "medium",
+      "title": "listWorkflowEntries が builtin と project/user の同名 workflow を重複公開する",
+      "location": "src/infra/config/loaders/workflowResolver.ts:363",
+      "description": "今回の差分で listWorkflowEntries() は builtinEntries と entriesToValidate を分離し、line 367 で [...builtinEntries, ...validatedEntries] をそのまま返す構造になっています。getWorkflowDirs() は builtin→user→project の順で候補を列挙し、既存の collectValidatedWorkflowEntries() は Map#set により後勝ちで同名 workflow を1件に畳み込む設計です。新構造では builtin の default と project-local の default が同時に存在する場合、listWorkflowEntries()/listWorkflows() が同名を重複公開し、loadWorkflowByIdentifier()/loadAllWorkflowsWithSources() の project-local 優先契約と一覧 API の契約がずれます。これは Policy の「候補解決と値合成の分離」「契約全入口」に反する配線不整合です。なお npm run build、npm run lint、npm test は成功しましたが、同名 builtin/project の listWorkflowEntries 重複は既存テストで検出されていません。",
+      "suggestion": "builtin の軽量ロード最適化は維持しても、listWorkflowEntries() の最終結果は従来と同じ名前単位の後勝ち統合を通してください。例として、元の entries 順を保ったまま builtin だけ軽量判定する entry loader を collectValidatedWorkflowEntries に渡す、または builtin/user/project/repertoire を同一 Map に投入して project/user が builtin を上書きする構造にしてください。あわせて project-local default が builtin default を上書きしたとき listWorkflowEntries()/listWorkflows() に default が1件だけ出るテストを追加してください。",
+      "kind": "issue"
+    },
+    {
+      "rawFindingId": "20260708-020013-pr-task-attachments-takt-add-p:reviewers:3:ai-antipattern-review:ai-antipattern-r3-001",
+      "stepName": "ai-antipattern-review",
+      "reviewer": "ai-antipattern-review",
+      "familyTag": "scope-creep",
+      "severity": "medium",
+      "title": "PR添付機能と無関係に builtin workflow の契約検証を迂回している",
+      "location": "src/infra/config/loaders/workflowResolver.ts:180",
+      "description": "`loadValidatedWorkflowEntry()` は `entry.source === 'builtin'` の場合に `buildWorkflowDiscoveryConfig(loadWorkflowForDiscovery(...))` を返し、`validateWorkflowCallContracts()` を通る `loadValidatedWorkflowDiscoveryEntry()` を迂回しています。同じ変更で `loadValidatedWorkflowConfigEntry()` も builtin では `validateLoadedWorkflowEntryContracts()` を実行せず、`listWorkflowEntries()` も builtin entries を未検証のまま返します。PRコメント画像の attachment 化とは別契約の workflow call validation を広く変更しており、builtin workflow の不整合を discovery / runtime / list 経路で検出できなくするスコープクリープです。",
+      "suggestion": "builtin 全体の validation bypass を戻してください。internal callable builtin を一覧から隠す必要がある場合は、その絞り込みだけを validation 前後の最小範囲に限定し、公開・実行される builtin workflow は従来どおり `validateWorkflowCallContracts()` / `validateLoadedWorkflowEntryContracts()` を通す構造にしてください。あわせて builtin workflow の workflow_call 契約不整合が discovery / runtime 経路で検出される回帰テストを追加してください。",
+      "kind": "issue"
+    },
+    {
+      "rawFindingId": "20260708-020013-pr-task-attachments-takt-add-p:reviewers:3:coding-review:coding-review-3-1",
+      "stepName": "coding-review",
+      "reviewer": "coding-review",
+      "familyTag": "bug",
+      "severity": "medium",
+      "title": "listWorkflows が project-local override と builtin を重複表示する",
+      "location": "src/infra/config/loaders/workflowResolver.ts:367",
+      "description": "今回の変更で listWorkflowEntries() が builtinEntries と validatedEntries を単純連結するようになり、同名 workflow の既存優先順位による重複排除が失われています。実行確認でも、builtin 有効かつ .takt/workflows/default.yaml がある環境で listWorkflows(project) の defaultCount が 2、listWorkflowEntries(project) の default source が [\"builtin\",\"project\"] になりました。loadAllWorkflows() / loadWorkflowByIdentifier() は project-local override を優先する契約を持つため、公開 listing API だけが同じ名前を重複して返すリグレッションです。",
+      "suggestion": "builtin の内部 workflow を除外しつつ、従来どおり entry.name 単位で Map に集約して後勝ちの優先順位を維持してください。例えば visible builtin と non-builtin を同じ順序で結合してから name で de-dupe し、project/user override が builtin を置き換えることを listWorkflowEntries/listWorkflows のテストに追加してください。",
+      "kind": "issue"
+    },
+    {
+      "rawFindingId": "20260708-020013-pr-task-attachments-takt-add-p:reviewers:3:implementation-semantics-review:implementation-semantics-raw-3-1",
+      "stepName": "implementation-semantics-review",
+      "reviewer": "implementation-semantics-review",
+      "familyTag": "implementation-semantics:meaning-contract",
+      "severity": "medium",
+      "title": "listWorkflowEntries が shadow された builtin workflow も同名で返す",
+      "location": "src/infra/config/loaders/workflowResolver.ts:363",
+      "description": "`listWorkflowEntries()` は `entries` を `builtinEntries` と `entriesToValidate` に分け、最後に `return [...builtinEntries, ...validatedEntries]` しています。このため project-local の `.takt/workflows/default.yaml` が builtin `default` を上書きする状態でも、`listWorkflowEntries()` は builtin と project の同名 `default` を両方返します。実確認では `loadAllWorkflowsWithSources(root).get('default')?.source` は `project` なのに、`listWorkflowEntries(root).filter(e => e.name === 'default')` は builtin と project の2件を返しました。`WorkflowDirEntry.source` が「その名前を選んだときに実行されるworkflowの出所」という意味と一致しなくなり、下流の workflow selection では builtin/custom の分類と実際に `loadWorkflowByIdentifier('default')` で解決される project workflow がズレます。",
+      "suggestion": "builtin と非builtinを分離した後も、workflow名単位で有効な1件に正規化してください。既存の `collectValidatedWorkflowEntries()` と同じく後勝ちの優先順位を維持するか、validated non-builtin 名の集合で同名 builtin を除外してから返してください。あわせて project-local `default.yaml` が builtin `default` をshadowする場合に `listWorkflowEntries()` が project 1件だけを返すテストを追加してください。",
+      "kind": "issue"
+    },
+    {
+      "rawFindingId": "20260708-020013-pr-task-attachments-takt-add-p:reviewers:4:arch-review:arch-review-4-resolved-001",
+      "stepName": "arch-review",
+      "reviewer": "arch-review",
+      "familyTag": "arch-resolution-order",
+      "severity": "medium",
+      "title": "listWorkflowEntries の同名 workflow 重複公開は解消済み",
+      "location": "src/infra/config/loaders/workflowResolver.ts:393",
+      "description": "`listWorkflowEntries()` は現在 `entries` 全体を `collectValidatedWorkflowEntries(entries, cwd, options, loadValidatedWorkflowEntry)` に渡しており、`workflowDiscovery.ts` の Map 集約による名前単位の後勝ち統合に戻っています。`src/__tests__/config.test.ts:752` 付近にも project-local `default.yaml` が builtin `default` を shadow する場合に `listWorkflowEntries()` が project 1件のみ、`listWorkflows()` も `default` 1件のみになる回帰テストが追加されています。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0013"
+    },
+    {
+      "rawFindingId": "20260708-020013-pr-task-attachments-takt-add-p:reviewers:4:arch-review:arch-review-4-resolved-002",
+      "stepName": "arch-review",
+      "reviewer": "arch-review",
+      "familyTag": "ai-scope-creep",
+      "severity": "medium",
+      "title": "builtin workflow の契約検証迂回は解消済み",
+      "location": "src/infra/config/loaders/workflowResolver.ts:219",
+      "description": "`loadValidatedWorkflowEntry()` は builtin 分岐の早期 return を持たず、`loadValidatedWorkflowDiscoveryEntry()` 経由で `validateLoadedWorkflowEntryContracts()` を呼びます。`loadValidatedWorkflowConfigEntry()` も `src/infra/config/loaders/workflowResolver.ts:232` で source に関係なく `validateLoadedWorkflowEntryContracts(workflow, cwd, true)` を実行しています。`src/__tests__/workflowCallContractValidator.test.ts:21` には builtin workflow の unsupported child return が検出される回帰テストも追加されています。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0014"
+    },
+    {
+      "rawFindingId": "20260708-020013-pr-task-attachments-takt-add-p:reviewers:4:arch-review:arch-review-4-resolved-003",
+      "stepName": "arch-review",
+      "reviewer": "arch-review",
+      "familyTag": "workflow-resolution-order",
+      "severity": "medium",
+      "title": "listWorkflows の project-local override 重複表示は解消済み",
+      "location": "src/infra/config/loaders/workflowResolver.ts:432",
+      "description": "`listWorkflows()` は現在 builtinEntries と validatedEntries の単純連結ではなく、全 entries を `collectValidatedWorkflowEntries()` に通してから name を返しているため、同名 workflow は Map 集約で1件に正規化されます。`src/__tests__/config.test.ts:756` 付近で `listWorkflows(testDir).filter((workflow) => workflow === 'default')` が1件であることも検証されています。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0015"
+    },
+    {
+      "rawFindingId": "20260708-020013-pr-task-attachments-takt-add-p:reviewers:4:arch-review:arch-review-4-resolved-004",
+      "stepName": "arch-review",
+      "reviewer": "arch-review",
+      "familyTag": "implementation-semantics:workflow-shadowing",
+      "severity": "medium",
+      "title": "shadow された builtin workflow の同名返却は解消済み",
+      "location": "src/infra/config/loaders/workflowResolver.ts:397",
+      "description": "`listWorkflowEntries()` の返却は `collectValidatedWorkflowEntries(...).map(({ entry }) => entry)` になっており、shadow された builtin と project workflow を同時に返す構造ではありません。`src/__tests__/config.test.ts:756` 付近で `entries[0]!.source` が `project` になることを確認するテストも追加されています。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0016"
+    },
+    {
+      "rawFindingId": "20260708-020013-pr-task-attachments-takt-add-p:reviewers:4:arch-review:arch-review-4-issue-001",
+      "stepName": "arch-review",
+      "reviewer": "arch-review",
+      "familyTag": "arch-validation-performance",
+      "severity": "high",
+      "title": "builtin workflow 一覧・一括ロードがテスト timeout を起こして品質ゲートを満たしていない",
+      "location": "src/infra/config/loaders/workflowResolver.ts:432",
+      "description": "open findings の重複排除と validation bypass は解消されていますが、現在の `listWorkflows()` は名前一覧を返すだけの経路で `getWorkflowDirs()` から全 entry を作り、`collectValidatedWorkflowEntries(entries, cwd, options, loadWorkflowNameEntry)` を実行します。`loadWorkflowNameEntry()` は `loadWorkflowForDiscovery()` で全 builtin YAML を正規化するため、builtin 有効時の一覧取得が 15 秒制限を超えます。実行証跡として `npm test -- --run src/__tests__/workflowLoader.test.ts src/__tests__/workflowCallContractValidator.test.ts src/__tests__/config.test.ts` は失敗し、`config.test.ts:728` の `listWorkflows(testDir)`、`config.test.ts:779` の `loadAllWorkflows(testDir)`、`workflowLoader.test.ts:914` の `listWorkflows(tempDir)`、`workflowLoader.test.ts:1260` の builtin override テストが timeout しました。ユーザー要件の `npm test` 成功を満たしておらず、一覧 API の設計としても名前取得が全 workflow 正規化・契約検証に引きずられています。",
+      "suggestion": "名前一覧・entry 一覧・runtime 一括ロードの責務を分けてください。`listWorkflows()` は workflow 名と visibility 判定に必要な最小 metadata だけを読む経路にし、同名 shadowing は名前単位 Map で維持してください。runtime の `loadAllWorkflows()` は validation を維持しつつ、builtin の繰り返しロード・検証がテスト timeout を超えない粒度で cache するか、検証済み builtin metadata を再利用してください。修正後に今回失敗した3テストファイルと `npm test` を再実行してください。",
+      "kind": "issue"
+    },
+    {
+      "rawFindingId": "20260708-020013-pr-task-attachments-takt-add-p:reviewers:4:ai-antipattern-review:ai-antipattern-r4-resolved-0013",
+      "stepName": "ai-antipattern-review",
+      "reviewer": "ai-antipattern-review",
+      "familyTag": "logic-error",
+      "severity": "medium",
+      "title": "解消確認: listWorkflowEntries の同名 workflow 重複公開は解消済み",
+      "location": "src/infra/config/loaders/workflowResolver.ts:397",
+      "description": "`listWorkflowEntries()` は現在 `collectValidatedWorkflowEntries(entries, cwd, options, loadValidatedWorkflowEntry)` の結果だけを返しており、`collectValidatedWorkflowEntries()` 側は `Map#set(entry.name, ...)` で同名 workflow を1件に正規化する経路へ戻っています。builtinEntries と validatedEntries の単純連結は現在の実コードに存在しません。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0013"
+    },
+    {
+      "rawFindingId": "20260708-020013-pr-task-attachments-takt-add-p:reviewers:4:ai-antipattern-review:ai-antipattern-r4-resolved-0014",
+      "stepName": "ai-antipattern-review",
+      "reviewer": "ai-antipattern-review",
+      "familyTag": "scope-creep",
+      "severity": "medium",
+      "title": "解消確認: builtin workflow の契約検証迂回は解消済み",
+      "location": "src/infra/config/loaders/workflowResolver.ts:219",
+      "description": "`loadValidatedWorkflowEntry()` は現在 `loadValidatedWorkflowDiscoveryEntry()` を呼び、その `validateWorkflowCallContracts` callback から `validateLoadedWorkflowEntryContracts()` を実行しています。runtime 側も `loadValidatedWorkflowConfigEntry()` の `src/infra/config/loaders/workflowResolver.ts:232` で `validateLoadedWorkflowEntryContracts(workflow, cwd, true)` を実行しており、builtin 全体を未検証で返す分岐は現在の実コードに存在しません。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0014"
+    },
+    {
+      "rawFindingId": "20260708-020013-pr-task-attachments-takt-add-p:reviewers:4:ai-antipattern-review:ai-antipattern-r4-resolved-0015",
+      "stepName": "ai-antipattern-review",
+      "reviewer": "ai-antipattern-review",
+      "familyTag": "logic-error",
+      "severity": "medium",
+      "title": "解消確認: listWorkflows の project-local override 重複表示は解消済み",
+      "location": "src/infra/config/loaders/workflowResolver.ts:436",
+      "description": "`listWorkflows()` は現在 `collectValidatedWorkflowEntries(entries, cwd, options, loadWorkflowNameEntry)` の結果から名前を生成しており、同名 workflow は `collectValidatedWorkflowEntries()` の Map 集約で1件に正規化されます。builtin と project-local の同名 entry を単純連結する実装は残っていません。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0015"
+    },
+    {
+      "rawFindingId": "20260708-020013-pr-task-attachments-takt-add-p:reviewers:4:ai-antipattern-review:ai-antipattern-r4-resolved-0016",
+      "stepName": "ai-antipattern-review",
+      "reviewer": "ai-antipattern-review",
+      "familyTag": "logic-error",
+      "severity": "medium",
+      "title": "解消確認: shadow された builtin workflow の同名返却は解消済み",
+      "location": "src/infra/config/loaders/workflowResolver.ts:397",
+      "description": "`listWorkflowEntries()` は現在、builtin/user/project/repertoire の entries をまとめたうえで `collectValidatedWorkflowEntries()` に渡しています。同関数は workflow 名を key にした Map へ投入するため、後続 source が同名 builtin を上書きする既存優先順位の経路に戻っています。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0016"
+    },
+    {
+      "rawFindingId": "20260708-020013-pr-task-attachments-takt-add-p:reviewers:4:ai-antipattern-review:ai-antipattern-r4-001",
+      "stepName": "ai-antipattern-review",
+      "reviewer": "ai-antipattern-review",
+      "familyTag": "scope-creep",
+      "severity": "medium",
+      "title": "builtin workflow cache が project/global 設定差を無視して別プロジェクトの正規化済み config を再利用する",
+      "location": "src/infra/config/loaders/workflowResolver.ts:81",
+      "description": "今回追加された `builtinWorkflowCache` は cache key を `mode`, `resolve(filePath)`, `callableArgs` だけで作り、`projectCwd`, global config, project config を含めていません。一方で実際の loader は `src/infra/config/loaders/workflowFileLoader.ts:47` で project ごとの language/context を作り、`src/infra/config/loaders/workflowFileLoader.ts:53` 以降で project/global の `workflowOverrides`, runtime prepare, arpeggio, MCP servers, command gates policy を使って `normalizeWorkflowConfig()` します。そのため同じ builtin workflow path を別プロジェクトで読み込むと、先に読まれたプロジェクトの設定で正規化された `WorkflowConfig` が後続プロジェクトにも返り得ます。PR添付画像機能とは無関係な早すぎるキャッシュ導入で、設定境界の意味契約を壊しています。",
+      "suggestion": "このタスクでは builtin workflow cache を削除し、従来どおり project/global 設定ごとに loader を通してください。性能対策が必要なら別タスクで、cache key に project/global 設定の有効入力を含めるか、設定依存しない raw parse だけを cache する設計に分離し、異なる project `.takt/config.yaml` の `workflow_overrides` が builtin workflow に混入しない回帰テストを追加してください。",
+      "kind": "issue"
+    },
+    {
+      "rawFindingId": "20260708-020013-pr-task-attachments-takt-add-p:reviewers:4:coding-review:coding-review-4-resolve-1",
+      "stepName": "coding-review",
+      "reviewer": "coding-review",
+      "familyTag": "bug",
+      "severity": "medium",
+      "title": "listWorkflowEntries の同名 workflow 重複公開は解消済み",
+      "location": "src/infra/config/loaders/workflowResolver.ts:393",
+      "description": "現在の listWorkflowEntries() は entries 全体を collectValidatedWorkflowEntries(entries, cwd, options, loadValidatedWorkflowEntry) に渡しており、WorkflowDiscovery の Map#set による名前単位の後勝ち統合が復元されています。実行確認でも project-local default.yaml がある場合の listWorkflowEntries(project).filter(name === 'default') は project 1件、listWorkflows(project).filter(default) も1件でした。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0013"
+    },
+    {
+      "rawFindingId": "20260708-020013-pr-task-attachments-takt-add-p:reviewers:4:coding-review:coding-review-4-resolve-2",
+      "stepName": "coding-review",
+      "reviewer": "coding-review",
+      "familyTag": "bug",
+      "severity": "medium",
+      "title": "builtin workflow の契約検証迂回は解消済み",
+      "location": "src/infra/config/loaders/workflowResolver.ts:219",
+      "description": "現在の loadValidatedWorkflowEntry() は builtin 分岐で bypass せず loadValidatedWorkflowDiscoveryEntry() を通り、loadValidatedWorkflowConfigEntry() も src/infra/config/loaders/workflowResolver.ts:232 で validateLoadedWorkflowEntryContracts(workflow, cwd, true) を常に実行しています。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0014"
+    },
+    {
+      "rawFindingId": "20260708-020013-pr-task-attachments-takt-add-p:reviewers:4:coding-review:coding-review-4-resolve-3",
+      "stepName": "coding-review",
+      "reviewer": "coding-review",
+      "familyTag": "bug",
+      "severity": "medium",
+      "title": "listWorkflows の project-local override 重複表示は解消済み",
+      "location": "src/infra/config/loaders/workflowResolver.ts:432",
+      "description": "現在の listWorkflows() は entries 全体を collectValidatedWorkflowEntries() に通して名前単位で統合した結果だけを返します。実行確認でも builtin 有効かつ .takt/workflows/default.yaml がある環境で default は1件のみ、source は project でした。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0015"
+    },
+    {
+      "rawFindingId": "20260708-020013-pr-task-attachments-takt-add-p:reviewers:4:coding-review:coding-review-4-resolve-4",
+      "stepName": "coding-review",
+      "reviewer": "coding-review",
+      "familyTag": "bug",
+      "severity": "medium",
+      "title": "shadow された builtin workflow の同名返却は解消済み",
+      "location": "src/infra/config/loaders/workflowResolver.ts:393",
+      "description": "listWorkflowEntries() は builtin と project/user を分離して単純連結する構造ではなく、全 entry を collectValidatedWorkflowEntries() に渡しています。実行確認で loadAllWorkflowsWithSources(project).get('default')?.source は project、listWorkflowEntries(project).filter(default) も project 1件のみでした。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0016"
+    },
+    {
+      "rawFindingId": "20260708-020013-pr-task-attachments-takt-add-p:reviewers:4:coding-review:coding-review-4-1",
+      "stepName": "coding-review",
+      "reviewer": "coding-review",
+      "familyTag": "bug",
+      "severity": "medium",
+      "title": "builtin workflow cache が project/global config を無視して別プロジェクトへ漏れる",
+      "location": "src/infra/config/loaders/workflowResolver.ts:81",
+      "description": "新規追加された buildBuiltinWorkflowCacheKey() は mode、filePath、callableArgs だけで key を作り、projectCwd/lookupCwd や project/global config を含めていません。しかし loadWorkflowFromFileInternal() は projectDir から language、workflow_overrides、workflow_runtime_prepare、workflow_mcp_servers、workflow_command_gates などを読み込んで WorkflowConfig を正規化します。実行確認では project1 の .takt/config.yaml に workflow_overrides.personas.coder.quality_gates: [P1 gate] を設定して loadWorkflow('default', project1) した後、設定なしの project2 で loadWorkflow('default', project2) しても write_tests.qualityGates が [P1 gate] となり、w1 === w2 も true でした。",
+      "suggestion": "builtin workflow cache を削除するか、少なくとも projectCwd/lookupCwd と正規化に影響する config 世代を cache key に含め、invalidateGlobalConfigCache()/invalidateAllResolvedConfigCache() と同じタイミングで破棄してください。project ごとの workflow_overrides が builtin workflow に混入しない回帰テストを追加してください。",
+      "kind": "issue"
+    },
+    {
+      "rawFindingId": "20260708-020013-pr-task-attachments-takt-add-p:reviewers:4:coding-review:coding-review-4-2",
+      "stepName": "coding-review",
+      "reviewer": "coding-review",
+      "familyTag": "bug",
+      "severity": "high",
+      "title": "npm test が builtin workflow listing/loading の timeout で失敗する",
+      "location": "src/infra/config/loaders/workflowResolver.ts:432",
+      "description": "品質要件の npm test を再実行したところ exit=1 でした。失敗は src/__tests__/config.test.ts:728 の listWorkflows builtin fallback、src/__tests__/config.test.ts:779 の loadAllWorkflows builtin fallback、src/__tests__/workflowDiscovery.test.ts:10、src/__tests__/workflowLoader.test.ts:914、src/__tests__/workflowLoader.test.ts:1260 の timeout です。現在の listWorkflows() は名前一覧取得だけのために entries 全体を loadWorkflowNameEntry 経由で loadWorkflowForDiscovery() しており、builtin 有効時の一覧/ロードがテスト timeout する性能リグレッションとして観測されました。",
+      "suggestion": "listWorkflows()/builtin fallback の名前一覧経路は、重複排除と internal callable 除外を保ちながら不要な全 workflow 正規化を避けてください。少なくとも既存の builtin listing/loading テストが 15 秒 timeout しない構造に戻し、npm test を再実行して成功させてください。",
+      "kind": "issue"
+    },
+    {
+      "rawFindingId": "20260708-020013-pr-task-attachments-takt-add-p:reviewers:4:implementation-semantics-review:implementation-semantics-raw-4-1",
+      "stepName": "implementation-semantics-review",
+      "reviewer": "implementation-semantics-review",
+      "familyTag": "implementation-semantics:meaning-contract",
+      "severity": "medium",
+      "title": "listWorkflowEntries の同名 workflow 重複公開は解消済み",
+      "location": "src/infra/config/loaders/workflowResolver.ts:393",
+      "description": "現在の `listWorkflowEntries()` は `builtinEntries` と `validatedEntries` の単純連結ではなく、`collectValidatedWorkflowEntries(entries, cwd, options, loadValidatedWorkflowEntry).map(({ entry }) => entry)` を返しています。実確認でも project-local `.takt/workflows/default.yaml` が builtin `default` を shadow する環境で、`listWorkflowEntries(project).filter(name === 'default')` は source `project` の1件のみ、`listWorkflows(project)` も `default` 1件のみ、`loadAllWorkflowsWithSources(project).get('default')?.source` も `project` でした。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0013"
+    },
+    {
+      "rawFindingId": "20260708-020013-pr-task-attachments-takt-add-p:reviewers:4:implementation-semantics-review:implementation-semantics-raw-4-2",
+      "stepName": "implementation-semantics-review",
+      "reviewer": "implementation-semantics-review",
+      "familyTag": "implementation-semantics:meaning-contract",
+      "severity": "medium",
+      "title": "listWorkflows の project-local override と builtin の重複表示は解消済み",
+      "location": "src/infra/config/loaders/workflowResolver.ts:432",
+      "description": "現在の `listWorkflows()` は `collectValidatedWorkflowEntries(entries, cwd, options, loadWorkflowNameEntry)` の結果から名前を作っており、同名 workflow は `collectValidatedWorkflowEntries()` の `Map#set` 後勝ち正規化を通ります。実確認で project-local `default.yaml` がある環境の `listWorkflows(project).filter(name => name === 'default')` は1件のみでした。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0015"
+    },
+    {
+      "rawFindingId": "20260708-020013-pr-task-attachments-takt-add-p:reviewers:4:implementation-semantics-review:implementation-semantics-raw-4-3",
+      "stepName": "implementation-semantics-review",
+      "reviewer": "implementation-semantics-review",
+      "familyTag": "implementation-semantics:meaning-contract",
+      "severity": "medium",
+      "title": "shadow された builtin workflow を同名で返す問題は解消済み",
+      "location": "src/infra/config/loaders/workflowResolver.ts:397",
+      "description": "`listWorkflowEntries()` は現在、全 entry を同一の `collectValidatedWorkflowEntries()` に渡して workflow 名単位で正規化しています。project-local `default.yaml` が builtin `default` を shadow する実確認では、`listWorkflowEntries(project).filter(entry => entry.name === 'default')` は source `project` の1件だけでした。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0016"
+    },
+    {
+      "rawFindingId": "20260708-020013-pr-task-attachments-takt-add-p:reviewers:4:implementation-semantics-review:implementation-semantics-raw-4-4",
+      "stepName": "implementation-semantics-review",
+      "reviewer": "implementation-semantics-review",
+      "familyTag": "implementation-semantics:fail-fast",
+      "severity": "medium",
+      "title": "builtin workflow の直接的な契約検証迂回は解消済み",
+      "location": "src/infra/config/loaders/workflowResolver.ts:219",
+      "description": "現在の `loadValidatedWorkflowEntry()` は source が builtin でも `loadValidatedWorkflowDiscoveryEntry()` を呼び、渡した `validateWorkflowCallContracts` callback から `validateLoadedWorkflowEntryContracts()` に到達します。また `loadValidatedWorkflowConfigEntry()` も `loadWorkflowForRuntime()` 後に `validateLoadedWorkflowEntryContracts(workflow, cwd, true)` を実行しており、F-0014 で指摘された `entry.source === 'builtin'` による検証 bypass 分岐は存在しません。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0014"
+    },
+    {
+      "rawFindingId": "20260708-020013-pr-task-attachments-takt-add-p:reviewers:4:implementation-semantics-review:implementation-semantics-raw-4-5",
+      "stepName": "implementation-semantics-review",
+      "reviewer": "implementation-semantics-review",
+      "familyTag": "implementation-semantics:state-normalization",
+      "severity": "medium",
+      "title": "builtin workflow cache が projectCwd を含まず project 固有の正規化結果を別 project に再利用する",
+      "location": "src/infra/config/loaders/workflowResolver.ts:81; src/infra/config/loaders/workflowCallContractValidator.ts:56",
+      "description": "`buildBuiltinWorkflowCacheKey()` は `mode`、workflow file path、callable args だけで key を作り、`projectCwd` や project/global config の正規化結果を含めていません。しかし `loadWorkflowFromFileInternal()` は `projectDir` に基づいて `workflow_overrides`、`workflow_command_gates`、facet resolution context などを適用して `WorkflowConfig` を作ります。実確認では project A の `.takt/config.yaml` に `workflow_overrides.quality_gates: [\"A gate\"]`、project B に `[\"B gate\"]` を置いて同一プロセスで builtin `default` をロードすると、B 側の最初の quality gate も `A gate` になり、`workflowA === workflowB` も `true` でした。さらに `validatedBuiltinWorkflowCallContracts` も key に `projectCwd` を含めないため、project A で builtin `default` を検証した後、project B が project-local `default-draft` で `need_replan` return を消しても、単独ロードなら `workflow_call step \"draft\" cannot route on unsupported child result \"need_replan\"` で失敗する設定が、A 後の B ロードでは `ok` になりました。これは project ごとに導出される workflow 正規化状態と検証状態を単一 cache に混在させ、境界での fail-fast も失わせています。",
+      "suggestion": "builtin workflow の cache key と builtin validation cache key に、少なくとも `projectCwd` と `lookupCwd`、および正規化へ影響する config 世代を含めるか、project 固有の正規化・検証を受ける `WorkflowConfig` は共有 cache しない構造にしてください。あわせて同一プロセス内で別 project の `workflow_overrides` が混ざらないこと、project-local child workflow が builtin workflow_call の return contract に違反する場合は前に別 project をロードしていても fail-fast することをテストしてください。",
+      "kind": "issue"
+    },
+    {
+      "rawFindingId": "20260708-020013-pr-task-attachments-takt-add-p:reviewers:5:arch-review:arch-5-resolve-f0018",
+      "stepName": "arch-review",
+      "reviewer": "arch-review",
+      "familyTag": "cache-boundary",
+      "severity": "medium",
+      "title": "builtin workflow cache の project/global 設定差無視は解消済み",
+      "location": "src/infra/config/loaders/workflowResolver.ts:102",
+      "description": "`rg builtinWorkflowCache` で旧グローバル cache は存在しないことを確認しました。現在の cache key は `filePath` に加えて `projectCwd`、`lookupCwd`、`source`、`loadMode`、`callableArgs`、`parentTrustInfo` を含み、`src/__tests__/config.test.ts:484` と `src/__tests__/config.test.ts:528` で別 project の workflow_overrides が混入せず workflow object も共有されないことを検証しています。対象テスト群 `config.test.ts workflowLoader.test.ts workflowCallContractValidator.test.ts workflowDiscovery.test.ts` は 4 files / 195 tests 成功しました。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0018"
+    },
+    {
+      "rawFindingId": "20260708-020013-pr-task-attachments-takt-add-p:reviewers:5:arch-review:arch-5-resolve-f0019",
+      "stepName": "arch-review",
+      "reviewer": "arch-review",
+      "familyTag": "cache-boundary",
+      "severity": "medium",
+      "title": "builtin workflow cache の別 project 漏れは解消済み",
+      "location": "src/infra/config/loaders/workflowResolver.ts:444",
+      "description": "`loadAllWorkflowsWithSources()` は実行ごとに `const workflowConfigCache: WorkflowConfigCache = new Map()` を作成し、`buildWorkflowConfigCacheKey()` は `projectCwd` と `lookupCwd` を含みます。`src/__tests__/config.test.ts:498` の回帰テストで project A/B の `workflow_overrides.personas.coder.quality_gates` が混ざらず、`workflowA` と `workflowB` が同一 object でないことを確認する構造になっています。対象テスト群は成功しました。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0019"
+    },
+    {
+      "rawFindingId": "20260708-020013-pr-task-attachments-takt-add-p:reviewers:5:ai-antipattern-review:ai-antipattern-r5-resolved-0017",
+      "stepName": "ai-antipattern-review",
+      "reviewer": "ai-antipattern-review",
+      "familyTag": "logic-error",
+      "severity": "high",
+      "title": "解消確認: builtin workflow 一覧・一括ロードの timeout は解消済み",
+      "location": "src/infra/config/loaders/workflowResolver.ts:517",
+      "description": "`listWorkflows()` は現在 `loadWorkflowNameEntry()` 経由になっており、builtin entry では `loadBuiltinWorkflowNameEntry()` が YAML の `name` / `description` / `subworkflow` metadata だけを読むため、名前一覧取得で全 builtin workflow の runtime 正規化を行っていません。検証として `npm test -- --run src/__tests__/workflowLoader.test.ts src/__tests__/workflowCallContractValidator.test.ts src/__tests__/config.test.ts` は 3 files / 193 tests passed、さらに `npm test` は exit 0 でした。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0017"
+    },
+    {
+      "rawFindingId": "20260708-020013-pr-task-attachments-takt-add-p:reviewers:5:ai-antipattern-review:ai-antipattern-r5-resolved-0018",
+      "stepName": "ai-antipattern-review",
+      "reviewer": "ai-antipattern-review",
+      "familyTag": "scope-creep",
+      "severity": "medium",
+      "title": "解消確認: builtin workflow cache の project/global 設定漏れは解消済み",
+      "location": "src/infra/config/loaders/workflowResolver.ts:102",
+      "description": "旧 `builtinWorkflowCache` / `buildBuiltinWorkflowCacheKey()` は現在存在せず、`buildWorkflowConfigCacheKey()` は `filePath`, `projectCwd`, `lookupCwd`, `source`, `loadMode`, `callableArgs`, `parentTrustInfo` を key に含めています。また `loadWorkflow()` / `getBuiltinWorkflow()` は scoped cache を使っておらず、`loadAllWorkflowsWithSources()` 内だけで `new Map()` した per-call cache を使う構造です。`src/__tests__/config.test.ts:454` と `src/__tests__/config.test.ts:498` で別 project の workflow_overrides が混入しない回帰テストも確認しました。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0018"
+    },
+    {
+      "rawFindingId": "20260708-020013-pr-task-attachments-takt-add-p:reviewers:5:ai-antipattern-review:ai-antipattern-r5-resolved-0019",
+      "stepName": "ai-antipattern-review",
+      "reviewer": "ai-antipattern-review",
+      "familyTag": "scope-creep",
+      "severity": "medium",
+      "title": "解消確認: builtin workflow cache の別プロジェクト漏れは解消済み",
+      "location": "src/infra/config/loaders/workflowResolver.ts:444",
+      "description": "`loadAllWorkflowsWithSources()` は呼び出しごとに `const workflowConfigCache: WorkflowConfigCache = new Map()` を作成し、cache key には `projectCwd` と `lookupCwd` が含まれています。`src/__tests__/config.test.ts:454` では project A / B の `workflow_overrides.personas.coder.quality_gates` が互いに混入せず、`workflowA` と `workflowB` が別インスタンスであることを検証しています。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0019"
+    },
+    {
+      "rawFindingId": "20260708-020013-pr-task-attachments-takt-add-p:reviewers:5:ai-antipattern-review:ai-antipattern-r5-resolved-0020",
+      "stepName": "ai-antipattern-review",
+      "reviewer": "ai-antipattern-review",
+      "familyTag": "logic-error",
+      "severity": "high",
+      "title": "解消確認: npm test の builtin listing/loading timeout は解消済み",
+      "location": "src/infra/config/loaders/workflowResolver.ts:517",
+      "description": "timeout していた `listWorkflows()` は builtin workflow の名前取得で full discovery load を避ける実装になっています。検証として `npm run build`、`npm run lint`、`git diff --check` は exit 0、`npm test` も exit 0 でした。`npm test -- --run src/__tests__/workflowLoader.test.ts src/__tests__/workflowCallContractValidator.test.ts src/__tests__/config.test.ts` も 3 files / 193 tests passed で、前回 timeout した対象ファイル群が成功しています。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0020"
+    },
+    {
+      "rawFindingId": "20260708-020013-pr-task-attachments-takt-add-p:reviewers:5:coding-review:coding-review-5-001",
+      "stepName": "coding-review",
+      "reviewer": "coding-review",
+      "familyTag": "bug",
+      "severity": "medium",
+      "title": "builtin workflow cache が project/global config を無視する問題の解消確認",
+      "location": "src/infra/config/loaders/workflowResolver.ts:102",
+      "description": "src/infra/config/loaders/workflowResolver.ts:102-131 で workflow cache key が filePath に加えて projectCwd、lookupCwd、source、loadMode、callableArgs、parentTrustInfo を含む scoped cache になっていることを確認しました。さらに build 後の実行確認で project1 の quality gate は P1 gate、project2 は P2 gate、loadWorkflow/loadAllWorkflows とも workflow object は別インスタンスでした。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0018"
+    },
+    {
+      "rawFindingId": "20260708-020013-pr-task-attachments-takt-add-p:reviewers:5:coding-review:coding-review-5-002",
+      "stepName": "coding-review",
+      "reviewer": "coding-review",
+      "familyTag": "bug",
+      "severity": "medium",
+      "title": "builtin workflow cache の別 project への混入解消確認",
+      "location": "src/infra/config/loaders/workflowResolver.ts:114",
+      "description": "src/infra/config/loaders/workflowResolver.ts:114-131 の loadWorkflowFileWithScopedCache は呼び出し側から渡された cache のみを使い、src/infra/config/loaders/workflowResolver.ts:321-329 の loadWorkflow 経路では共有 cache を渡していません。実行確認でも project1 の workflow_overrides が project2 に混入せず、loadAllWorkflows 側も project 別の quality gate を返しました。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0019"
+    },
+    {
+      "rawFindingId": "20260708-020013-pr-task-attachments-takt-add-p:reviewers:5:implementation-semantics-review:implementation-semantics-raw-5-1",
+      "stepName": "implementation-semantics-review",
+      "reviewer": "implementation-semantics-review",
+      "familyTag": "implementation-semantics:state-normalization",
+      "severity": "medium",
+      "title": "builtin workflow cache の project/global 設定混入は解消済み",
+      "location": "src/infra/config/loaders/workflowResolver.ts:102",
+      "description": "現在の workflow config cache key は `filePath`, `projectCwd`, `lookupCwd`, `source`, `loadMode`, `callableArgs`, `parentTrustInfo` を含みます。また cache は `loadAllWorkflowsWithSources()` 内で作る `workflowConfigCache: new Map()` に限定され、`loadWorkflow()` 経路では cache を渡していません。実確認でも project A/B に別々の `workflow_overrides.personas.coder.quality_gates` を設定した状態で、direct load と `loadAllWorkflows()` の双方が A/B それぞれの gate を返しました。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0018"
+    },
+    {
+      "rawFindingId": "20260708-020013-pr-task-attachments-takt-add-p:reviewers:5:implementation-semantics-review:implementation-semantics-raw-5-2",
+      "stepName": "implementation-semantics-review",
+      "reviewer": "implementation-semantics-review",
+      "familyTag": "implementation-semantics:state-normalization",
+      "severity": "medium",
+      "title": "builtin workflow cache の別プロジェクト漏れは解消済み",
+      "location": "src/infra/config/loaders/workflowResolver.ts:114",
+      "description": "現在は module-level の `builtinWorkflowCache` ではなく、任意に渡された scoped `workflowConfigCache` を使う `loadWorkflowFileWithScopedCache()` になっています。cache key も `projectCwd` / `lookupCwd` を含むため、実確認で project1 の `workflow_overrides` が project2 の builtin `default` に混入せず、project2 側は project2 の gate を返しました。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0019"
+    },
+    {
+      "rawFindingId": "20260708-020013-pr-task-attachments-takt-add-p:reviewers:5:implementation-semantics-review:implementation-semantics-raw-5-3",
+      "stepName": "implementation-semantics-review",
+      "reviewer": "implementation-semantics-review",
+      "familyTag": "implementation-semantics:fail-fast",
+      "severity": "medium",
+      "title": "builtin workflow call validation cache が同一 project 内の workflow 変更後も古い成功を再利用する",
+      "location": "src/infra/config/loaders/workflowCallContractValidator.ts:31",
+      "description": "`validatedBuiltinWorkflowCallContracts` は module-level の `Set` で、key は `projectCwd`, `lookupCwd`, parent workflow path, `allowPathBasedCalls` だけです。`invalidateAllResolvedConfigCache()` は config caches だけを clear し、この validation Set を clear しません。実確認では、同一 project で一度 `loadWorkflow('default', project)` を成功させた後、project-local `.takt/workflows/default-draft.yaml` を `need_replan` を返さない invalid child に差し替え、`invalidateGlobalConfigCache()` / `invalidateAllResolvedConfigCache()` 後に再度 `loadWorkflow('default', project)` しても `ok` になりました。一方、同じ invalid child を最初から置いた project を fresh に load すると `workflow_call step \"draft\" cannot route on unsupported child result \"need_replan\"` で失敗します。契約違反が境界で fail-fast せず、過去の成功状態が現在の workflow graph に漏れています。",
+      "suggestion": "builtin workflow call validation の成功 cache を module-global に残す場合は、project workflow/config の世代または child resolution 結果を key に含め、`invalidateAllResolvedConfigCache()` と同じタイミングで clear してください。より単純には、`workflowConfigCache` と同じく単一 load/list operation に閉じた validation cache にして、workflow ファイル変更後に contract 違反が再検出されるテストを追加してください。",
+      "kind": "issue"
+    },
+    {
+      "rawFindingId": "20260708-020013-pr-task-attachments-takt-add-p:reviewers:6:arch-review:arch-6-resolve-f0021",
+      "stepName": "arch-review",
+      "reviewer": "arch-review",
+      "familyTag": "cache-boundary",
+      "severity": "medium",
+      "title": "builtin workflow cache の project 固有正規化・検証結果再利用は解消済み",
+      "location": "src/infra/config/loaders/workflowResolver.ts:106; src/infra/config/loaders/workflowResolver.ts:486; src/infra/config/loaders/workflowCallContractValidator.ts:146",
+      "description": "現在コードでは旧 `buildBuiltinWorkflowCacheKey` / `builtinWorkflowCache` は存在せず、workflow config cache key は `projectCwd`、`lookupCwd`、`source`、`loadMode`、`callableArgs`、`parentTrustInfo` を含みます。`loadAllWorkflowsWithSources()` も呼び出しごとに operation-local の `workflowConfigCache` と `workflowValidationStateKeyCache` を作っています。builtin workflow call validation key は `validationKey` に加えて project/global config と workflow file state を含む `getProjectWorkflowValidationStateKey()` を組み込んでいます。回帰テスト `npm test -- --run src/__tests__/config.test.ts src/__tests__/workflowLoader.test.ts src/__tests__/workflowCallContractValidator.test.ts src/__tests__/workflowDiscovery.test.ts` は 4 files / 196 tests 成功し、全体 `npm test` も全 shard 成功しました。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0021"
+    },
+    {
+      "rawFindingId": "20260708-020013-pr-task-attachments-takt-add-p:reviewers:6:arch-review:arch-6-resolve-f0022",
+      "stepName": "arch-review",
+      "reviewer": "arch-review",
+      "familyTag": "validation-cache-boundary",
+      "severity": "medium",
+      "title": "builtin workflow call validation cache の同一 project 変更後の古い成功再利用は解消済み",
+      "location": "src/infra/config/loaders/workflowCallContractValidator.ts:88; src/__tests__/config.test.ts:586",
+      "description": "`buildProjectWorkflowValidationStateKey()` は global/project config と global/project/lookup workflow file state を key 化し、builtin validation cache key に含めています。`src/__tests__/config.test.ts:586` では同一 project で builtin `default` を一度 load 後、project-local `default-draft.yaml` を追加して `invalidateGlobalConfigCache()` / `invalidateAllResolvedConfigCache()` 後に再 load すると unsupported child result を検出することを固定しています。対象テスト群は 4 files / 196 tests 成功し、全体 `npm test` も成功しました。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0022"
+    },
+    {
+      "rawFindingId": "20260708-020013-pr-task-attachments-takt-add-p:reviewers:6:ai-antipattern-review:ai-antipattern-r6-resolved-0021",
+      "stepName": "ai-antipattern-review",
+      "reviewer": "ai-antipattern-review",
+      "familyTag": "scope-creep",
+      "severity": "medium",
+      "title": "解消確認: builtin workflow の project 固有 cache 混入は解消済み",
+      "location": "src/infra/config/loaders/workflowResolver.ts:106; src/infra/config/loaders/workflowCallContractValidator.ts:146",
+      "description": "`buildWorkflowConfigCacheKey()` は `filePath`, `projectCwd`, `lookupCwd`, `source`, `loadMode`, `callableArgs`, `parentTrustInfo` を key に含めており、runtime workflow config cache は `loadAllWorkflowsWithSources()` 内の per-call `Map` に閉じています。さらに builtin workflow call validation key は `getProjectWorkflowValidationStateKey(projectCwd, lookupCwd, ...)` を含み、その state key は global/project config と project/lookup workflows の file state を含みます。`src/__tests__/config.test.ts:454`, `src/__tests__/config.test.ts:498`, `src/__tests__/config.test.ts:542` で別 project の overrides と shadowed child contract が混入しないことを確認しました。`npm run build`, `npm run lint`, 対象テスト、再実行した `npm test` は exit 0 でした。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0021"
+    },
+    {
+      "rawFindingId": "20260708-020013-pr-task-attachments-takt-add-p:reviewers:6:ai-antipattern-review:ai-antipattern-r6-resolved-0022",
+      "stepName": "ai-antipattern-review",
+      "reviewer": "ai-antipattern-review",
+      "familyTag": "missing-edge-case",
+      "severity": "medium",
+      "title": "解消確認: 同一 project 内 workflow 変更後の validation stale cache は解消済み",
+      "location": "src/infra/config/loaders/workflowCallContractValidator.ts:88; src/__tests__/config.test.ts:586",
+      "description": "builtin validation cache の key は `getProjectWorkflowValidationStateKey()` を含むため、同一 project の `.takt/workflows` 配下の YAML file state が変わると以前の成功 key とは別 key になります。`src/__tests__/config.test.ts:586` の回帰テストは、一度 `loadWorkflow('default', testDir)` に成功した後に project-local `default-draft.yaml` を contract 違反へ変更し、`invalidateGlobalConfigCache()` / `invalidateAllResolvedConfigCache()` 後の再 `loadWorkflow('default', testDir)` が `workflow_call step \"draft\" cannot route on unsupported child result \"need_replan\"` で失敗することを検証しています。対象テストは 3 files / 194 tests passed、再実行した `npm test` も exit 0 でした。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0022"
+    },
+    {
+      "rawFindingId": "20260708-020013-pr-task-attachments-takt-add-p:reviewers:6:coding-review:coding-review-6-001",
+      "stepName": "coding-review",
+      "reviewer": "coding-review",
+      "familyTag": "bug",
+      "severity": "medium",
+      "title": "builtin workflow cache の project 固有正規化・検証混入解消確認",
+      "location": "src/infra/config/loaders/workflowResolver.ts:106",
+      "description": "src/infra/config/loaders/workflowResolver.ts:106-135 で WorkflowConfig cache key が filePath, projectCwd, lookupCwd, source, loadMode, callableArgs, parentTrustInfo を含む scoped key になっていることを確認しました。src/infra/config/loaders/workflowCallContractValidator.ts:146-151 では builtin validation key に workflow validation state key と path/named-call 条件が含まれます。build 後の再現確認でも project1/project2 の quality gate はそれぞれ P1 gate/P2 gate となり、loadWorkflow/loadAllWorkflows とも別インスタンスでした。また同一 project で後から不正な default-draft を追加した後の loadWorkflow('default') は workflow_call step \"draft\" cannot route on unsupported child result \"need_replan\" で失敗しました。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0021"
+    },
+    {
+      "rawFindingId": "20260708-020013-pr-task-attachments-takt-add-p:reviewers:6:coding-review:coding-review-6-002",
+      "stepName": "coding-review",
+      "reviewer": "coding-review",
+      "familyTag": "bug",
+      "severity": "medium",
+      "title": "builtin workflow call validation cache の古い成功再利用解消確認",
+      "location": "src/infra/config/loaders/workflowCallContractValidator.ts:88",
+      "description": "src/infra/config/loaders/workflowCallContractValidator.ts:88-116 で project/global config と workflow file state から validation state key を作り、src/infra/config/loaders/workflowCallContractValidator.ts:146-153 で builtin validation cache key に含めていることを確認しました。実行確認では、同一 project で一度 loadWorkflow('default') を成功させた後に invalid な project-local default-draft.yaml を追加し、invalidateGlobalConfigCache()/invalidateAllResolvedConfigCache() 後に再度 loadWorkflow('default') すると、期待通り workflow_call step \"draft\" cannot route on unsupported child result \"need_replan\" で失敗しました。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0022"
+    },
+    {
+      "rawFindingId": "20260708-020013-pr-task-attachments-takt-add-p:reviewers:6:implementation-semantics-review:implementation-semantics-raw-6-1",
+      "stepName": "implementation-semantics-review",
+      "reviewer": "implementation-semantics-review",
+      "familyTag": "implementation-semantics:state-normalization",
+      "severity": "medium",
+      "title": "builtin workflow cache の project 固有正規化・検証結果再利用は解消済み",
+      "location": "src/infra/config/loaders/workflowResolver.ts:106; src/infra/config/loaders/workflowCallContractValidator.ts:146",
+      "description": "`buildWorkflowConfigCacheKey()` は現在 `filePath`, `projectCwd`, `lookupCwd`, `source`, `loadMode`, `callableArgs`, `parentTrustInfo` を key に含めており、`loadAllWorkflowsWithSources()` 内の scoped `workflowConfigCache` は単一呼び出し内でのみ使われます。`workflowCallContractValidator.ts:146` 以降の builtin validation key も project/lookup の workflow/config file state を `getProjectWorkflowValidationStateKey()` で含めています。実確認では project A/B に別々の `workflow_overrides.personas.coder.quality_gates` を設定した場合、direct load と `loadAllWorkflows()` の双方で A/B それぞれの gate が返り、`workflowA === workflowB` は false でした。また project A で builtin `default` を検証後、project B の invalid project-local `default-draft` は `workflow_call step \"draft\" cannot route on unsupported child result \"need_replan\"` で fail-fast しました。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0021"
+    },
+    {
+      "rawFindingId": "20260708-020013-pr-task-attachments-takt-add-p:reviewers:6:implementation-semantics-review:implementation-semantics-raw-6-2",
+      "stepName": "implementation-semantics-review",
+      "reviewer": "implementation-semantics-review",
+      "familyTag": "implementation-semantics:fail-fast",
+      "severity": "medium",
+      "title": "workflow 変更後の古い builtin workflow call validation 成功再利用は解消済み",
+      "location": "src/infra/config/loaders/workflowCallContractValidator.ts:88",
+      "description": "`buildProjectWorkflowValidationStateKey()` は現在 global config、global workflows、project config、project workflows、および必要に応じて lookup workflows の file state を validation key に含めています。実確認では、同一 project で一度 `loadWorkflow('default', project)` を成功させた後、project-local `default-draft.yaml` を `need_replan` を返さない child に差し替え、`invalidateGlobalConfigCache()` / `invalidateAllResolvedConfigCache()` 後に再ロードすると、`workflow_call step \"draft\" cannot route on unsupported child result \"need_replan\"` が再検出されました。過去の成功 cache による `ok` は再現しませんでした。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0022"
+    },
+    {
+      "rawFindingId": "20260708-100701-pr-task-attachments-takt-add-p:reviewers:1:coding-review:coding-review-1",
+      "stepName": "coding-review",
+      "reviewer": "coding-review",
+      "familyTag": "bug",
+      "severity": "high",
+      "title": "npm test が workflowLoader の builtin override テスト timeout で失敗する",
+      "location": "src/infra/config/loaders/workflowResolver.ts:536; src/__tests__/workflowLoader.test.ts:1260",
+      "description": "品質要件の `npm test` を再実行したところ exit=1 でした。出力では `src/__tests__/workflowLoader.test.ts:1260` の `should have project-local override builtin when same name` が 15000ms timeout し、最終的に Vitest の `Timeout calling \"onTaskUpdate\"` unhandled error も発生しています。該当テストは `loadAllWorkflows(tempDir)` で builtin 有効時の project-local override を確認しており、現在の `loadAllWorkflows()` は `loadAllWorkflowsWithSources()` 経由で builtin を含む一覧を runtime load/contract validation するため、フルスイート条件で品質ゲートを満たせていません。",
+      "suggestion": "builtin 有効時の `loadAllWorkflows()`/override 経路がフルスイート内でも 15 秒 timeout しないよう、project-local shadowing 後に不要な builtin runtime load/validation を避ける、または validation/cache の粒度を見直してください。修正後に `npm test` を再実行して成功を確認してください。",
+      "kind": "issue"
+    },
+    {
+      "rawFindingId": "20260708-100701-pr-task-attachments-takt-add-p:reviewers:2:arch-review:arch-review-2-resolution-f0020",
+      "stepName": "arch-review",
+      "reviewer": "arch-review",
+      "familyTag": "bug",
+      "severity": "high",
+      "title": "F-0020 は解消済み",
+      "location": "src/infra/config/loaders/workflowDiscovery.ts:195; src/__tests__/workflowLoader.test.ts:72; src/__tests__/workflowLoader.test.ts:1322",
+      "description": "F-0020 の受入条件に戻って確認した。src/infra/config/loaders/workflowDiscovery.ts:195-238 で collectValidatedWorkflowEntries() が同名 workflow 候補を名前単位に集約し、高優先度候補から検証して、有効な project-local override がある場合は shadow 済み builtin を runtime load/validation しない構造になっている。src/__tests__/workflowLoader.test.ts:72-95 は下位 builtin がロードされないこと、同:98-123 は上位候補が invalid の場合に下位へフォールバックすること、同:1322-1340 は F-0020 の再現条件だった loadAllWorkflows(tempDir) の project-local default override を検証している。実行確認として `npm test -- --run src/__tests__/workflowLoader.test.ts src/__tests__/config.test.ts src/__tests__/workflowCallContractValidator.test.ts` は 3 files / 196 tests 成功、`npm test` は 125 files / 全 shard 成功、`npm run build` と `npm run lint` も成功した。Policy の全 ## セクション（原則、スコープ判定、判定基準、振る舞い証跡の判定、ファクトチェック、具体的な指摘の書き方、指摘ID管理、再オープン条件、finding_id の意味固定、テストファイルの扱い、変更履歴ファイルの扱い、ボーイスカウトルール、判定ルール、レビューの基本手順、堂々巡りの検出）と Knowledge の全 ## セクション（構造・設計、境界での解決、コード品質の検出手法、セキュリティ、テスタビリティ、アンチパターン検出、抽象化レベルの評価、その場しのぎの検出、未完成コードの検出、DRY違反の検出、仕様準拠の検証、呼び出しチェーン検証、公開状態の不変性、品質特性、大局観、変更スコープの評価）を累積差分と照合し、追加のブロッキング指摘は検出しなかった。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0020"
+    },
+    {
+      "rawFindingId": "20260708-100701-pr-task-attachments-takt-add-p:reviewers:2:ai-antipattern-review:ai-antipattern-review-r2-confirm-f0020",
+      "stepName": "ai-antipattern-review",
+      "reviewer": "ai-antipattern-review",
+      "familyTag": "logic-error",
+      "severity": "high",
+      "title": "npm test が builtin workflow listing/loading の timeout で失敗する問題は解消済み",
+      "location": "src/infra/config/loaders/workflowDiscovery.ts:195; src/__tests__/workflowLoader.test.ts:69",
+      "description": "`collectValidatedWorkflowEntries()` は workflow 名ごとに候補をまとめ、優先順位の高い候補から検証する実装になっており、project-local が builtin を shadow する場合に不要な builtin runtime load/validation を避ける構造になっていることを確認しました。`workflowLoader.test.ts:69` 付近には、shadow された builtin workflow がロードされないことを検証する回帰テストも追加されています。さらに `npm run build`、`npm run lint`、`npm test -- --run src/__tests__/workflowLoader.test.ts`、`npm test` が成功しており、F-0020 の受入条件であるフルテスト成功と timeout 解消を確認しました。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0020"
+    },
+    {
+      "rawFindingId": "20260708-100701-pr-task-attachments-takt-add-p:reviewers:2:coding-review:coding-review-2-1",
+      "stepName": "coding-review",
+      "reviewer": "coding-review",
+      "familyTag": "bug",
+      "severity": "high",
+      "title": "npm test が builtin workflow listing/loading の timeout で失敗する",
+      "location": "src/infra/config/loaders/workflowDiscovery.ts:195; src/__tests__/workflowLoader.test.ts:1260",
+      "description": "F-0020 の受入条件を再確認しました。`collectValidatedWorkflowEntries()` は workflow 名ごとに候補をまとめ、同名候補を高優先度側から検証するため、project-local `default.yaml` が builtin `default` を shadow する経路で不要な lower-priority builtin load/validation を避けています。再現対象の `npm test -- --run src/__tests__/workflowLoader.test.ts -t 'should have project-local override builtin when same name'` は 1 passed、さらに `npm test` は exit=0 で 4 shard すべて成功しました。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0020"
+    },
+    {
+      "rawFindingId": "20260708-100701-pr-task-attachments-takt-add-p:reviewers:3:ai-antipattern-review:ai-antipattern-review-r3-raw-1",
+      "stepName": "ai-antipattern-review",
+      "reviewer": "ai-antipattern-review",
+      "familyTag": "logic-error",
+      "severity": "high",
+      "title": "npm test が workflowDiscovery の builtin discovery timeout で失敗する",
+      "location": "src/infra/config/loaders/workflowDiscovery.ts:240; src/__tests__/workflowDiscovery.test.ts:10",
+      "description": "品質要件の `npm test` を判断直前に再実行したところ exit=1 でした。失敗は `src/__tests__/workflowDiscovery.test.ts:10` の `repo 直下でも builtin の privileged workflow を discovery で skip しない` が 15000ms timeout し、Vitest の `Timeout calling \"onTaskUpdate\"` unhandled error も発生しています。該当テストは `loadAllWorkflowsWithSourcesFromDirs(process.cwd(), [{ dir: builtins/ja/workflows, source: 'builtin' }])` を直接呼び、現在の `loadAllWorkflowsWithSourcesFromDirs()` は default loader で builtin workflow 全体を `loadWorkflowFileWithResolutionOptions()` 経由で読み込むため、F-0020 類似の builtin listing/loading timeout が別入口で残っています。単体 `npm test -- --run src/__tests__/workflowDiscovery.test.ts` は通りますが tests 7.64s と重く、フルスイート条件では品質ゲートを満たしていません。",
+      "suggestion": "`loadAllWorkflowsWithSourcesFromDirs()` の discovery/listing 用入口でも、builtin の名前・visibility 判定に必要な最小 metadata だけを読む loader を使うか、呼び出し元に lightweight loader を渡す構造へ分けてください。少なくとも builtin discovery がフル `npm test` の shard 内で 15 秒 timeout しないことを再確認してください。",
+      "kind": "issue"
+    },
+    {
+      "rawFindingId": "20260708-100701-pr-task-attachments-takt-add-p:reviewers:3:coding-review:coding-review-3-1",
+      "stepName": "coding-review",
+      "reviewer": "coding-review",
+      "familyTag": "bug",
+      "severity": "high",
+      "title": "npm test が Vitest worker timeout で失敗する",
+      "location": "src/infra/config/loaders/workflowResolver.ts:536",
+      "description": "品質要件の `npm test` を再実行したところ exit=1 でした。さらに失敗 shard を単独で `npm run test:unit:parallel -- --shard=1/4 --maxWorkers=1` として再実行しても exit=1 で、どちらも全 Test Files / Tests は passed 表示の後に Vitest の unhandled error `Error: [vitest-worker]: Timeout calling \"onTaskUpdate\"` が発生しています。現状の差分は品質要件の `npm test` 成功を満たしていません。",
+      "suggestion": "`npm run test:unit:parallel -- --shard=1/4 --maxWorkers=1` が worker timeout を出さずに exit=0 になるよう、該当 shard の長時間化・大量出力・workflow loading/listing の性能退行を解消してください。修正後に `npm run build`、`npm run lint`、`npm test` を再実行して成功を確認してください。",
+      "kind": "issue"
+    },
+    {
+      "rawFindingId": "20260708-100701-pr-task-attachments-takt-add-p:reviewers:3:implementation-semantics-review:implementation-semantics-review-raw-001",
+      "stepName": "implementation-semantics-review",
+      "reviewer": "implementation-semantics-review",
+      "familyTag": "meaning-contract",
+      "severity": "high",
+      "title": "フルスイート条件で worktree parent の相対 workflow_call 解決が不安定になっている",
+      "location": "src/__tests__/engine-workflow-call.test.ts:2203; src/infra/config/loaders/workflowResolver.ts:434",
+      "description": "`npm test` を再実行すると exit=1 となり、`default worktree root 上の parent path は worktree workflow を non-project trust として解決する` で `resolveWorkflowCallTarget(parentWorkflow!, './takt/coding.yaml', 'delegate', tmpDir, worktreeDir)` の結果が `undefined` になりました。単独実行では同テストが通るため、現在の workflow 解決はフルスイート内の先行状態に依存しており、`lookupCwd` 配下の worktree workflow を non-project trust として解決するという意味契約が安定していません。あわせて同じ `npm test` では `workflowDiscovery.test.ts:10` も 15000ms timeout しており、品質要件の `npm test` 成功も満たしていません。",
+      "suggestion": "`resolveWorkflowCallTarget()` から `loadWorkflowByIdentifierForWorkflowCall()` へ渡す `basePath`/`lookupCwd`/`parentTrustInfo` と、workflow/config/validation のキャッシュ状態を見直し、worktree parent の相対 path call が他テストや先行ロード状態に依存せず常に worktree 配下を解決する構造にしてください。修正後に `npm test` を再実行し、該当 assertion と discovery timeout の両方が再発しないことを確認してください。",
+      "kind": "issue"
+    },
+    {
+      "rawFindingId": "20260708-100701-pr-task-attachments-takt-add-p:reviewers:4:arch-review:arch-review-4-confirm-f0020",
+      "familyTag": "workflow-discovery-performance",
+      "severity": "high",
+      "title": "F-0020 は同名 workflow の高優先候補だけを検証する構造で解消済み",
+      "location": "src/infra/config/loaders/workflowDiscovery.ts:223",
+      "description": "src/infra/config/loaders/workflowDiscovery.ts:223-265 で workflow entries を name ごとに集約し、src/infra/config/loaders/workflowDiscovery.ts:241-263 で高優先候補から順に検証して成功時に break するため、project-local が builtin を shadow する場合に下位 builtin を不要に runtime load/validation しない構造になっています。src/infra/config/loaders/workflowResolver.ts:543-549 の listWorkflows も loadWorkflowNameEntry 経由で同じ collectValidatedWorkflowEntries を通ります。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0020",
+      "reviewer": "arch-review",
+      "stepName": "arch-review"
+    },
+    {
+      "rawFindingId": "20260708-100701-pr-task-attachments-takt-add-p:reviewers:4:arch-review:arch-review-4-confirm-f0023",
+      "familyTag": "workflow-discovery-performance",
+      "severity": "high",
+      "title": "F-0023 は builtin discovery が metadata-only loader を使う構造で解消済み",
+      "location": "src/infra/config/loaders/workflowDiscovery.ts:88",
+      "description": "src/infra/config/loaders/workflowDiscovery.ts:88-104 に builtin 用の loadBuiltinWorkflowDiscoveryEntry があり、YAML の name/description/subworkflow metadata のみを読む実装です。src/infra/config/loaders/workflowDiscovery.ts:106-109 と src/infra/config/loaders/workflowDiscovery.ts:268-283 により loadAllWorkflowsWithSourcesFromDirs の default discovery 経路でも builtin はこの軽量 loader を使うため、指摘の full runtime load 前提は現在コードでは成立しません。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0023",
+      "reviewer": "arch-review",
+      "stepName": "arch-review"
+    },
+    {
+      "rawFindingId": "20260708-100701-pr-task-attachments-takt-add-p:reviewers:4:arch-review:arch-review-4-confirm-f0024",
+      "familyTag": "workflow-call-resolution",
+      "severity": "high",
+      "title": "F-0024 は parent source path と lookupCwd を渡す相対 workflow_call 解決で解消済み",
+      "location": "src/infra/config/loaders/workflowCallResolver.ts:47",
+      "description": "src/infra/config/loaders/workflowCallResolver.ts:47-57 で parent workflow の sourcePath から basePath を作り、lookupCwd と parentTrustInfo を loadWorkflowByIdentifierForWorkflowCall に渡しています。src/infra/config/loaders/workflowResolver.ts:417-426 は path identifier をその basePath/lookupCwd で解決し、src/__tests__/engine-workflow-call.test.ts:2195-2214 では worktree parent から ./takt/coding.yaml を worktree workflow として解決する期待が固定されています。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0024",
+      "reviewer": "arch-review",
+      "stepName": "arch-review"
+    },
+    {
+      "rawFindingId": "20260708-100701-pr-task-attachments-takt-add-p:reviewers:4:ai-antipattern-review:ai-antipattern-review-4-confirm-f0020",
+      "familyTag": "logic-error",
+      "severity": "high",
+      "title": "npm test が builtin workflow listing/loading の timeout で失敗する",
+      "location": "src/infra/config/loaders/workflowDiscovery.ts:223",
+      "description": "F-0020 の受入条件を再確認しました。現在の collectValidatedWorkflowEntries() は name ごとに候補を集約し、高優先度候補が有効なら下位 builtin をロードしない構造です。`npm run test:unit:parallel -- --shard=1/4 --maxWorkers=1` は exit=0、125 files / 1739 tests passed。さらに `npm run build`、`npm run lint`、`npm test` も exit=0 でした。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0020",
+      "reviewer": "ai-antipattern-review",
+      "stepName": "ai-antipattern-review"
+    },
+    {
+      "rawFindingId": "20260708-100701-pr-task-attachments-takt-add-p:reviewers:4:ai-antipattern-review:ai-antipattern-review-4-confirm-f0023",
+      "familyTag": "logic-error",
+      "severity": "high",
+      "title": "npm test が workflowDiscovery の builtin discovery timeout で失敗する",
+      "location": "src/infra/config/loaders/workflowDiscovery.ts:88",
+      "description": "F-0023 の受入条件を再確認しました。builtin discovery は loadBuiltinWorkflowDiscoveryEntry() で YAML の metadata だけを読み、default loader も loadWorkflowDiscoveryEntry() 経由で full workflow 正規化を避けています。`npm test -- --run src/__tests__/workflowDiscovery.test.ts` は exit=0、1 file / 3 tests passed。フル `npm test` も exit=0 でした。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0023",
+      "reviewer": "ai-antipattern-review",
+      "stepName": "ai-antipattern-review"
+    },
+    {
+      "rawFindingId": "20260708-100701-pr-task-attachments-takt-add-p:reviewers:4:ai-antipattern-review:ai-antipattern-review-4-confirm-f0024",
+      "familyTag": "logic-error",
+      "severity": "high",
+      "title": "フルスイート条件で worktree parent の相対 workflow_call 解決が不安定になっている",
+      "location": "src/infra/config/loaders/workflowCallResolver.ts:47",
+      "description": "F-0024 の受入条件を再確認しました。resolveWorkflowCallTarget() は parent workflow の sourcePath から basePath を決め、lookupCwd とともに loadWorkflowByIdentifierForWorkflowCall() へ渡しています。該当テスト `default worktree root 上の parent path は worktree workflow を non-project trust として解決する` は exit=0、1 test passed。フル `npm test` も exit=0 でした。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0024",
+      "reviewer": "ai-antipattern-review",
+      "stepName": "ai-antipattern-review"
+    },
+    {
+      "rawFindingId": "20260708-100701-pr-task-attachments-takt-add-p:reviewers:4:coding-review:coding-review-4-1",
+      "familyTag": "bug",
+      "severity": "high",
+      "title": "npm test の worker timeout は解消済み",
+      "location": "src/infra/config/loaders/workflowResolver.ts:543",
+      "description": "`listWorkflows()` は `collectValidatedWorkflowEntries(..., loadWorkflowNameEntry)` を使う軽量一覧経路になっています。再実行結果は `npm run build` exit=0、`npm run lint` exit=0、`npm run test:unit:parallel -- --shard=1/4 --maxWorkers=1` exit=0、`npm test` exit=0 で、前回の Vitest `Timeout calling \"onTaskUpdate\"` は再発しませんでした。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0020",
+      "reviewer": "coding-review",
+      "stepName": "coding-review"
+    },
+    {
+      "rawFindingId": "20260708-100701-pr-task-attachments-takt-add-p:reviewers:4:coding-review:coding-review-4-2",
+      "familyTag": "bug",
+      "severity": "high",
+      "title": "builtin discovery timeout は解消済み",
+      "location": "src/infra/config/loaders/workflowDiscovery.ts:88",
+      "description": "`loadBuiltinWorkflowDiscoveryEntry()` が builtin workflow を full normalize せず YAML metadata だけで discovery config を返し、`loadWorkflowDiscoveryEntry()` も builtin ではこの軽量経路を使っています。`npm test -- --run src/__tests__/workflowDiscovery.test.ts` は 3 tests passed / Duration 1.49s、さらに full `npm test` も exit=0 でした。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0023",
+      "reviewer": "coding-review",
+      "stepName": "coding-review"
+    },
+    {
+      "rawFindingId": "20260708-100701-pr-task-attachments-takt-add-p:reviewers:4:coding-review:coding-review-4-3",
+      "familyTag": "bug",
+      "severity": "high",
+      "title": "worktree parent の相対 workflow_call 解決は安定化済み",
+      "location": "src/__tests__/engine-workflow-call.test.ts:2203",
+      "description": "対象テストは `resolveWorkflowCallTarget(parentWorkflow!, './takt/coding.yaml', 'delegate', tmpDir, worktreeDir)` で worktree 配下 child workflow を検証しています。`npm test -- --run src/__tests__/engine-workflow-call.test.ts -t \"default worktree root 上の parent path は worktree workflow を non-project trust として解決する\"` は 1 passed、full `npm test` も exit=0 で同 assertion の再発はありませんでした。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0024",
+      "reviewer": "coding-review",
+      "stepName": "coding-review"
+    },
+    {
+      "rawFindingId": "20260708-100701-pr-task-attachments-takt-add-p:reviewers:4:implementation-semantics-review:implementation-semantics-review-resolution-001",
+      "familyTag": "meaning-contract",
+      "severity": "high",
+      "title": "worktree parent の相対 workflow_call 解決が安定した",
+      "location": "src/__tests__/engine-workflow-call.test.ts:2203; src/infra/config/loaders/workflowResolver.ts:418",
+      "description": "`src/__tests__/engine-workflow-call.test.ts:2203` の worktree parent 相対 `resolveWorkflowCallTarget(parentWorkflow!, './takt/coding.yaml', ...)` を再確認し、対象テスト `npm test -- --run src/__tests__/engine-workflow-call.test.ts -t \"default worktree root 上の parent path\"` は exit=0 で通過しました。`src/infra/config/loaders/workflowResolver.ts:418` では path identifier が `basePath` と `lookupCwd` を保持して `loadWorkflowFromPath()` へ渡されていることを確認しました。フル `npm test` は既存 open finding F-0020 の `Timeout calling \"onTaskUpdate\"` で exit=1 でしたが、F-0024 の worktree 相対解決 assertion と workflowDiscovery timeout は再発していません。",
+      "kind": "resolution_confirmation",
+      "targetFindingId": "F-0024",
+      "reviewer": "implementation-semantics-review",
+      "stepName": "implementation-semantics-review"
+    }
+  ],
+  "conflicts": []
+}

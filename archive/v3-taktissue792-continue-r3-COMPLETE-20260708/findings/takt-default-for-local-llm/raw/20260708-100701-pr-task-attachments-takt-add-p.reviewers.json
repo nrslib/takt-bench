@@ -1,0 +1,14 @@
+[
+  {
+    "rawFindingId": "20260708-100701-pr-task-attachments-takt-add-p:reviewers:1:coding-review:coding-review-1",
+    "stepName": "coding-review",
+    "reviewer": "coding-review",
+    "familyTag": "bug",
+    "severity": "high",
+    "title": "npm test が workflowLoader の builtin override テスト timeout で失敗する",
+    "location": "src/infra/config/loaders/workflowResolver.ts:536; src/__tests__/workflowLoader.test.ts:1260",
+    "description": "品質要件の `npm test` を再実行したところ exit=1 でした。出力では `src/__tests__/workflowLoader.test.ts:1260` の `should have project-local override builtin when same name` が 15000ms timeout し、最終的に Vitest の `Timeout calling \"onTaskUpdate\"` unhandled error も発生しています。該当テストは `loadAllWorkflows(tempDir)` で builtin 有効時の project-local override を確認しており、現在の `loadAllWorkflows()` は `loadAllWorkflowsWithSources()` 経由で builtin を含む一覧を runtime load/contract validation するため、フルスイート条件で品質ゲートを満たせていません。",
+    "suggestion": "builtin 有効時の `loadAllWorkflows()`/override 経路がフルスイート内でも 15 秒 timeout しないよう、project-local shadowing 後に不要な builtin runtime load/validation を避ける、または validation/cache の粒度を見直してください。修正後に `npm test` を再実行して成功を確認してください。",
+    "kind": "issue"
+  }
+]

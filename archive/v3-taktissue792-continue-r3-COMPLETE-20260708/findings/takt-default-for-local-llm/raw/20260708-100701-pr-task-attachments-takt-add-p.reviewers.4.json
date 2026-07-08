@@ -1,0 +1,122 @@
+[
+  {
+    "rawFindingId": "20260708-100701-pr-task-attachments-takt-add-p:reviewers:4:arch-review:arch-review-4-confirm-f0020",
+    "stepName": "arch-review",
+    "reviewer": "arch-review",
+    "familyTag": "workflow-discovery-performance",
+    "severity": "high",
+    "title": "F-0020 は同名 workflow の高優先候補だけを検証する構造で解消済み",
+    "location": "src/infra/config/loaders/workflowDiscovery.ts:223",
+    "description": "src/infra/config/loaders/workflowDiscovery.ts:223-265 で workflow entries を name ごとに集約し、src/infra/config/loaders/workflowDiscovery.ts:241-263 で高優先候補から順に検証して成功時に break するため、project-local が builtin を shadow する場合に下位 builtin を不要に runtime load/validation しない構造になっています。src/infra/config/loaders/workflowResolver.ts:543-549 の listWorkflows も loadWorkflowNameEntry 経由で同じ collectValidatedWorkflowEntries を通ります。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0020"
+  },
+  {
+    "rawFindingId": "20260708-100701-pr-task-attachments-takt-add-p:reviewers:4:arch-review:arch-review-4-confirm-f0023",
+    "stepName": "arch-review",
+    "reviewer": "arch-review",
+    "familyTag": "workflow-discovery-performance",
+    "severity": "high",
+    "title": "F-0023 は builtin discovery が metadata-only loader を使う構造で解消済み",
+    "location": "src/infra/config/loaders/workflowDiscovery.ts:88",
+    "description": "src/infra/config/loaders/workflowDiscovery.ts:88-104 に builtin 用の loadBuiltinWorkflowDiscoveryEntry があり、YAML の name/description/subworkflow metadata のみを読む実装です。src/infra/config/loaders/workflowDiscovery.ts:106-109 と src/infra/config/loaders/workflowDiscovery.ts:268-283 により loadAllWorkflowsWithSourcesFromDirs の default discovery 経路でも builtin はこの軽量 loader を使うため、指摘の full runtime load 前提は現在コードでは成立しません。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0023"
+  },
+  {
+    "rawFindingId": "20260708-100701-pr-task-attachments-takt-add-p:reviewers:4:arch-review:arch-review-4-confirm-f0024",
+    "stepName": "arch-review",
+    "reviewer": "arch-review",
+    "familyTag": "workflow-call-resolution",
+    "severity": "high",
+    "title": "F-0024 は parent source path と lookupCwd を渡す相対 workflow_call 解決で解消済み",
+    "location": "src/infra/config/loaders/workflowCallResolver.ts:47",
+    "description": "src/infra/config/loaders/workflowCallResolver.ts:47-57 で parent workflow の sourcePath から basePath を作り、lookupCwd と parentTrustInfo を loadWorkflowByIdentifierForWorkflowCall に渡しています。src/infra/config/loaders/workflowResolver.ts:417-426 は path identifier をその basePath/lookupCwd で解決し、src/__tests__/engine-workflow-call.test.ts:2195-2214 では worktree parent から ./takt/coding.yaml を worktree workflow として解決する期待が固定されています。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0024"
+  },
+  {
+    "rawFindingId": "20260708-100701-pr-task-attachments-takt-add-p:reviewers:4:ai-antipattern-review:ai-antipattern-review-4-confirm-f0020",
+    "stepName": "ai-antipattern-review",
+    "reviewer": "ai-antipattern-review",
+    "familyTag": "logic-error",
+    "severity": "high",
+    "title": "npm test が builtin workflow listing/loading の timeout で失敗する",
+    "location": "src/infra/config/loaders/workflowDiscovery.ts:223",
+    "description": "F-0020 の受入条件を再確認しました。現在の collectValidatedWorkflowEntries() は name ごとに候補を集約し、高優先度候補が有効なら下位 builtin をロードしない構造です。`npm run test:unit:parallel -- --shard=1/4 --maxWorkers=1` は exit=0、125 files / 1739 tests passed。さらに `npm run build`、`npm run lint`、`npm test` も exit=0 でした。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0020"
+  },
+  {
+    "rawFindingId": "20260708-100701-pr-task-attachments-takt-add-p:reviewers:4:ai-antipattern-review:ai-antipattern-review-4-confirm-f0023",
+    "stepName": "ai-antipattern-review",
+    "reviewer": "ai-antipattern-review",
+    "familyTag": "logic-error",
+    "severity": "high",
+    "title": "npm test が workflowDiscovery の builtin discovery timeout で失敗する",
+    "location": "src/infra/config/loaders/workflowDiscovery.ts:88",
+    "description": "F-0023 の受入条件を再確認しました。builtin discovery は loadBuiltinWorkflowDiscoveryEntry() で YAML の metadata だけを読み、default loader も loadWorkflowDiscoveryEntry() 経由で full workflow 正規化を避けています。`npm test -- --run src/__tests__/workflowDiscovery.test.ts` は exit=0、1 file / 3 tests passed。フル `npm test` も exit=0 でした。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0023"
+  },
+  {
+    "rawFindingId": "20260708-100701-pr-task-attachments-takt-add-p:reviewers:4:ai-antipattern-review:ai-antipattern-review-4-confirm-f0024",
+    "stepName": "ai-antipattern-review",
+    "reviewer": "ai-antipattern-review",
+    "familyTag": "logic-error",
+    "severity": "high",
+    "title": "フルスイート条件で worktree parent の相対 workflow_call 解決が不安定になっている",
+    "location": "src/infra/config/loaders/workflowCallResolver.ts:47",
+    "description": "F-0024 の受入条件を再確認しました。resolveWorkflowCallTarget() は parent workflow の sourcePath から basePath を決め、lookupCwd とともに loadWorkflowByIdentifierForWorkflowCall() へ渡しています。該当テスト `default worktree root 上の parent path は worktree workflow を non-project trust として解決する` は exit=0、1 test passed。フル `npm test` も exit=0 でした。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0024"
+  },
+  {
+    "rawFindingId": "20260708-100701-pr-task-attachments-takt-add-p:reviewers:4:coding-review:coding-review-4-1",
+    "stepName": "coding-review",
+    "reviewer": "coding-review",
+    "familyTag": "bug",
+    "severity": "high",
+    "title": "npm test の worker timeout は解消済み",
+    "location": "src/infra/config/loaders/workflowResolver.ts:543",
+    "description": "`listWorkflows()` は `collectValidatedWorkflowEntries(..., loadWorkflowNameEntry)` を使う軽量一覧経路になっています。再実行結果は `npm run build` exit=0、`npm run lint` exit=0、`npm run test:unit:parallel -- --shard=1/4 --maxWorkers=1` exit=0、`npm test` exit=0 で、前回の Vitest `Timeout calling \"onTaskUpdate\"` は再発しませんでした。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0020"
+  },
+  {
+    "rawFindingId": "20260708-100701-pr-task-attachments-takt-add-p:reviewers:4:coding-review:coding-review-4-2",
+    "stepName": "coding-review",
+    "reviewer": "coding-review",
+    "familyTag": "bug",
+    "severity": "high",
+    "title": "builtin discovery timeout は解消済み",
+    "location": "src/infra/config/loaders/workflowDiscovery.ts:88",
+    "description": "`loadBuiltinWorkflowDiscoveryEntry()` が builtin workflow を full normalize せず YAML metadata だけで discovery config を返し、`loadWorkflowDiscoveryEntry()` も builtin ではこの軽量経路を使っています。`npm test -- --run src/__tests__/workflowDiscovery.test.ts` は 3 tests passed / Duration 1.49s、さらに full `npm test` も exit=0 でした。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0023"
+  },
+  {
+    "rawFindingId": "20260708-100701-pr-task-attachments-takt-add-p:reviewers:4:coding-review:coding-review-4-3",
+    "stepName": "coding-review",
+    "reviewer": "coding-review",
+    "familyTag": "bug",
+    "severity": "high",
+    "title": "worktree parent の相対 workflow_call 解決は安定化済み",
+    "location": "src/__tests__/engine-workflow-call.test.ts:2203",
+    "description": "対象テストは `resolveWorkflowCallTarget(parentWorkflow!, './takt/coding.yaml', 'delegate', tmpDir, worktreeDir)` で worktree 配下 child workflow を検証しています。`npm test -- --run src/__tests__/engine-workflow-call.test.ts -t \"default worktree root 上の parent path は worktree workflow を non-project trust として解決する\"` は 1 passed、full `npm test` も exit=0 で同 assertion の再発はありませんでした。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0024"
+  },
+  {
+    "rawFindingId": "20260708-100701-pr-task-attachments-takt-add-p:reviewers:4:implementation-semantics-review:implementation-semantics-review-resolution-001",
+    "stepName": "implementation-semantics-review",
+    "reviewer": "implementation-semantics-review",
+    "familyTag": "meaning-contract",
+    "severity": "high",
+    "title": "worktree parent の相対 workflow_call 解決が安定した",
+    "location": "src/__tests__/engine-workflow-call.test.ts:2203; src/infra/config/loaders/workflowResolver.ts:418",
+    "description": "`src/__tests__/engine-workflow-call.test.ts:2203` の worktree parent 相対 `resolveWorkflowCallTarget(parentWorkflow!, './takt/coding.yaml', ...)` を再確認し、対象テスト `npm test -- --run src/__tests__/engine-workflow-call.test.ts -t \"default worktree root 上の parent path\"` は exit=0 で通過しました。`src/infra/config/loaders/workflowResolver.ts:418` では path identifier が `basePath` と `lookupCwd` を保持して `loadWorkflowFromPath()` へ渡されていることを確認しました。フル `npm test` は既存 open finding F-0020 の `Timeout calling \"onTaskUpdate\"` で exit=1 でしたが、F-0024 の worktree 相対解決 assertion と workflowDiscovery timeout は再発していません。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0024"
+  }
+]

@@ -1,0 +1,50 @@
+[
+  {
+    "rawFindingId": "20260708-024900-pr-task-attachments-takt-add-p:reviewers:4:ai-antipattern-review:ai-4-001",
+    "stepName": "ai-antipattern-review",
+    "reviewer": "ai-antipattern-review",
+    "familyTag": "scope-creep",
+    "severity": "medium",
+    "title": "PR画像添付と無関係なworkflow/config系テスト変更が混在している",
+    "location": "src/__tests__/config.test.ts:719; src/__tests__/for-local-llm-replan-wiring.test.ts:48; src/__tests__/workflow-categories.test.ts:10",
+    "description": "今回の要求はPRコメント内画像の取得とtask attachments配線ですが、累積差分には builtin workflow 一覧テストの分割、for-local-llm replan wiring の一時cwd化、workflow category test の config resolver mock 追加など、PR画像添付の実装・配線・検証に必要な因果関係が確認できない変更が含まれています。AIが周辺の失敗テストを通すために別領域のテスト契約へ追随した典型的なscope creepです。",
+    "suggestion": "PR画像添付に直接必要な変更だけを残し、workflow/config系テスト変更は戻してください。これらが別の不具合修正として必要なら、PR画像添付とは別タスクで production 変更・要件・テスト根拠を揃えて扱ってください。",
+    "kind": "issue"
+  },
+  {
+    "rawFindingId": "20260708-024900-pr-task-attachments-takt-add-p:reviewers:4:ai-antipattern-review:ai-4-002",
+    "stepName": "ai-antipattern-review",
+    "reviewer": "ai-antipattern-review",
+    "familyTag": "missing-edge-case",
+    "severity": "medium",
+    "title": "Response body cancel失敗時に元の検証エラーが失われる",
+    "location": "src/infra/github/prImageDownload.ts:85; src/infra/github/prImageDownload.ts:154",
+    "description": "`readResponseBody()` と `fetchGitHubImageWithGhAuth()` は、サイズ超過・非OK・Content-Type不正などの拒否経路で `reader.cancel()` / `response.body?.cancel()` を `await` してから元エラーを再throwしています。cancel が reject した場合、元の境界検証エラーではなく cleanup 側のエラーが呼び出し元へ伝播します。現テストは cancel が呼ばれることだけを検証しており、cleanup 失敗時に本来の拒否理由を保持する契約を固定していません。",
+    "suggestion": "cancel/release は best-effort cleanup として扱い、cancel の reject は元エラーを隠さないように握るか suppressed 情報として付与してください。あわせて body cancel / reader cancel が reject しても元の HTTP・Content-Type・サイズ超過エラーが返る単体テストを追加してください。",
+    "kind": "issue"
+  },
+  {
+    "rawFindingId": "20260708-024900-pr-task-attachments-takt-add-p:reviewers:4:coding-review:coding-review-4-raw-1",
+    "stepName": "coding-review",
+    "reviewer": "coding-review",
+    "familyTag": "boundary-validation.content-length",
+    "severity": "medium",
+    "title": "Content-Length の不正な数値表現が数値プレフィックスとして受理される",
+    "location": "src/infra/github/prImageDownload.ts:140",
+    "description": "`fetchGitHubImageWithGhAuth()` は `Content-Length` を `Number.parseInt(contentLength, 10)` で数値化しており、`1e9` は `1`、`123abc` は `123` として扱われます。そのため不正な Content-Length ヘッダーが invalid header として fail-fast されず、ヘッダー段階のサイズ境界検証をすり抜けます。現在のテストは `invalid` の拒否だけで、数値プレフィックス付き不正値を固定していません。",
+    "suggestion": "`contentLength.trim()` を `^[0-9]+$` のような10進整数の完全一致で検証してから `Number()` に変換し、`Number.isSafeInteger()` と上限検証を適用してください。`Content-Length: 1e9` と `Content-Length: 123abc` を拒否する単体テストを追加してください。",
+    "kind": "issue"
+  },
+  {
+    "rawFindingId": "20260708-024900-pr-task-attachments-takt-add-p:reviewers:4:implementation-semantics-review:raw-implementation-semantics-4-001",
+    "stepName": "implementation-semantics-review",
+    "reviewer": "implementation-semantics-review",
+    "familyTag": "boundary-validation.content-length",
+    "severity": "medium",
+    "title": "Content-Length の不正な数値文字列が数値プレフィックスとして受理される",
+    "location": "src/infra/github/prImageDownload.ts:140",
+    "description": "`fetchGitHubImageWithGhAuth()` は `Content-Length` を `Number.parseInt(contentLength, 10)` で解釈してから `Number.isSafeInteger` とサイズ上限を確認しています。JavaScript の `parseInt` は `1e9` を `1`、`123abc` を `123` として返すため、GitHub image response が不正な `Content-Length: 1e9` や `Content-Length: 123abc` を返した場合でも invalid header として fail-fast されません。サイズ上限のために導入した境界検証が、ヘッダー文字列全体の意味ではなく数値プレフィックスだけを検証しています。",
+    "suggestion": "`Content-Length` は `contentLength.trim()` を `^(0|[1-9]\\d*)$` のような完全一致で検証してから `Number()` に変換し、非10進整数表現や余分な文字を含む値は `Invalid GitHub image Content-Length` として拒否してください。`1e9` と `123abc` を拒否する単体テストも追加してください。",
+    "kind": "issue"
+  }
+]

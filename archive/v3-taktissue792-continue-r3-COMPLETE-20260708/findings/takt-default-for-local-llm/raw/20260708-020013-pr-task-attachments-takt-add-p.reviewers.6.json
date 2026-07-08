@@ -1,0 +1,98 @@
+[
+  {
+    "rawFindingId": "20260708-020013-pr-task-attachments-takt-add-p:reviewers:6:arch-review:arch-6-resolve-f0021",
+    "stepName": "arch-review",
+    "reviewer": "arch-review",
+    "familyTag": "cache-boundary",
+    "severity": "medium",
+    "title": "builtin workflow cache の project 固有正規化・検証結果再利用は解消済み",
+    "location": "src/infra/config/loaders/workflowResolver.ts:106; src/infra/config/loaders/workflowResolver.ts:486; src/infra/config/loaders/workflowCallContractValidator.ts:146",
+    "description": "現在コードでは旧 `buildBuiltinWorkflowCacheKey` / `builtinWorkflowCache` は存在せず、workflow config cache key は `projectCwd`、`lookupCwd`、`source`、`loadMode`、`callableArgs`、`parentTrustInfo` を含みます。`loadAllWorkflowsWithSources()` も呼び出しごとに operation-local の `workflowConfigCache` と `workflowValidationStateKeyCache` を作っています。builtin workflow call validation key は `validationKey` に加えて project/global config と workflow file state を含む `getProjectWorkflowValidationStateKey()` を組み込んでいます。回帰テスト `npm test -- --run src/__tests__/config.test.ts src/__tests__/workflowLoader.test.ts src/__tests__/workflowCallContractValidator.test.ts src/__tests__/workflowDiscovery.test.ts` は 4 files / 196 tests 成功し、全体 `npm test` も全 shard 成功しました。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0021"
+  },
+  {
+    "rawFindingId": "20260708-020013-pr-task-attachments-takt-add-p:reviewers:6:arch-review:arch-6-resolve-f0022",
+    "stepName": "arch-review",
+    "reviewer": "arch-review",
+    "familyTag": "validation-cache-boundary",
+    "severity": "medium",
+    "title": "builtin workflow call validation cache の同一 project 変更後の古い成功再利用は解消済み",
+    "location": "src/infra/config/loaders/workflowCallContractValidator.ts:88; src/__tests__/config.test.ts:586",
+    "description": "`buildProjectWorkflowValidationStateKey()` は global/project config と global/project/lookup workflow file state を key 化し、builtin validation cache key に含めています。`src/__tests__/config.test.ts:586` では同一 project で builtin `default` を一度 load 後、project-local `default-draft.yaml` を追加して `invalidateGlobalConfigCache()` / `invalidateAllResolvedConfigCache()` 後に再 load すると unsupported child result を検出することを固定しています。対象テスト群は 4 files / 196 tests 成功し、全体 `npm test` も成功しました。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0022"
+  },
+  {
+    "rawFindingId": "20260708-020013-pr-task-attachments-takt-add-p:reviewers:6:ai-antipattern-review:ai-antipattern-r6-resolved-0021",
+    "stepName": "ai-antipattern-review",
+    "reviewer": "ai-antipattern-review",
+    "familyTag": "scope-creep",
+    "severity": "medium",
+    "title": "解消確認: builtin workflow の project 固有 cache 混入は解消済み",
+    "location": "src/infra/config/loaders/workflowResolver.ts:106; src/infra/config/loaders/workflowCallContractValidator.ts:146",
+    "description": "`buildWorkflowConfigCacheKey()` は `filePath`, `projectCwd`, `lookupCwd`, `source`, `loadMode`, `callableArgs`, `parentTrustInfo` を key に含めており、runtime workflow config cache は `loadAllWorkflowsWithSources()` 内の per-call `Map` に閉じています。さらに builtin workflow call validation key は `getProjectWorkflowValidationStateKey(projectCwd, lookupCwd, ...)` を含み、その state key は global/project config と project/lookup workflows の file state を含みます。`src/__tests__/config.test.ts:454`, `src/__tests__/config.test.ts:498`, `src/__tests__/config.test.ts:542` で別 project の overrides と shadowed child contract が混入しないことを確認しました。`npm run build`, `npm run lint`, 対象テスト、再実行した `npm test` は exit 0 でした。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0021"
+  },
+  {
+    "rawFindingId": "20260708-020013-pr-task-attachments-takt-add-p:reviewers:6:ai-antipattern-review:ai-antipattern-r6-resolved-0022",
+    "stepName": "ai-antipattern-review",
+    "reviewer": "ai-antipattern-review",
+    "familyTag": "missing-edge-case",
+    "severity": "medium",
+    "title": "解消確認: 同一 project 内 workflow 変更後の validation stale cache は解消済み",
+    "location": "src/infra/config/loaders/workflowCallContractValidator.ts:88; src/__tests__/config.test.ts:586",
+    "description": "builtin validation cache の key は `getProjectWorkflowValidationStateKey()` を含むため、同一 project の `.takt/workflows` 配下の YAML file state が変わると以前の成功 key とは別 key になります。`src/__tests__/config.test.ts:586` の回帰テストは、一度 `loadWorkflow('default', testDir)` に成功した後に project-local `default-draft.yaml` を contract 違反へ変更し、`invalidateGlobalConfigCache()` / `invalidateAllResolvedConfigCache()` 後の再 `loadWorkflow('default', testDir)` が `workflow_call step \"draft\" cannot route on unsupported child result \"need_replan\"` で失敗することを検証しています。対象テストは 3 files / 194 tests passed、再実行した `npm test` も exit 0 でした。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0022"
+  },
+  {
+    "rawFindingId": "20260708-020013-pr-task-attachments-takt-add-p:reviewers:6:coding-review:coding-review-6-001",
+    "stepName": "coding-review",
+    "reviewer": "coding-review",
+    "familyTag": "bug",
+    "severity": "medium",
+    "title": "builtin workflow cache の project 固有正規化・検証混入解消確認",
+    "location": "src/infra/config/loaders/workflowResolver.ts:106",
+    "description": "src/infra/config/loaders/workflowResolver.ts:106-135 で WorkflowConfig cache key が filePath, projectCwd, lookupCwd, source, loadMode, callableArgs, parentTrustInfo を含む scoped key になっていることを確認しました。src/infra/config/loaders/workflowCallContractValidator.ts:146-151 では builtin validation key に workflow validation state key と path/named-call 条件が含まれます。build 後の再現確認でも project1/project2 の quality gate はそれぞれ P1 gate/P2 gate となり、loadWorkflow/loadAllWorkflows とも別インスタンスでした。また同一 project で後から不正な default-draft を追加した後の loadWorkflow('default') は workflow_call step \"draft\" cannot route on unsupported child result \"need_replan\" で失敗しました。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0021"
+  },
+  {
+    "rawFindingId": "20260708-020013-pr-task-attachments-takt-add-p:reviewers:6:coding-review:coding-review-6-002",
+    "stepName": "coding-review",
+    "reviewer": "coding-review",
+    "familyTag": "bug",
+    "severity": "medium",
+    "title": "builtin workflow call validation cache の古い成功再利用解消確認",
+    "location": "src/infra/config/loaders/workflowCallContractValidator.ts:88",
+    "description": "src/infra/config/loaders/workflowCallContractValidator.ts:88-116 で project/global config と workflow file state から validation state key を作り、src/infra/config/loaders/workflowCallContractValidator.ts:146-153 で builtin validation cache key に含めていることを確認しました。実行確認では、同一 project で一度 loadWorkflow('default') を成功させた後に invalid な project-local default-draft.yaml を追加し、invalidateGlobalConfigCache()/invalidateAllResolvedConfigCache() 後に再度 loadWorkflow('default') すると、期待通り workflow_call step \"draft\" cannot route on unsupported child result \"need_replan\" で失敗しました。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0022"
+  },
+  {
+    "rawFindingId": "20260708-020013-pr-task-attachments-takt-add-p:reviewers:6:implementation-semantics-review:implementation-semantics-raw-6-1",
+    "stepName": "implementation-semantics-review",
+    "reviewer": "implementation-semantics-review",
+    "familyTag": "implementation-semantics:state-normalization",
+    "severity": "medium",
+    "title": "builtin workflow cache の project 固有正規化・検証結果再利用は解消済み",
+    "location": "src/infra/config/loaders/workflowResolver.ts:106; src/infra/config/loaders/workflowCallContractValidator.ts:146",
+    "description": "`buildWorkflowConfigCacheKey()` は現在 `filePath`, `projectCwd`, `lookupCwd`, `source`, `loadMode`, `callableArgs`, `parentTrustInfo` を key に含めており、`loadAllWorkflowsWithSources()` 内の scoped `workflowConfigCache` は単一呼び出し内でのみ使われます。`workflowCallContractValidator.ts:146` 以降の builtin validation key も project/lookup の workflow/config file state を `getProjectWorkflowValidationStateKey()` で含めています。実確認では project A/B に別々の `workflow_overrides.personas.coder.quality_gates` を設定した場合、direct load と `loadAllWorkflows()` の双方で A/B それぞれの gate が返り、`workflowA === workflowB` は false でした。また project A で builtin `default` を検証後、project B の invalid project-local `default-draft` は `workflow_call step \"draft\" cannot route on unsupported child result \"need_replan\"` で fail-fast しました。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0021"
+  },
+  {
+    "rawFindingId": "20260708-020013-pr-task-attachments-takt-add-p:reviewers:6:implementation-semantics-review:implementation-semantics-raw-6-2",
+    "stepName": "implementation-semantics-review",
+    "reviewer": "implementation-semantics-review",
+    "familyTag": "implementation-semantics:fail-fast",
+    "severity": "medium",
+    "title": "workflow 変更後の古い builtin workflow call validation 成功再利用は解消済み",
+    "location": "src/infra/config/loaders/workflowCallContractValidator.ts:88",
+    "description": "`buildProjectWorkflowValidationStateKey()` は現在 global config、global workflows、project config、project workflows、および必要に応じて lookup workflows の file state を validation key に含めています。実確認では、同一 project で一度 `loadWorkflow('default', project)` を成功させた後、project-local `default-draft.yaml` を `need_replan` を返さない child に差し替え、`invalidateGlobalConfigCache()` / `invalidateAllResolvedConfigCache()` 後に再ロードすると、`workflow_call step \"draft\" cannot route on unsupported child result \"need_replan\"` が再検出されました。過去の成功 cache による `ok` は再現しませんでした。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0022"
+  }
+]
