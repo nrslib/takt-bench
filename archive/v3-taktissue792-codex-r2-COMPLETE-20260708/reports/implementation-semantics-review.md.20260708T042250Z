@@ -1,0 +1,10 @@
+# 実装意味論レビュー
+
+## 結果: APPROVE
+
+## サマリー
+実装意味論スコープで確認した PR 画像 attachment の cleanup 漏れは解消されています。`F-0001` / `F-0007` / `F-0008` は現在の実コード上で cleanup が例外経路まで保護されており、`F-0004` の HTTP status fallback も専用分岐へ修正済みです。
+
+## 検証証跡
+- 再走査証跡: Knowledge の「データ構造の意味選択」「導出値の単一情報源」「命名と意味の整合」「境界での fail-fast」「内部状態の参照漏れ」を累積差分全体に照合。
+- 解消確認: `src/app/cli/routing-inputs.ts:75-86`、`src/features/pipeline/steps.ts:175-188`、`src/app/cli/routing.ts:149-305`、`src/infra/github/attachmentImageDownloader.ts:107-115` を再読し確認。

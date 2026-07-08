@@ -1,0 +1,50 @@
+[
+  {
+    "rawFindingId": "20260708-024638-pr-task-attachments-takt-add-p:reviewers:4:arch-review:arch4-resolution-001",
+    "stepName": "arch-review",
+    "reviewer": "arch-review",
+    "familyTag": "arch-review/state-consistency-temp-cleanup",
+    "severity": "low",
+    "title": "PR画像attachmentの一時ディレクトリ初期化失敗時cleanupが保護された",
+    "location": "src/features/tasks/prReviewImageAttachments.ts:71",
+    "description": "F-0010 の受入条件に戻って現行コードを確認しました。src/features/tasks/prReviewImageAttachments.ts:63 で sessionDir を作成し、src/features/tasks/prReviewImageAttachments.ts:65-67 で cleanup を定義した後、src/features/tasks/prReviewImageAttachments.ts:71-73 の try ブロック内で ensurePrivateDirectory(sessionDir) と ensurePrivateDirectory(attachmentDir) を実行しています。src/features/tasks/prReviewImageAttachments.ts:93-95 の catch で cleanup() を呼んで再throwしているため、directory 初期化失敗時も作成済み sessionDir が削除されます。src/__tests__/prReviewImageAttachmentsCleanup.test.ts:63-79 でも attachment directory chmod 失敗時に sessionDir が存在しないことを検証しています。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0010"
+  },
+  {
+    "rawFindingId": "20260708-024638-pr-task-attachments-takt-add-p:reviewers:4:ai-antipattern-review:raw-ai-antipattern-4-resolved-f0010",
+    "stepName": "ai-antipattern-review",
+    "reviewer": "ai-antipattern-review",
+    "familyTag": "arch-review/state-consistency-temp-cleanup",
+    "severity": "low",
+    "title": "PR画像attachmentの一時ディレクトリ初期化失敗時cleanup漏れは解消済み",
+    "location": "src/features/tasks/prReviewImageAttachments.ts:71",
+    "description": "src/features/tasks/prReviewImageAttachments.ts:63-67 で sessionDir 作成後に cleanup を定義し、src/features/tasks/prReviewImageAttachments.ts:71-95 で ensurePrivateDirectory(sessionDir)、ensurePrivateDirectory(attachmentDir)、download/write 全体を同じ try/catch に入れ、初期化失敗時も catch の cleanup() に到達することを確認しました。src/__tests__/prReviewImageAttachmentsCleanup.test.ts:63-79 で chmod failed 時に作成済み session directory が削除済みになることも検証されています。関連テスト 7 files / 128 tests、npm run build、npm run lint、git diff --check は成功しました。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0010"
+  },
+  {
+    "rawFindingId": "20260708-024638-pr-task-attachments-takt-add-p:reviewers:4:coding-review:coding-review-4-resolved-F-0010",
+    "stepName": "coding-review",
+    "reviewer": "coding-review",
+    "familyTag": "arch-review/state-consistency-temp-cleanup",
+    "severity": "low",
+    "title": "PR画像attachment一時ディレクトリ初期化失敗時のcleanup漏れは解消済み",
+    "location": "src/features/tasks/prReviewImageAttachments.ts:71",
+    "description": "preparePrReviewImageAttachments() は src/features/tasks/prReviewImageAttachments.ts:63 で sessionDir を作成し、src/features/tasks/prReviewImageAttachments.ts:65-67 で cleanup を定義した後、src/features/tasks/prReviewImageAttachments.ts:71-73 の try 内で ensurePrivateDirectory(sessionDir) と ensurePrivateDirectory(attachmentDir) を実行しています。初期化・download/write のいずれかが throw した場合は src/features/tasks/prReviewImageAttachments.ts:93-95 で cleanup() して再throwするため、F-0010 の初期化失敗経路は保護されています。src/__tests__/prReviewImageAttachmentsCleanup.test.ts:63-79 で attachmentDir の chmod 失敗時に一時 sessionDir が削除されることも検証されています。npm run build、npm run lint、対象テスト7ファイル128件は成功しました。npm test 全体は既存の workflow/config 系 timeout と replan wiring 期待値差分、および Vitest worker onTaskUpdate timeout で失敗しましたが、今回の F-0010 修正経路では失敗していません。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0010"
+  },
+  {
+    "rawFindingId": "20260708-024638-pr-task-attachments-takt-add-p:reviewers:4:implementation-semantics-review:implementation-semantics-raw-4-1",
+    "stepName": "implementation-semantics-review",
+    "reviewer": "implementation-semantics-review",
+    "familyTag": "state-consistency.cleanup",
+    "severity": "low",
+    "title": "PR画像attachmentの一時ディレクトリ初期化失敗時にcleanupが漏れる",
+    "location": "src/features/tasks/prReviewImageAttachments.ts:71",
+    "description": "`src/features/tasks/prReviewImageAttachments.ts:63-67` で `sessionDir` 作成後すぐ cleanup 関数が定義され、`src/features/tasks/prReviewImageAttachments.ts:71-95` の `try/catch` 内に `ensurePrivateDirectory(sessionDir)` と `ensurePrivateDirectory(attachmentDir)` が含まれていることを確認しました。どちらの初期化が throw しても catch で `cleanup()` が実行されるため、F-0010 の失敗経路は解消済みです。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0010"
+  }
+]

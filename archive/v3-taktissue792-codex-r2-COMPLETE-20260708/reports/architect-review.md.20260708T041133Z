@@ -1,0 +1,35 @@
+# アーキテクチャレビュー
+
+## 結果: REJECT
+
+## サマリー
+PR画像attachmentの主要経路は配線されていますが、一時ファイルcleanupの例外経路漏れ、責務過多の新規モジュール、本番downloader境界のテスト不足があり、このまま承認できません。
+
+## 確認した観点
+- [x] 構造・設計
+- [x] コード品質
+- [x] 変更スコープ
+- [x] テストカバレッジ
+- [x] デッドコード
+- [x] 呼び出しチェーン検証
+
+## 観測した指摘
+| # | family_tag | スコープ | 重大度 | 場所 | 問題 | 修正案 |
+|---|------------|---------|--------|------|------|--------|
+| 1 | arch-review/state-consistency-cleanup | スコープ内 | medium | `src/app/cli/routing-inputs.ts:73`, `src/features/pipeline/steps.ts:168` | `preparePrReviewImageAttachments()` 後、`formatPrReviewAsTask()` 以降で例外が出ると cleanup が呼ばれない。`add --pr` 経路だけは `finally` で保護されており、入口間で状態管理契約が不一致。 | `resolvePrInput()` と pipeline `resolveTaskContent()` で、cleanup を呼び出し元へ正常に渡せない例外経路では `preparedPrImages.cleanup()` を必ず実行する。 |
+| 2 | arch-review/module-responsibility | スコープ内 | medium | `src/features/tasks/prReviewImageAttachments.ts:1` | 新規320行ファイルに Markdown/HTML解析、GitHub URL policy、gh token取得、HTTPS redirect、画像検証、一時ファイル管理、PR置換が同居している。1ファイル複数責務かつ300行超。 | parser/replacer、URL policy、download adapter、validation、TaskAttachment assembly に分割する。gh/HTTPS 実装は infra/adapter 側に寄せ、tasks 側は組み立て責務に絞る。 |
+| 3 | arch-review/external-boundary-testability | スコープ内 | medium | `src/features/tasks/prReviewImageAttachments.ts:194` | 本番downloaderの `gh auth token`、Authorization header、redirect、HTTP失敗、streaming中サイズ上限が単体テストされていない。既存テストは downloader 注入境界まで。 | downloader を注入可能な adapter に分離し、認証・redirect・HTTP status・Content-Type欠落・maxBytes超過を再現可能な単体テストで固定する。 |
+| 4 | arch-review/fallback-value | スコープ内 | low | `src/features/tasks/prReviewImageAttachments.ts:228` | `statusCode ?? 'unknown'` により外部境界の失敗分類が曖昧。Policy の fallback 値乱用基準に該当。 | `statusCode === undefined` を専用エラー分岐にし、数値 status がある場合だけ `HTTP ${statusCode}` を出す。 |
+
+## 検証証跡
+- ビルド: `npm run build` を実行し成功。
+- Lint: `npm run lint` を実行し成功。
+- テスト: `npm test` を実行し失敗。`config.test.ts`、`workflowDiscovery.test.ts`、`workflowLoader.test.ts` の timeout と `for-local-llm-replan-wiring.test.ts:56` の期待値不一致を確認。変更起因かは未判定。
+- 動作確認: 実CLIでのPR画像取得は未確認。
+
+## 再走査証跡
+- Policy章: 原則、スコープ判定、判定基準、振る舞い証跡の判定、ファクトチェック、具体的な指摘の書き方、指摘ID管理、再オープン条件、finding_id の意味固定、テストファイルの扱い、変更履歴ファイルの扱い、ボーイスカウトルール、判定ルール、レビューの基本手順、堂々巡りの検出。
+- Knowledge章: 構造・設計、境界での解決、コード品質の検出手法、セキュリティ、テスタビリティ、アンチパターン検出、抽象化レベルの評価、その場しのぎの検出、未完成コードの検出、DRY違反の検出、仕様準拠の検証、呼び出しチェーン検証、公開状態の不変性、品質特性、大局観、変更スコープの評価。
+
+## REJECT判定条件
+- スコープ内のブロッキング指摘が4件あるため REJECT。

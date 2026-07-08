@@ -1,0 +1,26 @@
+# AI生成コードレビュー
+
+## 結果: REJECT
+
+## サマリー
+PR画像取得の外部境界で、private画像URLの漏えいリスクと実ダウンローダ未検証が残っています。
+
+## 検証した項目
+| 観点 | 結果 | 備考 |
+|------|------|------|
+| 仮定の妥当性 | ❌ | private画像URLを安全にログへ出せる前提が未検証 |
+| API/ライブラリの実在 | ✅ | `npm run build` 成功 |
+| コンテキスト適合 | ❌ | 外部副作用の実装本体がテストされていない |
+| スコープ | ✅ | 変更範囲はPR画像attachment要件内 |
+
+## 観測した指摘
+| # | family_tag | カテゴリ | 重大度 | 場所 | 問題 | 修正案 |
+|---|------------|---------|--------|------|------|--------|
+| 1 | missing-edge-case | 機密情報露出 | high | `src/features/tasks/prReviewImageAttachments.ts:123` | `downloaded.finalUrl` / `sourceUrl` / `url` を含む Error が `add` / `pipeline` / `routing` でそのまま表示され、private画像の署名付きURLや一時トークン相当の値がログへ出る可能性があります。 | 画像URLをエラー表示用に query/hash なしへ丸めるか redaction し、失敗経路で署名付きURLが出ないテストを追加してください。 |
+| 2 | unvalidated-assumption | テストダブル依存 | medium | `src/features/tasks/prReviewImageAttachments.ts:194` | 実際の `requestGithubAttachmentImage()` / `downloadGithubAttachmentImage()` の Authorization、redirect、非2xx、Content-Type欠落、streaming中サイズ超過がテストされておらず、注入stubの戻り値検証で外部境界の正しさを代用しています。 | 実ダウンローダ経路を mock server または `https.get` 注入で検証し、認証ヘッダ・拒否/許可redirect・失敗レスポンス・サイズ超過を単体テストに追加してください。 |
+
+## 再走査証跡
+Policy全章（原則、スコープ判定、判定基準、ファクトチェック、レビュー基本手順、AI Antipattern各章）と Knowledge 全章（コア構造、補助入口、境界解決、エラー伝播、テスト、実装意味論）を、変更差分・実コード・対象テストに照合しました。`npm run build`、`npm run lint`、対象5テストは成功、`npm test` は変更外の timeout / 既存文言差分で失敗しました。
+
+## REJECT判定条件
+- ブロッキング指摘が2件あります。

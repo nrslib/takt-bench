@@ -1,0 +1,30 @@
+# アーキテクチャレビュー
+
+## 結果: REJECT
+
+## サマリー
+F-0009 は `exitOnFailure: false` と cleanup 後の `process.exit(1)` により解消確認済みです。累積差分の再走査で、PR画像attachmentの一時ディレクトリ初期化失敗時だけ cleanup 対象外になる新規の状態整合性問題を検出しました。
+
+## 確認した観点
+- [x] 構造・設計
+- [x] コード品質
+- [x] 変更スコープ
+- [x] テストカバレッジ
+- [x] デッドコード
+- [x] 呼び出しチェーン検証
+
+## 観測した指摘
+| # | family_tag | スコープ | 重大度 | 場所 | 問題 | 修正案 |
+|---|------------|---------|--------|------|------|--------|
+| 1 | arch-review/state-consistency-temp-cleanup | スコープ内 | low | `src/features/tasks/prReviewImageAttachments.ts:63` | `sessionDir` 作成後、`ensurePrivateDirectory(sessionDir)` / `ensurePrivateDirectory(attachmentDir)` が `try/catch` 外のため、初期化失敗時に作成済み一時ディレクトリが cleanup されません。 | `sessionDir` 作成後、cleanup 関数定義直後から directory 初期化と download/write 全体を同じ `try/catch` に入れ、失敗時に `cleanup()` を実行してください。 |
+
+## 検証証跡
+- ビルド: `npm run build` 成功
+- テスト: 対象テスト `npm run test:unit -- ...` 成功（6 files / 127 tests）。`npm test` は変更外の workflow/config 系 timeout と文言差分で失敗
+- 動作確認: 実コード上で `src/app/cli/routing.ts:268-318` と `src/features/tasks/execute/selectAndExecute.ts:192-196` を照合し、F-0009 の cleanup 後 exit 経路を確認
+
+## 再走査証跡
+Policy 全章（原則、スコープ判定、判定基準、振る舞い証跡、ファクトチェック、ID管理、ボーイスカウト、判定ルール、レビュー手順）と Knowledge 全章（構造・設計、境界、品質、セキュリティ、テスタビリティ、アンチパターン、抽象化、DRY、仕様準拠、呼び出しチェーン、公開状態、変更スコープ）を累積差分へ照合しました。
+
+## REJECT判定条件
+- スコープ内のブロッキング指摘が1件あります。

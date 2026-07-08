@@ -1,0 +1,19 @@
+# コーディングレビュー
+
+## 結果: REJECT
+
+## サマリー
+PR画像添付の主要経路は実装・配線されていますが、`takt --pr` の対話準備中に例外が出た場合、ダウンロード済みPR画像の一時ディレクトリが cleanup されない経路があります。
+
+## 観測した指摘
+| # | family_tag | 重大度 | 場所 | 問題 | 影響 | 修正案 |
+|---|------------|--------|------|------|------|--------|
+| 1 | pr_image_attachment_cleanup_exception_path | Medium | `src/app/cli/routing.ts:155` | `resolvePrInput()` 後に `cleanupPrInputAttachments` が設定されますが、`determineWorkflow()`、`getWorkflowDescription()`、`selectInteractiveMode()`、`loadTaskHistory()` は `try/finally` の外で実行されています。これらが例外で中断すると、PRコメント画像を保存した一時ディレクトリが削除されません。 | private PR画像を含みうる一時ファイルが `/tmp` 配下に残り、繰り返し実行時に不要なファイルも蓄積します。 | `cleanupPrInputAttachments` が設定された直後から workflow 解決・mode 選択・dispatch 完了までを同じ `try/finally` で囲み、null/cancel の早期 return も含めて一箇所で cleanup してください。 |
+
+## 検証証跡
+- 差分確認: PR画像 helper、`add --pr`、`takt --pr`、pipeline `--pr`、関連テスト差分を確認
+- ビルド: `npm run build` 成功
+- テスト: 対象テスト `imageMime`, `prReviewImageAttachments`, `addTask`, `pipelineExecution`, `cli-routing-pr-resolve` は成功
+
+## REJECT判定条件
+- ブロッキング指摘が1件あります。

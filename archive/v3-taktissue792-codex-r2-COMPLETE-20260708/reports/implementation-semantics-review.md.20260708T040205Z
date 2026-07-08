@@ -1,0 +1,18 @@
+# 実装意味論レビュー
+
+## 結果: REJECT
+
+## サマリー
+PR画像一時ファイルの cleanup 範囲に漏れがあります。`takt --pr` で画像を取得した後、interactive 実行前の設定・ワークフロー解決が例外を投げると、private 画像を含む一時ディレクトリが残ります。
+
+## 観測した指摘
+| # | family_tag | 重大度 | 場所 | 問題 | 壊れる条件 | 修正案 |
+|---|------------|--------|------|------|-----------|--------|
+| 1 | implementation-semantics:state-cleanup | Medium | `src/app/cli/routing.ts:149` | `resolvePrInput()` が画像をダウンロードして `cleanupPrInputAttachments` を設定した後、`resolveConfigValues()` / `determineWorkflow()` / `getWorkflowDescription()` / `selectInteractiveMode()` が共通 `finally` の外で実行されている。 | `takt --pr` でPR画像取得後、無効な設定やワークフロー読み込みエラーなどで line 149/155/163 付近が throw すると、一時画像ファイルが削除されない。 | `cleanupPrInputAttachments` を受け取った直後から、config/workflow 解決、mode 選択、interactive 実行、dispatch までを同じ `try/finally` に入れ、成功・キャンセル・例外の全経路で一度だけ cleanup する。 |
+
+## 検証証跡
+- 差分確認: PR画像 attachment 追加に伴う `routing.ts`、`routing-inputs.ts`、`add/index.ts`、`pipeline/steps.ts`、`prReviewImageAttachments.ts` の変更を確認。
+- 判定根拠の実在確認: `src/app/cli/routing.ts:112-120` で cleanup 関数が設定され、`src/app/cli/routing.ts:149-163` が `try/finally` 外、`src/app/cli/routing.ts:193-305` で cleanup が遅れて実行される構造を実コードで確認。
+
+## REJECT判定条件
+- ブロッキング指摘が1件あるため REJECT。

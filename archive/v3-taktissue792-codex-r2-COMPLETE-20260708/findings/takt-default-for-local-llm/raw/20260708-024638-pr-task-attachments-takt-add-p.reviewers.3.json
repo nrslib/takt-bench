@@ -1,0 +1,62 @@
+[
+  {
+    "rawFindingId": "20260708-024638-pr-task-attachments-takt-add-p:reviewers:3:arch-review:arch3-resolution-001",
+    "stepName": "arch-review",
+    "reviewer": "arch-review",
+    "familyTag": "arch-review/state-consistency-process-exit-cleanup",
+    "severity": "medium",
+    "title": "PR画像attachment cleanupのprocess.exit経路が保護された",
+    "location": "src/app/cli/routing.ts:268",
+    "description": "src/app/cli/routing.ts:268-279 で attachment 付き execute 経路は selectOptions.exitOnFailure=false を設定し、selectAndExecuteTask() からの 'Task failed' を exitCodeAfterCleanup=1 に変換して return しています。src/app/cli/routing.ts:314-318 では cleanupPrInputAttachments?.() の finally 実行後に process.exit(exitCodeAfterCleanup) を呼ぶため、src/features/tasks/execute/selectAndExecute.ts:192-196 の直接 process.exit(1) 経路を回避してから cleanup できる構造になっています。src/__tests__/cli-routing-pr-resolve.test.ts:381-420 でも cleanup 実行後に process.exit(1) されることを検証しています。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0009"
+  },
+  {
+    "rawFindingId": "20260708-024638-pr-task-attachments-takt-add-p:reviewers:3:arch-review:arch3-raw-001",
+    "stepName": "arch-review",
+    "reviewer": "arch-review",
+    "familyTag": "arch-review/state-consistency-temp-cleanup",
+    "severity": "low",
+    "title": "PR画像attachmentの一時ディレクトリ初期化失敗時にcleanupが漏れる",
+    "location": "src/features/tasks/prReviewImageAttachments.ts:63",
+    "description": "preparePrReviewImageAttachments() は src/features/tasks/prReviewImageAttachments.ts:63 で sessionDir を作成し、src/features/tasks/prReviewImageAttachments.ts:68-69 で private directory 初期化を行っていますが、cleanup 付きの try/catch は src/features/tasks/prReviewImageAttachments.ts:73 から始まります。そのため ensurePrivateDirectory(sessionDir) または ensurePrivateDirectory(attachmentDir) が throw した場合、既に作成された sessionDir/attachmentDir が cleanup() されません。今回追加された PR 画像 attachment の一時資源管理として、初期化失敗経路だけ後片付け契約から外れています。",
+    "suggestion": "sessionDir 作成後、cleanup 関数を定義した直後から ensurePrivateDirectory(sessionDir)、ensurePrivateDirectory(attachmentDir)、download/write 処理全体を同じ try/catch に入れてください。mkdtempSync 自体が失敗した場合は cleanup 対象がないため、sessionDir 作成後の初期化失敗だけ cleanup() する構造にしてください。",
+    "kind": "issue"
+  },
+  {
+    "rawFindingId": "20260708-024638-pr-task-attachments-takt-add-p:reviewers:3:ai-antipattern-review:raw-ai-antipattern-3-resolved-f0009",
+    "stepName": "ai-antipattern-review",
+    "reviewer": "ai-antipattern-review",
+    "familyTag": "arch-review/state-consistency-process-exit-cleanup",
+    "severity": "medium",
+    "title": "PR画像attachment cleanupが実行失敗時の process.exit 経路で漏れる問題は解消済み",
+    "location": "src/app/cli/routing.ts:268",
+    "description": "src/app/cli/routing.ts:268-278 で attachment 付き execute 経路が selectOptions.exitOnFailure=false を渡し、selectAndExecuteTask() の Task failed を exitCodeAfterCleanup=1 に変換しています。src/app/cli/routing.ts:314-318 で cleanupPrInputAttachments?.() 実行後に process.exit(exitCodeAfterCleanup) するため、元 finding の process.exit が outer finally を飛ばす経路は解消されています。src/__tests__/cli-routing-pr-resolve.test.ts:381-420 でも cleanup 後に process.exit(1) されることを確認しています。対象テスト、npm run build、npm run lint は成功しました。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0009"
+  },
+  {
+    "rawFindingId": "20260708-024638-pr-task-attachments-takt-add-p:reviewers:3:coding-review:coding-review-3-resolved-F-0009",
+    "stepName": "coding-review",
+    "reviewer": "coding-review",
+    "familyTag": "arch-review/state-consistency-process-exit-cleanup",
+    "severity": "medium",
+    "title": "PR画像attachment cleanupのprocess.exit経路漏れは解消済み",
+    "location": "src/app/cli/routing.ts:268",
+    "description": "interactive execute 経路では actionAttachments がある場合に src/app/cli/routing.ts:268-272 で selectOptions.exitOnFailure = false を設定し、selectAndExecuteTask() からの `Task failed` を src/app/cli/routing.ts:273-281 で捕捉して exitCodeAfterCleanup = 1 に遅延しています。その後 src/app/cli/routing.ts:314-315 の finally で cleanupPrInputAttachments?.() を実行し、src/app/cli/routing.ts:317-318 で cleanup 後に process.exit する構造になっていることを確認しました。src/__tests__/cli-routing-pr-resolve.test.ts:381-419 でも失敗時に cleanup 後 exit され、exitOnFailure:false が渡ることを検証しています。npm run build と npm run lint、対象テスト6ファイル127件は成功しました。npm test 全体は既存の workflow/config 系 timeout と replan wiring 期待値差分、および Vitest worker onTaskUpdate timeout で失敗しましたが、今回の F-0009 修正経路では失敗していません。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0009"
+  },
+  {
+    "rawFindingId": "20260708-024638-pr-task-attachments-takt-add-p:reviewers:3:implementation-semantics-review:implementation-semantics-raw-3-1",
+    "stepName": "implementation-semantics-review",
+    "reviewer": "implementation-semantics-review",
+    "familyTag": "arch-review/state-consistency-cleanup",
+    "severity": "medium",
+    "title": "PR画像attachment cleanupのprocess.exit経路漏れは解消済み",
+    "location": "src/app/cli/routing.ts:271",
+    "description": "`execute` action で PR attachment がある場合、`src/app/cli/routing.ts:269-272` により `selectOptions.attachments` と同時に `selectOptions.exitOnFailure = false` が設定されることを確認しました。`selectAndExecuteTask()` 側は `src/features/tasks/execute/selectAndExecute.ts:192-196` で `exitOnFailure === false` の場合に `process.exit(1)` ではなく `Error('Task failed')` を throw します。さらに `src/app/cli/routing.ts:273-280` がこの失敗を `exitCodeAfterCleanup = 1` に変換し、`src/app/cli/routing.ts:314-318` で `cleanupPrInputAttachments?.()` の後に `process.exit(exitCodeAfterCleanup)` するため、元 finding の cleanup 契約を満たしています。",
+    "kind": "resolution_confirmation",
+    "targetFindingId": "F-0009"
+  }
+]

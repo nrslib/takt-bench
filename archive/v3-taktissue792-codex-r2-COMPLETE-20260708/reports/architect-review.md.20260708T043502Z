@@ -1,0 +1,37 @@
+# アーキテクチャレビュー
+
+## 結果: REJECT
+
+## サマリー
+前回の `F-0001`〜`F-0008` は実コード上の修正を確認しました。一方で、PR画像attachment cleanup が `selectAndExecuteTask()` の `process.exit(1)` 経路で漏れる新しい状態不整合を確認したため、REJECT です。
+
+## 確認した観点
+- [x] 構造・設計
+- [x] コード品質
+- [x] 変更スコープ
+- [x] テストカバレッジ
+- [x] デッドコード
+- [x] 呼び出しチェーン検証
+
+## 観測した指摘
+| # | family_tag | スコープ | 重大度 | 場所 | 問題 | 修正案 |
+|---|------------|---------|--------|------|------|--------|
+| 1 | arch-review/state-consistency-process-exit-cleanup | スコープ内 | medium | `src/app/cli/routing.ts:270`, `src/features/tasks/execute/selectAndExecute.ts:192` | `executeDefaultAction()` は PR attachment cleanup を `src/app/cli/routing.ts:303-305` の `finally` に置いているが、execute action は `selectAndExecuteTask()` に `exitOnFailure:false` を渡していない。`selectAndExecuteTask()` は task 失敗時に `process.exit(1)` を直接呼ぶため、外側の `finally` に到達せず PR画像一時ディレクトリが残る。 | PR attachment を持つ interactive execute 経路では `selectOptions.exitOnFailure = false` を設定して `selectAndExecuteTask()` から throw させ、`executeDefaultAction()` 側の `finally` で cleanup 後に終了処理する。失敗時 cleanup のテストも追加する。 |
+
+## 解消確認
+| finding | 判定 | 根拠 |
+|---|---|---|
+| F-0001 | 解消確認 | `src/app/cli/routing-inputs.ts:75-85`, `src/features/pipeline/steps.ts:175-188` で cleanup 付き try/catch を確認。 |
+| F-0002 | 解消確認 | `prReviewImageAttachments.ts` は 96 行へ縮小し、参照処理・検証・URL policy・downloader が別ファイルへ分離済み。 |
+| F-0003/F-0006 | 解消確認 | `src/__tests__/githubAttachmentImageDownloader.test.ts:73-283` で本番downloader境界の主要分岐を確認。 |
+| F-0004 | 解消確認 | `src/infra/github/attachmentImageDownloader.ts:107-115` で `unknown` fallback が専用分岐へ置換済み。 |
+| F-0005 | 解消確認 | `formatSafeGithubAttachmentUrlForError()` と関連テストで query/hash を落とすことを確認。 |
+| F-0007/F-0008 | 解消確認 | `src/app/cli/routing.ts:149-305` で config/workflow/mode/dispatch が cleanup 対象範囲に入ったことを確認。 |
+
+## 検証証跡
+- ビルド: `npm run build` 成功。
+- テスト: 対象テスト6ファイルは成功。`npm test` は既存の workflow/config/ACP 系 timeout と replan wiring 期待値不一致で失敗。
+- 動作確認: 実CLIでのPR画像取得は未確認。
+
+## REJECT判定条件
+- スコープ内のブロッキング指摘が1件あるため REJECT。

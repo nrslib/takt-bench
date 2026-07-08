@@ -1,0 +1,10 @@
+# 実装意味論レビュー
+
+## 結果: APPROVE
+
+## サマリー
+実装意味論スコープで確認した `F-0009` は解消済みです。PR画像 attachment 付き interactive execute 失敗時も、`process.exit` を cleanup 後に遅延する構造になっています。
+
+## 検証証跡
+- 再走査証跡: Knowledge の「データ構造の意味選択」「導出値の単一情報源」「命名と意味の整合」「境界での fail-fast」「内部状態の参照漏れ」を累積差分全体に照合。
+- 解消確認: `src/app/cli/routing.ts:269-280`、`src/app/cli/routing.ts:314-318`、`src/features/tasks/execute/selectAndExecute.ts:192-196` を再読し、`exitOnFailure:false`、cleanup、cleanup後 exit の順序を確認。

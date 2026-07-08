@@ -1,0 +1,98 @@
+[
+  {
+    "rawFindingId": "20260708-024638-pr-task-attachments-takt-add-p:reviewers:1:arch-review:arch-raw-001",
+    "stepName": "arch-review",
+    "reviewer": "arch-review",
+    "familyTag": "arch-review/state-consistency-cleanup",
+    "severity": "medium",
+    "title": "PR画像attachmentのcleanupが例外経路で漏れる",
+    "location": "src/app/cli/routing-inputs.ts:73",
+    "description": "resolvePrInput() は preparePrReviewImageAttachments() で一時attachmentを作成した後、formatPrReviewAsTask() と戻り値構築を try/finally で囲んでいません。同じ PR attachment 経路の add --pr では src/features/tasks/add/index.ts:204 から finally で cleanup していますが、takt --pr 経路では formatPrReviewAsTask() などが throw した場合、呼び出し元へ cleanupAttachments が返らず一時画像ディレクトリが残ります。pipeline 側も src/features/pipeline/steps.ts:168 で作成後、src/features/pipeline/steps.ts:175 の formatPrReviewAsTask() 以降を cleanup で保護していません。",
+    "suggestion": "preparePrReviewImageAttachments() の戻り値を受け取った直後から、戻り値を呼び出し元へ正常に引き渡すまでを try/catch または try/finally で保護してください。resolvePrInput() と pipeline resolveTaskContent() の両方で、戻り値として cleanup を引き渡せない例外経路では preparedPrImages.cleanup() を必ず実行する構造にしてください。",
+    "kind": "issue"
+  },
+  {
+    "rawFindingId": "20260708-024638-pr-task-attachments-takt-add-p:reviewers:1:arch-review:arch-raw-002",
+    "stepName": "arch-review",
+    "reviewer": "arch-review",
+    "familyTag": "arch-review/module-responsibility",
+    "severity": "medium",
+    "title": "PR画像attachmentモジュールが複数責務を抱えすぎている",
+    "location": "src/features/tasks/prReviewImageAttachments.ts:1",
+    "description": "新規ファイル src/features/tasks/prReviewImageAttachments.ts は 320 行あり、Markdown/HTML 解析、GitHub URL allowlist、gh token 取得、HTTPS redirect 処理、Content-Type/magic bytes 検証、一時ファイル管理、PrReviewData の置換コピー作成を同一モジュールに持っています。Knowledge の「1ファイル300行超は Warning」「1ファイルに複数の責務は REJECT」「プロトコル境界の例外変換/外部取得は境界に集約」に照らすと、task attachment 生成という feature 境界に HTTP/gh 実装詳細まで混在しています。",
+    "suggestion": "少なくとも parser/replacer、GitHub attachment URL policy、download adapter、downloaded image validation、TaskAttachment assembly を分けてください。gh/HTTPS の具体実装は GitHub infra 側または専用 adapter に置き、features/tasks 側は PrReviewData と downloader interface から TaskAttachment を組み立てる責務に絞ってください。",
+    "kind": "issue"
+  },
+  {
+    "rawFindingId": "20260708-024638-pr-task-attachments-takt-add-p:reviewers:1:arch-review:arch-raw-003",
+    "stepName": "arch-review",
+    "reviewer": "arch-review",
+    "familyTag": "arch-review/external-boundary-testability",
+    "severity": "medium",
+    "title": "本番downloaderの外部境界が単体テストされていない",
+    "location": "src/features/tasks/prReviewImageAttachments.ts:194",
+    "description": "実装は requestGithubAttachmentImage() と downloadGithubAttachmentImage() で gh auth token、Authorization header、HTTPS redirect、HTTP status、streaming中のサイズ上限を扱いますが、確認した prReviewImageAttachments.test.ts は downloadImage を注入した preparePrReviewImageAttachments() のテストのみで、本番 downloader 境界を通っていません。テストレポートでも実装時に gh auth token 呼び出し・Authorization header・redirect 追跡・streaming中の上限打ち切り確認が必要と記録されています。外部実行/認証/HTTP 境界の新規挙動に対して主要な成功/失敗/拒否経路の再現可能な検証が欠けています。",
+    "suggestion": "downloader をテスト可能な adapter に分離し、execFileSync 相当と HTTPS client を注入できる構造にしてください。その上で gh token が空の場合、Authorization header、許可外redirect拒否、redirect上限、HTTP失敗、Content-Type欠落、streaming中の maxBytes 超過を単体テストで固定してください。",
+    "kind": "issue"
+  },
+  {
+    "rawFindingId": "20260708-024638-pr-task-attachments-takt-add-p:reviewers:1:arch-review:arch-raw-004",
+    "stepName": "arch-review",
+    "reviewer": "arch-review",
+    "familyTag": "arch-review/fallback-value",
+    "severity": "low",
+    "title": "HTTP status の fallback に unknown 文字列を使っている",
+    "location": "src/features/tasks/prReviewImageAttachments.ts:228",
+    "description": "新規コードで `statusCode ?? 'unknown'` を使ってエラーメッセージを作っています。Policy の REJECT 基準にはフォールバック値の乱用（`?? 'unknown'`）が明示されており、未取得の status と実際の HTTP status を同じ文字列補完で扱うと、外部境界の失敗分類が曖昧になります。",
+    "suggestion": "statusCode が undefined の場合は専用の分岐で `Missing HTTP status code ...` のように明示エラーにし、数値 status がある場合だけ `HTTP ${statusCode}` を出してください。",
+    "kind": "issue"
+  },
+  {
+    "rawFindingId": "20260708-024638-pr-task-attachments-takt-add-p:reviewers:1:ai-antipattern-review:raw-ai-antipattern-001",
+    "stepName": "ai-antipattern-review",
+    "reviewer": "ai-antipattern-review",
+    "familyTag": "ai-antipattern:sensitive-error-output",
+    "severity": "high",
+    "title": "PR画像取得失敗時に private image URL をそのままログへ流す",
+    "location": "src/features/tasks/prReviewImageAttachments.ts:123",
+    "description": "PR画像ダウンロード処理は `private-user-images.githubusercontent.com` も許可対象にしている一方、検証失敗やHTTP失敗時の Error に `downloaded.finalUrl` / `sourceUrl` / `url` をそのまま含めています。この Error は `src/features/tasks/add/index.ts:199`、`src/features/pipeline/steps.ts:172`、`src/app/cli/routing.ts:128` で `getErrorMessage()` のまま表示されます。private repository 画像の URL には署名付きクエリや一時アクセストークン相当の値が含まれ得るため、失敗経路で機密性のある画像URLを端末ログへ露出する実装になっています。レビューポリシーの「ログ、エラーレスポンス、テスト出力への機密情報露出」に該当します。",
+    "suggestion": "画像URLを含むエラー文言はホストと安全な識別子だけに丸め、query/hash を落としてください。ログへ渡す前に `sanitizeSensitiveText` 相当を使うか、PR画像専用の `formatSafeImageUrlForError()` を用意して、add/routing/pipeline の全失敗経路で署名付きURLが出ないことをテストしてください。",
+    "kind": "issue"
+  },
+  {
+    "rawFindingId": "20260708-024638-pr-task-attachments-takt-add-p:reviewers:1:ai-antipattern-review:raw-ai-antipattern-002",
+    "stepName": "ai-antipattern-review",
+    "reviewer": "ai-antipattern-review",
+    "familyTag": "ai-antipattern:test-double-contract-gap",
+    "severity": "medium",
+    "title": "実際のGitHub画像ダウンローダの外部境界がテストされていない",
+    "location": "src/features/tasks/prReviewImageAttachments.ts:194",
+    "description": "新規の外部副作用である `requestGithubAttachmentImage()` / `downloadGithubAttachmentImage()` は、`gh auth token`、Authorizationヘッダ、HTTPステータス、リダイレクト、Content-Type欠落、streaming中のサイズ上限を実装しています。しかし追加テストは `preparePrReviewImageAttachments()` に注入した `downloadImage` stub の戻り値検証に寄っており、`rg` でも `downloadGithubAttachmentImage` や `Too many redirects` / `Missing Content-Type` を検証するテストは見つかりませんでした。外部取得・認証・拒否境界という新しい振る舞いに対して、実装本体ではなくテストダブルだけで成功を確認している状態です。",
+    "suggestion": "`https.get` を制御できる形に分離するかローカルHTTPS/HTTP相当のテストダブルを使い、実際の downloader 経路で Authorization ヘッダ付与、許可/拒否リダイレクト、非2xx、Content-Type欠落、受信途中のサイズ超過、空トークンを検証してください。既存の `preparePrReviewImageAttachments()` の注入テストは維持しつつ、外部境界そのものの単体テストを追加してください。",
+    "kind": "issue"
+  },
+  {
+    "rawFindingId": "20260708-024638-pr-task-attachments-takt-add-p:reviewers:1:coding-review:raw-coding-review-1",
+    "stepName": "coding-review",
+    "reviewer": "coding-review",
+    "familyTag": "pr_image_attachment_cleanup_exception_path",
+    "severity": "medium",
+    "title": "PR画像一時ファイルのcleanupが対話準備中の例外経路で漏れる",
+    "location": "src/app/cli/routing.ts:155",
+    "description": "`resolvePrInput()` 後に `cleanupPrInputAttachments` が設定されますが、`determineWorkflow()`、`getWorkflowDescription()`、`selectInteractiveMode()`、`loadTaskHistory()` は `try/finally` の外で実行されています。これらが例外で中断すると、PRコメント画像を保存した一時ディレクトリが削除されません。今回追加されたPR画像ダウンロードの副作用に対し、例外経路の後片付けが不足しています。",
+    "suggestion": "`cleanupPrInputAttachments` が設定された直後から、workflow解決・mode選択・dispatch完了までを同じ `try/finally` で囲み、既存の null/cancel 早期return時も含めて一箇所で cleanup してください。",
+    "kind": "issue"
+  },
+  {
+    "rawFindingId": "20260708-024638-pr-task-attachments-takt-add-p:reviewers:1:implementation-semantics-review:implementation-semantics-raw-1",
+    "stepName": "implementation-semantics-review",
+    "reviewer": "implementation-semantics-review",
+    "familyTag": "implementation-semantics:state-cleanup",
+    "severity": "medium",
+    "title": "PR画像一時ファイルのcleanup範囲が遅く、設定/ワークフロー解決例外で漏れる",
+    "location": "src/app/cli/routing.ts:149",
+    "description": "`resolvePrInput()` が画像をダウンロードして `cleanupPrInputAttachments` を設定した後、`resolveConfigValues()`、`determineWorkflow()`、`getWorkflowDescription()`、`selectInteractiveMode()` が実行されますが、共通の `finally` は line 194 以降にしかありません。無効な設定やワークフロー読み込みエラーで line 149/155/163 付近が throw すると、PRコメント由来の画像一時ディレクトリが削除されず、private repository 画像が `/tmp` に残ります。",
+    "suggestion": "`cleanupPrInputAttachments` を受け取った直後から、workflow/config 解決、mode 選択、interactive 実行、dispatch までを同じ `try/finally` に入れ、成功・キャンセル・例外の全経路で一度だけcleanupしてください。",
+    "kind": "issue"
+  }
+]
