@@ -1,0 +1,70 @@
+# 修正レポート
+
+## サマリー
+
+`src/features/tasks/add/index.ts` の `addTask()` 外側 cleanup に残っていた `fs.rmdirSync(..., { recursive: true })` を `fs.rmSync` へ置換した。
+
+`src/shared/utils/imageUrls.ts` は、画像URL抽出順およびcleanup API置換を実施できなかった。ツール実行エラーが12回連続したため、未完了である。テスト・ビルドは未実施。
+
+## 修正単位
+
+| 修正単位 | 対象 finding | 守る契約 | 実施内容・反映先 | 状態 |
+|----------|--------------|------------|-----------------|------|
+| 画像URL抽出順と取得処理のcleanup修正 | 提示資料にID記載なし | PR-IMG-PLACEHOLDER-1 / PR-IMG-TEMP-LIFECYCLE-1。`src/shared/utils/imageUrls.ts` の抽出・一時ディレクトリ管理 | 実装未完了。対象ファイルの修正に至らず | blocker |
+| addTask外側cleanupの現行API移行 | 提示資料にID記載なし | PR-IMG-TEMP-LIFECYCLE-1。`addTask()` 外側 `finally` の一時ディレクトリcleanup | `src/features/tasks/add/index.ts` の `fs.rmdirSync` を `fs.rmSync` へ置換 | 全完了義務を閉じていないため未完了 |
+
+## 不変条件台帳の引き継ぎ
+
+引き継ぎ元: fix-plan.md は存在しない前提であり、転記可能な台帳記載なし。
+
+| 修正単位 | family ID | 不変条件の名前 | 担当箇所 | 今回の検証回数 | 前回の検証回数 | 前回経路 | 今回経路 | 同一不変条件・再発判定 | 累積 `incomplete` 回数 | 別経路での再発が確認済みか | 強制点候補 | 記録の完全性 |
+|----------|-----------|------------------|---------------------|----------------------------|----------------------------|----------|----------|------------------------|-------------------------|-----------|------------|--------------|
+| なし | 不明 | 不明 | 不明 | 判定できない | 判定できない | 判定できない | 判定できない | 未判定 | 判定できない | 判定できない | 判定できない | 引き継ぎ元の記録なし |
+
+## 引き継ぎ不足
+
+- fix-plan.md の台帳、family ID、検証回数、再発判定、強制点候補が提示されていないため、台帳を完全には引き継げない。保守的に未判定として扱う。
+- `src/shared/utils/imageUrls.ts` の修正結果を確認できる実行証拠がない。
+
+## 完了義務
+
+| 修正単位 | 義務ID | 種別 | 対象 finding | 不変条件と対象経路 | 違反を検出する反例・観測点 | 修正前または差し戻し時の結果 | 実装根拠 | 修正後の証拠 | 状態 |
+|----------|--------|------|--------------|--------------------|------------------------------|--------------------------------|----------|--------------|------|
+| addTask外側cleanupの現行API移行 | ADD-CLEANUP-1 | 振る舞い修正 | 提示資料にID記載なし | PR-IMG-TEMP-LIFECYCLE-1 / `addTask()` 外側cleanup | 成功・保存失敗・cancel経路で一時ディレクトリが残る、またはcleanup失敗が主例外を隠す | `fs.rmdirSync(..., { recursive: true })` が残存 | `src/features/tasks/add/index.ts` のcleanup呼び出しを `fs.rmSync` に置換 | 前工程レポートの実施記録のみ。テスト未実施 | 未完了 |
+| 画像URL抽出順と取得処理のcleanup修正 | IMAGE-URLS-1 | 振る舞い修正 | 提示資料にID記載なし | PR-IMG-PLACEHOLDER-1 / 混在記法の本文出現順抽出 | Markdown・HTML double quote・single quote混在時に抽出順が崩れる | 未確認 | 未実施 | ツールエラーにより証拠なし | 未完了 |
+| 画像URL抽出順と取得処理のcleanup修正 | IMAGE-URLS-2 | 振る舞い修正 | 提示資料にID記載なし | PR-IMG-TEMP-LIFECYCLE-1 / `downloadImage()`・`validateAndSetImageExtension()` cleanup | 取得失敗・magic bytes検証失敗時に一時ディレクトリが残る、または元例外が隠れる | `fs.rmdirSync(..., { recursive: true })` の残存が未解消 | 未実施 | ツールエラーにより証拠なし | 未完了 |
+
+## 受入条件
+
+| finding ID | 受入条件 | 証拠 | 状態 |
+|------------|----------|------|------|
+| 提示資料にID記載なし | `addTask()` の成功・失敗・cancel経路で現行Node.js対応のcleanup APIを使用する | `fs.rmdirSync` を `fs.rmSync` に置換したとの前工程記録。テスト未実施 | blocker |
+| 提示資料にID記載なし | `extractImageUrls()` が混在記法を本文出現順に抽出する | 実装確認・テスト未実施 | blocker |
+| 提示資料にID記載なし | `downloadImage()` と `validateAndSetImageExtension()` のcleanupが現行APIに適合する | 実装確認・テスト未実施 | blocker |
+
+## 差し戻し後の証拠修正
+
+| 修正単位 | 義務ID | verifier が確認した不足 | 前回の証拠が検出できなかった理由 | 修正した反例・観測点 | 同じ証明手段から再開・再確認した義務 |
+|----------|--------|--------------------------|----------------------------------|----------------------|----------------------------------------|
+| 画像URL抽出順と取得処理のcleanup修正 | IMAGE-URLS-1 / IMAGE-URLS-2 | 修正結果を確認できない | ツール実行エラーが12回連続し、対象ファイルを確認・編集できなかった | なし | IMAGE-URLS-1 / IMAGE-URLS-2 |
+
+## 確立済み不変条件への差分走査
+
+| family ID | 不変条件の名前 | 担当箇所 | 状態 | 証拠 | 理由・後続対応 |
+|-----------|------------------|----------|------|------|----------------|
+| 不明 | PR-IMG-PLACEHOLDER-1 | `src/shared/utils/imageUrls.ts` | 未確認 | 対象ファイルの走査・テスト未実施 | 混在記法の抽出順を確認する必要がある |
+| 不明 | PR-IMG-TEMP-LIFECYCLE-1 | `src/shared/utils/imageUrls.ts` / `src/features/tasks/add/index.ts` | 未確認 | add/index.ts は置換記録のみ。imageUrls.ts とテストは未確認 | 全cleanup経路を走査し、例外保持を検証する必要がある |
+
+## 品質ゲート
+
+| 種別 | 結果 | 証拠 |
+|------|------|------|
+| ビルド | 未実施 | コマンド未実行 |
+| テスト | 未実施 | コマンド未実行 |
+| その他 | 失敗 | `src/shared/utils/imageUrls.ts` の作業中に `todowrite` ツールエラーが12回連続 |
+
+## 未完了義務
+
+- `IMAGE-URLS-1`: `extractImageUrls()` の混在記法における本文出現順抽出を実装・確認する。
+- `IMAGE-URLS-2`: `downloadImage()` と `validateAndSetImageExtension()` のcleanup APIを置換し、元例外保持を確認する。
+- `ADD-CLEANUP-1`: 変更後の成功・失敗・cancel経路をテストまたはコード走査で検証する。

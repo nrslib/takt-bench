@@ -1,0 +1,142 @@
+{
+  "version": 2,
+  "sourceRunSlug": "20260818-035944-implement-using-only-the-files-6x3qx0",
+  "targetRunSlug": "20260818-062828-implement-using-only-the-files-art885",
+  "createdAt": "2026-08-18T06:28:30.354Z",
+  "files": [
+    {
+      "path": "subworkflows/iteration-1--step-develop--workflow-development-core--site-b9b67e102c7636dc49c60589c6d88cd6b679d711796f4401ec74ecc215055f93/plan.md",
+      "size": 19713,
+      "sha256": "a3117da9deb05fa44aeca77a94d1eff548428caf74d87be5fb897a8f6c85c297"
+    },
+    {
+      "path": "subworkflows/iteration-1--step-develop--workflow-development-core--site-b9b67e102c7636dc49c60589c6d88cd6b679d711796f4401ec74ecc215055f93/subworkflows/iteration-1--step-implement--workflow-development-implement-team--site-27a3d0e747f2dcadd6548a2cf66042b77e311353d5affed7fcf178e381ef988f/.takt-report-internal/team-leader/implement/part-part-1-0543cf94.md",
+      "size": 174,
+      "sha256": "6667f2f2299ffa8cf5ceeeacd068dc5b90236de1a221e66199c7393f8a2a1cfb"
+    },
+    {
+      "path": "subworkflows/iteration-1--step-develop--workflow-development-core--site-b9b67e102c7636dc49c60589c6d88cd6b679d711796f4401ec74ecc215055f93/subworkflows/iteration-1--step-implement--workflow-development-implement-team--site-27a3d0e747f2dcadd6548a2cf66042b77e311353d5affed7fcf178e381ef988f/coder-decisions.md",
+      "size": 3178,
+      "sha256": "cbc040fc96ba2403bca281fb3e37b41e73f8c73c1175b64cba5007387993a92b"
+    },
+    {
+      "path": "subworkflows/iteration-1--step-develop--workflow-development-core--site-b9b67e102c7636dc49c60589c6d88cd6b679d711796f4401ec74ecc215055f93/subworkflows/iteration-1--step-implement--workflow-development-implement-team--site-27a3d0e747f2dcadd6548a2cf66042b77e311353d5affed7fcf178e381ef988f/coder-scope.md",
+      "size": 1016,
+      "sha256": "64fdd8baa076d595df70c4a73240a9808641a99b971300e84ba4394951adb67c"
+    },
+    {
+      "path": "subworkflows/iteration-1--step-develop--workflow-development-core--site-b9b67e102c7636dc49c60589c6d88cd6b679d711796f4401ec74ecc215055f93/subworkflows/iteration-1--step-implement--workflow-development-implement-team--site-27a3d0e747f2dcadd6548a2cf66042b77e311353d5affed7fcf178e381ef988f/implementation-report.md",
+      "size": 8988,
+      "sha256": "5936407889302765446624dc4ee01864b7c99c0d876c5e41946b7bbfc489f4c5"
+    },
+    {
+      "path": "subworkflows/iteration-1--step-develop--workflow-development-core--site-b9b67e102c7636dc49c60589c6d88cd6b679d711796f4401ec74ecc215055f93/subworkflows/iteration-1--step-peer-review--workflow-peer-review--site-2ab59835bfe74465500aea382575c17b00d31c5582298b14b45d7485db86bf44/review-resolution.md",
+      "size": 7701,
+      "sha256": "7b066a1b3fd8ef50ff4ccf48d0d2644d7cc777ea02dfbb1ed42d5fe3611bbeb2"
+    },
+    {
+      "path": "subworkflows/iteration-1--step-develop--workflow-development-core--site-b9b67e102c7636dc49c60589c6d88cd6b679d711796f4401ec74ecc215055f93/subworkflows/iteration-1--step-peer-review--workflow-peer-review--site-2ab59835bfe74465500aea382575c17b00d31c5582298b14b45d7485db86bf44/subworkflows/iteration-1--step-initial-reviewers--workflow-takt-experimental-review--site-3515d63371966133bef479407baba079833be20f3e0c258aec89547c7d798cf1/ai-antipattern-review.md",
+      "size": 4633,
+      "sha256": "4abca8daeb0a00c0bd4f4a37cbfe674f36e20e5798e2484b24ec82fd1b1896fb"
+    },
+    {
+      "path": "subworkflows/iteration-1--step-develop--workflow-development-core--site-b9b67e102c7636dc49c60589c6d88cd6b679d711796f4401ec74ecc215055f93/subworkflows/iteration-1--step-peer-review--workflow-peer-review--site-2ab59835bfe74465500aea382575c17b00d31c5582298b14b45d7485db86bf44/subworkflows/iteration-1--step-initial-reviewers--workflow-takt-experimental-review--site-3515d63371966133bef479407baba079833be20f3e0c258aec89547c7d798cf1/architecture-review.md",
+      "size": 2918,
+      "sha256": "494d99d845d80b789640c3f6ac9c2ef154f66e1e08835ddcf9f87ad09ea72863"
+    },
+    {
+      "path": "subworkflows/iteration-1--step-develop--workflow-development-core--site-b9b67e102c7636dc49c60589c6d88cd6b679d711796f4401ec74ecc215055f93/subworkflows/iteration-1--step-peer-review--workflow-peer-review--site-2ab59835bfe74465500aea382575c17b00d31c5582298b14b45d7485db86bf44/subworkflows/iteration-1--step-initial-reviewers--workflow-takt-experimental-review--site-3515d63371966133bef479407baba079833be20f3e0c258aec89547c7d798cf1/coding-review.md",
+      "size": 3299,
+      "sha256": "959ba3dfdca9877675ec25add647057510aa9f125d8da20f9774fcf2d049dfd1"
+    },
+    {
+      "path": "subworkflows/iteration-1--step-develop--workflow-development-core--site-b9b67e102c7636dc49c60589c6d88cd6b679d711796f4401ec74ecc215055f93/subworkflows/iteration-1--step-peer-review--workflow-peer-review--site-2ab59835bfe74465500aea382575c17b00d31c5582298b14b45d7485db86bf44/subworkflows/iteration-1--step-initial-reviewers--workflow-takt-experimental-review--site-3515d63371966133bef479407baba079833be20f3e0c258aec89547c7d798cf1/security-review.md",
+      "size": 2207,
+      "sha256": "4843f1eb92cf95c3cd1bd0c115266b2f27f165713666f3372e3262b5cd4c7477"
+    },
+    {
+      "path": "subworkflows/iteration-1--step-develop--workflow-development-core--site-b9b67e102c7636dc49c60589c6d88cd6b679d711796f4401ec74ecc215055f93/subworkflows/iteration-1--step-peer-review--workflow-peer-review--site-2ab59835bfe74465500aea382575c17b00d31c5582298b14b45d7485db86bf44/subworkflows/iteration-1--step-initial-reviewers--workflow-takt-experimental-review--site-3515d63371966133bef479407baba079833be20f3e0c258aec89547c7d798cf1/testing-review.md",
+      "size": 3106,
+      "sha256": "308a7d4a2be05598aacf9f834df7dfadc5f6eb1a9ef7c670027d9c83a0c60a36"
+    },
+    {
+      "path": "subworkflows/iteration-1--step-develop--workflow-development-core--site-b9b67e102c7636dc49c60589c6d88cd6b679d711796f4401ec74ecc215055f93/subworkflows/iteration-1--step-peer-review--workflow-peer-review--site-2ab59835bfe74465500aea382575c17b00d31c5582298b14b45d7485db86bf44/subworkflows/iteration-1--step-remediation--workflow-development-remediation-team--site-4796e570b1f6d269571d887530ea33794906c5cb7abebcdb62415be07ff899d8/.takt-report-internal/history/a1098d5035e795f26009b375c9c15242546106c250a6298e09d8744c660745bb/writer/fix-plan.md.20260818T043259Z",
+      "size": 16873,
+      "sha256": "199b2ce92cf6cc9ea05b7e842cc92d6e428d7bff4183dc38033f3da393450aef"
+    },
+    {
+      "path": "subworkflows/iteration-1--step-develop--workflow-development-core--site-b9b67e102c7636dc49c60589c6d88cd6b679d711796f4401ec74ecc215055f93/subworkflows/iteration-1--step-peer-review--workflow-peer-review--site-2ab59835bfe74465500aea382575c17b00d31c5582298b14b45d7485db86bf44/subworkflows/iteration-1--step-remediation--workflow-development-remediation-team--site-4796e570b1f6d269571d887530ea33794906c5cb7abebcdb62415be07ff899d8/.takt-report-internal/history/a1098d5035e795f26009b375c9c15242546106c250a6298e09d8744c660745bb/writer/fix-plan.md.20260818T051003Z",
+      "size": 17262,
+      "sha256": "9e34d73752214f39d8251c7770917bbd0a812aa8c765b10947506426b3cfe99c"
+    },
+    {
+      "path": "subworkflows/iteration-1--step-develop--workflow-development-core--site-b9b67e102c7636dc49c60589c6d88cd6b679d711796f4401ec74ecc215055f93/subworkflows/iteration-1--step-peer-review--workflow-peer-review--site-2ab59835bfe74465500aea382575c17b00d31c5582298b14b45d7485db86bf44/subworkflows/iteration-1--step-remediation--workflow-development-remediation-team--site-4796e570b1f6d269571d887530ea33794906c5cb7abebcdb62415be07ff899d8/.takt-report-internal/history/fe2308da5ff853ed35c223da0135a2621f331e12666d4e8c8bfe6f6797ba41b1/writer/fix-report.md.20260818T045602Z",
+      "size": 4169,
+      "sha256": "48c621edcd37b2a7b7786695d5b0037958b8ef7b4504a08238d26a13f8a66451"
+    },
+    {
+      "path": "subworkflows/iteration-1--step-develop--workflow-development-core--site-b9b67e102c7636dc49c60589c6d88cd6b679d711796f4401ec74ecc215055f93/subworkflows/iteration-1--step-peer-review--workflow-peer-review--site-2ab59835bfe74465500aea382575c17b00d31c5582298b14b45d7485db86bf44/subworkflows/iteration-1--step-remediation--workflow-development-remediation-team--site-4796e570b1f6d269571d887530ea33794906c5cb7abebcdb62415be07ff899d8/.takt-report-internal/team-leader/fix/part-image-attachment-contract-boundary-check-dc0391c7.md",
+      "size": 1269,
+      "sha256": "513c5de8f6bda18119aaee57012f7e75ee6c85acc92e4d11520163e92cbf12d0"
+    },
+    {
+      "path": "subworkflows/iteration-1--step-develop--workflow-development-core--site-b9b67e102c7636dc49c60589c6d88cd6b679d711796f4401ec74ecc215055f93/subworkflows/iteration-1--step-peer-review--workflow-peer-review--site-2ab59835bfe74465500aea382575c17b00d31c5582298b14b45d7485db86bf44/subworkflows/iteration-1--step-remediation--workflow-development-remediation-team--site-4796e570b1f6d269571d887530ea33794906c5cb7abebcdb62415be07ff899d8/.takt-report-internal/team-leader/fix/part-image-attachments-fix-317c9475.md",
+      "size": 2192,
+      "sha256": "a0dbc6a23c04584e73afeaef10f3ee612f0eff13ea72d61ab491eb7d24e4142d"
+    },
+    {
+      "path": "subworkflows/iteration-1--step-develop--workflow-development-core--site-b9b67e102c7636dc49c60589c6d88cd6b679d711796f4401ec74ecc215055f93/subworkflows/iteration-1--step-peer-review--workflow-peer-review--site-2ab59835bfe74465500aea382575c17b00d31c5582298b14b45d7485db86bf44/subworkflows/iteration-1--step-remediation--workflow-development-remediation-team--site-4796e570b1f6d269571d887530ea33794906c5cb7abebcdb62415be07ff899d8/.takt-report-internal/team-leader/fix/part-implement-image-attachment-fixes-eebd5cec.md",
+      "size": 216,
+      "sha256": "e2b0cef85f8b0c54cd9645858e3d0c447dcd83cd9949563d65479b1df4dfef84"
+    },
+    {
+      "path": "subworkflows/iteration-1--step-develop--workflow-development-core--site-b9b67e102c7636dc49c60589c6d88cd6b679d711796f4401ec74ecc215055f93/subworkflows/iteration-1--step-peer-review--workflow-peer-review--site-2ab59835bfe74465500aea382575c17b00d31c5582298b14b45d7485db86bf44/subworkflows/iteration-1--step-remediation--workflow-development-remediation-team--site-4796e570b1f6d269571d887530ea33794906c5cb7abebcdb62415be07ff899d8/.takt-report-internal/team-leader/fix/part-part-image-attachment-fix-433f0f74.md",
+      "size": 287,
+      "sha256": "8a131681c8dc13c9a95dcfedc0b496e2a92b4e1a3f7223d2860968d35fc8eb7d"
+    },
+    {
+      "path": "subworkflows/iteration-1--step-develop--workflow-development-core--site-b9b67e102c7636dc49c60589c6d88cd6b679d711796f4401ec74ecc215055f93/subworkflows/iteration-1--step-peer-review--workflow-peer-review--site-2ab59835bfe74465500aea382575c17b00d31c5582298b14b45d7485db86bf44/subworkflows/iteration-1--step-remediation--workflow-development-remediation-team--site-4796e570b1f6d269571d887530ea33794906c5cb7abebcdb62415be07ff899d8/.takt-report-internal/team-leader/fix/part-part-image-attachments-lifecycle-c23a213a.md",
+      "size": 328,
+      "sha256": "cc47745958e392dbdfc1358548387f69e5307d41fdfe604accf5671c4581a56b"
+    },
+    {
+      "path": "subworkflows/iteration-1--step-develop--workflow-development-core--site-b9b67e102c7636dc49c60589c6d88cd6b679d711796f4401ec74ecc215055f93/subworkflows/iteration-1--step-peer-review--workflow-peer-review--site-2ab59835bfe74465500aea382575c17b00d31c5582298b14b45d7485db86bf44/subworkflows/iteration-1--step-remediation--workflow-development-remediation-team--site-4796e570b1f6d269571d887530ea33794906c5cb7abebcdb62415be07ff899d8/.takt-report-internal/team-leader/fix/part-pr-image-attachments-implementation-ce616d54.md",
+      "size": 326,
+      "sha256": "bb554d07231091f640146788fcbd67d82493943dfca8689bda5f732379619d1b"
+    },
+    {
+      "path": "subworkflows/iteration-1--step-develop--workflow-development-core--site-b9b67e102c7636dc49c60589c6d88cd6b679d711796f4401ec74ecc215055f93/subworkflows/iteration-1--step-peer-review--workflow-peer-review--site-2ab59835bfe74465500aea382575c17b00d31c5582298b14b45d7485db86bf44/subworkflows/iteration-1--step-remediation--workflow-development-remediation-team--site-4796e570b1f6d269571d887530ea33794906c5cb7abebcdb62415be07ff899d8/fix-plan.md",
+      "size": 18699,
+      "sha256": "11ac95a86494022274e7f913e3f1e91f058332abc132beabf5d8b50fe281ec47"
+    },
+    {
+      "path": "subworkflows/iteration-1--step-develop--workflow-development-core--site-b9b67e102c7636dc49c60589c6d88cd6b679d711796f4401ec74ecc215055f93/subworkflows/iteration-1--step-peer-review--workflow-peer-review--site-2ab59835bfe74465500aea382575c17b00d31c5582298b14b45d7485db86bf44/subworkflows/iteration-1--step-remediation--workflow-development-remediation-team--site-4796e570b1f6d269571d887530ea33794906c5cb7abebcdb62415be07ff899d8/fix-report.md",
+      "size": 4099,
+      "sha256": "20bf813cfd5831f8e2c47566d2f46da762b2c9a94c5212ad4530acd6e9a120c3"
+    },
+    {
+      "path": "subworkflows/iteration-1--step-develop--workflow-development-core--site-b9b67e102c7636dc49c60589c6d88cd6b679d711796f4401ec74ecc215055f93/subworkflows/iteration-1--step-peer-review--workflow-peer-review--site-2ab59835bfe74465500aea382575c17b00d31c5582298b14b45d7485db86bf44/subworkflows/iteration-1--step-remediation--workflow-development-remediation-team--site-4796e570b1f6d269571d887530ea33794906c5cb7abebcdb62415be07ff899d8/review-report-inheritance.json",
+      "size": 1697,
+      "sha256": "9a0ea258bdf98471a9bbc89112f8efedb7daad8cc8917f5cf73a4c039fbf8490"
+    },
+    {
+      "path": "subworkflows/iteration-1--step-develop--workflow-development-core--site-b9b67e102c7636dc49c60589c6d88cd6b679d711796f4401ec74ecc215055f93/test-report.md",
+      "size": 13795,
+      "sha256": "fa698d2dc8a9f98870514e66844ccda9bb33e7bc1ae4dc74d7ae007be67d4714"
+    }
+  ],
+  "resumeReportConsumers": [
+    {
+      "consumerKey": "{\"workflow\":\"builtin:sha256:b5a6f15a76569031f4332daa54548ec9232f9f906c1a282bfbfaba04946d5bbf\",\"step\":\"fix\",\"calls\":[{\"workflow\":\"builtin:sha256:fa713ac55583cd0c63a7a678a8e632f06306bbaf21d4e6f1ce212ec517b0f19b\",\"step\":\"develop\",\"kind\":\"workflow_call\"},{\"workflow\":\"builtin:sha256:17c77466a6a4a7a599ba2bd875d4544c81ec78ce276b8e84708e87a3a9a37767\",\"step\":\"peer-review\",\"kind\":\"workflow_call\"},{\"workflow\":\"builtin:sha256:e12ee751f9ab5be19c8daf1eaaea975dfb0830ab0354649ae696d7de9ea3a0da\",\"step\":\"remediation\",\"kind\":\"workflow_call\"}]}",
+      "reportDirectories": [
+        "subworkflows/iteration-1--step-develop--workflow-development-core--site-b9b67e102c7636dc49c60589c6d88cd6b679d711796f4401ec74ecc215055f93/subworkflows/iteration-1--step-peer-review--workflow-peer-review--site-2ab59835bfe74465500aea382575c17b00d31c5582298b14b45d7485db86bf44/subworkflows/iteration-1--step-remediation--workflow-development-remediation-team--site-4796e570b1f6d269571d887530ea33794906c5cb7abebcdb62415be07ff899d8"
+      ],
+      "references": [
+        {
+          "reference": "fix-plan.md",
+          "path": "subworkflows/iteration-1--step-develop--workflow-development-core--site-b9b67e102c7636dc49c60589c6d88cd6b679d711796f4401ec74ecc215055f93/subworkflows/iteration-1--step-peer-review--workflow-peer-review--site-2ab59835bfe74465500aea382575c17b00d31c5582298b14b45d7485db86bf44/subworkflows/iteration-1--step-remediation--workflow-development-remediation-team--site-4796e570b1f6d269571d887530ea33794906c5cb7abebcdb62415be07ff899d8/fix-plan.md"
+        }
+      ]
+    }
+  ]
+}

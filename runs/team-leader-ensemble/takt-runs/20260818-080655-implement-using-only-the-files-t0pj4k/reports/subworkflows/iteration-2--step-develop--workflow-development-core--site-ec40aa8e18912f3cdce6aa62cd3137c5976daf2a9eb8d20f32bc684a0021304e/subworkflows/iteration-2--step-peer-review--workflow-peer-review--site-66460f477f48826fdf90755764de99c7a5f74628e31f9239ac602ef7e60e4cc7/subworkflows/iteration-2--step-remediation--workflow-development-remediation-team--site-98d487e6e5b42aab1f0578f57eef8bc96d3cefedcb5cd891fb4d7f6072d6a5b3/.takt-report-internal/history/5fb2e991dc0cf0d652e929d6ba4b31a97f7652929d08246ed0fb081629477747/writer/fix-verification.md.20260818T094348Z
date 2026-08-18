@@ -1,0 +1,67 @@
+# 修正完了検証
+
+## 結果: incomplete
+
+## サマリー
+
+修正計画の前提・修正境界は有効です。ただし、以下の完了義務が未達です。
+
+- 一時ディレクトリの cleanup に、Node.js `>=24.15.0` で使用できない `fs.rmdirSync(..., { recursive: true })` が残っている。
+- 画像抽出が記法ごとに別走査され、本文中の画像URLの初出順を維持できない。
+
+元のランダム placeholder 問題は解消されています。
+
+## 不変条件の再発記録
+
+| 修正単位 | family ID | 不変条件の名前 | 担当箇所 | 今回の検証回数 | 前回の検証回数 | 前回経路 | 今回経路 | 同一不変条件・再発判定 | 累積 `incomplete` 回数 | 別経路での再発が確認済みか | 強制点候補 | 記録の完全性 |
+|----------|-----------|----------------|----------|----------------|----------------|----------|----------|------------------------|--------------------------|------------------------------|------------|--------------|
+| `PR-IMG-PLACEHOLDER-1` | `PR-IMG-PLACEHOLDER-1` | `pr-image-placeholder-deterministic-unique` | `src/shared/utils/imageUrls.ts` の `downloadImage()` による placeholder 生成契約 | 1 | なし（初回） | なし（初回） | `addTask()` → `extractImageUrls()` → URL重複排除 → `downloadImage()` → `validateAndSetImageExtension()` → `saveTaskFile()` → `buildTaskOrderContent()` / `promoteTaskAttachments()` | 同一・初回 | 1 | 未確認 | 不要 | 理由付き成果物不足 |
+| `PR-IMG-TEMP-LIFECYCLE-1` | `PR-IMG-TEMP-LIFECYCLE-1` | `pr-image-download-temp-finalization` | `addTask()` PR経路の一時ディレクトリ所有境界 | 1 | なし（初回） | なし（初回） | 取得失敗時の `downloadImage()` cleanup、検証失敗時の `validateAndSetImageExtension()` cleanup、保存成功・保存失敗・cancel時の `addTask()` 外側 `finally` | 同一・初回 | 1 | 未確認 | 不要 | 理由付き成果物不足 |
+
+## 修正単位の整合性
+
+| 修正単位 | 対象 finding | 前提・方法・証拠能力の整合性 | 判定 |
+|----------|--------------|------------------------------|------|
+| `PR-IMG-PLACEHOLDER-1` | `AI-NEW-imageUrls-L108`、`PR-IMG-PLACEHOLDER-ORDER-1` | 成功件数による決定的採番とURL重複排除は計画に適合する。記法混在時の初出順は未達。 | 適合 |
+| `PR-IMG-TEMP-LIFECYCLE-1` | `AI-NEW-imageUrls-L90` | 取得用資源を外側 `finally` と取得処理内 cleanup で回収する方針は適切だが、使用APIが現行Node.js契約に適合しない。 | 適合 |
+
+## 完了義務の独立検証
+
+| 修正単位 | 義務ID | 対象 finding | 不変条件と対象経路 | 独立に用いた反例・観測点 | 観測結果 | 証拠 | 判定 |
+|----------|--------|--------------|--------------------|----------------------------|----------|------|------|
+| `PR-IMG-PLACEHOLDER-1` | `SCN-PR-IMG-PLACEHOLDER-1-P1` | 成功画像の初出順 placeholder と本文・保存経路の一致 | `addTask()` → URL抽出 → download → 保存 → `order.md` / consumer | Markdown画像とHTML画像を混在させ、抽出結果を確認 | 記法ごとの別走査により本文の初出順と抽出順が不一致 | `imageUrls.ts:23-46`、混在入力の直接実行結果 | 未完了 |
+| `PR-IMG-PLACEHOLDER-1` | `SCN-PR-IMG-PLACEHOLDER-1-N1` | 同一URLを1 attachmentへ集約 | `addTask()` → URL重複排除 → download → 保存 | `Set` による重複排除と保存経路を静的確認 | 同一URLは1回だけ処理される | `add/index.ts:216-224` | 完了 |
+| `PR-IMG-PLACEHOLDER-1` | `SCN-PR-IMG-PLACEHOLDER-1-P2` | 先行失敗が後続成功画像の番号を消費しない | `addTask()` → download失敗継続 → 後続download → 保存 | `attachments.length` を採番に使用する経路を確認 | 失敗時に配列へ追加されず、後続成功は現在の件数で採番される | `add/index.ts:227-239`、`imageUrls.ts:145` | 完了 |
+| `PR-IMG-PLACEHOLDER-1` | `SCN-PR-IMG-PLACEHOLDER-1-N2` | 既存consumerが重複 placeholder を拒否 | `resolveReferencedImageAttachments()` → provider consumer | 重複 placeholder の既存テストを実行 | 7件成功 | `npm test -- src/__tests__/imageAttachmentReferences.test.ts` | 完了 |
+| `PR-IMG-TEMP-LIFECYCLE-1` | `PR-IMG-TEMP-LIFECYCLE-T1` | 取得失敗後に一時資源を回収 | `downloadImage()` → catch cleanup | 404取得失敗を直接実行 | cleanupで `TypeError` が発生し、一時ディレクトリが残った | `imageUrls.ts:149-156`、Node `v25.7.0` の直接実行 | 未完了 |
+| `PR-IMG-TEMP-LIFECYCLE-1` | `PR-IMG-TEMP-LIFECYCLE-T2` | magic bytes検証失敗後に一時資源を回収 | `validateAndSetImageExtension()` → catch cleanup | 検証失敗時のcleanup APIを静的確認 | `rmdirSync(..., { recursive: true })` が同じ `TypeError` を発生させる | `imageUrls.ts:210-216` | 未完了 |
+| `PR-IMG-TEMP-LIFECYCLE-1` | `PR-IMG-TEMP-LIFECYCLE-T3` | 保存成功後に取得用資源だけを回収し永続attachmentを保持 | `saveTaskFile()` → `addTask()` finally | 成功経路のcleanup APIと既存保存テストを確認 | 一時ファイル削除後のディレクトリ削除が失敗する | `add/index.ts:265-287`、`npm test -- src/__tests__/saveTaskFile.test.ts` | 未完了 |
+| `PR-IMG-TEMP-LIFECYCLE-1` | `PR-IMG-TEMP-LIFECYCLE-T4` | 保存失敗後に取得用資源を回収 | `saveTaskFile()` 例外 → `addTask()` finally | 外側 `finally` の失敗経路を静的確認 | 同じ非対応APIによりディレクトリ回収を保証できない | `add/index.ts:265-287` | 未完了 |
+| `PR-IMG-TEMP-LIFECYCLE-1` | `PR-IMG-TEMP-LIFECYCLE-T5` | workflow cancel後に取得用資源だけを回収 | `determineWorkflow()` → cancel return → finally | cancel経路と外側cleanupを静的確認 | 同じ非対応APIによりディレクトリが残る | `add/index.ts:249-253,265-287` | 未完了 |
+
+## 不成立・未確認事項
+
+| 修正単位 | 義務ID | 種別 | 根拠 | 修正報告の証拠が検出できなかった理由 | 同じ検出パターンで再監査した範囲 | 必要な対応 |
+|----------|--------|------|------|----------------------------------------|----------------------------------|--------------|
+| `PR-IMG-PLACEHOLDER-1` | `PR-IMG-PLACEHOLDER-ORDER-1` | 実装不足 | `extractImageUrls()` が Markdown、HTML double quote、HTML single quoteを別々に走査し、初出順を崩す | 混在記法の反例が検証されていない | 全対応記法を位置順に抽出するよう修正 |
+| `PR-IMG-TEMP-LIFECYCLE-1` | `PR-IMG-TEMP-LIFECYCLE-T1`〜`T5` | 実装不足 | cleanup 3箇所で `fs.rmdirSync(..., { recursive: true })` を使用し、Node `v25.7.0` で `TypeError` | cleanup APIの現行runtime挙動を検証していない | `fs.rmSync` 等の現行APIへ置換し、元の例外を隠さないcleanupにする |
+| 全修正単位 | 台帳引き継ぎ | 証拠不足 | Report Directoryに修正計画・修正報告の引き継ぎ情報がなく、検証回数・累積回数を完全復元できない | 引き継ぎ元の成果物が欠落している | fix-reportに計画済み不変条件の全行と再発記録を転記する |
+
+## 環境要因により実証できない後続確認（判定非ブロッキング）
+
+なし。
+
+## 実行証跡
+
+| 対象 | 方法 | 結果 |
+|------|------|------|
+| 型契約 | `npm test -- src/__tests__/addTask.test.ts` | 成功（17件） |
+| 既存task保存 | `npm test -- src/__tests__/saveTaskFile.test.ts` | 成功（35件） |
+| 既存画像保存 | `npm test -- src/__tests__/imageAttachments.test.ts` | 成功（15件） |
+| placeholder consumer | `npm test -- src/__tests__/imageAttachmentReferences.test.ts` | 成功（7件） |
+| run-context | `npm test -- src/__tests__/taskSpecContext.test.ts` | 成功（13件） |
+| ビルド | `npm run build` | 成功 |
+| cleanup API | Node `v25.7.0` で `fs.rmdirSync(dir, { recursive: true })` を実行 | 失敗。`TypeError: The property 'options.recursive' is no longer supported` |
+| 取得失敗cleanup | `downloadImage()` を404 URLで実行 | 失敗。一時ディレクトリが残留 |
+| 混在記法の抽出順 | HTML画像を先、Markdown画像を後にした入力で `extractImageUrls()` を実行 | 失敗。Markdown URLが先に返却された |
+| placeholder乱数除去 | `Math.random` と placeholder生成箇所を検索 | 成功。`imageUrls.ts:145` は成功件数ベースの採番 |

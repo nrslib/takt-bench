@@ -38,9 +38,10 @@ node eval/scripts/aggregate.mjs eval/rubrics/pr-image-attachments.md \
 | sol-single | Sol 単発 | なし | なし | 62.6 |
 | all-local-ensemble | DeepSeek-V4-Flash | Gemma4:31B | DeepSeek-V4-Flash | 49.1 |
 | nemotron-ensemble | nemotron-3-super | Gemma4:31B | Gemma4:31B(計画は Luna) | 18.5 |
-| team-leader-ensemble | nemotron-3-super(リーダーは Luna) | Gemma4:31B | Luna | 測定中 |
+| team-leader-ensemble | nemotron-3-super(リーダーは Luna) | Gemma4:31B | Luna | 26.6 |
 
 judge ログは `eval/results/pr-image-attachments/<条件>-r{1..3}.log`。
+team-leader-ensemble は修正ループが収束せず停止した時点の作業ツリーを採点した値(他条件は完走時点)。
 
 ## 実走証跡
 

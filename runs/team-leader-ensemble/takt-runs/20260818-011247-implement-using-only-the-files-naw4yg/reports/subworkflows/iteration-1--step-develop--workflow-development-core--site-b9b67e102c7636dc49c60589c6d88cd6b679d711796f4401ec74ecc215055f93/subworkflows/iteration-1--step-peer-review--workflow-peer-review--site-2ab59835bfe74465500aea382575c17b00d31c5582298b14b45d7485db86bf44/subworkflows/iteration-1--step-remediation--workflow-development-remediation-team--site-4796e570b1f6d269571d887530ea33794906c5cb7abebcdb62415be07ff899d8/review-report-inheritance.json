@@ -1,0 +1,15 @@
+{
+  "sourceRunSlug": "20260817-062934-implement-using-only-the-files-8myiea",
+  "sourceReportDirectory": "/Users/nrs/work/git/takt-worktrees/20260817T0629-pr-komento-no-wodaunroodoshite-547bd08a4136875a/.takt/runs/20260817-062934-implement-using-only-the-files-8myiea/reports",
+  "targetReportDirectory": "/Users/nrs/work/git/takt-worktrees/20260817T0629-pr-komento-no-wodaunroodoshite-547bd08a4136875a/.takt/runs/20260817-093023-implement-using-only-the-files-j64ubx/reports/subworkflows/iteration-1--step-develop--workflow-development-core--site-b9b67e102c7636dc49c60589c6d88cd6b679d711796f4401ec74ecc215055f93/subworkflows/iteration-1--step-peer-review--workflow-peer-review--site-2ab59835bfe74465500aea382575c17b00d31c5582298b14b45d7485db86bf44/subworkflows/iteration-1--step-remediation--workflow-development-remediation-team--site-4796e570b1f6d269571d887530ea33794906c5cb7abebcdb62415be07ff899d8",
+  "status": "partial",
+  "fallbackUsed": true,
+  "copied": [],
+  "skipped": [
+    {
+      "reportName": "fix-plan.md",
+      "reason": "target_exists",
+      "sourcePath": "/Users/nrs/work/git/takt-worktrees/20260817T0629-pr-komento-no-wodaunroodoshite-547bd08a4136875a/.takt/runs/20260817-062934-implement-using-only-the-files-8myiea/reports/subworkflows/iteration-1--step-develop--workflow-development-core--site-b9b67e102c7636dc49c60589c6d88cd6b679d711796f4401ec74ecc215055f93/subworkflows/iteration-1--step-peer-review--workflow-peer-review--site-2ab59835bfe74465500aea382575c17b00d31c5582298b14b45d7485db86bf44/subworkflows/iteration-1--step-remediation--workflow-development-remediation-team--site-4796e570b1f6d269571d887530ea33794906c5cb7abebcdb62415be07ff899d8/fix-plan.md"
+    }
+  ]
+}

@@ -1,0 +1,34 @@
+version: 1
+# takt-experimental-team: リーダーが分解し part が実装する編成
+#   coding-leader (implement/fix のリーダー) = luna : 分解と統合
+#   coding-part   (part)                     = nemotron-3-super : 実装の実働
+#   review                                   = gemma4:31b
+#   その他(plan / 裁定 / verifier / gate / loop-judge) = luna
+companion:
+  enabled: false
+provider:
+  profiles:
+    luna-max:
+      provider: codex
+      model: gpt-5.6-luna
+      options:
+        network_access: true
+        reasoning_effort: xhigh
+    reviewer-local:
+      provider: opencode
+      model: ollama-cloud/gemma4:31b
+      options:
+        guards:
+          call_timeout_ms: 10800000
+    coder-local:
+      provider: opencode
+      model: ollama-cloud/nemotron-3-super
+      options:
+        guards:
+          call_timeout_ms: 10800000
+  defaults:
+    profile: luna-max
+  targets:
+    tags:
+      coding-part: { profile: coder-local }
+      review: { profile: reviewer-local }

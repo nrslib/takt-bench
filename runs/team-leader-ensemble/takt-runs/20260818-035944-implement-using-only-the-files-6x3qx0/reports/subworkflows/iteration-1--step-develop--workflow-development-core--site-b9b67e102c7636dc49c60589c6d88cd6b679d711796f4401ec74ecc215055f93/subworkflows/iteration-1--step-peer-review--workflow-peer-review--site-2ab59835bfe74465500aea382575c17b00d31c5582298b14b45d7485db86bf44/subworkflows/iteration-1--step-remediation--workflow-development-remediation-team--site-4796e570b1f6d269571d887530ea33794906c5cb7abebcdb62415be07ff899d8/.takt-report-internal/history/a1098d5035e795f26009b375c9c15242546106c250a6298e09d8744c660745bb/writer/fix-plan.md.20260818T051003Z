@@ -1,0 +1,96 @@
+# 修正計画
+
+## 結果: 修正計画確定
+
+## 指摘カバレッジ
+
+| finding ID / 出典 | 修正権限の根拠 | 根拠 | 修正単位 / 後続確認 | 問題 → 直接原因 → 根本原因 | 原因を確認した根拠 / 確認して否定した別の原因 | 分類 | 受入条件・修正境界 |
+|---|---|---|---|---|---|---|---|
+| `AI-NEW-imageUrls-L108` / `ai-antipattern-review.md` | `direct_acceptance_criterion_violation` | `src/shared/utils/imageUrls.ts:80-148`、`src/features/tasks/add/index.ts:218-229` | `PR-IMG-PLACEHOLDER-1` | 採番が成功した attachment の順序と一致しない → `addTask()` がダウンロード前に番号を増やし、placeholder を別途再生成している → placeholder の正本と成功件数の管理が分離している | 裁定では `Math.random()` が根拠とされたが、現行コードの `downloadImage()` は `imageIndex` を使っており、`Math.random()` は確認されない。現行に残る成功前採番と二重生成はコードで確認した。同期 I/O は別契約のため対象外 | 局所 | 成功した画像だけを `[Image #1]` から決定的・一意に採番し、`order.md` と attachment consumer の値を一致させる。同期 I/O、外部URL範囲、pipeline新規配線、保存機構再設計は除外 |
+| `image-random-placeholder` / `architecture-review.md` | `duplicate` | `src/shared/utils/imageUrls.ts:146` | `PR-IMG-PLACEHOLDER-1` に統合 | 同上 | `AI-NEW-imageUrls-L108` と同じ placeholder 不変条件・同じ producer 経路であることを確認 | 局所 | 独立した修正単位を作らず、同じ採番修正で解消する |
+| `AI-NEW-imageUrls-L90` / `ai-antipattern-review.md` | `remediation_regression` | `src/shared/utils/imageUrls.ts:82-158`、`src/features/tasks/add/index.ts:225-271` | `PR-IMG-TEMP-LIFECYCLE-1` | 取得用一時資源の所有が保存・終端まで明確でない → `mkdtempSync()` の資源をファイル単位で後追い管理している → downloaderの生成責務と `addTask()` の終端責務の境界が弱い | `downloadImage()` 内の失敗時 cleanup と `addTask()` の外側 `finally` は現行コードに存在する。保存成功時の全終端接続を、ディレクトリ単位の追跡と決定的な回収で確認可能にする。非同期化・signal基盤は原因として確認されず対象外 | 構造 | 正常終了・保存失敗・cancel・取得失敗・検証失敗で取得用資源を回収し、永続 task attachment は保持する。transaction、rollback、非同期I/O、強制終了処理、generic attachment機構の変更は除外 |
+| `CODE-NEW-src-features-tasks-add-index-L148` / `coding-review.md` | なし | `src/features/tasks/add/index.ts:203-255` | `no_issue_after_verification`、対象外 | 抽出・download・保存呼び出しは現行コードに存在する | 裁定記録と現行の `addTask()` 呼び出しを確認 | 対象外 | 再採用・追加修正しない |
+| `AI-NEW-imageUrls-L83` / `ai-antipattern-review.md` | なし | `execFileSync`、同期 filesystem API | `overreach`、対象外 | 同期API使用は確認できるが、性能要件・測定証拠・非同期化受入条件がない | 裁定記録を確認 | 対象外 | 非同期I/Oへ変更しない |
+| `AI-NEW-addTask-L223` / `ai-antipattern-review.md` | なし | `src/features/tasks/add/index.ts:230-233` | `overreach`、対象外 | 個別画像失敗時の `log.warn` 継続は既存契約であり、全体throw契約はない | 裁定記録と個別失敗継続の実装を確認 | 対象外 | throw化・周辺ログ整理をしない |
+
+## 不変条件台帳
+
+引き継ぎ元: 先行 remediation なし。Report Directory直下に数値付きの公開 `fix-verification.md` は存在せず、`.takt-report-internal` 配下は候補から除外した。
+
+### 引き継ぎ元からの行
+
+| 修正単位 | family ID | 不変条件の名前 | 担当箇所 | 今回の検証回数 | 前回の検証回数 | 前回経路 | 今回経路 | 同一不変条件・再発判定 | 累積 `incomplete` 回数 | 別経路での再発が確認済みか | 強制点候補 | 記録の完全性 |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| 該当なし | — | — | — | — | — | — | — | — | — | — | — | 先行 remediation なし |
+
+### 新規・現在の計画行
+
+| 修正単位 | family ID | 不変条件の名前 | 観測可能な不変条件 | 担当箇所 | 分類 | 別経路での再発が確認済みか | 強制点 |
+|---|---|---|---|---|---|---|---|
+| `PR-IMG-PLACEHOLDER-1` | `PR-IMG-PLACEHOLDER-1` | `pr-image-placeholder-deterministic-unique` | 同じ成功入力では同じ順序のplaceholderになり、1つのattachment集合内で重複せず、task本文・`order.md`・consumerで一致する | `downloadImage()` のplaceholder生成責務と、成功件数を渡す `addTask()` | 局所 | 不要: 既存のproducer責務で直接修正 |
+| `PR-IMG-TEMP-LIFECYCLE-1` | `PR-IMG-TEMP-LIFECYCLE-1` | `pr-image-download-temp-finalization` | 取得用一時資源が正常終了・保存失敗・cancel・取得失敗・検証失敗で回収され、永続attachmentは保持される | `downloadImage()` の一時資源生成・途中失敗cleanupと、`addTask()` の終端cleanup | 構造 | 未確認 | `addTask()` の取得開始から保存・cancel・例外終端を覆う単一の `finally`。生成途中は `downloadImage()` 内の cleanup で回収する |
+
+## 欠陥 family の最終状態
+
+| 修正単位 | 守る契約 | 完了対象の全不変条件 | 変更後の責務と参照元 | 関係する契約経路 | 成立例・失敗例・境界値 | 移行・削除対象 |
+|---|---|---|---|---|---|---|
+| `PR-IMG-PLACEHOLDER-1` | `order.md` の既存 attachment 形式、`TaskAttachment.placeholder`、`buildTaskOrderContent()`、`resolveReferencedImageAttachments()` | 成功画像のplaceholderが決定的・一意で、成功順序と表示番号が一致し、本文・保存形式・consumerで同じ値になる | `downloadImage()` が渡された成功順序からplaceholderを生成する。`addTask()` は成功後のattachment数を次番号の基準にし、返却されたplaceholderを本文置換に使用する。保存・manifest・consumerは既存責務を維持する | `addTask()` → `extractImageUrls()` → `filterGithubAttachmentUrls()` → `downloadImage()` → `validateAndSetImageExtension()` → `saveTaskFile()` → `prepareTaskSpecDirectory()` → `buildTaskOrderContent()` / `promoteTaskAttachments()` → `order.md`・`attachments/` → task spec / provider attachment consumer | 画像0件、1件成功、複数件成功、先行画像失敗後の成功、同一入力の反復。実装index 0は表示position 1に対応させる | 乱数・成功前採番・placeholder再生成を削除または修正する。fileName形式、URL dedup、既存保存経路、pipeline新規配線は変更しない |
+| `PR-IMG-TEMP-LIFECYCLE-1` | 取得用一時資源と永続 task attachment の所有分離 | 成功後・保存失敗・cancel・取得失敗・magic bytes検証失敗で一時資源が残らず、保存済みattachmentは残る | `downloadImage()` は生成途中の失敗を自身で回収し、`addTask()` は返却された一時ディレクトリを追跡して終端で回収する。`prepareTaskSpecDirectory()` と `saveEnqueuedTaskFile()` の既存 task spec cleanup は維持する | `addTask()` → `downloadImage()` → `validateAndSetImageExtension()` → `saveTaskFile()` → `prepareTaskSpecDirectory()` → `promoteTaskAttachments()` → `.takt/tasks/.../attachments/`。保存・cancel・例外後に `addTask()` の `finally` へ到達する | 画像なし、取得前失敗、取得後検証失敗、保存成功、保存失敗、workflow cancel。hard kill / `process.exit()` は `finally` 保証外 | ファイル単位追跡を一時ディレクトリ単位の追跡へ整理する。永続 task directory、interactive attachment store、transaction、rollback、signal処理は変更しない |
+
+## 要求シナリオ（条件付き）
+
+### `PR-IMG-PLACEHOLDER-1` — 識別子生成
+
+~~~gherkin
+Scenario: [SCN-PR-IMG-PLACEHOLDER-1-P1] 成功したPR画像を順序付きplaceholderへ変換する
+  Given PR本文に`![a](https://github.com/user-attachments/assets/a)`と通常コメントに`![b](https://github.com/user-attachments/assets/b)`があり、両画像の取得と検証が成功する
+  When `addTask()`がPR画像を既存のtask attachment保存経路へ渡す
+  Then attachmentは順に`[Image #1]`と`[Image #2]`となり、`order.md`の対応行と保存済みconsumerのplaceholderが一致する
+
+Scenario: [SCN-PR-IMG-PLACEHOLDER-1-N1] 失敗した画像がplaceholder番号を消費しない
+  Given PR本文に画像URL `https://github.com/user-attachments/assets/failed` と `https://github.com/user-attachments/assets/success` がこの順であり、最初の取得は失敗し後者の取得と検証は成功する
+  When `addTask()`が画像を順番に処理する
+  Then 保存される画像は`[Image #1]`となり、`order.md`とattachment consumerに`[Image #2]`だけの参照は生成されない
+~~~
+
+### `PR-IMG-TEMP-LIFECYCLE-1`
+
+対象外 — 「構造化入力」または「識別子生成」に該当する修正単位ではない。
+
+## 入力・状態・経路の確認表
+
+| 修正単位 | 軸の正本・根拠 | 具体的な入力・状態 | 入口・経路 | 実装上の制約 | consumer / terminal | 期待結果 | 反証方法・テスト ID |
+|---|---|---|---|---|---|---|---|
+| `PR-IMG-PLACEHOLDER-1` | `order.md`、`StoredImageAttachment.placeholder`、`downloadImage()`、`resolveReferencedImageAttachments()` | 対象URLが0件 | 現行: `addTask()` → `extractImageUrls()` → `filterGithubAttachmentUrls()` → `attachments=[]` → `saveTaskFile()`。修正後: 同じ入口でattachment生成なし | attachment処理を開始しない | 既存task保存形式、画像consumerへの入力なし | 画像なしの既存挙動を維持 | `addTask.test.ts` のPR画像なしケース |
+| `PR-IMG-PLACEHOLDER-1` | 同上 | 最初の成功画像。実装index 0、表示position 1 | 現行: `addTask()` → `downloadImage()` → `validateAndSetImageExtension()` → `saveTaskFile()`。修正後: `attachments.length + 1` を渡し、返却placeholderを保存経路へ渡す | 成功前に番号を消費しない | `buildTaskOrderContent()`、`order.md`、保存済みattachment consumer | `[Image #1]` が安定して保存される | `SCN-PR-IMG-PLACEHOLDER-1-P1` |
+| `PR-IMG-PLACEHOLDER-1` | 同上 | 複数の成功画像。最後の表示position N | 現行: 各試行が独立した番号を使い、成功件数との同期が caller に依存する。修正後: 成功済みattachment数から次番号を計算する | 1-based表示番号と成功順序を一致させる | `buildTaskOrderContent()`、`.takt/tasks/.../order.md`、`resolveReferencedImageAttachments()` | `[Image #1]` から `[Image #N]` が重複なく成立する | placeholder回帰テスト |
+| `PR-IMG-PLACEHOLDER-1` | 同上 | 先行画像が失敗し、後続画像だけ成功する | 現行: `successfulImageCount++` が取得前に実行される。修正後: download・validation成功後にattachment数を進める | 失敗画像は番号を消費しない | `order.md`、保存済みattachment、consumer | 成功画像が`[Image #1]`になる | `SCN-PR-IMG-PLACEHOLDER-1-N1` |
+| `PR-IMG-TEMP-LIFECYCLE-1` | `mkdtempSync()`、`downloadImage()` 内 catch、`addTask()` の `finally` | 対象画像0件 | 現行・修正後: `addTask()` → URL抽出 → 対象なし → 保存 | 一時ディレクトリを生成しない | task保存終端 | 一時資源なし、既存task保存 | 画像なし回帰テスト |
+| `PR-IMG-TEMP-LIFECYCLE-1` | 同上 | `gh api` がファイル作成前に失敗 | 現行・修正後: `addTask()` → `downloadImage()` → 内部catch cleanup → 個別失敗継続 | エラーを既存の個別警告契約に従って処理する | 一時ディレクトリ | 作成済み一時資源なし、後続画像は処理可能 | downloader failure test |
+| `PR-IMG-TEMP-LIFECYCLE-1` | 同上 | magic bytes検証が失敗する | 現行・修正後: `downloadImage()` / `validateAndSetImageExtension()` → cleanup → `addTask()` の個別失敗継続 | 不正画像をattachmentへ追加しない | 一時ディレクトリ、task attachments | 不正画像なし、一時資源なし | validation failure test |
+| `PR-IMG-TEMP-LIFECYCLE-1` | `saveTaskFile()`、`prepareTaskSpecDirectory()`、`promoteTaskAttachments()` | 有効画像の保存成功 | 現行: download → validation → promote → 外側cleanup。修正後: 同じ経路で一時ディレクトリを`finally`が回収 | 永続先を一時cleanup対象にしない | `.takt/tasks/.../attachments/`、`order.md` | 永続attachmentは残り、取得用tempだけ消える | `addTask.test.ts` の正常系 |
+| `PR-IMG-TEMP-LIFECYCLE-1` | 同上 | `saveTaskFile()` が保存失敗する | 現行: 保存失敗 → task spec cleanup → 外側cleanup。修正後: 同じ経路でtemp directory cleanupを保証 | generic task spec cleanupを変更しない | taskDir、tasks.yaml、取得用temp | task保存失敗、task specなし、tempなし | 保存失敗回帰テスト |
+| `PR-IMG-TEMP-LIFECYCLE-1` | `determineWorkflow()`、`addTask()` の `finally` | workflow選択が`null`を返すcancel状態 | 現行: 画像取得 → `determineWorkflow()` → return → `finally`。修正後: 同じ終端でtemp directoryを回収 | cancel時にtask保存を実行しない | tasks.yaml、taskDir、取得用temp | task未作成、取得用tempなし | cancel回帰テスト |
+| `PR-IMG-TEMP-LIFECYCLE-1` | Knowledgeの終了経路完全性 | hard kill / `process.exit()` | 現行・修正後ともJavaScriptの`finally`実行保証なし | signal基盤を追加しない | OS終端 | 今回の受入条件外 | 後続の運用確認のみ |
+
+## 実施順序
+
+| 順序 | 修正単位 | 工程 | 依存先 | 変更対象 | 完了条件と証拠 |
+|---:|---|---|---|---|---|
+| 1 | `PR-IMG-PLACEHOLDER-1` | 局所修正 | なし | `src/features/tasks/add/index.ts:218-229`、必要時 `src/shared/utils/imageUrls.ts:80-148` | 成功順序に基づくplaceholderが生成され、失敗画像が番号を消費しない |
+| 2 | `PR-IMG-TEMP-LIFECYCLE-1` | 一時資源所有境界の修正 | 1 | `src/shared/utils/imageUrls.ts:82-158`、`src/features/tasks/add/index.ts:176-271` | 取得用一時ディレクトリが成功・保存失敗・cancel・取得失敗で回収される |
+| 3 | 両family | 回帰確認 | 1、2 | `src/__tests__/addTask.test.ts`、既存attachment保存テスト | placeholder、`order.md`、永続attachment、temp cleanupを観測できる |
+
+## 制約適合性
+
+| 修正単位 | 制約の参照先 | 実装方法と候補案の採否 | 検証方法・観測点・実行条件 | 適合根拠 |
+|---|---|---|---|---|
+| `PR-IMG-PLACEHOLDER-1` | `order.md`、review-resolution.md、`TaskAttachment` 契約、決定性テストポリシー | 成功済みattachment数を明示的に渡し、返却placeholderを正本として使う。乱数、URL hashによるplaceholder、fileName変更、URL dedup、pipeline配線は採用しない | 同一入力のplaceholder列、`order.md` のattachment行、consumerへの参照値を比較する。先行失敗後の成功も確認する | 明示された決定性・一意性を満たし、既存保存形式を保持する |
+| `PR-IMG-TEMP-LIFECYCLE-1` | review-resolution.md、Knowledge「終了経路の完全性」、`prepareTaskSpecDirectory()` | downloader内の途中失敗cleanupと、`addTask()` の取得開始から保存終端を覆う `finally` を使用する。generic保存機構、transaction、非同期I/O、signal処理は採用しない | 実filesystemと取得処理の test double で、成功・保存失敗・cancel・取得失敗・検証失敗後のtempと永続taskを確認する | 取得用資源だけを所有者の終端で回収し、永続task attachmentを保持する |
+| 対象外指摘 | review-resolution.md | 同期I/Oの非同期化、画像処理例外のthrow化は採用しない | これらの追加性能測定・throw契約テストは計画しない | 裁定で権限なしと明示されている |
+| 既存attachment経路 | `src/features/tasks/attachments.ts:35-108`、`src/features/tasks/execute/taskSpecContext.ts` | `buildTaskOrderContent()`、`promoteTaskAttachments()`、manifest、run-context stagingは変更せず検証する | 保存結果、manifest、task spec consumerの参照を確認する | 変更対象外の観測可能な既存契約を保持する |
+| pipeline / `takt --pr` の新規配線 | review-resolution.md の修正境界 | この remediation では追加しない | 現在の裁定範囲外として扱い、fix stepの変更対象に含めない | 裁定が pipeline 新規配線を明示的に除外している |
+
+## 再計画事項
+
+- なし。修正対象 family、原因、受入条件、修正境界、検証経路を確定できる。
