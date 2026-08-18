@@ -1,0 +1,82 @@
+# 修正完了検証
+
+## 結果: incomplete
+
+## サマリー
+
+計画された7 familyのうち、U1〜U5は実装と利用側移行を確認しました。U6では、画像取得中の明示終了およびrouting初期化失敗時にresource cleanupへ到達しない経路が残っています。U7では、実filesystemを使用する追加テストがunit runnerに残っています。
+
+計画の必須family、担当箇所、対象graph、受入条件、証拠能力に不足はなく、`plan_invalid`ではありません。
+
+## 不変条件の再発記録
+
+| 修正単位 | family ID | 不変条件の名前 | 担当箇所 | 今回の検証回数 | 前回の検証回数 | 前回経路 | 今回経路 | 同一不変条件・再発判定 | 累積 `incomplete` 回数 | 別経路での再発が確認済みか | 強制点候補 | 記録の完全性 |
+|----------|-----------|----------------|----------|----------------|----------------|----------|----------|------------------------|-------------------------|-------------------------------|------------|--------------|
+| U1-PR metadata副作用分離 | `F-PRIMG-FETCH-BOUNDARY` | PR metadata副作用分離 | `fetchPrReviewComments()` | なし（据え置き） | なし | なし | なし | 維持 | 0 | 未確認 | task専用PR準備境界 | 完全 |
+| U2-画像参照出現順整合 | `F-PRIMG-REFERENCE-ORDER` | 画像参照出現順整合 | `extractGitHubPrImageReferences()` / `replaceGitHubPrImageReferences()` | なし（据え置き） | なし | なし | なし | 維持 | 0 | 未確認 | parser内のmatch位置統合 | 完全 |
+| U3-画像参照名前空間一意性 | `F-PRIMG-REFERENCE-ALLOCATION` | 画像参照名前空間一意性 | `extractGitHubPrImageReferences()`の採番責務 | なし（据え置き） | なし | なし | なし | 維持 | 0 | 未確認 | 使用済み番号集合による単一採番 | 完全 |
+| U4-認証取得repository scope | `F-PRIMG-FETCH-SCOPE` | 認証取得repository scope | `isAllowedGitHubAttachmentUrl()`とPR repository context | なし（据え置き） | なし | なし | なし | 維持 | 0 | 未確認 | credential付与直前の単一分類境界 | 完全 |
+| U5-実在画像取得 | `F-PRIMG-DOWNLOAD-API` | 許可画像の実在取得 | `downloadGitHubPrImages()` | なし（据え置き） | なし | なし | なし | 維持 | 0 | 未確認 | HTTP取得と既存payload validator | 完全 |
+| U6-temp資源終端解放 | `F-PRIMG-TEMP-LIFECYCLE` | PR画像一時資源終端解放 | downloader / resource cleanup | 1 | なし（先行remediationなし） | なし | `downloadGitHubPrImages()`のtemp生成後の明示終了、`resolvePrInput()`後のrouting初期化失敗 | 判定できない（初回） | 1 | 未確認 | temp生成直後のresource owner登録、routing初期化を含む単一cleanup境界 | 完全 |
+| U7-実境界テスト分類 | `F-PRIMG-TEST-WIRING` | 実境界テスト分類 | test classifier | 1 | なし（先行remediationなし） | なし | `github-pr.test.ts` → `prepareGitHubPrTask()` → 実filesystem → unit runner | 判定できない（初回） | 1 | 未確認 | filesystem分類のsingle source of truthへ全対象を接続 | 完全 |
+
+## 修正単位の整合性
+
+| 修正単位 | 対象 finding | 前提・方法・証拠能力の整合性 | 判定 |
+|----------|--------------|------------------------------|------|
+| U1-PR metadata副作用分離 | `ARCH-PRIMG-002`, `CODE-NEW-src-infra-github-pr.ts-L464`, `PRIMG-07-SYSTEM-FETCH-SIDE-EFFECT`, `SEC-PRIMG-002` | metadata-only fetchとtask入口移行のgraph、受入条件、テスト方法は整合 | 適合 |
+| U2-画像参照出現順整合 | `AI-PRIMG-003`, `ARCH-PRIMG-004`, `CODE-NEW-src-infra-github-pr-images.ts-L184`, `TEST-NEW-PRIMG-01-order` | match位置統合と非render領域保持を直接検証可能 | 適合 |
+| U3-画像参照名前空間一意性 | `CODE-NEW-src-infra-github-pr-images.ts-L198`, `PRIMG-05-IMAGE-NUMBER-COLLISION` | 使用済み番号集合とfilename連携を直接検証可能 | 適合 |
+| U4-認証取得repository scope | `SEC-PRIMG-001` | PR repository contextによるcredential境界を決定的に検証可能 | 適合 |
+| U5-実在画像取得 | `AI-PRIMG-001` | HTTP response、Content-Type、magic bytes、サイズ検証を決定的に検証可能 | 適合 |
+| U6-temp資源終端解放 | `AI-PRIMG-002`, `ARCH-PRIMG-001`, `ARCH-PRIMG-003`, `CODE-NEW-src-infra-github-pr-images.ts-L311`, `PRIMG-06-PROCESS-EXIT-CLEANUP`, `PRIMG-06-TEMP-DIRECTORY-CLEANUP`, `SEC-PRIMG-002` | resource ownerと全terminalを対象にした計画は整合するが、実装に未到達経路が残る | 適合 |
+| U7-実境界テスト分類 | `PRIMG-08-TEST-CLASSIFICATION` | classifierをsingle source of truthとする方法は整合するが、追加された実filesystem consumerの移行が不足 | 適合 |
+
+## 完了義務の独立検証
+
+| 修正単位 | 義務ID | 対象 finding | 不変条件と対象経路 | 独立に用いた反例・観測点 | 観測結果 | 証拠 | 判定 |
+|----------|--------|--------------|--------------------|----------------------------|----------|------|------|
+| U2-画像参照出現順整合 | U2-01 | `AI-PRIMG-003`, `ARCH-PRIMG-004`, `CODE-NEW-src-infra-github-pr-images.ts-L184` | Markdown/HTML抽出・置換 | HTML先行、Markdown後続の同一body | 成立 | `github-pr-images.test.ts`の位置順テスト | 完了 |
+| U2-画像参照出現順整合 | U2-02 | `TEST-NEW-PRIMG-01-order` | code fence、inline code、HTML comment除外 | 非render領域内の画像記法 | 成立 | parserテストと非render除外処理 | 完了 |
+| U3-画像参照名前空間一意性 | U3-01 | `CODE-NEW-src-infra-github-pr-images.ts-L198`, `PRIMG-05-IMAGE-NUMBER-COLLISION` | 既存placeholderと新規画像の採番 | 既存`[Image #1]`と新規画像 | 成立 | `github-pr-images.test.ts` | 完了 |
+| U3-画像参照名前空間一意性 | U3-02 | 同上 | placeholder、filename、attachmentの番号一致 | 同一batch内の重複URLとfilename | 成立 | `github-pr.test.ts`、add/pipelineテスト | 完了 |
+| U4-認証取得repository scope | U4-01 | `SEC-PRIMG-001` | 現PR repository assetのみ許可 | 別repository asset | 成立 | scope分類テスト | 完了 |
+| U4-認証取得repository scope | U4-02 | `SEC-PRIMG-001` | credential付与前のrequest分類 | repository assetとuser-attachmentsのAuthorization差 | 成立 | `github-pr.test.ts` | 完了 |
+| U5-実在画像取得 | U5-01 | `AI-PRIMG-001` | Web URLの実在HTTP取得 | `gh api` endpointとしての呼出し有無 | 成立 | `fetch()`実装、`github-pr.test.ts` | 完了 |
+| U5-実在画像取得 | U5-02 | `AI-PRIMG-001` | Content-Type、magic bytes、size検証 | HTML、不一致payload、サイズ超過、対応形式 | 成立 | `github-pr-images.test.ts` | 完了 |
+| U6-temp資源終端解放 | U6-01 | `AI-PRIMG-002`, `ARCH-PRIMG-001`, `CODE-NEW-src-infra-github-pr-images.ts-L311`, `PRIMG-06-TEMP-DIRECTORY-CLEANUP` | fileと親directoryの通常cleanup | `rmSync(attachmentDirectory, { recursive: true })`の追跡 | 通常経路は成立 | `pr-images.ts:431-439` | 完了 |
+| U6-temp資源終端解放 | U6-02 | `SEC-PRIMG-002` | add/routing/pipelineへのresource伝播 | 各入口のresource引渡しとcleanup | 成立 | add、routing、pipelineの対象テスト | 完了 |
+| U6-temp資源終端解放 | U6-03 | `ARCH-PRIMG-003`, `PRIMG-06-PROCESS-EXIT-CLEANUP` | workflow失敗、cancel、明示終了 | download中の`process.exit()`、routing初期化例外 | 違反 | `pr-images.ts:463-480`、`routing.ts:122-149,168-346`、終了probe | 未完了 |
+| U6-temp資源終端解放 | U6-04 | `PRIMG-06-PROCESS-EXIT-CLEANUP` | interactive cleanupとPR resource cleanupの分離 | interactive結果cleanup後のPR resource cleanup | 成立 | routingの二重cleanup責務 | 完了 |
+| U1-PR metadata副作用分離 | U1-01 | `ARCH-PRIMG-002`, `PRIMG-07-SYSTEM-FETCH-SIDE-EFFECT`, `SEC-PRIMG-002` | system metadata入口 | raw本文保持、画像HTTP呼出し回数 | 成立 | `fetchPrReviewComments()`、`github-pr.test.ts` | 完了 |
+| U1-PR metadata副作用分離 | U1-02 | 同上 | add入口のtask準備・保存 | attachment伝播と保存 | 成立 | `addTask.test.ts` | 完了 |
+| U1-PR metadata副作用分離 | U1-03 | 同上 | routing入口のinteractive seed | attachment伝播 | 成立 | `cli-routing-pr-resolve.test.ts` | 完了 |
+| U1-PR metadata副作用分離 | U1-04 | `CODE-NEW-src-infra-github-pr.ts-L464` | pipeline入口からtask spec・workflow | attachment伝播とworkflow実行 | 成立 | `pipelineExecution.test.ts` | 完了 |
+| U1-PR metadata副作用分離 | U1-05 | 同上 | 旧`PrReviewData.attachments`・旧cleanup経路削除 | repository内の限定検索 | 成立 | scoped `rg`検索、差分 | 完了 |
+| U7-実境界テスト分類 | U7-01 | `PRIMG-08-TEST-CLASSIFICATION` | 実filesystemテストのunit除外・light IT包含 | `github-pr.test.ts`のrunner分類 | 違反 | `npm test -- src/__tests__/github-pr.test.ts`がunit runnerで44件成功 | 未完了 |
+
+## 不成立・未確認事項
+
+| 修正単位 | 義務ID | 種別 | 根拠 | 修正報告の証拠が検出できなかった理由 | 同じ検出パターンで再監査した範囲 | 必要な対応 |
+|----------|--------|------|------|----------------------------------------|----------------------------------|--------------|
+| U6-temp資源終端解放 | U6-03a | 実装不足 | `mkdtempSync()`後、`createGitHubPrImageResource()`による終了hook登録は全画像取得後。download中の`process.exit()`で親directoryが残った | 通常成功・失敗のcleanupだけでは、`catch`を迂回する明示終了を検出できない | downloader、resource生成、終了hook、HTTP取得中の終了probe | temp生成直後にresource ownerと同期終了cleanupを登録する |
+| U6-temp資源終端解放 | U6-03b | 実装不足 | routingではresource取得後、外側cleanup用`finally`開始前に`resolveBaseBranch()` / `createPullRequestContext()`が実行される | 対象テストは通常のPR setup成功経路を通り、setup失敗時のcleanupを観測していない | add、routing、pipelineのresource伝播と全terminal | PR入力準備から初期化失敗までを単一resource ownerのcleanup範囲に含める |
+| U7-実境界テスト分類 | U7-01 | 実装不足 | `github-pr.test.ts`が実際の`mkdtempSync()`・private file writeを通るがunit runnerに分類される | classifierは直接の`node:fs` import中心で、production code経由のfilesystem境界を検出できない | `pipelineExecution.test.ts`、`addTask.test.ts`、`github-pr.test.ts`、`github-pr-images.test.ts` | `github-pr.test.ts`をfilesystem integration分類へ接続し、unitから除外する |
+
+## 環境要因により実証できない後続確認（判定非ブロッキング）
+
+| 対象 | 環境要因 | リポジトリ内で解消不能な根拠 | 現在確認した代替証拠 | 後続確認 |
+|------|----------|------------------------------|--------------------------|----------|
+| 実private GitHub repositoryを使った認証付きE2E | 資格情報と対象repositoryが提供されていない | 同一環境で実サービスへの認証結果は再現できない | deterministicなHTTP response、scope、Authorization、payload検証、task保存経路、既存品質ゲート | 資格情報と対象repositoryがある環境で実GitHub E2Eを実行する |
+
+## 実行証跡
+
+| 対象 | 方法 | 結果 |
+|------|------|------|
+| add/routing/pipeline利用側 | `npm test -- src/__tests__/addTask.test.ts src/__tests__/cli-routing-pr-resolve.test.ts src/__tests__/pipelineExecution.test.ts` | 成功。19、26、53 tests。各runnerはheavy/light/unitに分類 |
+| PR metadata・画像準備 | `npm test -- src/__tests__/github-pr.test.ts` | 成功。44 tests。ただし`test:unit:parallel`で実行され、U7違反を確認 |
+| 画像parser・validator | `npm test -- src/__tests__/github-pr-images.test.ts` | 成功。16 tests |
+| download中の明示終了 | `downloadGitHubPrImages()`の`fetch`を`process.exit()`で終了させ、生成されたtemp親directoryを確認 | 失敗。resource cleanup未到達 |
+| routing setup失敗 | `routing.ts`のresource代入、初期化処理、外側`finally`の順序を追跡 | 失敗経路を確認 |
+| 修正報告の品質ゲート | `fix-report.md`のbuild、lint、unit、light IT、E2E、分類契約の記録 | 記録上は全て成功 |
+| 旧経路・差分 | `git diff --check`、旧attachments・旧cleanup経路のscoped検索 | 成功 |

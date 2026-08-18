@@ -1,0 +1,32 @@
+# 変更スコープ宣言
+
+## タスク
+PR コメント本文中の GitHub 画像を検出・検証・ダウンロードし、`add --pr` と pipeline の task attachment として保存・参照できるようにする。
+
+## 変更予定
+| 種別 | ファイル |
+|------|---------|
+| 作成 | `src/infra/github/pr-images.ts` |
+| 作成 | `src/__tests__/github-pr-images.test.ts`（既存の未追跡テストを契約所有者のテストとして維持） |
+| 変更 | `src/__tests__/github-pr.test.ts` |
+| 変更 | `src/infra/git/types.ts` |
+| 変更 | `src/infra/github/pr.ts` |
+| 変更 | `src/features/tasks/add/index.ts` |
+| 変更 | `src/app/cli/routing-inputs.ts` |
+| 変更 | `src/app/cli/routing.ts` |
+| 変更 | `src/features/pipeline/steps.ts` |
+| 変更 | `src/features/pipeline/execute.ts` |
+| 変更 | `src/features/interactive/imageAttachments.ts` |
+| 変更 | `src/__tests__/addTask.test.ts` |
+| 変更 | `src/__tests__/cli-routing-pr-resolve.test.ts` |
+| 変更 | `src/__tests__/imageAttachments.test.ts` |
+| 変更 | `src/__tests__/pipelineExecution.test.ts` |
+
+## 推定規模
+Medium
+
+## 影響範囲
+- GitHub PRレビュー取得と画像URLの抽出・認証済みダウンロード
+- `takt add --pr` の task spec 保存・一時ファイル後片付け
+- 通常の `--pr` interactive seed と pipeline `--pr` の実行コンテキスト
+- 既存 task attachment の placeholder 番号衝突回避

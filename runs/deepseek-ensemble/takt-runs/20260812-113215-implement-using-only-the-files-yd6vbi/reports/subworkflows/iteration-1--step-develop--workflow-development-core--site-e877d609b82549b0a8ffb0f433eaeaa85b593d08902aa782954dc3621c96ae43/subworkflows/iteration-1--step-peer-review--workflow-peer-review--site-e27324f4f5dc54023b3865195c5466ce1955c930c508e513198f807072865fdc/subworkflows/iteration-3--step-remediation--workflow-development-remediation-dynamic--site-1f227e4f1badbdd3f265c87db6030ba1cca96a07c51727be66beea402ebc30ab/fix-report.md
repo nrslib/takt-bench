@@ -1,0 +1,37 @@
+# 修正レポート
+## サマリー
+`PROTECTED-REWRITE` 修正単位は前回の修正で実装済みであり、今回のステップで再検証して完了を確認した。`src/infra/github/prReviewImageAttachments.ts` の `buildReplacedPrReview` が本文全体に `replace` を適用していたため、コードフェンス・インラインコード・HTMLコメント内の同一URLも置換されていた。抽出と同一のセグメンテーション基準（`splitTextSegments`）で分割し、非コード領域のみ置換して再結合する方式に変更済みである。`E2E-EVIDENCE` は前回、4 shard 並列時の Vitest `onTaskUpdate` timeout により終了コード1だったが、今回の再実行で終了コード0で成功し、後続確認を解消した。
+
+## 修正単位
+| 修正単位 | 対象 finding | 契約の正本 | 実施内容・反映先 | 状態 |
+|----------|--------------|------------|-----------------|------|
+| `PROTECTED-REWRITE` | `FINAL-NEW-PRIMG-PROTECTED-SEGMENT-REWRITE` | `extractPrReviewImageReferences` の受入条件 | 局所修正。`buildReplacedPrReview` の置換を `splitTextSegments` で分割した非コード領域のみに適用し、コード領域（コードフェンス・インラインコード・HTMLコメント）は完全に維持。反映先: `src/infra/github/prReviewImageAttachments.ts` | 完了 |
+| `E2E-EVIDENCE` | `FINAL-NEW-PRIMG-E2E-EVIDENCE` | 品質ゲート定義 | 後続確認。既存の E2E mock gate を再実行し成功を記録。変更対象なし | 完了 |
+
+## 完了義務
+| 修正単位 | 義務ID | 種別 | 対象 finding | 不変条件と対象経路 | 違反を検出する反例・観測点 | 修正前または差し戻し時の結果 | 実装根拠 | 修正後の証拠 | 状態 |
+|----------|--------|------|--------------|--------------------|------------------------------|--------------------------------|----------|--------------|------|
+| `PROTECTED-REWRITE` | `OBL-PROTECTED-REWRITE-1` | 振る舞い修正 | `FINAL-NEW-PRIMG-PROTECTED-SEGMENT-REWRITE` | 保護領域（コードフェンス・インラインコード・HTMLコメント）内の文字列は、いかなる置換からも保護される。経路: 本文 → `splitTextSegments` → 非コード領域のみ置換 → 再構成 → 出力 | 混在入力テスト `SCN-PROTECTED-REWRITE-P1`（通常本文＋コードフェンスに同一URL）でフェンス内が置換されれば失敗 | 修正前は本文全体への `replace` によりフェンス内の同一URLも置換されていた | `buildReplacedPrReview` を `splitTextSegments` のセグメントごとに `isCode` 判定し、非コードのみ `replaceSegmentImageUrls` を適用して `join('')` する方式に変更 | `npm test -- src/__tests__/prReviewImageAttachments.test.ts`: 18 passed（追加2件含む） | 完了 |
+| `PROTECTED-REWRITE` | `OBL-PROTECTED-REWRITE-2` | 振る舞い修正 | `FINAL-NEW-PRIMG-PROTECTED-SEGMENT-REWRITE` | 保護領域のみにURLがある場合、置換は行われず元の文字列が完全に維持される。経路: 本文 → `splitTextSegments` → 非コード領域のみ置換 → 再構成 → 出力 | 保護領域のみ入力テスト `SCN-PROTECTED-REWRITE-N1`（インラインコード＋HTMLコメント内のみ）で置換されれば失敗 | 修正前は保護領域内のURLも抽出・置換されていた | 同上。`isCode` セグメントは `segment.text` をそのまま返す | `npm test -- src/__tests__/prReviewImageAttachments.test.ts`: 18 passed（追加2件含む） | 完了 |
+| `PROTECTED-REWRITE` | `OBL-PROTECTED-REWRITE-3` | 既存契約保存 | `FINAL-NEW-PRIMG-PROTECTED-SEGMENT-REWRITE` | 抽出ロジック（`extractPrReviewImageReferences`）の既存挙動が維持される。経路: 本文/コメント/レビュー → `splitNonCodeSegments` → 抽出 | 既存の抽出テスト（フェンス内・インラインコード・HTMLコメント内の非抽出、重複排除、番号採番、元データ不変）が失敗すれば検出 | 修正前の抽出挙動が基準 | `splitNonCodeSegments` を `splitTextSegments` の非コード抽出として保持し、既存の抽出経路を変更しない | `npm test -- src/__tests__/prReviewImageAttachments.test.ts`: 既存16件含む18 passed | 完了 |
+| `E2E-EVIDENCE` | `OBL-E2E-EVIDENCE-1` | 振る舞い修正（実行のみ） | `FINAL-NEW-PRIMG-E2E-EVIDENCE` | 現行成果物における E2E mock 全ケース成功。経路: CLI → `add --pr` / 直接 `--pr` / pipeline `--pr` → E2E mock gate | E2E mock スイートの失敗 | 前回は4 shard 並列時の Vitest `onTaskUpdate` timeout により終了コード1 | 既存の E2E mock gate をそのまま実行 | `npm run test:e2e:mock`: 55 passed / 13 skipped / 30 todo（18 files passed）、終了コード0 | 完了 |
+
+## 受入条件
+| finding ID | 受入条件 | 証拠 | 状態 |
+|------------|----------|------|------|
+| `FINAL-NEW-PRIMG-PROTECTED-SEGMENT-REWRITE` | 通常本文のみ置換され、保護領域（コードフェンス・インラインコード・HTMLコメント）は完全に維持される | 追加テスト2件: `should replace only the non-code occurrence of a URL shared with a code fence`（P1）、`should not replace a URL that appears only inside a protected region`（N1）。`npm test -- src/__tests__/prReviewImageAttachments.test.ts` で 18 passed | 完了 |
+| `FINAL-NEW-PRIMG-E2E-EVIDENCE` | `npm run test:e2e:mock` が完了し、成功結果が記録される | `npm run test:e2e:mock`: 55 passed / 13 skipped / 30 todo（18 files passed）、終了コード0 | 完了 |
+
+## 差し戻し後の証拠修正
+| 修正単位 | 義務ID | verifier が確認した不足 | 前回の証拠が検出できなかった理由 | 修正した反例・観測点 | 同じ証明手段から再開・再確認した義務 |
+|----------|--------|--------------------------|----------------------------------|----------------------|----------------------------------------|
+| 該当なし | - | - | - | - | - |
+
+## 品質ゲート
+| 種別 | 結果 | 証拠 |
+|------|------|------|
+| 対象テストファイル | 成功 | `npm test -- src/__tests__/prReviewImageAttachments.test.ts`: 18 passed |
+| E2E mock | 成功 | `npm run test:e2e:mock`: 55 passed / 13 skipped / 30 todo（18 files passed）、終了コード0 |
+
+## 未完了義務
+- なし

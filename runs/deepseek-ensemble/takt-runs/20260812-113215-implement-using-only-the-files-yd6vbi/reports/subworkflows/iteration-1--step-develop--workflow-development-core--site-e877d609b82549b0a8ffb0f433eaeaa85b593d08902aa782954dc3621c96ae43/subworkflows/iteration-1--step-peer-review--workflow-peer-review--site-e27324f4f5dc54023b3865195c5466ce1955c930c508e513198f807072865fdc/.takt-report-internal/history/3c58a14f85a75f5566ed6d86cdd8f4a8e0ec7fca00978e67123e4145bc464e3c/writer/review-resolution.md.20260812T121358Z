@@ -1,0 +1,20 @@
+# レビュー指摘裁定
+
+## 結果: 修正対象なし
+
+## 裁定サマリー
+
+対象は Report Directory 配下の最新 `architecture-review.md`、`coding-review.md`、`testing-review.md`、`security-review.md`、`ai-antipattern-review.md`。提出された finding は2件で、修正対象 family は0件、非修正対象は2件と裁定した。
+
+PR attachment の terminal cleanup 漏れは、現行コードの exit 前の明示 cleanup と、その呼び出し順序を直接観測するテストにより反証された。形式外 placeholder に対する採番保証は、現行 producer・検証境界の契約を超える要求であり、実在する番号重複経路も確認できないため修正対象に含めない。
+
+## 指摘ごとの裁定
+
+| finding ID / 出典 | 技術的妥当性 | 裁定 | 対象 family | authorization basis | 初回に含まれなかった理由 | 根拠 |
+|-------------------|----------------|------|-------------|---------------------|--------------------------|------|
+| `AI-NEW-routing-L325` / 最新 `ai-antipattern-review.md` | 反証済み | `no_issue_after_verification` | なし | なし | 該当なし | `src/app/cli/routing.ts:325-358` は interactive result と PR attachment の cleanup を `process.exit(1)` より前に明示実行する。`src/__tests__/cli-routing-pr-resolve.test.ts:370-395` は cleanup の呼び出しと exit より前の実行順序を直接検証している。`src/infra/github/prReviewImageAttachments.ts:412-420` の cleanup も冪等である。 |
+| `AI-NEW-imageAttachments-L34` / 最新 `ai-antipattern-review.md` | 反証済み | `overreach` | なし | なし | 該当なし | `src/infra/github/prReviewImageAttachments.ts:82-109,161-183` の producer は既存番号と今回使用番号を避け、一意な正規 placeholder `[Image #N]` を生成する。`src/features/interactive/imageAttachments.ts:34-45` は正規 placeholder の最大番号から次番号を決める。形式外 placeholder は `src/shared/utils/imageAttachmentReferences.ts:32-38` と `src/features/tasks/attachments.ts:88-107` の保存境界で拒否される。形式外要素から実際に番号が重複する現行 consumer は確認できず、契約外入力への追加保証は元の受入条件を超える。 |
+
+## 未解決の前提
+
+- なし。要求、計画、指摘間に修正対象を確定できない競合はなく、タスク全体の再計画は不要。

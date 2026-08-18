@@ -1,0 +1,2 @@
+{"id":"ai-antipattern-review-companion-1","severity":"must_fix","file":"src/app/cli/processExitCleanup.ts","line":1,"finding":"`registerProcessExitCleanup` は追加されていますが、累積差分内に import・呼び出しがなく到達不能です。終了時クリーンアップを提供する意図なら実際の一時添付ファイル所有者へ配線し、要求されていないならファイルごと削除してください。現状は必須セルフスキャンの未使用コード除去条件を満たしていません。","status":"open"}
+{"id":"ai-antipattern-review-companion-1","status":"resolved"}

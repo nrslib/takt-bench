@@ -1,0 +1,45 @@
+# レビュー指摘裁定
+
+## 結果: 修正対象あり
+
+## 裁定サマリー
+
+対象は `ai-antipattern-review.md`、`architecture-review.md`、`coding-review.md`、`security-review.md`、`testing-review.md` の5レポート、提出 finding は12件である。
+
+裁定後は、修正対象8 family（actionable 8件、duplicate 3件）と非修正対象1件（overreach）になった。PR本文画像の配線、画像signature検証、cleanup時の結果保持、責務境界、認証ホスト、Markdown構文解釈、production dataflowテスト、所有者例外時のcleanupテストを修正対象とする。
+
+`SEC-001` が要求するPR全体の件数・累積容量制限は、元要求が定める1画像ごとのサイズ上限とGitHub attachment URL制限を超える新しい資源制限であり、裁定ポリシーの過剰方式不採用に該当するため除外する。
+
+## 修正対象 family
+
+| family | finding ID / 出典 | 根拠 | 問題 → 根本原因 | 関係する契約経路 | 受入条件 | 修正境界 |
+|--------|-------------------|------|-------------------|--------------------|----------|----------|
+| `pr-body-image-routing` | `AI-NEW-TASKS-PR-BODY-194` / `ai-antipattern-review.md`<br>`ARCH-NEW-src-features-tasks-add-index-L194` / `architecture-review.md` | `src/features/tasks/add/index.ts:194-201`<br>`src/infra/git/format.ts:197-205`<br>`src/__tests__/addTask.test.ts:345-357` | `reviews` と `comments` が空だとPR本文を整形・画像準備する前に終了する → `add --pr` の早期終了条件がPR本文を入力契約として扱っていない | `addTask` → `formatPrReviewAsTask` → `preparePrReviewAttachments` → `saveTaskFile` → task attachments | `reviews: []`、`comments: []` でも、PR本文にGitHub画像があれば画像が保存され、`order.md` に `[Image #N]` とattachment参照が出力される | 早期終了判定と対応テストを最小修正する。本文・コメントとも実質的な内容がないPRの既存挙動まで無条件に変更しない |
+| `image-signature-validation` | `ARCH-NEW-src-shared-utils-imageMimeType-L17` / `architecture-review.md`<br>`AI-NEW-IMAGE-MAGIC-16` / `ai-antipattern-review.md`<br>`CODE-NEW-imageMimeType-L17` / `coding-review.md` | `src/shared/utils/imageMimeType.ts:16-27`<br>`src/infra/github/prImageDownload.ts:100-114`<br>`src/__tests__/github-pr-image-download.test.ts:14-21` | PNGを先頭4バイトだけで受理し、テストも4バイトの疑似PNGを正常fixtureにしている → Content-Typeとの比較前提となるmagic bytes判定が正式なPNG署名を検証していない | PR downloader／inline paste → `inferSupportedImageMimeType` → MIME一致検査 → attachment保存 | PNGの8バイト署名を検証し、4バイトprefixや途中不一致を拒否する。PR取得とinline pasteの正常fixtureを有効な署名へ更新する | 実デコーダによる画像全体の妥当性検査は追加しない。WebPを14バイトに固定する reviewer 提案は必要性が確認できないため受入条件に含めない |
+| `pipeline-cleanup-result-preservation` | `ARCH-NEW-src-features-pipeline-steps-L411` / `architecture-review.md` | `src/features/pipeline/steps.ts:371-415`<br>`src/features/tasks/attachments.ts:110-112`<br>`src/infra/task/enqueueService.ts:160-169` | `finally` から例外を投げ得る `fs.rmSync` を直接呼ぶ → cleanup例外がworkflowの `false` または実行例外を上書きする | pipeline `runWorkflow` → transient task spec作成 → `executeTask` → `cleanupPreparedTaskSpec` | workflow失敗または実行例外とcleanup失敗が連続しても、元のworkflow結果・例外が維持される | cleanupを最小限best-effort化し回帰テストを追加する。transaction、rollback、再試行保証は追加しない |
+| `shared-image-boundary-ownership` | `ARCH-NEW-src-shared-utils-githubAttachmentUrl-L1` / `architecture-review.md` | `src/shared/utils/githubAttachmentUrl.ts:1-18`<br>`src/shared/utils/imageAttachmentStore.ts:23-35,54-59`<br>`src/features/tasks/prReviewAttachments.ts:2-7` | GitHub固有URL規則を汎用shared層が所有し、共有storeに `pasted` エラーと `interactive` ログ分類が残る → interactive実装の共有化でprovider・feature固有責務が除去されていない | GitHub downloader／PR attachment準備 → URL判定、tasks／pipeline／interactive → image attachment store | GitHub URL判定がGitHub境界の内部所有となり、共有storeのエラー・ログが画像添付一般の意味になる | 今回追加・移動したURL判定とstoreの固有命名だけを修正する。shared全体の再編成、公開API拡張、他provider対応は除外する |
+| `github-auth-host-binding` | `CODE-NEW-prImageDownload-L39` / `coding-review.md` | `src/shared/utils/githubAttachmentUrl.ts:6-18`<br>`src/infra/github/prImageDownload.ts:38-47,117-130`<br>`src/__tests__/github-pr-image-download.test.ts:51-55` | 取得URLは `github.com` 固定だが `gh auth token` にhostnameを渡していない → default hostがEnterpriseの場合、そのトークンを `github.com` 宛てAuthorizationへ送信できる | URL許可判定 → GitHub token解決 → authenticated fetch | `github.com` 向け取得では同ホスト用トークンを明示的に選び、default hostがEnterpriseでも別ホスト用資格情報を送信しないことを決定的テストで確認する | 現在許可される `github.com` へのホスト結合だけを修正する。GitHub Enterprise attachment URL対応は追加しない |
+| `markdown-image-semantics` | `CODE-NEW-prReviewAttachments-L22` / `coding-review.md` | `src/features/tasks/prReviewAttachments.ts:21-35`<br>`src/__tests__/prReviewAttachments.test.ts:59-125` | Markdown構造を解釈せず本文全体へ正規表現を適用する → コードフェンス、inline code、HTMLコメント内の例示まで画像として取得・置換する | 整形済みPR本文・review summary・thread・通常コメント → 画像参照抽出 → download → placeholder置換 | 通常のMarkdown画像とHTML `<img>` は処理し、コードフェンス、inline code、HTMLコメント内の記法は原文のまま保持して取得しない | 画像参照の構文判定だけを修正する。Markdown全般の変換器、レンダラー、無関係な本文正規化は追加しない |
+| `pr-image-production-dataflow-test` | `TEST-NEW-pr-image-dataflow-L29` / `testing-review.md` | `src/__tests__/addTask.test.ts:301-329`<br>`src/__tests__/pipelineExecution.test.ts:1345-1379,1433-1478` | addテストは準備済みattachmentを返し、pipelineテストは画像準備・task spec生成・resolverをすべてモックする → 個別モックの期待値だけでは抽出、store、永続化、staging間の本番配線を保証できない | PR入力 → `preparePrReviewAttachments` → image store → task保存／task spec staging → run context | 外部GitHub取得とagent境界だけを置換し、実store・保存／stagingを通して画像ファイル、書換済み `order.md`、実行コンテキストからの参照を観測する分類済み軽量ITがある | 実GitHub資格情報を使うE2E、完全なworkflow engine、重いIT化は要求しない。実際に通る境界に従って分類する |
+| `pr-image-owner-failure-tests` | `TEST-NEW-pr-image-cleanup-L301` / `testing-review.md` | `src/features/tasks/add/index.ts:199-233`<br>`src/app/cli/routing.ts:120-147,281-347`<br>`src/__tests__/addTask.test.ts:301-329,413-437`<br>`src/__tests__/cli-routing-pr-resolve.test.ts:370-453` | 正常終了・取消時のcleanupは検証されるが、PR画像準備後の保存・実行例外を直接検証していない → 新しい一時画像所有者の主要な失敗側契約がテストされていない | add保存所有者、対話CLIのPR source attachment所有者 → 後続保存／実行 → `finally` cleanup | addの保存失敗とPR routingの実行または保存失敗で、cleanupが1回だけ呼ばれ、元例外と永続状態が保持される | 既存所有者の代表的な例外経路テストだけを追加する。OS削除障害の網羅や新しいcleanup運用保証は要求しない |
+
+## 指摘ごとの裁定
+
+| finding ID / 出典 | 裁定 | 対象 family | 根拠 |
+|-------------------|------|-------------|------|
+| `AI-NEW-TASKS-PR-BODY-194` / `ai-antipattern-review.md` | `actionable` | `pr-body-image-routing` | `addTask` がコメント件数だけで早期終了し、明示要求されたPR本文画像が準備処理へ到達しない |
+| `ARCH-NEW-src-features-tasks-add-index-L194` / `architecture-review.md` | `duplicate` | `pr-body-image-routing` | 同じ早期終了条件、同じ `add --pr` 経路、同じ本文画像の受入条件を指摘している |
+| `ARCH-NEW-src-shared-utils-imageMimeType-L17` / `architecture-review.md` | `actionable` | `image-signature-validation` | PNGの4バイトprefixだけを正式な画像として受理し、magic bytes検証要求を満たさない |
+| `AI-NEW-IMAGE-MAGIC-16` / `ai-antipattern-review.md` | `duplicate` | `image-signature-validation` | PNG署名欠陥とfixture不一致は同じ根本原因。WebPを14バイトに限定する方式は根拠未確定のため修正境界から除外する |
+| `CODE-NEW-imageMimeType-L17` / `coding-review.md` | `duplicate` | `image-signature-validation` | 同じPNG部分署名判定と同じ正常fixtureを対象とし、受入条件も一致する |
+| `ARCH-NEW-src-features-pipeline-steps-L411` / `architecture-review.md` | `actionable` | `pipeline-cleanup-result-preservation` | `finally` 内のthrow可能なcleanupが元のworkflow結果・例外を上書きする実装経路を確認できる |
+| `ARCH-NEW-src-shared-utils-githubAttachmentUrl-L1` / `architecture-review.md` | `actionable` | `shared-image-boundary-ownership` | 今回共有化した層にGitHub・interactive固有責務が残り、変更に直接関係する責務境界欠陥である |
+| `CODE-NEW-prImageDownload-L39` / `coding-review.md` | `actionable` | `github-auth-host-binding` | URL送信先が `github.com` 固定なのにtoken取得ホストが未指定で、認証対象ホストとの一致を保証しない |
+| `CODE-NEW-prReviewAttachments-L22` / `coding-review.md` | `actionable` | `markdown-image-semantics` | 全文正規表現により、Markdown上の非画像コンテキストも取得・破壊的置換することをコードから確認できる |
+| `SEC-001` / `security-review.md` | `overreach` | なし | 現行コードには1画像10 MiB上限とGitHub attachment URL制限がある。PR全体の件数・累積容量制限は要求ソースにない新しい資源制限であり、裁定ポリシーが禁止する過剰方式に該当する |
+| `TEST-NEW-pr-image-dataflow-L29` / `testing-review.md` | `actionable` | `pr-image-production-dataflow-test` | production内部境界を同時にモックしており、今回追加した抽出から保存・stagingまでの配線を直接観測するテストがない |
+| `TEST-NEW-pr-image-cleanup-L301` / `testing-review.md` | `actionable` | `pr-image-owner-failure-tests` | PR画像所有者について、後続保存・実行例外時のcleanupと元例外保持を直接検証するテストがない |
+
+## 未解決の前提
+
+- なし。要求・指摘間に修正対象を確定できない競合はなく、タスク全体の再計画は不要である。

@@ -1,0 +1,55 @@
+# 修正レポート
+
+## サマリー
+`F-PR-IMAGE-LIFECYCLE` の修正計画（4工程）を完了させ、verifier が指摘した3つの未完了義務（`OBL-3-PRE-DISPATCH-EXCEPTION` / `OBL-3-CONFIG-EXCEPTION` / `OBL-3-TERMINAL-EXIT`）をすべて解消した。`src/app/cli/routing.ts` を再構成し、PR 解決後の prContext 構築・設定解決（`resolveConfigValues` / `resolveLanguage`）・workflow 選択・mode 選択・dispatch 完了までを単一の try/finally 保証境界で覆うことで、cleanup 関数取得後から dispatch 完了までの全例外経路で `prAttachmentsCleanup` が実行されることを構造的に保証した。実 `process.exit(1)` 経路（save_task の head branch 欠落）は、終了前に cleanup を明示実行してから exit する構造へ変更した。build / lint / npm test / test:it / test:e2e:mock をすべて成功させ、計画の受入条件「成功・失敗・キャンセル・例外すべてで削除されること」を満たす。
+
+## 修正単位
+| 修正単位 | 対象 finding | 契約の正本 | 実施内容・反映先 | 状態 |
+|----------|--------------|------------|-----------------|------|
+| F-PR-IMAGE-LIFECYCLE | `AI-NEW-infra-github-L309` / `ai-antipattern-review.md` new #1、`FU-PRIMG-PRODUCER-TOKEN`、`FU-PRIMG-INTERACTIVE-CANCEL`、`FU-PRIMG-ADD-SELECTION-ERROR` | PRレビュー画像の一時保存仕様（生成された一時ディレクトリは処理の成否に関わらず必ず削除される） | 局所修正。`downloadPrReviewImageAttachments` の try 範囲拡大、pipeline の try/finally 化、対話 routing の prContext 構築・設定解決・選択処理・dispatch 完了まで cleanup 保証境界を拡張、`add --pr` の workflow 選択例外・保存例外への cleanup 追加、save_task の実 `process.exit` 前 cleanup | 完了 |
+
+## 完了義務
+| 修正単位 | 義務ID | 種別 | 対象 finding | 不変条件と対象経路 | 違反を検出する反例・観測点 | 修正前または差し戻し時の結果 | 実装根拠 | 修正後の証拠 | 状態 |
+|----------|--------|------|--------------|--------------------|------------------------------|--------------------------------|----------|--------------|------|
+| F-PR-IMAGE-LIFECYCLE | OBL-1 | 振る舞い修正 | `FU-PRIMG-PRODUCER-TOKEN` | token取得失敗時に一時ディレクトリが削除される（生成: `downloadPrReviewImageAttachments`） | `getToken` を reject させ、`fs.readdirSync(tmpRoot)` が空になること | token取得が try の外にあり失敗時にディレクトリ残留 | `src/infra/github/prReviewImageAttachments.ts` で `getToken` を try 内に移動 | `prReviewImageAttachments.integration.test.ts` の token 失敗テストで `fs.readdirSync(tmpRoot)` が `[]` を確認 | 完了 |
+| F-PR-IMAGE-LIFECYCLE | OBL-2 | 振る舞い修正 | `AI-NEW-infra-github-L309` new #1 | workflow 実行例外時に `attachmentCleanup` が実行される（Consumer: `executePipeline` の `runWorkflow`） | `runWorkflow`（executeTask）を reject させ、cleanup が1回呼ばれること | `runWorkflow` が reject すると後続の return 前 cleanup に到達しない | `src/features/pipeline/execute.ts` で `runPipeline` 本体を try/finally 化し `finally` で cleanup | `pipelineExecution.test.ts` の workflow 例外テストで cleanup 1回を確認 | 完了 |
+| F-PR-IMAGE-LIFECYCLE | OBL-3-CANCEL | 振る舞い修正 | `FU-PRIMG-INTERACTIVE-CANCEL` | ワークフロー選択・モード選択キャンセル時に `prAttachmentsCleanup` が実行される（Consumer: `executeDefaultAction`） | `determineWorkflow` が null を返し、cleanup が1回呼ばれること | キャンセル分岐が dispatch 前の早期 return で cleanup finally に到達しない | `src/app/cli/routing.ts` の workflow 選択キャンセル・mode 選択キャンセル分岐に `prAttachmentsCleanup?.()` を追加 | `cli-routing-pr-resolve.test.ts` の workflow 選択キャンセルテストで cleanup 1回を確認 | 完了 |
+| F-PR-IMAGE-LIFECYCLE | OBL-3-WORKFLOW-EXCEPTION | 振る舞い修正 | `FU-PRIMG-INTERACTIVE-CANCEL` | workflow選択例外でも cleanup する（Consumer: `executeDefaultAction` の `determineWorkflow`） | `determineWorkflow` を reject させ、cleanup が1回呼ばれること | `routing.ts` の `determineWorkflow` await が cleanup finally の外にあり、reject 時に cleanup されない | `src/app/cli/routing.ts` を再構成し、`determineWorkflow` の await を dispatch 後の finally と同じ try ブロック内に移動 | `cli-routing-pr-resolve.test.ts` の workflow 選択例外テストで cleanup 1回と `selectInteractiveMode` 未呼び出しを確認 | 完了 |
+| F-PR-IMAGE-LIFECYCLE | OBL-3-MODE-EXCEPTION | 振る舞い修正 | `FU-PRIMG-INTERACTIVE-CANCEL` | mode選択例外でも cleanup する（Consumer: `executeDefaultAction` の `selectInteractiveMode`） | `selectInteractiveMode` を reject させ、cleanup が1回呼ばれること | `selectInteractiveMode` の await が cleanup finally の外にあり、reject 時に cleanup されない | `src/app/cli/routing.ts` を再構成し、`selectInteractiveMode` の await を dispatch 後の finally と同じ try ブロック内に移動 | `cli-routing-pr-resolve.test.ts` の mode 選択例外テストで cleanup 1回と `interactiveMode` 未呼び出しを確認 | 完了 |
+| F-PR-IMAGE-LIFECYCLE | OBL-3-DISPATCH-EXCEPTION | 振る舞い修正 | `AI-NEW-infra-github-L309` | mode実行・dispatch 後の例外で cleanup する | `selectAndExecuteTask` を reject させる | dispatch 後の finally は既に存在 | `src/app/cli/routing.ts` の finally | 対象テスト成功 | 完了 |
+| F-PR-IMAGE-LIFECYCLE | OBL-3-PRE-DISPATCH-EXCEPTION | 振る舞い修正 | `FU-PRIMG-INTERACTIVE-CANCEL` | cleanup 関数取得後、選択開始前の例外（`resolveBaseBranch` / `createPullRequestContext`）でも cleanup する | `resolveBaseBranch` / `createPullRequestContext` の例外経路を追跡 | `routing.ts` の prContext 構築が cleanup finally の外にあり、`process.exit(1)` に到達し cleanup されない | `src/app/cli/routing.ts` を再構成し、prContext 構築（`resolveBaseBranch` / `createPullRequestContext`）を cleanup 保証境界内へ移動 | 静的追跡で prContext 構築が try 内に配置されたことを確認。`cli-routing-pr-resolve.test.ts` 全31テスト成功 | 完了 |
+| F-PR-IMAGE-LIFECYCLE | OBL-3-CONFIG-EXCEPTION | 振る舞い修正 | `FU-PRIMG-INTERACTIVE-CANCEL` | PR解決後の設定解決例外（`resolveConfigValues`）でも cleanup する | `resolveConfigValues` の例外経路を追跡 | `routing.ts` の設定解決が cleanup 用 try の外にあり、例外時に cleanup されない | `src/app/cli/routing.ts` を再構成し、`resolveConfigValues` / `resolveLanguage` を cleanup 保証境界内へ移動 | 静的追跡で設定解決が try 内に配置されたことを確認。`cli-routing-pr-resolve.test.ts` 全31テスト成功 | 完了 |
+| F-PR-IMAGE-LIFECYCLE | OBL-3-TERMINAL-EXIT | 振る舞い修正 | `AI-NEW-infra-github-L309` | 実際の終了経路（save_task の `process.exit(1)`）でも一時ディレクトリを残さない | save_task 内の `process.exit(1)` を追跡 | `process.exit()` は `finally` を実行せずプロセスを終了するため cleanup されない | `src/app/cli/routing.ts` の save_task head branch 欠落分岐で、`process.exit(1)` 前に `cleanupInteractiveResultAttachments(result)` と `prAttachmentsCleanup?.()` を明示実行 | 静的追跡で exit 前に cleanup が実行されることを確認。`cli-routing-pr-resolve.test.ts` の head branch 欠落テスト（`process.exit` を throw に差し替え）で cleanup 実行を確認 | 完了 |
+| F-PR-IMAGE-LIFECYCLE | OBL-4-CANCEL | 振る舞い修正 | `FU-PRIMG-ADD-SELECTION-ERROR` | `add --pr` の workflow選択キャンセルで cleanup する | workflow を null にして cleanup を確認 | キャンセル分岐が cleanup に到達しない | `src/features/tasks/add/index.ts:222-225` | 対象 addTask テスト成功 | 完了 |
+| F-PR-IMAGE-LIFECYCLE | OBL-4-WORKFLOW-EXCEPTION | 振る舞い修正 | `FU-PRIMG-ADD-SELECTION-ERROR` | `determineWorkflow` 例外で cleanup する | workflow選択を reject させる | `determineWorkflow` 例外時にキャンセル分岐にも保存 finally にも到達しない | `src/features/tasks/add/index.ts:214-220` | 対象 addTask テスト成功 | 完了 |
+| F-PR-IMAGE-LIFECYCLE | OBL-4-SAVE-EXCEPTION | 振る舞い修正 | `AI-NEW-infra-github-L309` | `saveTaskFile` 例外でも cleanup する | `saveEnqueuedTaskFile` を reject させ、cleanup とエラー伝播を確認 | 実装は finally で cleanup 済みだが、保存例外を意図的に発生させる直接回帰テストが無かった | `src/features/tasks/add/index.ts:235-245` の finally は既に `resolved.cleanup()` を保証。`addTask.test.ts` に `enqueuedTaskFile.js` のモックを追加し保存 reject テストを新設 | `addTask.test.ts` の保存例外テストで cleanup 1回と `rejects.toThrow('save failed')` を確認 | 完了 |
+| F-PR-IMAGE-LIFECYCLE | OBL-5 | 既存契約保存 | `AI-NEW-infra-github-L309` new #2（Response 読み取り） | Response 読み取り方式・redirect 処理・画像形式は変更しない | — | 裁定で false_positive とされたため対象外 | 変更せず維持 | 対象外のため変更なし | 該当なし |
+
+## 受入条件
+| finding ID | 受入条件 | 証拠 | 状態 |
+|------------|----------|------|------|
+| F-PR-IMAGE-LIFECYCLE | 一時ディレクトリ生成後の成功・失敗・キャンセル・例外すべてで削除される | token 失敗（integration）、workflow 例外（pipeline）、workflow/mode 選択キャンセル・例外・prContext 構築・設定解決・実 exit（routing）、workflow 選択例外・保存例外（addTask）の各退行テストで cleanup 実行を確認。cleanup の冪等性（`cleaned` フラグ）は維持 | 完了 |
+
+## 差し戻し後の証拠修正
+| 修正単位 | 義務ID | verifier が確認した不足 | 前回の証拠が検出できなかった理由 | 修正した反例・観測点 | 同じ証明手段から再開・再確認した義務 |
+|----------|--------|--------------------------|----------------------------------|----------------------|----------------------------------------|
+| F-PR-IMAGE-LIFECYCLE | OBL-3-PRE-DISPATCH-EXCEPTION | `routing.ts` で cleanup 取得後、`resolveBaseBranch` と `createPullRequestContext` が `finally` の外で実行される | workflow/mode 選択例外だけをテストし、選択開始前の例外を確認していなかった | `routing.ts` を再構成し、prContext 構築（`resolveBaseBranch` / `createPullRequestContext`）を cleanup 保証境界内へ移動。静的追跡で配置を確認 | OBL-3-CONFIG-EXCEPTION、OBL-3-TERMINAL-EXIT、OBL-3-CANCEL、OBL-3-WORKFLOW-EXCEPTION、OBL-3-MODE-EXCEPTION、OBL-3-DISPATCH-EXCEPTION |
+| F-PR-IMAGE-LIFECYCLE | OBL-3-CONFIG-EXCEPTION | `routing.ts` の設定解決（`resolveConfigValues`）が cleanup 境界外 | 設定解決例外の反例がない | `resolveConfigValues` / `resolveLanguage` を cleanup 保証境界内へ移動。静的追跡で配置を確認 | OBL-3-PRE-DISPATCH-EXCEPTION、OBL-3-TERMINAL-EXIT、OBL-3-CANCEL、OBL-3-WORKFLOW-EXCEPTION、OBL-3-MODE-EXCEPTION、OBL-3-DISPATCH-EXCEPTION |
+| F-PR-IMAGE-LIFECYCLE | OBL-3-TERMINAL-EXIT | `routing.ts` の実 `process.exit(1)` は cleanup `finally` を迂回する | テストでは `process.exit` を throw に差し替えており、実終了経路を検証していない | save_task の head branch 欠落分岐で、`process.exit(1)` 前に `cleanupInteractiveResultAttachments(result)` と `prAttachmentsCleanup?.()` を明示実行。静的追跡で exit 前 cleanup を確認 | OBL-3-PRE-DISPATCH-EXCEPTION、OBL-3-CONFIG-EXCEPTION、OBL-3-CANCEL、OBL-3-WORKFLOW-EXCEPTION、OBL-3-MODE-EXCEPTION、OBL-3-DISPATCH-EXCEPTION |
+
+## 品質ゲート
+| 種別 | 結果 | 証拠 |
+|------|------|------|
+| 型チェック | 成功 | `npx tsc --noEmit -p tsconfig.json` 成功 |
+| ビルド | 成功 | `npm run build`（tsc / prompt-evals / copy-build-assets）成功 |
+| リント | 成功 | `npm run lint`（eslint src/）成功 |
+| 単体テスト | 成功 | `npm test` 全シャード成功（1864 / 1519 / 1499 / 1161 件、失敗なし） |
+| 対象テストファイル | 成功 | `npm test -- cli-routing-pr-resolve.test.ts cli-routing-issue-resolve.test.ts addTask.test.ts prReviewImageAttachments.integration.test.ts pipelineExecution.test.ts releaseVerificationWiring.test.ts` 全成功（31 + 86 + 50 件） |
+| 統合テスト | 成功 | `HOME=/tmp/takt-bench-v3-home npm run test:it` 全成功（2357 件） |
+| mock E2E | 成功 | `npm run test:e2e:mock` 全成功（55 passed / 13 skipped / 30 todo、失敗なし） |
+
+## 未完了義務
+- なし（計画の修正単位 `F-PR-IMAGE-LIFECYCLE` の全完了義務を閉じた）。
+
+## 編集後セルフスキャン
+今回の編集（`src/app/cli/routing.ts` の再構成）で追加・変更した import / 変数 / 分岐を走査した。`resolveBaseBranch` / `createPullRequestContext` / `resolveConfigValues` / `resolveLanguage` はすべて try 内で使用され、未使用化はない。`prAttachments` は interactiveSeed で、`prAttachmentsCleanup` は finally と save_task exit 分岐で使用され、未使用化はない。依存方向の違反（新規 import なし）と共通責務の重複（cleanup は既存の `cleanupInteractiveResultAttachments` / `prAttachmentsCleanup` を再利用）は確認されなかった。追加コードはすべて cleanup 呼び出しとその保証境界の拡張に使用された。

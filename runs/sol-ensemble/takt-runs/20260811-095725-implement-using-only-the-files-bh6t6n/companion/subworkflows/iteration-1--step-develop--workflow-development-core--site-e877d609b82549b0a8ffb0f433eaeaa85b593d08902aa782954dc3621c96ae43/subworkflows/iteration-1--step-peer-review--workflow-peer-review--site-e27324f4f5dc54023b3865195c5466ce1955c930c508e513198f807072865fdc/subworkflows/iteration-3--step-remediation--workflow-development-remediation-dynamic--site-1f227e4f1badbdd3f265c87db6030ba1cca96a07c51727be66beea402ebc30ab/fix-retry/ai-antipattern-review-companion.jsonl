@@ -1,0 +1,10 @@
+{"id":"ai-antipattern-review-companion-1","severity":"must_fix","file":"src/features/tasks/retryTaskSpecAttachments.ts","line":48,"finding":"`createImageAttachmentIndexAssigner` は `readonly string[]` を要求しますが、ここでは `baseContent` 文字列を直接渡しています。同じ誤りが `prReviewAttachments.ts` にもあります。型チェックではコンパイルエラーになり、トランスパイルのみでも文字単位で走査されるため既存の画像番号を予約できず、追加した #2/#4 の反例テストが失敗します。両経路で参照文字列を配列として渡すよう契約を統一してください。","status":"open"}
+{"id":"ai-antipattern-review-companion-2","severity":"must_fix","file":"src/__tests__/pr-image-dataflow.integration.test.ts","line":87,"finding":"保存済みタスクを実行コンテキストへ復元せず、まだ生存している元の一時添付から別の task spec を新規作成しています。このため、`saveTaskFile` が保存した添付を実行時の読込・stage 経路が欠落させてもテストは成功し、「task saving から run-context staging まで」のデータフローを証明できません。保存した `task_dir` を実際の解決・stage 経路へ渡す観測に変更する必要があります。","status":"open"}
+{"id":"ai-antipattern-review-companion-1","status":"resolved"}
+{"id":"ai-antipattern-review-companion-2","status":"unresolved"}
+{"id":"ai-antipattern-review-companion-1","status":"resolved"}
+{"id":"ai-antipattern-review-companion-2","status":"resolved"}
+{"id":"ai-antipattern-review-companion-1","status":"resolved"}
+{"id":"ai-antipattern-review-companion-2","status":"resolved"}
+{"id":"ai-antipattern-review-companion-1","status":"resolved"}
+{"id":"ai-antipattern-review-companion-2","status":"resolved"}

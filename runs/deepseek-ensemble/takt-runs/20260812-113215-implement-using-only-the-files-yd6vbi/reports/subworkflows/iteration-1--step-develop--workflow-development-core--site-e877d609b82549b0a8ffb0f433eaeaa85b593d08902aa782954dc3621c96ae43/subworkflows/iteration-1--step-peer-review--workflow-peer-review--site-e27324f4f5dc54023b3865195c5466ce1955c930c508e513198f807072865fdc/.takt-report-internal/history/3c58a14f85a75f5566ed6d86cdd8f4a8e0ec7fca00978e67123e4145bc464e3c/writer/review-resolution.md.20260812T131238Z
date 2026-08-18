@@ -1,0 +1,43 @@
+# マージレディネス最終裁定
+
+## 結果: 修正が必要
+
+## 要件・証跡サマリー
+
+| 対象 | 状態 | 根拠 |
+|------|------|------|
+| PR本文・通常コメント・reviewコメントの画像抽出 | 未充足 | `src/infra/github/prReviewImageAttachments.ts:58-62` は `/owner/repo/assets/<id>` を許可できず、元要件のURL例を取りこぼす |
+| Markdown・HTML画像記法の置換 | 充足 | `prReviewImageAttachments.test.ts:29-82` で本文・コメント・reviewの置換を確認 |
+| PNG/JPEG/GIF/WebP、Content-Type、magic bytes検証 | 充足 | `imageFormat.test.ts`、`prReviewImageAttachments.integration.test.ts:48-89` と品質ゲート成功記録 |
+| ダウンロードサイズ上限 | 未充足 | `prReviewImageAttachments.ts:294-307` で全本文を読み込んだ後、同337-353行で上限判定している |
+| 認証済みGitHub取得と外部URL制限 | 確認済み | `prReviewImageAttachments.ts:45-63,264-335`、認証ヘッダ・外部URL拒否テスト |
+| `takt add --pr`の保存・添付節生成 | 充足 | `addTask.test.ts:412-468` で添付節、保存ファイル、本文画像のみのPRを確認 |
+| 直接`--pr`への添付伝播・cleanup | 充足 | `cli-routing-pr-resolve.test.ts:582-701`、terminal exit順序検証 |
+| pipeline `--pr`の実行配線 | 実装確認済み・証跡未充足 | `pipelineExecution.test.ts:1571-1614` はtask spec関連処理をモックし、実画像stageやorder内容を観測していない |
+| 要求シナリオP1 | 未充足 | 対応テストは抽出関数のみを呼び、Thenの「画像1件取得」を検証していない |
+| 要求シナリオN1・N2 | 充足 | `prReviewImageAttachments.test.ts:84-93,168-178` |
+| 要求シナリオP2 | 未充足 | 計画のGivenは通常コメントだが、`prReviewImageAttachments.test.ts:138-152` はPR本文を入力している |
+| build・lint・unit・light IT・mock E2E | 確認済み | `fix-report.md`および`fix-verification.md`の成功記録 |
+| 最新レビュー裁定 | 確認済み | `review-resolution.md`は専門レビューの2 findingを非修正対象と裁定 |
+
+## 修正対象 family
+
+| family | finding ID | 根拠 | 問題 → 根本原因 | 関係する契約経路 | 受入条件 | 修正境界 |
+|--------|------------|------|-------------------|--------------------|----------|----------|
+| GitHub repo asset URL分類 | `FINAL-NEW-PRIMG-REPO-ASSET-URL` | `prReviewImageAttachments.ts:58-62`。Authorization basis: `direct_acceptance_criterion_violation`。初回証跡になかった理由: テスト入力が`user-attachments/assets`形式に限定されていた | 明示対象の`/owner/repo/assets/<id>`を抽出できない → パス構造を3セグメント固定で判定している | PR本文・コメント・review → URL分類 → 抽出 → ダウンロード → add/direct/pipeline | `https://github.com/<owner>/<repo>/assets/<id...>`のMarkdown・HTML画像を抽出でき、HTTP、外部ホスト、無関係なGitHub URLは拒否される | URL分類と対応単体テストのみ。対応ホストの拡張、任意外部URL対応、パーサー全面改修は除外 |
+| ダウンロード容量制御 | `FINAL-NEW-PRIMG-STREAM-SIZE-LIMIT` | `prReviewImageAttachments.ts:294-307,337-353`。Authorization basis: `direct_acceptance_criterion_violation`。初回証跡になかった理由: 超過Bufferの事後rejectだけを検証していた | 応答全体をメモリへ保持してから上限判定する → 読込中のbyte上限がない | 認証済みfetch → Content-Length確認 → 本文読込 → MIME/magic検証 → 一時保存 | 明白なContent-Length超過は本文読込前に拒否し、Content-Length欠落・過少申告でも上限超過時点で読込を停止する。失敗時の一時領域も清掃される | HTTP本文の制限付き読込と統合テストのみ。キャッシュ、並列化、設定項目追加は除外 |
+| 要求シナリオ・pipeline結合証跡 | `FINAL-NEW-PRIMG-REQUIRED-TEST-EVIDENCE` | `plan.md:228-246`と`prReviewImageAttachments.test.ts:29-39,138-152`、`pipelineExecution.test.ts:56-66,1571-1614`の不一致。Authorization basis: `direct_acceptance_criterion_violation`。初回証跡になかった理由: 対応表を具体的な入力・assertionと照合していなかった | ファイル単位の対応を完了証拠としている → シナリオのGiven/When/Thenと実テストが一致せず、pipelineもモック戻り値の存在しか検証していない | 抽出・取得 → task attachment生成 → task spec準備 → run context stage → `executeTask` | P1で同一テスト内に置換本文と取得attachment 1件を観測する。P2で通常コメントの異なる2 URLから一意なplaceholder・ファイル名を観測する。pipelineで実task spec準備を通し、order、画像、run slug、cleanupを観測する。対象テストと必要な分類契約テストが成功する | 対象テストと、必要な最小限の依存注入のみ。新規E2E基盤、実GitHub資格情報への依存、無関係なテスト整理は除外 |
+
+## 前段 finding の扱い
+
+| finding ID | 状態 | 根拠 |
+|------------|------|------|
+| `AI-NEW-routing-L325` | `adjudicated_non_actionable` | 最新`review-resolution.md`で、exit前cleanupと呼出順テストにより反証済み |
+| `AI-NEW-imageAttachments-L34` | `adjudicated_non_actionable` | 最新`review-resolution.md`で、形式外placeholderは契約外かつ保存境界で拒否されると裁定 |
+| `AI-NEW-routing-L283` | `resolved` | `fix-verification.md`で非null assertion除去とexhaustive checkを検証済み |
+| `FU-PRIMG-TERMINAL-EXIT-TEST` | `resolved` | `fix-verification.md`でcleanupが`process.exit`より先に実行されることを検証済み |
+
+## 未解決の前提・環境要因
+
+- タスク全体の再計画は不要。3 familyはいずれも現在の要件・設計前提のまま局所修正できる。
+- 実GitHub API・private repositoryとの実連携は未確認だが、今回の阻害事項はリポジトリ内の決定的テストで修正・検証可能であり、実行環境による判定不能には該当しない。

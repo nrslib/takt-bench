@@ -1,0 +1,29 @@
+# レビュー指摘裁定
+
+## 結果: 修正対象あり
+
+## 裁定サマリー
+
+Report Directory 配下の最新 `architecture-review.md`、`coding-review.md`、`ai-antipattern-review.md`、`testing-review.md`、`security-review.md` を対象とした。
+
+提出された現行 finding は3件で、同一の数値精度欠陥へ収束するため、修正対象1 family（actionable 1件、duplicate 2件）へ統合した。修正対象から除外する独立した非修正対象は0件である。
+
+任意長の画像番号を `Number` に変換して加算するため、安全整数境界でplaceholderとfileNameが重複し、さらに巨大値では `Infinity` が生成される。PR画像を一意なattachmentとして保存・参照する要求へ直接違反するため、修正対象とする。
+
+## 修正対象 family
+
+| family | finding ID / 出典 | 根拠 | 問題 → 根本原因 | 関係する契約経路 | 受入条件 | 修正境界 |
+|--------|-------------------|------|-------------------|--------------------|----------|----------|
+| `image-attachment-index-precision` | `ARCH-NEW-src-features-tasks-attachments-L31` / `architecture-review.md`、`CODE-NEW-imageAttachmentIndex-L37` / `coding-review.md`、`AI-NEW-IMAGE-INDEX-PRECISION-31` / `ai-antipattern-review.md` | `src/features/tasks/attachments.ts:31-55`で任意長の数字列を`Number`へ変換する。`src/features/tasks/prReviewAttachments.ts:564-575`と`src/features/tasks/retryTaskSpecAttachments.ts:52-58`が加算して採番する。実行確認では`9007199254740991`の次の2値がともに`9007199254740992`となり、400桁の値は`Infinity`となった。重複fileNameは`src/features/tasks/attachments.ts:126-134`で保存エラーとなり、`[Image #Infinity]`は`src/shared/utils/imageAttachmentReferences.ts:7,32-39`で拒否される | PR保存・pipeline・retryが失敗する、または既存参照と新規画像が衝突する → 外部本文の任意長番号を精度確認なしで`Number`化し、最大値への加算を一意な採番として扱っている | `takt add --pr` → `preparePrReviewAttachments` → `saveTaskFile`、対話CLI `--pr` → `resolvePrInput`、pipeline `--pr` → `resolveTaskContent` → `prepareTaskSpecDirectory`、retry再注入 → `renumberRetryAttachments` → `prepareTaskSpecDirectory` | 任意長の既存番号を精度損失なく衝突判定できる。新規画像ごとに既存参照・既存fileName・同一バッチ内の画像と重複しない正の10進番号を割り当てる。`Infinity`、指数表記、重複placeholder、重複fileNameを生成しない。`Number.MAX_SAFE_INTEGER`、安全整数超過値、400桁値、異なる2画像を含むPR・retry双方の回帰テストが成功する。通常範囲の採番、attachment形式、cleanupを維持する | 共通採番責務とPR・retryの直接回帰テストを最小変更する。`BigInt`、10進文字列、未使用安全番号探索など特定方式は固定しない。Markdown構文・画像抽出範囲、download・認証、MIME・magic bytes・サイズ制限、公開attachment形式、互換経路、migration、fallback、周辺リファクタリングは除外する |
+
+## 指摘ごとの裁定
+
+| finding ID / 出典 | 裁定 | 対象 family | 根拠 |
+|-------------------|------|-------------|------|
+| `ARCH-NEW-src-features-tasks-attachments-L31` / `architecture-review.md` | `actionable` | `image-attachment-index-precision` | 現行コードと再現結果が一致する。安全整数境界で2画像が同じ番号となり、巨大値ではvalidatorが拒否する値を生成するため、PR画像の保存・参照契約に直接違反する |
+| `CODE-NEW-imageAttachmentIndex-L37` / `coding-review.md` | `duplicate` | `image-attachment-index-precision` | actionable指摘と同じ共通helperの`Number`精度損失、同じPR・pipeline・retry経路、同じ一意採番の受入条件を指摘している |
+| `AI-NEW-IMAGE-INDEX-PRECISION-31` / `ai-antipattern-review.md` | `duplicate` | `image-attachment-index-precision` | actionable指摘と同じ任意長数字列の未検証変換を根本原因とし、同じplaceholder・fileName衝突の解消を要求している |
+
+## 未解決の前提
+
+- なし。要求・指摘・現行契約の競合はなく、タスク全体の再計画は不要である。

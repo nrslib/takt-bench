@@ -1,0 +1,22 @@
+version: 1
+provider:
+  profiles:
+    luna-max:
+      provider: codex
+      model: gpt-5.6-luna
+      options:
+        network_access: true
+        reasoning_effort: xhigh
+    sol-high:
+      provider: codex
+      model: gpt-5.6-sol
+      options:
+        network_access: true
+        reasoning_effort: high
+  defaults:
+    profile: luna-max
+  targets:
+    steps:
+      final-gate: { profile: sol-high }
+    personas:
+      planner: { profile: sol-high }

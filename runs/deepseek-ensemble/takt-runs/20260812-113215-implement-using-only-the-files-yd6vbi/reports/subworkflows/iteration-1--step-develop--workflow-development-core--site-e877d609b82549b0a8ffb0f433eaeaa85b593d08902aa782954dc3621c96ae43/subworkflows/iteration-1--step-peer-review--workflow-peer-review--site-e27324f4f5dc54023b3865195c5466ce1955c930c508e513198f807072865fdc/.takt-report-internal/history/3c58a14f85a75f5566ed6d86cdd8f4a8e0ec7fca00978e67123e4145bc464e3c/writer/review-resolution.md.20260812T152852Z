@@ -1,0 +1,46 @@
+# マージレディネス最終裁定
+
+## 結果: 修正が必要
+
+## 要件・証跡サマリー
+
+| 対象 | 状態 | 根拠 |
+|------|------|------|
+| PR本文・通常コメント・review summary・threadコメントからのMarkdown／HTML画像抽出と参照置換 | 充足 | `prReviewImageAttachments.test.ts`の18件成功、およびiteration 3の`fix-verification.md` |
+| PNG／JPEG／GIF／WebPのContent-Type・magic bytes・10MiB上限検証 | 充足 | iteration 2の`fix-verification.md`。`prReviewImageAttachments.integration.test.ts`の14件成功 |
+| GitHub attachment URL限定、認証付き取得、redirect制限 | 充足 | iteration 2の修正検証および最新5専門レビュー |
+| `takt add --pr`での保存、添付節生成、本文画像のみのPR対応 | 充足 | iteration 2の`fix-verification.md`。`addTask.test.ts`成功 |
+| 直接`takt --pr`での添付伝播、採番、終了経路のcleanup | 充足 | iteration 1の`fix-verification.md`。`cli-routing-pr-resolve.test.ts`成功 |
+| pipeline `--pr`でのtask spec生成、画像配置、成功・失敗時のcleanup | 充足 | iteration 2の`fix-verification.md`。`pipeline-image-attachments.integration.test.ts`の3件成功 |
+| 計画の要求シナリオP1・N1・P2・N2 | 充足 | 対応する実テストの入力とassertionを照合済み。対象テストにskip／todoなし |
+| provider capabilityの正規化と3 consumerの移行 | 解消済み | iteration 4の`fix-verification.md`。`resolvePrImages`の対応・非対応providerテスト成功 |
+| 一時画像の処理単位ごとの所有権と分離 | 未充足 | 現在の実装は固定の`<tmpRoot>/takt-pr-images`を共有し、同名ファイル拒否とディレクトリ全体削除を行う。同一rootで未cleanupの処理が重なる場合を既存テストは検証していない |
+| build／lint／unit／light IT／mock E2E | 確認済み | iteration 4の`fix-report.md`で全ゲート成功 |
+| 追加・変更された重いITと分類契約 | 確認済み | iteration 2の`fix-verification.md`で対象IT各成功、分類契約20件成功 |
+| 最新専門レビューと裁定 | 確認済み | iteration 4の5レポートはすべて`APPROVE`。最新`review-resolution.md`は修正対象なし |
+
+## 修正対象 family
+
+| family | finding ID | 根拠 | 問題 → 根本原因 | 関係する契約経路 | 受入条件 | 修正境界 |
+|--------|------------|------|-------------------|--------------------|----------|----------|
+| `PRIMG-TEMP-DIR-OWNERSHIP` | `FINAL-NEW-PRIMG-TEMP-DIR-OWNERSHIP` | Authorization Basis: `direct_acceptance_criterion_violation`。画像解決結果が自身の一時領域とcleanupを所有する計画契約に対し、固定ディレクトリを共有する。初回証跡に含まれなかった理由は、`prReviewImageAttachments.integration.test.ts`がテストごとに異なる`tmpRoot`を作り、同一rootで複数結果を生存させていないため | 同時・重複実行で同じ`image-1.png`が衝突し、後続処理の失敗cleanupが先行処理の画像も削除する → 処理単位の一意なprivate一時ディレクトリを生成せず、固定ディレクトリを共有している | PR画像抽出 → 認証取得 → 画像ダウンロード → 一時保存 → add／direct／pipelineによる消費 → 各結果のcleanup | 同一`tmpRoot`で2回解決し、両結果を未cleanupのまま保持しても、それぞれが同名の`image-1.png`を独立して生成できる。一方の失敗またはcleanupで他方のファイルが削除されず、各cleanup後に対応する専用領域だけが削除される | 一時ダウンロードディレクトリを処理ごとに一意かつprivateに生成し、所有するディレクトリだけをcleanupする。同一rootでの並存・片側失敗・個別cleanupを統合テストへ追加する。URL分類、認証、MIME、magic bytes、サイズ上限、CLI／pipeline配線、周辺リファクタリングは除外する |
+
+## 前段 finding の扱い
+
+| finding ID | 状態 | 根拠 |
+|------------|------|------|
+| `AI-NEW-routing-L283` | resolved | exhaustive check導入とbuild成功をiteration 1の`fix-verification.md`で確認 |
+| `FU-PRIMG-TERMINAL-EXIT-TEST` | resolved | cleanupが`process.exit`より先に実行されるテスト成功をiteration 1で確認 |
+| `FINAL-NEW-PRIMG-REPO-ASSET-URL` | resolved | repository asset URLの正負テスト成功をiteration 2で確認 |
+| `FINAL-NEW-PRIMG-STREAM-SIZE-LIMIT` | resolved | 制限付きストリーム読込、超過時cancel・cleanupをiteration 2で確認 |
+| `FINAL-NEW-PRIMG-REQUIRED-TEST-EVIDENCE` | resolved | 要求シナリオと実ファイルを観測する統合テスト成功をiteration 2で確認 |
+| `FINAL-NEW-PRIMG-PROTECTED-SEGMENT-REWRITE` | resolved | 非コード領域のみの置換と保護領域維持をiteration 3で確認 |
+| `FINAL-NEW-PRIMG-E2E-EVIDENCE` | resolved | 標準mock E2Eの終了コード0をiteration 3の`fix-report.md`で確認 |
+| `AI-NEW-src-app-cli-routing-inputs-L67` | resolved | 共通解決関数とconsumer移行をiteration 4で検証済み |
+| `ADJ-FOLLOWUP-src-features-tasks-add-L198` | resolved | `add/index.ts`を含む3 consumerの移行をiteration 4で検証済み |
+| 最新iteration 4の非finding化された懸念 | adjudicated_non_actionable | 最新`review-resolution.md`により再投入対象外 |
+
+## 未解決の前提・環境要因
+
+- 環境要因による判定不能事項はない。
+- タスク全体の再計画は不要であり、現在の設計前提のまま局所修正できる。

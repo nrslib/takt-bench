@@ -1,0 +1,29 @@
+# 実装レポート
+
+## 作業結果
+- GitHub PR本文、通常コメント、review summary、review thread本文からMarkdown画像とHTML `img` を抽出する経路を追加した。
+- GitHub attachment URLだけを許可し、`gh api` の認証済み経路で取得するようにした。
+- Content-Type、PNG/JPEG/GIF/WebPのmagic bytes、10 MiBサイズ上限を検証し、検証失敗時はエラーとして処理するようにした。
+- 画像参照を `[Image #N]` に置換し、既存のtask attachment形式で保存・実行時参照できるようにした。
+
+## 変更内容
+- `PrReviewData` に `StoredImageAttachment[]` を追加し、GitHub PR取得結果から添付を `add --pr`、通常の `--pr`、pipeline `--pr` へ受け渡した。
+- `add --pr` は `prepareTaskSpecDirectory` 経由で `order.md` と `attachments/image-N.ext` を保存し、成功・キャンセル・失敗時にGitHub取得用一時ファイルを削除する。
+- 通常の `--pr` は添付をinteractive seedへ渡し、pipeline `--pr` は一時task specを作成して既存のrun context stagingへ接続する。
+- 既存のinteractive添付にPR添付をseedした場合の番号衝突を避けるため、placeholderとファイル名の最大番号の次を採番する。
+- 変更対象の契約グラフは次の1 familyとして確認した。
+  - `participates`: GitHub PR本文/コメント/review thread → `extract/validate` → `gh api` download → `StoredImageAttachment` → task spec/interactive seed → `add --pr`・通常 `--pr`・pipeline `--pr` → workflow実行。
+  - `preserved`: 既存のtask attachment manifest、`order.md`追記形式、run context staging、GitHub以外のIssue/GitLab経路。
+  - `outside`: 任意外部URLの取得、旧契約のalias/fallback/migration経路。編集していない。
+
+## ビルド結果
+- `npm run build` 成功。
+- `npm run lint` 成功。
+- 編集後のセルフスキャンで `git diff --check` 成功。新規関数の参照元、旧URL直書き置換、未使用import、片側だけの添付受け渡しを意味検索で確認し、残存する対象経路はない。
+
+## テスト結果
+- 対象テスト全体: `npm test -- src/__tests__/github-pr-images.test.ts src/__tests__/github-pr.test.ts src/__tests__/imageAttachments.test.ts src/__tests__/addTask.test.ts src/__tests__/cli-routing-pr-resolve.test.ts src/__tests__/pipelineExecution.test.ts` 成功（170件）。
+- Fast Unit Gate: `npm test` 成功（4 shard、合計5,427件）。最終編集後にも同コマンドを再実行して成功。
+- 軽量統合: `HOME=/tmp/takt-bench-v3-home npm run test:it` 成功（131ファイル、2,049件）。
+- モックE2E: `npm run test:e2e:mock` 成功。最終JSONは4 shard合計で失敗0（成功155件、skip17件）。途中のbirpc worker通知タイムアウトはランナーの再計測で解消した。
+- smoke E2E: `npm run test:e2e:smoke` 成功（成功21件、skip1件）。

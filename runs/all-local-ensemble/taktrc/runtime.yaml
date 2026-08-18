@@ -1,0 +1,19 @@
+version: 1
+companion:
+  enabled: false
+provider:
+  profiles:
+    reviewer-local:
+      provider: opencode
+      model: ollama-cloud/gemma4:31b
+    coder-x:
+      provider: opencode
+      model: ollama-cloud/deepseek-v4-flash
+      options:
+        guards:
+          call_timeout_ms: 10800000
+  defaults:
+    profile: coder-x
+  targets:
+    tags:
+      review: { profile: reviewer-local }

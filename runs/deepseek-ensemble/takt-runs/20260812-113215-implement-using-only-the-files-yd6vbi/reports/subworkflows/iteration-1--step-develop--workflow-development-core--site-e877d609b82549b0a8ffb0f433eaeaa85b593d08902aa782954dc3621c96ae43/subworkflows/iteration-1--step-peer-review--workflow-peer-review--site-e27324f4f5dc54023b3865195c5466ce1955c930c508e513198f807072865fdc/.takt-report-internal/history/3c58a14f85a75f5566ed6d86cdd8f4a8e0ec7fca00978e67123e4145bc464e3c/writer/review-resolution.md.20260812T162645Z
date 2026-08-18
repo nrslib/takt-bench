@@ -1,0 +1,30 @@
+# レビュー指摘裁定
+
+## 結果: 修正対象あり
+
+## 裁定サマリー
+
+最新の5専門レビューレポートを対象とし、提出された4件を現行コード・要求・実行履歴へ照合した。修正対象は1 family、非修正対象は3件である。
+
+`AI-NEW-image-attach-L35` は、今回差分が既存の画像 placeholder 文法とは異なる parser を追加した退行として採用する。bounded horizontal comparison で、同じ不変条件・正本・根本原因を持つ retry consumer も確認したため、follow-up 1件を同じ family に統合する。残る3件は、現在の実装またはテスト証拠により主張が反証された。
+
+## 修正対象 family
+
+| family | finding ID / 出典 | 修正権限の根拠 | 根拠 | 問題 → 根本原因 | 関係する契約経路 | 受入条件 | 修正境界 |
+|--------|-------------------|----------------|------|-------------------|--------------------|----------|----------|
+| `PRIMG-PLACEHOLDER-GRAMMAR-OWNER` | `AI-NEW-image-attach-L35` / `ai-antipattern-review.md`、`ADJ-FOLLOWUP-retry-placeholder-grammar` / 裁定時 bounded horizontal comparison | 今回差分の退行。follow-up は採用済み family の閉鎖 | `src/shared/utils/imageAttachmentReferences.ts:5-17` は正規形を正の整数・先頭ゼロなしとして定義。一方、`src/infra/github/prReviewImageAttachments.ts:85-103`、`src/features/interactive/imageAttachments.ts:34-45`、`src/features/tasks/retryTaskSpecAttachments.ts:50-82` はそれぞれ独自の `\d+` parser・生成規則を持つ | PR画像機能追加後、同じ `[Image #N]` 文法を複数 consumer が別々に再構築し、`[Image #0]` や先頭ゼロに対する解釈が共通 validator と不一致になる → placeholder 文法・番号抽出・生成の共通所有者が利用されていない | 共通 placeholder 定義・検証 → PR本文／コメントからの既存番号収集と生成 → interactive attachment の後続採番 → retry task spec の最大番号算出・再採番 → task attachment 検証・terminal prompt 参照 | 正規 placeholder の判定、番号抽出、生成が共通所有者を通じて一貫すること。PRでは既存番号を避けた空き番号、interactive／retryでは既存最大番号の次を採番する現在の観測可能な挙動を維持すること。不正な placeholder を正規番号として扱わないこと | placeholder 文法と番号変換の最小限の共通化、およびPR・interactive・retry consumerの移行だけを対象とする。Markdown／HTML画像抽出、URL・MIME・magic bytes・サイズ検証、download、cleanup、provider capability、無効形式への互換対応、周辺リファクタリングは除外する |
+
+## 指摘ごとの裁定
+
+| finding ID / 出典 | 技術的妥当性 | 裁定 | 対象 family | authorization basis | 初回に含まれなかった理由 | 根拠 |
+|-------------------|----------------|------|-------------|---------------------|--------------------------|------|
+| `AI-NEW-routing-L144` / `ai-antipattern-review.md` | 反証済み | `false_positive` | なし | なし | 該当なし | 実体は `src/infra/github/prReviewImageAttachments.ts:144-157`。2回の呼出しは Markdown画像記法とHTML `<img>` 記法という異なる入力形式を順に処理し、2回目の入力は1回目の置換結果である。「同一引数で2回連続」という主張は現行コードと一致しない。 |
+| `AI-NEW-tasks-add-L215` / `ai-antipattern-review.md` | 反証済み | `no_issue_after_verification` | なし | なし | 該当なし | `src/features/tasks/add/index.ts:212-243` は `determineWorkflow` のthrow時、取消時、保存成功・失敗時にcleanupを実行する。`src/__tests__/addTask.test.ts:472-520` が取消、throw、保存失敗で各1回のcleanupを直接検証している。 |
+| `AI-NEW-pipeline-test` / `ai-antipattern-review.md` | 反証済み | `no_issue_after_verification` | なし | なし | 該当なし | `src/__tests__/pipelineExecution.test.ts:1573-1689` は画像付き成功、workflow失敗、throw時のcleanupを検証する。非対応providerのidentity fallbackは`src/__tests__/git-factory.test.ts:337-345`、実filesystem上のtask spec昇格と削除は`pipeline-image-attachments.integration.test.ts`で検証済み。 |
+| `AI-NEW-image-attach-L35` / `ai-antipattern-review.md` | 確認済み | `actionable` | `PRIMG-PLACEHOLDER-GRAMMAR-OWNER` | `remediation_regression` | 該当なし | `src/features/interactive/imageAttachments.ts:34-45` と新規GitHub画像処理が、既存の共通placeholder文法を利用せず別の正規表現で同じ意味を再構築している。reviewer記載の`direct_acceptance_criterion_violation`ではなく、今回差分が顕在化させた文法所有の退行として採用する。 |
+| `ADJ-FOLLOWUP-retry-placeholder-grammar` / 裁定時 bounded horizontal comparison | 確認済み | `duplicate` | `PRIMG-PLACEHOLDER-GRAMMAR-OWNER` | `accepted_family_unvisited_consumer` | 初回レビューの比較対象がGitHub producerとinteractive consumerに限定され、同じplaceholder文法を消費するretry経路が未訪問だったため | `src/features/tasks/retryTaskSpecAttachments.ts:50-82` が同じ`\d+`文法、番号抽出、placeholder生成を独自実装している。同一の不変条件・正本・根本原因を持つため、別familyにはせず統合する。 |
+
+## 未解決の前提
+
+- なし。要求・計画・指摘間に再計画を必要とする競合はなく、現行設計のまま局所修正できる。
+- 環境要因による裁定不能事項はない。

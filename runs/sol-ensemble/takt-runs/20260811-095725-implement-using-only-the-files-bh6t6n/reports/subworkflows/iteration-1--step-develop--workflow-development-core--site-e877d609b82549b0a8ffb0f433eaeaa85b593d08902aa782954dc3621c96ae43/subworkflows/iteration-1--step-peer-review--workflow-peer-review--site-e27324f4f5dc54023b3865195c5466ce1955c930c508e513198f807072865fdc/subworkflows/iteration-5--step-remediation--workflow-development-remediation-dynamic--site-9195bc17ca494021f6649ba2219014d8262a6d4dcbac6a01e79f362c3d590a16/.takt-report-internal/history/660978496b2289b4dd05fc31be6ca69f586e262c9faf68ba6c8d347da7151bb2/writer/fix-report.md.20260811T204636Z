@@ -1,0 +1,68 @@
+# 修正レポート
+
+## サマリー
+
+最新の完了検証で未完了となった2件を修正した。
+
+- `<pre>`配下の実HTML `<img>`を画像収集対象から除外した。
+- conversation commentに`path`・`line`・`url`が存在しても、従来どおりauthorとbodyだけを出力するよう復元した。
+- 本文とMarkdown断片位置の生成は共通化し、画像解析用の構造化契約を維持した。
+- 実HTML画像入り`pre`と直後の通常画像を対にした回帰テスト、およびmetadata付きconversation commentの完全一致テストを追加した。
+- 差し戻しで再開した`pr-review-markdown-fragment-isolation`の全完了義務を、断片解析、順序、重複排除、採番、cleanup、3入口、filesystem保存まで再確認した。
+- `e2e-runner-attempt-boundary`は最新検証で全義務完了済みであり、変更していない。
+- Companionの`formatPrReviewAsTask()`削除指摘は、確定修正計画が同APIの既存公開文字列契約維持を明示し、変更前HEADにも存在するため適用しなかった。
+
+## 修正単位
+
+| 修正単位 | 対象 finding | 契約の正本 | 実施内容・反映先 | 状態 |
+|----------|--------------|------------|-----------------|------|
+| `pr-review-markdown-fragment-isolation` | `CODE-NEW-pr-review-fragment-isolation-L92` | `order.md`のPR本文・通常コメント・review thread画像要件、確定修正計画の断片解析・既存文字列契約 | `src/features/tasks/prReviewAttachments.ts`で`pre`子孫走査を停止。`src/infra/git/format.ts`でconversation commentの既存出力を復元し、本文断片生成を共通化。反例テストを追加 | 完了 |
+| `e2e-runner-attempt-boundary` | `TEST-NEW-e2e-runner-attempt-boundary-L31` | 確定修正計画の実process境界・隔離資源・cleanup契約 | 最新完了検証で全義務完了済み。今回の差し戻しでは変更なし | 完了 |
+
+## 完了義務
+
+| 修正単位 | 義務ID | 種別 | 対象 finding | 不変条件と対象経路 | 違反を検出する反例・観測点 | 修正前または差し戻し時の結果 | 実装根拠 | 修正後の証拠 | 状態 |
+|----------|--------|------|--------------|--------------------|------------------------------|--------------------------------|----------|--------------|------|
+| `pr-review-markdown-fragment-isolation` | `PR-FRAGMENT-01` | 振る舞い修正 | `CODE-NEW-pr-review-fragment-isolation-L92` | 各PR本文・コメント本文を独立したMarkdown文書として解析する | 未閉鎖PR本文後のsummary、thread、conversation画像 | 連結解析では後続画像が欠落していた | `formatPrReviewTask()`の断片範囲と断片単位`fromMarkdown()` | 対象unitとdataflow IT成功 | 完了 |
+| 同上 | `PR-ORDER-02` | 振る舞い修正 | 同上 | summary、active、outdated、resolved、legacy、conversationの順序を維持する | カテゴリ横断の画像URLとplaceholder順 | 全体parser状態に後続カテゴリが依存していた | formatterのparts列を順序の正本として維持 | カテゴリ横断assertion成功 | 完了 |
+| 同上 | `PR-LITERAL-03` | 振る舞い修正 | 同上 | fenced code、inline code、HTML comment、`pre`内を画像扱いしない | `<pre><img ...></pre>`直後に通常`img`を配置 | `pre`配下の実HTML画像も収集されていた | HTML走査で`pre`要素の子孫探索を停止 | `pre`内画像は保持、直後の画像だけdownload・置換するテスト成功 | 完了 |
+| 同上 | `PR-DEDUPE-04` | 振る舞い修正 | 同上 | 全断片でURL重複排除を共有する | 異なる断片に同一URLを配置 | 断片単位状態では重複保存の可能性があった | task全体の`placeholderByUrl`を維持 | download 1回、同一placeholderのassertion成功 | 完了 |
+| 同上 | `PR-INDEX-05` | 振る舞い修正 | 同上 | 予約済み画像番号と採番状態をtask全体で共有する | 既存placeholder、attachment path、巨大識別子と新規画像 | 断片単位採番では衝突し得た | task全体のindex assignerを維持 | 採番境界テスト成功 | 完了 |
+| 同上 | `PR-CLEANUP-06` | 振る舞い修正 | 同上 | download・保存失敗時に一時storeをcleanupする | 途中download失敗とcleanup失敗 | 境界変更後も既存cleanup契約の確認が必要だった | 共通store所有者のcatchとcleanupを維持 | cleanup・元エラー保持テスト成功 | 完了 |
+| 同上 | `PR-MIGRATE-07` | 利用側移行 | 同上 | add、対話CLI、pipelineが構造化formatterを使用する | 3入口のformatter入力とattachment伝播 | 旧実装は完成文字列を直接解析していた | 3入口とも`formatPrReviewTask()`を使用 | add、CLI、pipeline対象テスト成功 | 完了 |
+| 同上 | `PR-OLDPATH-08` | 旧経路削除 | 同上 | 完成task文字列を直接attachment parserへ渡さない | formatterとattachment準備関数の参照検索 | 旧3入口が連結文字列を渡していた | 本番3入口を`FormattedPrReviewTask`へ統一 | 本番の旧直接解析呼び出しなし | 完了 |
+| 同上 | `PR-PUBLIC-09` | 既存契約保存 | 同上 | `formatPrReviewAsTask(): string`の従来整形結果を維持する | metadata付きconversation commentの完全一致 | File／URL行が新たに追加されていた | conversation commentは共通本文formatterのみ使用し、review metadata整形と分離 | 変更前形式との完全一致テスト成功 | 完了 |
+| 同上 | `PR-DATAFLOW-10` | 利用側移行 | 同上 | task attachmentとrun contextへ画像参照を伝播する | 未閉鎖本文後の画像を実filesystemへ保存・staging | parser unitだけでは保存経路を証明できなかった | task保存と`prepareTaskSpecDirectory()`の実経路 | light IT 1件成功 | 完了 |
+| `e2e-runner-attempt-boundary` | `E2E-ENV-01`～`E2E-CLASSIFY-07` | 既存契約保存 | `TEST-NEW-e2e-runner-attempt-boundary-L31` | attempt分離、env伝播、正常・spawn失敗cleanup、再測定、分類契約 | 実child processと起動失敗 | 最新完了検証で全反例が成立済み | 共通attempt executorとheavy IT | 最新検証で全義務完了 | 完了 |
+
+## 受入条件
+
+| finding ID | 受入条件 | 証拠 | 状態 |
+|------------|----------|------|------|
+| `CODE-NEW-pr-review-fragment-isolation-L92` | 未閉鎖PR本文後の各コメント画像を検出・保存・置換し、コードリテラル除外、重複排除、順序、採番、cleanup、3入口を維持する | 最終対象実行でunit 145件、light IT 1件、heavy分類テスト40件成功 | 完了 |
+| `TEST-NEW-e2e-runner-attempt-boundary-L31` | 実childでcwd・隔離env、attempt分離、正常・spawn失敗cleanup、初回・再測定共通契約を確認する | 最新完了検証のheavy IT・分類契約で完了確認済み | 完了 |
+| `ai-antipattern-review-companion-1` | `formatPrReviewAsTask()`が置換対象の旧契約なら削除する | 確定計画は同API維持を明記。変更前HEADから関数・re-exportが存在し、formatterテストでも公開契約を検証 | 異議 |
+
+## 差し戻し後の証拠修正
+
+| 修正単位 | 義務ID | verifier が確認した不足 | 前回の証拠が検出できなかった理由 | 修正した反例・観測点 | 同じ証明手段から再開・再確認した義務 |
+|----------|--------|--------------------------|----------------------------------|----------------------|----------------------------------------|
+| `pr-review-markdown-fragment-isolation` | `PR-LITERAL-03` | `<pre>`配下の実HTML `<img>`が収集される | 未実行の反例。既存テストは`pre`内のMarkdown記法だけを使用していた | 実HTML `<img>`入り`pre`と直後の通常画像を対にし、download引数と最終本文を検証 | `PR-FRAGMENT-01`、`PR-ORDER-02`、`PR-LITERAL-03`、`PR-DEDUPE-04`、`PR-INDEX-05`、`PR-CLEANUP-06` |
+| 同上 | `PR-PUBLIC-09` | conversation metadataが従来存在しないFile／URL行を追加する | 弱い観測点。authorとbodyだけの入力と部分一致assertionでは差異を検出できなかった | `path`・`line`・`url`付き入力に対する出力全体の完全一致を追加 | `PR-MIGRATE-07`、`PR-OLDPATH-08`、`PR-PUBLIC-09`、`PR-DATAFLOW-10` |
+
+## 品質ゲート
+
+| 種別 | 結果 | 証拠 |
+|------|------|------|
+| 対象テスト | 成功 | unit 145件、light IT 1件、heavy分類テスト40件 |
+| ビルド | 成功 | `npm run build`、終了コード0 |
+| lint | 成功 | `npm run lint`、終了コード0 |
+| fast unit gate | 成功 | `npm test`、4 shard・合計6,070件成功 |
+| light IT gate | 成功 | `npm run test:it`、159 files・2,358件成功 |
+| mock E2E | 成功 | `npm run test:e2e:mock`。shard 2のbirpc noiseを再測定後、終了コード0 |
+| 差分セルフスキャン | 成功 | `git diff --check`成功。未使用参照、依存方向、共通責務、旧直接解析経路を確認し問題なし |
+| Companion再確認 | 異議 | wrapper削除は確定計画の`PR-PUBLIC-09`と矛盾するため変更対象外 |
+
+## 未完了義務
+
+- なし。

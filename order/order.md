@@ -1,0 +1,53 @@
+PR コメント内の画像をダウンロードして task attachments に配置する機能を実装してください。
+
+## 背景
+
+現状、`takt add --pr` や `takt --pr` では PR 本文・通常コメント・review thread の本文は取得されるが、コメント内に貼られた PNG などの画像はローカルの `attachments/` に保存されない。
+
+既存の task attachment 仕組みはあるため、PR コメント中の画像 URL を抽出して `TaskAttachment[]` として渡せば、`.takt/tasks/<slug>/attachments/` 配下に配置できるはず。
+
+## 期待する挙動
+
+- `takt add --pr <number>` 実行時に、PR 本文・通常コメント・review thread コメント内の画像 URL を検出する
+- 対応画像をローカルにダウンロードする
+- `.takt/tasks/<slug>/attachments/` に `image-1.png` などとして保存する
+- `order.md` に既存 attachment 形式で追記する
+
+```md
+## 添付画像
+
+- [Image #1]: `attachments/image-1.png`
+```
+
+- 元コメント本文内の画像参照も、可能なら `[Image #1]` のように参照できる形に置換または補足する
+- pipeline の `--pr` 経路でも同等に画像を参照できること
+
+対象とする画像記法の例:
+
+```md
+![screenshot](https://github.com/user-attachments/assets/...)
+![image](https://github.com/org/repo/assets/...)
+<img src="https://github.com/user-attachments/assets/..." />
+```
+
+## 安全性・制約
+
+- 対応形式はまず PNG/JPEG/GIF/WebP
+- Content-Type と magic bytes を検証する
+- サイズ上限を設ける
+- GitHub の private repository 画像に対応するため、`gh api` または認証済み `gh` 経由の取得を優先する
+- 外部 URL を無制限に取得しない。GitHub attachment URL から始めるのが安全
+
+## 参考（実装方針案）
+
+- PR 取得後の `PrReviewData` から画像 URL を抽出する（PR body / conversation comments / review summaries / review thread comments）
+- Markdown image syntax と HTML `<img src="...">` を対象にする
+- ダウンロードした画像を `TaskAttachment[]` に変換する
+- `saveTaskFile()` / `prepareTaskSpecDirectory()` に渡す
+- pipeline 直実行時も attachment 付き task spec を使う経路を追加する
+- PR 取得の既存実装は `src/infra/github/pr.ts` にある
+
+## 品質要件
+
+- 既存のテスト規約に従い、新規ロジックには単体テストを追加する
+- `npm run build`、`npm run lint`、`npm test` が全て成功すること

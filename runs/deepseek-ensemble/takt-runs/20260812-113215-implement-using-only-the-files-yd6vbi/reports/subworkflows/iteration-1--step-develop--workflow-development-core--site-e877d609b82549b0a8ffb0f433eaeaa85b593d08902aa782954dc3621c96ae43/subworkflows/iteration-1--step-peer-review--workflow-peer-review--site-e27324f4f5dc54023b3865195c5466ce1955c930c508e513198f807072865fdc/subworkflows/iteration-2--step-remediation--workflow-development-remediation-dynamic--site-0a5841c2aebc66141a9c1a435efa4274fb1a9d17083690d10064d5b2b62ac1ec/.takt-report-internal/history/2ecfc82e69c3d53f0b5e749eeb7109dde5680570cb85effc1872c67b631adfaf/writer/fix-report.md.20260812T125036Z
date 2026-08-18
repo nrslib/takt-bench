@@ -1,0 +1,49 @@
+# 修正レポート
+## サマリー
+修正計画の3修正単位（UNIT-URL-CLASSIFY / UNIT-SIZE-LIMIT / UNIT-TEST-EVIDENCE）をすべて実装し、全完了義務を閉じた。URL分類は `assets` セグメント存在確認方式へ変更し、`/owner/repo/assets/<id>` 形式を抽出可能にした。サイズ上限は `arrayBuffer()` 全読込を廃止し、`ReadableStream` を逐次消費しながら `MAX_IMAGE_BYTES` 超過時に即座に停止する制限付き読込へ変更した。エンドツーエンド検証のため `resolvePrReviewImageAttachments` に最小限の依存注入を追加し、SCN-TEST-P1/P2 と SCN-PIPE-P1（実ファイル作成・削除）を統合テストで観測した。ビルド・lint・fast unit gate・IT gate・mock E2E はすべて成功。
+
+## 修正単位
+| 修正単位 | 対象 finding | 契約の正本 | 実施内容・反映先 | 状態 |
+|----------|--------------|------------|-----------------|------|
+| UNIT-URL-CLASSIFY | FINAL-NEW-PRIMG-REPO-ASSET-URL | 要求シナリオP1/P2 | `isAllowedGithubAttachmentUrl` をパスセグメントのインデックス固定判定（`segments.length === 3 && segments[2] === 'assets'`）から `segments.includes('assets')` へ局所修正。外部ホスト・非HTTPS・無関係URLは従来どおり拒否。 | 完了 |
+| UNIT-SIZE-LIMIT | FINAL-NEW-PRIMG-STREAM-SIZE-LIMIT | 要求仕様 (MAX_IMAGE_BYTES) | `readResponseBody` を `arrayBuffer()` 全読込から `getReader().read()` 逐次消費＋上限超過即時 throw へ変更。Buffer フォールバック時も上限チェックを追加。`finally` で `releaseLock()` により読込停止・清掃。 | 完了 |
+| UNIT-TEST-EVIDENCE | FINAL-NEW-PRIMG-REQUIRED-TEST-EVIDENCE | 要求シナリオ P1, P2, Pipeline | `resolvePrReviewImageAttachments` に最小限の依存注入（`deps?: Partial<PrReviewImageDownloadDeps>`）を追加。既存の公開契約（引数・戻り値）は維持し、全呼び出し側（GitHubProvider, routing-inputs, pipeline steps, add）は無変更。SCN-TEST-P1/P2 と SCN-PIPE-P1 を統合テストで観測。 | 完了 |
+
+## 完了義務
+| 修正単位 | 義務ID | 種別 | 対象 finding | 不変条件と対象経路 | 違反を検出する反例・観測点 | 修正前または差し戻し時の結果 | 実装根拠 | 修正後の証拠 | 状態 |
+|----------|--------|------|--------------|--------------------|------------------------------|--------------------------------|----------|--------------|------|
+| UNIT-URL-CLASSIFY | URL-1 | 振る舞い修正 | FINAL-NEW-PRIMG-REPO-ASSET-URL | `https://github.com/<owner>/<repo>/assets/<id>` を抽出し、本文を `[Image #1]` に置換する | `prReviewImageAttachments.test.ts` の「should extract a repository asset URL of the form /owner/repo/assets/<id>」 | セグメント数3固定判定により `/owner/repo/assets/<id>` が抽出不可 | `segments.includes('assets')` へ変更 | 単体テスト15件パス | 完了 |
+| UNIT-URL-CLASSIFY | URL-2 | 既存契約保存 | FINAL-NEW-PRIMG-REPO-ASSET-URL | 外部ホスト・非HTTPS・無関係GitHub URL（`/issues/123`）を拒否し、本文を置換しない | 「should reject a GitHub URL that is not an asset URL」「should not extract an arbitrary external image URL」「should not extract a non-HTTPS GitHub attachment URL」 | 既存の拒否動作が維持される | hostname/protocol チェックは変更せず維持 | 単体テスト15件パス | 完了 |
+| UNIT-SIZE-LIMIT | SIZE-1 | 振る舞い修正 | FINAL-NEW-PRIMG-STREAM-SIZE-LIMIT | `MAX_IMAGE_BYTES` 未満のストリームボディを全データ読込し `Buffer` として返す | 統合テスト「should read a streamed body within the size limit into a Buffer」 | `arrayBuffer()` による全読込のみ | `getReader().read()` 逐次消費＋`Buffer.concat` | 統合テスト12件パス | 完了 |
+| UNIT-SIZE-LIMIT | SIZE-2 | 振る舞い修正 | FINAL-NEW-PRIMG-STREAM-SIZE-LIMIT | `MAX_IMAGE_BYTES` 超過時に全データを読み切る前に上限超過エラーで即時停止する | 統合テスト「should stop reading a streamed body as soon as it exceeds the size limit」 | 応答全体をメモリ保持後に判定 | 読込ループ内で `total > MAX_IMAGE_BYTES` 時に throw | 統合テスト12件パス | 完了 |
+| UNIT-SIZE-LIMIT | SIZE-3 | 旧経路削除 | FINAL-NEW-PRIMG-STREAM-SIZE-LIMIT | `arrayBuffer()` へのフォールバックを廃止する | `grep arrayBuffer src/infra/github/` が空 | `readResponseBody` に `arrayBuffer()` 分岐が存在 | ストリーム読込へ置換し `arrayBuffer()` 分岐を削除 | grep で該当なしを確認 | 完了 |
+| UNIT-TEST-EVIDENCE | TEST-1 | 振る舞い修正 | FINAL-NEW-PRIMG-REQUIRED-TEST-EVIDENCE | 置換後の本文に `[Image #1]` があり、`attachments` に1件の有効な一時ファイルパスが含まれる | 統合テスト「should replace the PR body with a placeholder and produce one temp file for a single image」 | 局所的な関数検証に留まりエンドツーエンドな振る舞い検証が欠如 | `resolvePrReviewImageAttachments` に依存注入を追加し実経路で検証 | 統合テスト12件パス | 完了 |
+| UNIT-TEST-EVIDENCE | TEST-2 | 振る舞い修正 | FINAL-NEW-PRIMG-REQUIRED-TEST-EVIDENCE | 異なる2つのGitHubアセットURLから `[Image #1]` と `[Image #2]` の異なる placeholder と異なるファイル名が生成される | 統合テスト「should assign distinct placeholders and file names for two distinct asset URLs in a comment」 | 通常コメント2URLからの一意性検証が欠如 | 依存注入経由で `resolvePrReviewImageAttachments` を実行 | 統合テスト12件パス | 完了 |
+| UNIT-TEST-EVIDENCE | TEST-3 | 振る舞い修正 | FINAL-NEW-PRIMG-REQUIRED-TEST-EVIDENCE | 一時的に画像ファイルが作成され、処理完了後に `cleanup` により物理ファイルが削除される | 統合テスト「should create real image files during resolution and delete them on cleanup」 | pipeline テストは attachment 解決をモックしており実ファイル生存期間を観測不可 | `fs.existsSync` による作成→削除の生存期間検証を統合テストに配置 | 統合テスト12件パス | 完了 |
+
+## 受入条件
+| finding ID | 受入条件 | 証拠 | 状態 |
+|------------|----------|------|------|
+| FINAL-NEW-PRIMG-REPO-ASSET-URL | `https://github.com/<owner>/<repo>/assets/<id>` を抽出可能にし、外部ホスト・無関係URLは拒否 | 単体テスト「should extract a repository asset URL of the form /owner/repo/assets/<id>」「should reject a GitHub URL that is not an asset URL」がパス | 完了 |
+| FINAL-NEW-PRIMG-STREAM-SIZE-LIMIT | `MAX_IMAGE_BYTES` 超過時に読込を即座に停止 | 統合テスト「should stop reading a streamed body as soon as it exceeds the size limit」がパス | 完了 |
+| FINAL-NEW-PRIMG-REQUIRED-TEST-EVIDENCE | P1(置換本文+添付1件)、P2(通常コメント2URLから一意な識別子)、pipeline(実ファイル作成・削除)を観測 | 統合テスト3件（SCN-TEST-P1/P2、SCN-PIPE-P1）がパス | 完了 |
+
+## 差し戻し後の証拠修正
+| 修正単位 | 義務ID | verifier が確認した不足 | 前回の証拠が検出できなかった理由 | 修正した反例・観測点 | 同じ証明手段から再開・再確認した義務 |
+|----------|--------|--------------------------|----------------------------------|----------------------|----------------------------------------|
+| （該当なし） | - | - | - | - | - |
+
+## 品質ゲート
+| 種別 | 結果 | 証拠 |
+|------|------|------|
+| ビルド | 成功 | `npm run build` |
+| lint | 成功 | `npm run lint` |
+| fast unit gate | 成功 | `npm test`（1864件パス） |
+| IT gate | 成功 | `HOME=/tmp/takt-bench-v3-home npm run test:it`（2357件パス） |
+| mock E2E | 成功 | `npm run test:e2e:mock`（55 passed / 13 skipped / 30 todo） |
+| 対象テストファイル | 成功 | `npm test -- src/__tests__/prReviewImageAttachments.test.ts`（15件）、`src/__tests__/prReviewImageAttachments.integration.test.ts`（12件）、`src/__tests__/pipelineExecution.test.ts`（54件）、`src/__tests__/github-provider.test.ts`（40件）、`src/__tests__/releaseVerificationWiring.test.ts`（20件） |
+
+## 未完了義務
+- なし
+
+補足: 修正計画の変更対象に `src/__tests__/core/pipelineExecution.test.ts` とあったが、実在しない（実際は `src/__tests__/pipelineExecution.test.ts`）。pipeline テストは attachment 解決をモックしており実ファイル生存期間の観測に不向きなため、SCN-PIPE-P1 の実ファイル作成・削除検証は `prReviewImageAttachments.integration.test.ts` に配置した。

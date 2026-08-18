@@ -1,0 +1,55 @@
+# 修正完了検証
+
+## 結果: incomplete
+
+## サマリー
+
+`F-PR-IMAGE-LIFECYCLE` の producer と pipeline、`add --pr` の主要経路は修正されていますが、対話 routing の例外経路が保証境界の外に残っています。
+
+`determineWorkflow()` および `selectInteractiveMode()` の reject は、`prAttachmentsCleanup` を含む finally の外で発生します。修正報告にはキャンセルと dispatch 後の例外テストはありますが、これらの選択処理例外を検出するテストはありません。
+
+## 修正単位の整合性
+
+| 修正単位 | 対象 finding | 前提・方法・証拠能力の整合性 | 判定 |
+|----------|--------------|------------------------------|------|
+| `F-PR-IMAGE-LIFECYCLE` | `AI-NEW-infra-github-L309`、`FU-PRIMG-PRODUCER-TOKEN`、`FU-PRIMG-INTERACTIVE-CANCEL`、`FU-PRIMG-ADD-SELECTION-ERROR` | 一時ディレクトリの生成から全 consumer の終了まで cleanup を保証する計画は、契約と根本原因に整合する。ただし routing の選択処理例外まで保証境界が届いていない | 適合。ただし実装未完了 |
+
+## 完了義務の独立検証
+
+| 修正単位 | 義務ID | 対象 finding | 不変条件と対象経路 | 独立に用いた反例・観測点 | 観測結果 | 証拠 | 判定 |
+|----------|--------|--------------|--------------------|----------------------------|----------|------|------|
+| `F-PR-IMAGE-LIFECYCLE` | `OBL-1` | `FU-PRIMG-PRODUCER-TOKEN` | token取得失敗時に producer の一時ディレクトリを削除する | `getToken` を reject させ、tmpRoot の列挙結果を確認 | 成立 | `downloadPrReviewImageAttachments` の try/catch、および integration test 83件成功。独立実行でも成功後 cleanup と token失敗後のディレクトリ空を確認 | 完了 |
+| `F-PR-IMAGE-LIFECYCLE` | `OBL-2` | `AI-NEW-infra-github-L309` | pipeline の workflow 成功・既知失敗・例外で cleanup する | `executeTask` を false / reject にして cleanup 呼び出しを確認 | 成立 | `src/features/pipeline/execute.ts:43-96` の finally、対象 pipeline テストを含む unit 29件成功 | 完了 |
+| `F-PR-IMAGE-LIFECYCLE` | `OBL-3-CANCEL` | `FU-PRIMG-INTERACTIVE-CANCEL` | 対話 routing の workflow/mode 選択キャンセルで cleanup する | workflow選択と mode選択を null にして cleanup を確認 | 成立 | `src/app/cli/routing.ts:175-201`、routing のキャンセル回帰テスト | 完了 |
+| `F-PR-IMAGE-LIFECYCLE` | `OBL-3-WORKFLOW-EXCEPTION` | `FU-PRIMG-INTERACTIVE-CANCEL` | workflow選択例外でも cleanup する | `determineWorkflow` を reject させる経路を追跡 | 違反 | `src/app/cli/routing.ts:174` の await は cleanup finally (`:283-347`) の外にある | 未完了 |
+| `F-PR-IMAGE-LIFECYCLE` | `OBL-3-MODE-EXCEPTION` | `FU-PRIMG-INTERACTIVE-CANCEL` | mode選択例外でも cleanup する | `selectInteractiveMode` の reject 経路を追跡 | 違反 | `src/app/cli/routing.ts:193-197` は cleanup finally の外にある。対応する reject 回帰テストも未確認 | 未完了 |
+| `F-PR-IMAGE-LIFECYCLE` | `OBL-3-DISPATCH-EXCEPTION` | `AI-NEW-infra-github-L309` | mode実行・dispatch 後の例外で cleanup する | `selectAndExecuteTask` を reject させる | 成立 | `src/app/cli/routing.ts:283-347` の finally、対象テスト成功 | 完了 |
+| `F-PR-IMAGE-LIFECYCLE` | `OBL-4-CANCEL` | `FU-PRIMG-ADD-SELECTION-ERROR` | `add --pr` の workflow選択キャンセルで cleanup する | workflow を null にして cleanup を確認 | 成立 | `src/features/tasks/add/index.ts:222-225`、対象 addTask テスト成功 | 完了 |
+| `F-PR-IMAGE-LIFECYCLE` | `OBL-4-WORKFLOW-EXCEPTION` | `FU-PRIMG-ADD-SELECTION-ERROR` | `determineWorkflow` 例外で cleanup する | workflow選択を reject させる | 成立 | `src/features/tasks/add/index.ts:214-220`、対象 addTask テスト成功 | 完了 |
+| `F-PR-IMAGE-LIFECYCLE` | `OBL-4-SAVE-EXCEPTION` | `AI-NEW-infra-github-L309` | `saveTaskFile` 例外でも cleanup する | 保存処理の reject 経路と finally を追跡 | 実装は成立、直接証拠は未確認 | `src/features/tasks/add/index.ts:235-245` は finally で cleanup。ただし保存例外を意図的に発生させる回帰テストは確認できない | 未完了 |
+| `F-PR-IMAGE-LIFECYCLE` | `OBL-5` | Response読み取り既存契約 | Response読み取り方式・redirect・画像形式を保持する | 差分と実装を確認 | 成立 | `arrayBuffer()` の通常経路は変更されていない。裁定済み false positive | 完了 |
+
+## 不成立・未確認事項
+
+| 修正単位 | 義務ID | 種別 | 根拠 | 修正報告の証拠が検出できなかった理由 | 同じ検出パターンで再監査した範囲 | 必要な対応 |
+|----------|--------|------|------|----------------------------------------|----------------------------------|--------------|
+| `F-PR-IMAGE-LIFECYCLE` | `OBL-3-WORKFLOW-EXCEPTION` | 実装不足 | `determineWorkflow()` の reject が cleanup finally の外にある | キャンセル分岐と dispatch 後の finally だけを検証し、選択処理の reject を検証していない | workflow選択開始後から dispatch完了までを cleanup の保証境界で覆う |
+| `F-PR-IMAGE-LIFECYCLE` | `OBL-3-MODE-EXCEPTION` | 実装不足 | `selectInteractiveMode()` の reject が cleanup finally の外にある | modeキャンセルは検証したが、mode選択例外は検証していない | mode選択例外を同じ cleanup 境界で処理し、reject 回帰テストを追加する |
+| `F-PR-IMAGE-LIFECYCLE` | `OBL-4-SAVE-EXCEPTION` | 証拠不足 | `saveTaskFile` は finally で覆われているが、保存例外時の直接回帰テストが未確認 | addTask のキャンセル・workflow例外・正常系は再監査したが、保存処理 reject の反例は未実行 | `saveTaskFile` reject 時に cleanup とエラー伝播を確認するテストを追加・実行する |
+
+## 環境要因により実証できない後続確認（判定非ブロッキング）
+
+なし。
+
+## 実行証跡
+
+| 対象 | 方法 | 結果 |
+|------|------|------|
+| producer、add、pipeline、routing の対象テスト | `npm test -- src/__tests__/prReviewImageAttachments.integration.test.ts src/__tests__/addTask.test.ts src/__tests__/pipelineExecution.test.ts src/__tests__/cli-routing-pr-resolve.test.ts` | 成功。integration 83件、unit 29件 |
+| producer 成功後 cleanup | `downloadPrReviewImageAttachments` を直接実行し、cleanup 前後の tmpRoot を列挙 | 成功 |
+| producer token取得失敗 | `getToken` を reject させ、tmpRoot を列挙 | 成功。残留なし |
+| pipeline cleanup | `executeTask` の false / reject 経路を対象テストで確認 | 成功 |
+| routing workflow/mode キャンセル | 対象テストと `routing.ts:175-201` の追跡 | 成功 |
+| routing workflow/mode 選択例外 | `routing.ts:174`、`:193-197` の呼び出し境界を追跡 | 未完了 |
+| addTask workflow選択例外 | 対象テストおよび `add/index.ts:214-220` を確認 | 成功 |
+| addTask saveTaskFile例外 | `add/index.ts:235-245` の finally を確認 | 直接回帰テストは未確認 |

@@ -1,0 +1,46 @@
+# 修正レポート
+## サマリー
+修正計画 `PRIMG-PLACEHOLDER-GRAMMAR-OWNER` を完了した。プレースホルダー文法（形式 `[Image #N]`、`N` は正の整数かつ先頭ゼロ不可）の判定・抽出・生成の全責務を正本 `src/shared/utils/imageAttachmentReferences.ts` に集約し、PR / interactive / retry の3 consumer を全て正本関数へ移行した。独自の `\d+` 正規表現と `[Image #` リテラルを全 consumer から除去し、採番挙動（PR: 既存番号回避、interactive/retry: 最大番号の次）は維持した。追加したユニットテストで要求シナリオ [SCN-PRIMG-P1, N1, N2] を検証し、全品質ゲート（build / lint / unit / IT / e2e:mock / e2e:smoke）が成功した。
+
+## 修正単位
+| 修正単位 | 対象 finding | 契約の正本 | 実施内容・反映先 | 状態 |
+|----------|--------------|------------|-----------------|------|
+| `PRIMG-PLACEHOLDER-GRAMMAR-OWNER` | `AI-NEW-image-attach-L35` / `ADJ-FOLLOWUP-retry-placeholder-grammar` | `src/shared/utils/imageAttachmentReferences.ts`（`IMAGE_ATTACHMENT_PLACEHOLDER_EXACT_PATTERN`） | 境界変更: 正本に `extractImagePlaceholderNumber`・`createImageAttachmentPlaceholder`・`findImageAttachmentPlaceholders` を追加。利用側移行: `prReviewImageAttachments.ts` / `imageAttachments.ts` / `retryTaskSpecAttachments.ts` の独自正規表現と文字列リテラルを正本関数へ置換。旧経路削除: 各 consumer の `\d+` 系プレースホルダー正規表現と `[Image #` リテラルを除去 | 完了 |
+
+## 完了義務
+| 修正単位 | 義務ID | 種別 | 対象 finding | 不変条件と対象経路 | 違反を検出する反例・観測点 | 修正前または差し戻し時の結果 | 実装根拠 | 修正後の証拠 | 状態 |
+|----------|--------|------|--------------|--------------------|------------------------------|--------------------------------|----------|--------------|------|
+| `PRIMG-PLACEHOLDER-GRAMMAR-OWNER` | OBL-1 | 振る舞い修正 | `AI-NEW-image-attach-L35` | `extractImagePlaceholderNumber` が正規プレースホルダー `[Image #12]` から `12` を返す（[SCN-PRIMG-P1]） | `extractImagePlaceholderNumber('[Image #12]') === 12` | 関数未実装（該当する共通抽出関数なし） | `src/shared/utils/imageAttachmentReferences.ts` に `extractImagePlaceholderNumber` を追加し、`isImageAttachmentPlaceholder` で正規判定後に番号を `Number.parseInt` | `imageAttachmentReferences.test.ts` の `should extract the number from a regular placeholder` が成功 | 完了 |
+| `PRIMG-PLACEHOLDER-GRAMMAR-OWNER` | OBL-2 | 振る舞い修正 | `AI-NEW-image-attach-L35` / `ADJ-FOLLOWUP-retry-placeholder-grammar` | 不正プレースホルダー `[Image #0]`・`[Image #01]` は番号が抽出されない（[SCN-PRIMG-N1, N2]） | `extractImagePlaceholderNumber('[Image #0]') === undefined`、`extractImagePlaceholderNumber('[Image #01]') === undefined` | consumer の独自 `\d+` 正規表現が `[Image #0]`・`[Image #01]` を正規番号として扱い得た | `isImageAttachmentPlaceholder`（正本 `/^\[Image #[1-9]\d*\]$/`）を経由しない限り `undefined` を返す実装 | `imageAttachmentReferences.test.ts` の `should reject a placeholder numbered zero` / `should reject a placeholder with a leading zero` が成功 | 完了 |
+| `PRIMG-PLACEHOLDER-GRAMMAR-OWNER` | OBL-3 | 振る舞い修正 | `AI-NEW-image-attach-L35` | `createImageAttachmentPlaceholder` が正の整数から正規プレースホルダーを生成し、非正数は拒絶する | `createImageAttachmentPlaceholder(1) === '[Image #1]'`、`createImageAttachmentPlaceholder(0)` が例外 | 関数未実装 | `Number.isSafeInteger(number) && number >= 1` の検証後 `[Image #${number}]` を返す実装 | `imageAttachmentReferences.test.ts` の生成・非正数拒絶テストが成功 | 完了 |
+| `PRIMG-PLACEHOLDER-GRAMMAR-OWNER` | OBL-4 | 利用側移行 | `AI-NEW-image-attach-L35` | `prReviewImageAttachments.ts` の番号収集とプレースホルダー生成が正本関数を通る。既存番号を避けた採番が維持される | `collectExistingPlaceholderNumbers` が `findImageAttachmentPlaceholders` + `extractImagePlaceholderNumber` を使い、`extractPrReviewImageReferences` が `createImageAttachmentPlaceholder` を使うこと。`prReviewImageAttachments.test.ts` の `should avoid colliding with an existing placeholder` 等が通ること | 独自 `/\[Image #(\d+)\]/g` と `` `[Image #${number}]` `` を使用 | `imageAttachmentReferences.js` から3関数を import し置換 | `prReviewImageAttachments.test.ts` 16件すべて成功。`rg` で該当ファイルから `\[Image #` 系独自正規表現・リテラルがゼロ件 | 完了 |
+| `PRIMG-PLACEHOLDER-GRAMMAR-OWNER` | OBL-5 | 利用側移行 | `AI-NEW-image-attach-L35` | `imageAttachments.ts` の次番号採番とプレースホルダー生成が正本関数を通る。最大番号の次を採番する挙動が維持される | `nextAttachmentNumber` が `extractImagePlaceholderNumber` を使い、`saveImage` が `createImageAttachmentPlaceholder` を使うこと。`imageAttachments.test.ts` の `should number new pasted images after the highest initial attachment number` が通ること | 独自 `/^\[Image #(\d+)\]$/` と `` `[Image #${index}]` `` を使用 | 正本関数へ置換 | `imageAttachments.test.ts` 全件成功 | 完了 |
+| `PRIMG-PLACEHOLDER-GRAMMAR-OWNER` | OBL-6 | 利用側移行 | `ADJ-FOLLOWUP-retry-placeholder-grammar` | `retryTaskSpecAttachments.ts` の最大番号抽出・採番・retryNote 置換が正本関数を通る。最大番号の次を採番する挙動が維持される | `resolveMaxImageIndex` が `findImageAttachmentPlaceholders` + `extractImagePlaceholderNumber` を使い、`renumberRetryAttachments` が `createImageAttachmentPlaceholder` + `findImageAttachmentPlaceholders`/`replaceAll` を使うこと。`retryTaskSpecAttachments.test.ts` の既存テストが通ること | 独自 `/\[Image #(\d+)\]|attachments\/image-(\d+)\.[A-Za-z0-9]+/g` と `` `[Image #${nextImageIndex}]` `` および `/\[Image #\d+\]/g` 置換を使用 | 正本関数へ置換。ファイル名パターン `attachments\/image-(\d+)\.[A-Za-z0-9]+` は別契約のため維持 | `retryTaskSpecAttachments.test.ts` 3件すべて成功 | 完了 |
+| `PRIMG-PLACEHOLDER-GRAMMAR-OWNER` | OBL-7 | 旧経路削除 | `AI-NEW-image-attach-L35` / `ADJ-FOLLOWUP-retry-placeholder-grammar` | 3 consumer から独自の `\d+` 系プレースホルダー正規表現と `[Image #` 文字列リテラルが除去されている | `rg -n '\[Image #|\\d\+' <3ファイル>` でプレースホルダー系がゼロ件（ファイル名パターンのみ残存） | 修正前は各 consumer に独自実装が存在 | 正本関数への置換により旧実装を削除 | `rg` で `\[Image #` 系がゼロ件（exit=1）、ファイル名パターン `\d+` 1件のみ | 完了 |
+| `PRIMG-PLACEHOLDER-GRAMMAR-OWNER` | OBL-8 | 既存契約保存 | `AI-NEW-image-attach-L35` / `ADJ-FOLLOWUP-retry-placeholder-grammar` | 変更対象外の観測可能な既存契約（採番挙動、生成されるプレースホルダー形式、ファイル名形式）が維持される | PR/interactive/retry の既存テストの期待値が全て通ること | 基準値: 既存テストの期待値（`[Image #1]` 等） | 置換後も同一のプレースホルダー・ファイル名を生成 | 4被覆テストファイル（prReviewImageAttachments / imageAttachments / retryTaskSpecAttachments / imageAttachmentReferences）全件成功、fast unit gate 1864件成功 | 完了 |
+
+## 受入条件
+| finding ID | 受入条件 | 証拠 | 状態 |
+|------------|----------|------|------|
+| `AI-NEW-image-attach-L35` | 正規 placeholder の判定・番号抽出・生成が共通所有者 `imageAttachmentReferences.ts` を通じて一貫する。PR/interactive/retry consumer の独自正規表現・リテラルが削除される | `extractImagePlaceholderNumber('[Image #12]') === 12`、`createImageAttachmentPlaceholder(1) === '[Image #1]'`、`rg` で3 consumer から `\[Image #` 系がゼロ件 | 完了 |
+| `ADJ-FOLLOWUP-retry-placeholder-grammar` | retry consumer が共通所有者を通じ、不正形式を正規番号として扱わない。採番挙動が維持される | `extractImagePlaceholderNumber('[Image #0]') === undefined`、`extractImagePlaceholderNumber('[Image #01]') === undefined`、`retryTaskSpecAttachments.test.ts` 3件成功 | 完了 |
+
+## 差し戻し後の証拠修正
+| 修正単位 | 義務ID | verifier が確認した不足 | 前回の証拠が検出できなかった理由 | 修正した反例・観測点 | 同じ証明手段から再開・再確認した義務 |
+|----------|--------|--------------------------|----------------------------------|----------------------|----------------------------------------|
+| 該当なし | - | - | - | - | - |
+
+## 品質ゲート
+| 種別 | 結果 | 証拠 |
+|------|------|------|
+| ビルド | 成功 | `npm run build`（tsc 2構成 + copy-build-assets）成功 |
+| lint | 成功 | `npm run lint` 成功（ESLint 警告なし） |
+| fast unit gate | 成功 | `npm test`（4シャード）1864 passed |
+| 被覆テスト | 成功 | `npm test -- src/__tests__/imageAttachmentReferences.test.ts src/__tests__/prReviewImageAttachments.test.ts src/__tests__/imageAttachments.test.ts src/__tests__/retryTaskSpecAttachments.test.ts` 全件成功（18 + 16件） |
+| 分類契約テスト | 成功 | `npm test -- src/__tests__/releaseVerificationWiring.test.ts` 20/20 passed（出力中の `check:release failed` はハーネスが意図的に最終ログ書き込み失敗をシミュレートするテスト出力であり実ゲート失敗ではないことを L333-348 で確認） |
+| 軽い IT | 成功 | `HOME=/tmp/takt-bench-v3-home npm run test:it` 2365 passed |
+| E2E mock | 成功 | `HOME=/tmp/takt-bench-v3-home npm run test:e2e:mock` 55 passed（残りは既存 skip/todo） |
+| E2E smoke | 成功 | `HOME=/tmp/takt-bench-v3-home npm run test:e2e:smoke` 21 passed |
+
+## 未完了義務
+- なし

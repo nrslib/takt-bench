@@ -1,0 +1,30 @@
+# レビュー指摘裁定
+
+## 結果: 修正対象あり
+
+## 裁定サマリー
+
+最新の専門レビューレポート4件を対象とし、`ai-antipattern-review.md` が提出した3件を裁定した。修正対象は1 family、非修正対象は2件。同一 family の bounded horizontal comparison により、未訪問 consumer 1件を duplicate として統合した。
+
+修正対象は、今回差分で追加されたPR画像解決 capability の判定と非対応時 fallback が3つの入口で重複している問題である。採番方式の指摘は将来の契約変更を前提とする過剰要求、cleanup 指摘は現行コードとテストにより反証された。
+
+## 修正対象 family
+
+| family | finding ID / 出典 | 修正権限の根拠 | 根拠 | 問題 → 根本原因 | 関係する契約経路 | 受入条件 | 修正境界 |
+|--------|-------------------|----------------|------|-------------------|--------------------|----------|----------|
+| `PRIMG-CAPABILITY-NORMALIZATION` | `AI-NEW-src-app-cli-routing-inputs-L67` / `ai-antipattern-review.md`、`ADJ-FOLLOWUP-src-features-tasks-add-L198` / 裁定時比較 | 今回差分の退行、採用済み family の閉鎖 | `src/infra/git/types.ts:159-166`、`src/app/cli/routing-inputs.ts:67-69`、`src/features/pipeline/steps.ts:229-232`、`src/features/tasks/add/index.ts:197-200` | optional capability の有無判定と、非対応時の identity result が各 consumer で再構築されている → 同一契約の共通所有者がなく、今回差分で意味知識が重複した | `GitProvider` の capability 定義 → GitHub 実装／GitLab非対応経路 → `takt --pr`、pipeline `--pr`、`takt add --pr` → 整形、attachment伝播、cleanup | capability 判定と `{ prReview, attachments: [], cleanup: no-op }` の生成が共通境界に一元化され、3 consumer が同じ境界を利用する。GitHubでは既存resolverへ委譲され、非対応providerでは元PRデータ・空attachments・no-op cleanupという既存挙動が維持される | 共通解決境界、3 consumer、および直接契約テストだけを対象とする。GitLabへのGitHub画像取得実装、optional methodの必須化、全provider/mockの大規模移行、採番・画像検証・cleanupの周辺リファクタリング、具体的な抽象化方式の固定は除外する |
+
+## 指摘ごとの裁定
+
+| finding ID / 出典 | 技術的妥当性 | 裁定 | 対象 family | authorization basis | 初回に含まれなかった理由 | 根拠 |
+|-------------------|----------------|------|-------------|---------------------|--------------------------|------|
+| `AI-NEW-src-features-interactive-imageAttachments-L34` / `ai-antipattern-review.md` | 反証済み | `overreach` | なし | なし | 該当なし | `[Image #N]` は現行のattachment契約であり、PR画像producerも同形式を生成する。`src/features/interactive/imageAttachments.ts:34-45,138-152` は既存最大番号の次を採番し、`src/__tests__/imageAttachments.test.ts:146-163` は初期`#3`から`#4`を生成する現行経路を確認している。将来のplaceholder形式変更を前提とした`index`フィールド追加には、現在壊れるシナリオまたは修正権限がない |
+| `AI-NEW-src-app-cli-routing-inputs-L67` / `ai-antipattern-review.md` | 確認済み | `actionable` | `PRIMG-CAPABILITY-NORMALIZATION` | `remediation_regression` | 該当なし | direct CLIとpipelineで、同じoptional capability確認と同じidentity fallbackが重複している。いずれも今回追加されたPR画像解決契約のconsumerであり、意味・変更理由・受入条件を共有する |
+| `AI-NEW-src-features-tasks-add-L232` / `ai-antipattern-review.md` | 反証済み | `no_issue_after_verification` | なし | なし | 該当なし | `src/features/tasks/add/index.ts:235-245` では`saveTaskFile`が`try...finally`内にあり、例外時も`resolved.cleanup()`が実行される。`src/__tests__/addTask.test.ts:505-519`にも保存失敗時のcleanupを直接確認するテストがある |
+| `ADJ-FOLLOWUP-src-features-tasks-add-L198` / 裁定時 bounded horizontal comparison | 確認済み | `duplicate` | `PRIMG-CAPABILITY-NORMALIZATION` | `accepted_family_unvisited_consumer` | reviewerはdirect CLIとpipelineのみを列挙し、`takt add --pr`の同一consumerを含めていなかった | `src/features/tasks/add/index.ts:197-200` が同じoptional capability判定、同じidentity fallback、同じ根本原因を持つため、独立familyではなく既存familyへ統合する |
+
+## 未解決の前提
+
+- なし。
+- 要求、計画、指摘間に修正対象を確定できない競合はなく、タスク全体の再計画は不要。
+- `environment_unverified` に該当する指摘はない。

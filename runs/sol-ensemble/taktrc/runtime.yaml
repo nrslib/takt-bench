@@ -1,0 +1,11 @@
+version: 1
+provider:
+  profiles:
+    sol-high:
+      provider: codex
+      model: gpt-5.6-sol
+      options:
+        network_access: true
+        reasoning_effort: high
+  defaults:
+    profile: sol-high

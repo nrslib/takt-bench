@@ -1,0 +1,16 @@
+# 決定ログ
+
+## 1. GitHub画像の取得境界をGitHub attachment URLに限定
+- **背景**: PR本文・通常コメント・review summary・review threadには外部URLも含まれ得るため、無制限の取得は今回の契約外である。
+- **検討した選択肢**: 任意のHTTPS画像URLを取得する / `github.com` のHTTPS attachment URLだけを取得する。
+- **理由**: 要求された認証済み `gh api` 経路と外部URLの無制限取得防止を同時に満たすため、`user-attachments/assets/...` と `owner/repo/assets/...` に限定した。
+
+## 2. 画像参照は画像構文全体をプレースホルダーへ置換
+- **背景**: URLだけを置換するとMarkdown画像構文が残り、`[Image #N]` が画像参照として明確に扱われない。
+- **検討した選択肢**: URL部分だけを置換する / Markdown画像またはHTML `img` 要素全体を置換する。
+- **理由**: `[Image #N]` を本文から直接参照でき、コードブロック・インラインコード内の文字列は保持できるため。
+
+## 3. PipelineのPR添付は既存のtask spec実行経路へ接続
+- **背景**: pipeline直実行には保存済みtaskを経由しないため、画像をダウンロードしただけではworkflowから参照できない。
+- **検討した選択肢**: workflow promptへ一時パスを直書きする / `prepareTaskSpecDirectory` と `resolveTaskSpecForExecution` を利用する。
+- **理由**: 既存のattachment manifest、run contextへのstage、`attachments/...` の安全なパス変換を維持できるため。

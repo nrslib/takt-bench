@@ -1,0 +1,66 @@
+# 修正完了検証
+
+## 結果: incomplete
+
+## サマリー
+
+修正計画の前提・修正境界・証拠能力は妥当であり、`plan_invalid`ではない。`e2e-runner-attempt-boundary`は全完了義務を独立に確認できた。
+
+一方、`pr-review-markdown-fragment-isolation`には2件の未完了義務が残る。
+
+- `<pre>`配下のHTML `<img>`を画像として収集しており、`PR-LITERAL-03`に違反する。
+- conversation commentに`path`または`url`がある場合、従来は出力しなかったFile／URL行を追加するため、`formatPrReviewAsTask()`の既存文字列契約を保存できておらず、`PR-PUBLIC-09`に違反する。
+
+対象テストはすべて成功したが、既存テストの入力とassertionでは上記2反例を検出できない。現在の環境で修正可能なため、判定は`incomplete`とする。
+
+## 修正単位の整合性
+
+| 修正単位 | 対象 finding | 前提・方法・証拠能力の整合性 | 判定 |
+|----------|--------------|------------------------------|------|
+| `pr-review-markdown-fragment-isolation` | `CODE-NEW-pr-review-fragment-isolation-L92` | formatterがtask文字列と本文範囲を一度だけ生成し、attachment層が断片別解析と全体の重複排除・採番を所有する方針は、3入口と既存保存経路に整合する。反例も現在環境で決定的に再現可能 | 適合 |
+| `e2e-runner-attempt-boundary` | `TEST-NEW-e2e-runner-attempt-boundary-L31` | command構築と隔離attempt executorを分離し、実child processでcwd・env・cleanupを観測する方針は、実process境界とテスト分類規約に整合する | 適合 |
+
+## 完了義務の独立検証
+
+| 修正単位 | 義務ID | 対象 finding | 不変条件と対象経路 | 独立に用いた反例・観測点 | 観測結果 | 証拠 | 判定 |
+|----------|--------|--------------|--------------------|----------------------------|----------|------|------|
+| `pr-review-markdown-fragment-isolation` | `PR-FRAGMENT-01` | PR本文と各review・comment本文を独立したMarkdown文書として解析する | 未閉鎖PR本文の後にsummary、全thread分類、legacy、conversation画像を配置 | 成立 | `formatPrReviewTask()`の断片範囲、`findTaskImageReferences()`の断片別`fromMarkdown()`、対象unit成功 | 完了 |
+| 同上 | `PR-ORDER-02` | summary、active、outdated、resolved、legacy、conversationの出力順とattachment順を一致させる | 全分類に異なるURLを配置し、placeholderとdownload順を比較 | 成立 | `prReviewAttachments.test.ts`のカテゴリ横断assertion | 完了 |
+| 同上 | `PR-LITERAL-03` | fenced code、inline code、HTML comment、`pre`内を画像扱いしない | `<pre><img src="GitHub attachment URL"></pre>`をmdast・parse5で解析 | 違反 | `htmlImageReferences()`は祖先の`pre`状態を保持せず、全`img`を収集する | 未完了 |
+| 同上 | `PR-DEDUPE-04` | 異なる断片でも同一URLを1回だけ保存する | active threadとlegacy commentに同じURLを配置 | 成立 | download 1回、同一placeholder、attachment 1件のassertion | 完了 |
+| 同上 | `PR-INDEX-05` | 予約済み画像番号と新規採番状態をtask全体で共有する | 既存placeholder、attachment path、巨大な10進識別子と複数画像を併置 | 成立 | 共通index assignerと採番境界テスト | 完了 |
+| 同上 | `PR-CLEANUP-06` | download失敗時に一時attachment storeをcleanupする | 1件保存後の2件目download失敗、cleanup自体の失敗 | 成立 | cleanup呼出しと元download error保持のテスト | 完了 |
+| 同上 | `PR-MIGRATE-07` | add、対話CLI、pipelineが構造化formatterを使用する | 3入口のformatter入力とattachment伝播を追跡 | 成立 | 本番3入口の`formatPrReviewTask()`呼出し、対象106件成功 | 完了 |
+| 同上 | `PR-OLDPATH-08` | 完成task文字列を直接attachment parserへ渡す本番経路を残さない | formatterと`preparePrReviewAttachments()`の全参照を検索 | 成立 | 本番呼出しは3入口とも`FormattedPrReviewTask`を渡す | 完了 |
+| 同上 | `PR-PUBLIC-09` | `formatPrReviewAsTask(): string`の既存整形結果を維持する | conversation commentに型上有効な`path`・`line`・`url`を設定し、変更前実装と比較 | 違反 | 現実装は従来存在しなかったFile／URL行を追加する | 未完了 |
+| 同上 | `PR-DATAFLOW-10` | 保存済みtask attachmentとrun contextへ画像と参照を伝播する | 未閉鎖PR本文後のconversation画像を実filesystemへ保存・staging | 成立 | light ITで`order.md`、attachment bytes、run contextを確認 | 完了 |
+| `e2e-runner-attempt-boundary` | `E2E-ENV-01` | attemptごとに新しい隔離環境を取得する | 同一shardを複数回実行してrootを比較 | 成立 | 実child heavy ITで全rootが一意 | 完了 |
+| 同上 | `E2E-PROPAGATE-02` | cwd、HOME、XDG、TMPDIR、TAKT系envを実childへ渡す | childから`process.cwd()`と対象envをJSON出力 | 成立 | 実child出力が生成環境と一致 | 完了 |
+| 同上 | `E2E-CLEANUP-03` | 正常終了後にattempt rootを削除する | child exit 0後に各rootの存在を確認 | 成立 | 全rootが不存在 | 完了 |
+| 同上 | `E2E-SPAWN-04` | spawn失敗後も同じ所有者がcleanupする | 存在しないexecutableでENOENTを発生させる | 成立 | ENOENT伝播後にroot不存在 | 完了 |
+| 同上 | `E2E-REMEASURE-05` | 初回とbirpc再測定が同じattempt executorを通る | shard 2初回のみbirpc noiseを返す | 成立 | attempt順`[1,2,3,4,2]`、5つの実childと一意rootを確認 | 完了 |
+| 同上 | `E2E-POLICY-06` | 空shard、再測定条件、shard構成、timeout、結果判定を維持する | 単一spec filter、通常失敗、別error、CI、signal、再測定再失敗 | 成立 | 空shardでは`runAttempt`未呼出し。runner unit 7件成功 | 完了 |
+| 同上 | `E2E-CLASSIFY-07` | 新規process ITをheavy gateへ一意に接続する | 対象指定時のrunner選択と分類契約を観測 | 成立 | `it-e2e-mock-runner-attempt.test.ts`がheavy parallelへ送られ、分類契約19件成功 | 完了 |
+
+## 不成立・未確認事項
+
+| 修正単位 | 義務ID | 種別 | 根拠 | 修正報告の証拠が検出できなかった理由 | 同じ検出パターンで再監査した範囲 | 必要な対応 |
+|----------|--------|------|------|----------------------------------------|----------------------------------|--------------|
+| `pr-review-markdown-fragment-isolation` | `PR-LITERAL-03` | 実装不足・証拠不足 | `htmlImageReferences()`は`pre`祖先を判定せず、parse5ツリー内の全`img`を収集する。`<pre>`配下の実HTML画像がdownload・置換対象になる | 既存テストは`<pre>`内にMarkdownの`![...]`を置くだけで、parse5が`img`要素として返す実HTML `<img>`を使用していない | fenced code、inline code、HTML comment、Markdown記法入り`pre`、実HTML `img`入り`pre`を同じAST境界で再監査。実HTML `img`入り`pre`だけが違反 | fixで`pre`配下のHTML走査を除外し、`pre`内HTML画像と直後の通常画像を対にした回帰テストを追加する |
+| 同上 | `PR-PUBLIC-09` | 実装不足・証拠不足 | conversation commentが`formatPrReviewComment()`を通るため、`path`・`line`・`url`を持つ有効入力で従来になかったFile／URL行が出力される | formatterテストはconversation commentにauthorとbodyしか設定せず、assertionも部分一致で、変更前文字列との等価性を確認していない | PR本文、summary、各thread、legacy、conversation、changed filesの組立差分を変更前実装と再照合。差異はconversation metadataの追加に限定 | fixでconversation commentの従来文字列を変えずに本文範囲だけを記録し、変更前出力との完全一致テストを追加する |
+
+## 環境要因により実証できない後続確認（判定非ブロッキング）
+
+なし。
+
+## 実行証跡
+
+| 対象 | 方法 | 結果 |
+|------|------|------|
+| PR断片解析・既存formatter・filesystem dataflow | `npm test -- src/__tests__/prReviewAttachments.test.ts src/__tests__/git-format.test.ts src/__tests__/pr-image-dataflow.integration.test.ts` | unit 58件、light IT 1件成功 |
+| add、対話CLI、pipelineの3入口 | `npm test -- src/__tests__/addTask.test.ts src/__tests__/cli-routing-pr-resolve.test.ts src/__tests__/pipelineExecution.test.ts` | unit 85件、heavy IT 21件成功 |
+| E2E attempt実process境界・分類 | `npm test -- src/__tests__/it-e2e-mock-runner-attempt.test.ts src/__tests__/e2eMockRunner.test.ts src/__tests__/releaseVerificationWiring.test.ts` | runner unit 7件、heavy IT・分類契約22件成功 |
+| `<pre>`内HTML画像反例 | `fromMarkdown()`と`parseFragment()`で`<pre><img ...></pre>`を解析し、実装と同じ再帰条件を確認 | `pre`配下の`img`が収集対象になることを確認 |
+| formatter既存契約反例 | conversation commentへ`path`・`line`・`url`を設定して現行formatterを実行し、変更前コードと比較 | File／URL行の追加を確認 |
+| 空shardのprocess非起動 | 1つのshardだけに一致するspec filterで`runE2eMockShards()`を実行し、attempt呼出しを記録 | 対象shardのみ1回呼び出され、空shardは未実行 |
+| 差分整合性 | `git diff --check` | 成功 |

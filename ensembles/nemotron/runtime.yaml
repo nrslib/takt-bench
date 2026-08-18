@@ -1,0 +1,31 @@
+version: 1
+provider:
+  profiles:
+    codex-sol:
+      provider: codex
+      model: gpt-5.6-sol
+      options: { reasoning_effort: high }
+    codex-luna:
+      provider: codex
+      model: gpt-5.6-luna
+      options: { reasoning_effort: xhigh }
+    deepseek-v4-flash:
+      provider: opencode
+      model: ollama-cloud/deepseek-v4-flash
+    nemotron-3-super:
+      provider: opencode
+      model: ollama-cloud/nemotron-3-super
+    gemma4:
+      provider: opencode
+      model: ollama-cloud/gemma4:31b
+  defaults:
+    profile: codex-luna
+  targets:
+    personas:
+      coder: { profile: nemotron-3-super }          # 実装
+    steps:
+      review-adjudication: { profile: gemma4 }
+      fix-verifier: { profile: gemma4 }
+      final-gate: { profile: gemma4 }
+    tags:
+      review: { profile: gemma4 }

@@ -1,0 +1,27 @@
+# レビュー指摘裁定
+
+## 結果: 修正対象あり
+
+## 裁定サマリー
+
+最新の `ai-antipattern-review.md`、`architecture-review.md`、`coding-review.md`、`security-review.md`、`testing-review.md` を対象とした。現在提出されている finding は1件であり、修正対象1 family（actionable 1件）、非修正対象0件となった。
+
+Markdown literal 判定が行ごとに増大する本文 prefix を再構築するため、画像を含まないPRでも二乗時間の同期処理が発生する。現行コードと reviewer の再現結果が一致し、今回変更したPR画像抽出処理に直接関係する実装品質上の欠陥であるため修正対象とする。
+
+過去の finding は最新レポートで解消済みとして記録されており、今回の提出 finding 集合には含めない。
+
+## 修正対象 family
+
+| family | finding ID / 出典 | 根拠 | 問題 → 根本原因 | 関係する契約経路 | 受入条件 | 修正境界 |
+|--------|-------------------|------|-------------------|--------------------|----------|----------|
+| `markdown-literal-scan-complexity` | `AI-NEW-MARKDOWN-LITERAL-SCAN-158` / `ai-antipattern-review.md` | `src/features/tasks/prReviewAttachments.ts:152-178,193-215,435-505`。画像なし本文の2,000／4,000／8,000／16,000行で72／279／1,079／4,256msという再現証拠 | 大きなPR本文でCLIが長時間停止する → `findLiteralRanges()`が各行の判定から`findInheritedListIndent()`を呼び、毎回`content.slice(0, start).split('\n').reverse()`で増大するprefixを再構築する | `takt add --pr`、対話CLIの`--pr`、pipelineの`--pr` → `preparePrReviewAttachments` → `findImageReferences` → `findLiteralRanges`。画像0件でも走査される | 行ごとの本文prefix再分割・再走査がなくなる。大きな画像なし本文で非線形退行がないことを決定的な回帰テストで確認する。既存のMarkdown／HTML画像、コードフェンス、inline code、HTMLコメント、引用・リスト・インデントの意味論を維持する | `prReviewAttachments`の内部走査と直接の回帰テストを最小修正する。一方向走査は候補だが方式として固定しない。Markdown構文対応の拡大、新規parser依存、公開API・placeholder・attachment形式の変更、画像総量制限、GitHub互換経路は除外する |
+
+## 指摘ごとの裁定
+
+| finding ID / 出典 | 裁定 | 対象 family | 根拠 |
+|-------------------|------|-------------|------|
+| `AI-NEW-MARKDOWN-LITERAL-SCAN-158` / `ai-antipattern-review.md` | `actionable` | `markdown-literal-scan-complexity` | 各行で増大する本文prefixを再構築する呼び出し連鎖を現行コードで確認できる。入力倍増時に処理時間が約4倍になる再現証拠があり、add・対話CLI・pipelineの全PR入口へ直接影響する |
+
+## 未解決の前提
+
+- なし。要求・計画・指摘間に修正対象を確定できない競合はなく、タスク全体の再計画は不要である。

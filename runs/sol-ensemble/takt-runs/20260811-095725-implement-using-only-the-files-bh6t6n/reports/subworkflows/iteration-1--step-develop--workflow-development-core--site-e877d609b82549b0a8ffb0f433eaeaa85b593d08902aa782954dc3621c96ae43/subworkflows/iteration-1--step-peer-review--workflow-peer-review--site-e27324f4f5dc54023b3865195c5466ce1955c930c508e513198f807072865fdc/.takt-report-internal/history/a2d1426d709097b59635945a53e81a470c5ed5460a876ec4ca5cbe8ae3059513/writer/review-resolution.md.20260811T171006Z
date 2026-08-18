@@ -1,0 +1,23 @@
+# レビュー指摘裁定
+
+## 結果: 修正対象なし
+
+## 裁定サマリー
+
+Report Directory 配下の最新 `architecture-review.md`、`coding-review.md`、`ai-antipattern-review.md`、`testing-review.md`、`security-review.md` を対象とした。
+
+提出された finding ID は5件で、いずれも現行コードとテスト証跡により解消済みと確認した。修正対象 family は0件、非修正対象は5件である。旧画像採番経路は共通allocatorへ置換され、Markdown走査、PR画像データフロー、失敗時cleanupにも元指摘を反証する実装・回帰テストが存在する。
+
+## 指摘ごとの裁定
+
+| finding ID / 出典 | 裁定 | 対象 family | 根拠 |
+|-------------------|------|-------------|------|
+| `AI-NEW-IMAGE-INDEX-PRECISION-31` / `ai-antipattern-review.md` | `no_issue_after_verification` | なし | `src/shared/utils/imageAttachmentReferences.ts:21-44`は任意長番号を文字列集合として予約し、候補だけを`BigInt`で生成する。400桁番号を含むPR・retry回帰テストが成功しており、`Infinity`、指数表記、精度損失による重複を生成しない |
+| `CODE-NEW-imageAttachmentIndex-L37` / `coding-review.md` | `no_issue_after_verification` | なし | `src/features/tasks/prReviewAttachments.ts:546-590`は処理単位で共通assignerを共有する。`src/features/tasks/retryTaskSpecAttachments.ts:46-101`は本文とmanifest上の既存fileNameを予約する。旧`Number(rawIndex)`、最大値加算、件数採番はproductionコードに残っていない |
+| `AI-NEW-MARKDOWN-LITERAL-SCAN-158` / `coding-review.md` | `no_issue_after_verification` | なし | `src/features/tasks/prReviewAttachments.ts:428-520`は行コンテキストとliteral rangeを前方走査で構築し、元指摘の行ごとの本文prefix再走査を除去している。`src/__tests__/prReviewAttachments.test.ts:613-622`の30,000行画像なし本文テストも成功している |
+| `TEST-NEW-pr-image-dataflow-L29` / `testing-review.md` | `no_issue_after_verification` | なし | `src/__tests__/pr-image-dataflow.integration.test.ts:40-99`がPR整形、画像準備、task保存、保存済みtaskの解決、run context staging、画像bytesと`order.md`参照を実ファイルで検証する。`scripts/test-classification.mjs:363`で軽いITへ接続済み |
+| `TEST-NEW-pr-image-cleanup-L301` / `testing-review.md` | `no_issue_after_verification` | なし | `src/__tests__/addTask.test.ts:410-435`が保存失敗時のcleanupと永続状態不変を検証し、`src/__tests__/cli-routing-pr-resolve.test.ts:408-429`が実行例外の同一性維持とcleanupを検証する |
+
+## 未解決の前提
+
+- なし。実private GitHub repositoryとの通信は外部資格情報を要するため未実施だが、現行 finding として提出されておらず、認証、URL制限、Content-Type、magic bytes、サイズ上限の境界は決定的テストで確認済みである。タスク全体の再計画は不要であり、最終マージ準備ゲートへ送る。

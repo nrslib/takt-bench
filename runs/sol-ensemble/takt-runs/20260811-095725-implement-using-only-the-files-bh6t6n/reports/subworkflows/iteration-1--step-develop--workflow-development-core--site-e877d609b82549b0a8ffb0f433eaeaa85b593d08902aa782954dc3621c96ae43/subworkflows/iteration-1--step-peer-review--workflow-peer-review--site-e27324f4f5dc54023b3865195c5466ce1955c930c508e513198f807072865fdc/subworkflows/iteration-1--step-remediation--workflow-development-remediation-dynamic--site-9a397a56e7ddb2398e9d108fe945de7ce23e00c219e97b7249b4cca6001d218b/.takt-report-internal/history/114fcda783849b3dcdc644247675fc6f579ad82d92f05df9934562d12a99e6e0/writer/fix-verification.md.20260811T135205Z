@@ -1,0 +1,74 @@
+# 修正完了検証
+
+## 結果: incomplete
+
+## サマリー
+
+8修正単位を現在のコード、差分、対象テスト、独立反例へ照合した。7修正単位は完了している。
+
+`markdown-image-semantics` では、典型的なトップレベルのコードフェンス、inline code、HTMLコメントは保持されるが、Markdownコンテナとエスケープ境界に未対応だった。ブロック引用内のチルダ式コードフェンスでは画像が取得・置換され、エスケープ済みdelimiterでは通常画像が見落とされることを実行で再現したため、`incomplete` と判定する。計画の前提・修正境界は有効であり、再計画は不要である。
+
+## 修正単位の整合性
+
+| 修正単位 | 対象 finding | 前提・方法・証拠能力の整合性 | 判定 |
+|----------|--------------|------------------------------|------|
+| `shared-image-boundary-ownership` | `ARCH-NEW-src-shared-utils-githubAttachmentUrl-L1`、Companion `3`、`5` | GitHub固有規則をinfraへ移し、shared storeを汎用化しつつinteractive公開契約をadapterで保持する方法は、契約置換ポリシーと既存利用側に整合する | 適合 |
+| `github-auth-host-binding` | `CODE-NEW-prImageDownload-L39` | 許可URLホストとtoken選択ホストを同一定数へ結合する方法で決定的に検証可能 | 適合 |
+| `image-signature-validation` | `ARCH-NEW-src-shared-utils-imageMimeType-L17`、`AI-NEW-IMAGE-MAGIC-16`、`CODE-NEW-imageMimeType-L17` | PNGの正式8バイト署名へ限定し、共有helperの全consumerを確認する境界は裁定と一致する | 適合 |
+| `markdown-image-semantics` | `CODE-NEW-prReviewAttachments-L22` | literal範囲を小規模走査で除外する計画自体は有効。ただし実装がMarkdownコンテナとエスケープ境界を網羅していない | 適合 |
+| `pr-body-image-routing` | `AI-NEW-TASKS-PR-BODY-194`、`ARCH-NEW-src-features-tasks-add-index-L194`、Companion `4` | 本文・review・commentの入力有無を入口で判定し、通常本文も有効入力とする条件は確定計画と一致する | 適合 |
+| `pipeline-cleanup-result-preservation` | `ARCH-NEW-src-features-pipeline-steps-L411` | pipeline所有期間だけでcleanup例外を隔離し、元結果・例外を保持する方法は修正境界に一致する | 適合 |
+| `pr-image-owner-failure-tests` | `TEST-NEW-pr-image-cleanup-L301` | add保存失敗とPR実行失敗を所有者単位で観測する計画は副作用テスト方針に適合する | 適合 |
+| `pr-image-production-dataflow-test` | `TEST-NEW-pr-image-dataflow-L29` | 外部取得とagent境界だけを置換し、実store・保存・task spec・resolver・stagingを通すlight ITとして成立する | 適合 |
+
+## 完了義務の独立検証
+
+| 修正単位 | 義務ID | 対象 finding | 不変条件と対象経路 | 独立に用いた反例・観測点 | 観測結果 | 証拠 | 判定 |
+|----------|--------|--------------|--------------------|----------------------------|----------|------|------|
+| `shared-image-boundary-ownership` | `SIBO-01` | `ARCH-NEW-src-shared-utils-githubAttachmentUrl-L1` | GitHub URL判定の現行利用側をinfra境界へ移行する | 全参照検索 | 利用側は`src/infra/github/attachmentUrl.ts`だけを参照 | `rg`による参照確認 | 完了 |
+| `shared-image-boundary-ownership` | `SIBO-02` | 同上 | 旧shared URL module、alias、re-exportを削除する | 旧ファイル存在・旧import検索 | 旧module不存在、旧参照0件 | ファイル存在確認、`rg` | 完了 |
+| `shared-image-boundary-ownership` | `SIBO-03` | 同上 | shared storeのエラー・ログを画像attachment一般の意味にする | 未対応MIMEとcleanup失敗 | 汎用エラーと`image-attachment`名前空間を観測 | `imageAttachments.test.ts`、実装読解 | 完了 |
+| `shared-image-boundary-ownership` | `SIBO-04` | Companion `3`、`5` | interactive公開経路の既存エラー・ログ契約を保持する | `image/bmp`、cleanup throw | 旧文言と`interactive`名前空間を保持 | `imageAttachments.test.ts` | 完了 |
+| `github-auth-host-binding` | `GAHB-01` | `CODE-NEW-prImageDownload-L39` | token選択とAuthorization送信先を`github.com`へ固定する | `GH_HOST=enterprise.example` | `gh auth token --hostname github.com`を使用 | `prImageDownload.ts:41-50`、対象テスト20件 | 完了 |
+| `image-signature-validation` | `ISV-01` | PNG署名3 finding | PNGは8バイト完全一致だけを受理する | 4バイトprefix、8バイト目不一致、短い入力 | PR取得・inline paste双方で拒否 | `imageMimeType.ts:16-29`、対象テスト | 完了 |
+| `image-signature-validation` | `ISV-02` | 同上 | JPEG/GIF/WebPとContent-Type一致検査を維持する | 形式別正常値、MIME不一致 | 各正常値を受理し不一致を拒否 | downloader対象テスト | 完了 |
+| `image-signature-validation` | `ISV-03` | `AI-NEW-IMAGE-MAGIC-16` | PR取得とinline pasteの正常PNG fixtureを正式署名へ移行する | fixture内容照合 | 両入口の正常fixtureは8バイト署名 | `github-pr-image-download.test.ts`、`inlineImagePaste.test.ts` | 完了 |
+| `markdown-image-semantics` | `MIS-01` | `CODE-NEW-prReviewAttachments-L22` | 通常Markdown／HTML画像をappearance orderで処理する | 通常4セクション、重複URL、エスケープ済みdelimiter | 典型例と重複処理は成立するが、エスケープ済みdelimiter後の通常画像を取得しない | 対象テスト、独立実行反例 | 未完了 |
+| `markdown-image-semantics` | `MIS-02` | 同上 | コードフェンス、inline code、HTMLコメントを原文保持する | トップレベル3文脈、ブロック引用内チルダ式フェンス | 典型例は成立するが、引用内フェンスの画像を取得・置換 | 対象テスト、独立実行反例 | 未完了 |
+| `markdown-image-semantics` | `MIS-03` | 同上 | 重複URLを1回だけ取得しplaceholderを再利用する | Markdown／HTMLの同一URL | download・save各1回、同一placeholder | `prReviewAttachments.test.ts` | 完了 |
+| `pr-body-image-routing` | `PBIR-01` | PR本文画像2 finding | review/commentなしでも本文画像を準備・保存へ渡す | 本文画像のみ | attachment、placeholder、保存画像を観測 | `addTask.test.ts`、production dataflow IT | 完了 |
+| `pr-body-image-routing` | `PBIR-02` | 同上 | 本文・review・commentがすべて空なら拒否する | 空白本文と空配列 | 整形・workflow・保存へ進まない | `addTask.test.ts:396-408` | 完了 |
+| `pr-body-image-routing` | `PBIR-03` | Companion `4` | 通常本文のみのPRも有効入力とする | 本文テキストのみ | taskとして保存 | `addTask.test.ts:366-381` | 完了 |
+| `pipeline-cleanup-result-preservation` | `PCRP-01` | `ARCH-NEW-src-features-pipeline-steps-L411` | workflow falseをcleanup失敗後も維持する | execute=false＋cleanup throw | exit code 3を維持し診断を出力 | `pipelineExecution.test.ts` | 完了 |
+| `pipeline-cleanup-result-preservation` | `PCRP-02` | 同上 | 実行例外の同一性をcleanup失敗後も維持する | execute throw＋cleanup throw | 元Error参照を維持 | `pipelineExecution.test.ts` | 完了 |
+| `pipeline-cleanup-result-preservation` | `PCRP-03` | 同上 | workflow成功をcleanup失敗後も維持する | execute=true＋cleanup throw | exit code 0を維持 | `pipelineExecution.test.ts` | 完了 |
+| `pr-image-owner-failure-tests` | `PIOF-01` | `TEST-NEW-pr-image-cleanup-L301` | add保存失敗時にcleanupを1回実行し永続状態を維持する | 存在しないattachment source | ENOENT、cleanup 1回、tasks状態不変 | `addTask.test.ts:410-435` | 完了 |
+| `pr-image-owner-failure-tests` | `PIOF-02` | 同上 | PR実行失敗時にcleanupを1回実行し元例外を維持する | `selectAndExecuteTask` throw | 元Error同一性、cleanup 1回 | `cli-routing-pr-resolve.test.ts:408-429` | 完了 |
+| `pr-image-production-dataflow-test` | `PIDF-01` | `TEST-NEW-pr-image-dataflow-L29` | PR入力からtask保存まで実store・永続化を通す | 保存済み`order.md`と画像bytes | placeholder、参照、bytesが一致 | `pr-image-dataflow.integration.test.ts` | 完了 |
+| `pr-image-production-dataflow-test` | `PIDF-02` | 同上 | task specからrun context stagingまで参照とbytesを維持する | staged `order.md`とcontext attachment | run context参照とbytesが一致 | 同light IT | 完了 |
+| `pr-image-production-dataflow-test` | `PIDF-03` | 同上 | 新規ITをlight分類へ排他的に登録する | test routingと分類契約 | light ITで1件実行、分類契約19件成功 | `scripts/test-classification.mjs`、`releaseVerificationWiring.test.ts` | 完了 |
+
+## 不成立・未確認事項
+
+| 修正単位 | 義務ID | 種別 | 根拠 | 修正報告の証拠が検出できなかった理由 | 同じ検出パターンで再監査した範囲 | 必要な対応 |
+|----------|--------|------|------|----------------------------------------|----------------------------------|--------------|
+| `markdown-image-semantics` | `MIS-02` | 実装不足 | `> ~~~md`で始まるブロック引用内コードフェンスの画像が`[Image #1]`へ置換され、attachmentが1件生成された。`findFencedCodeRange`は行頭の空白0〜3文字だけを認識する | 既存テストはトップレベルのバッククォート式フェンスだけで、コンテナ接頭辞やチルダ式を組み合わせた反例を実行していない | inline code、HTMLコメント、バッククォート式フェンス、チルダ式フェンス、引用コンテナを同じliteral範囲走査として再監査。引用内チルダ式だけで違反を再現 | コンテナ内コードフェンスをliteral範囲として認識し、原文保持・download 0件を検証する回帰テストを追加する |
+| `markdown-image-semantics` | `MIS-01` | 実装不足 | `\``および`\<!--`の後に置いた通常画像が取得されず、原文のまま・attachment 0件となった。走査がエスケープ済みdelimiterもinline code／HTMLコメント開始として扱う | 既存テストは未エスケープdelimiter内の画像だけを確認し、逆方向の「delimiter風文字列だが通常画像である」反例がない | inline codeとHTMLコメントの開始判定を同じエスケープ前提で横展開し、双方で見落としを再現 | エスケープ済みdelimiterをliteral開始と扱わず、通常画像を取得・置換する対向テストを追加する |
+
+## 環境要因により実証できない後続確認（判定非ブロッキング）
+
+| 対象 | 環境要因 | リポジトリ内で解消不能な根拠 | 現在確認した代替証拠 | 後続確認 |
+|------|----------|------------------------------|--------------------------|----------|
+| Full mock E2E | ローカル並列実行時のVitest worker `onTaskUpdate`通知タイムアウト | 修正報告では同一コマンドを2回実行してworker通信で非ゼロ終了し、該当spec単独では3件成功している | smoke E2E成功、`run-recovery.e2e.ts`単独成功、対象unit・light IT成功 | 隔離runnerまたはCIでfull mock E2Eを再確認する |
+
+## 実行証跡
+
+| 対象 | 方法 | 結果 |
+|------|------|------|
+| GitHub取得、PNG署名、Markdown基本形、add、routing、pipeline、store互換 | `npm test -- src/__tests__/github-pr-image-download.test.ts src/__tests__/inlineImagePaste.test.ts src/__tests__/prReviewAttachments.test.ts src/__tests__/addTask.test.ts src/__tests__/cli-routing-pr-resolve.test.ts src/__tests__/pipelineExecution.test.ts src/__tests__/imageAttachments.test.ts` | unit 5ファイル117件、変更heavy IT 2ファイル40件成功 |
+| Production dataflow・分類 | `npm test -- src/__tests__/pr-image-dataflow.integration.test.ts src/__tests__/releaseVerificationWiring.test.ts` | light IT 1件、分類契約19件成功 |
+| ブロック引用内チルダ式コードフェンス | `preparePrReviewAttachments`を合成PNG responseで直接実行 | 失敗。原文が変更されattachment 1件 |
+| エスケープ済みバッククォート | 同関数を合成PNG responseで直接実行 | 失敗。通常画像を取得せずattachment 0件 |
+| エスケープ済みHTMLコメント開始記号 | 同関数を合成PNG responseで直接実行 | 失敗。通常画像を取得せずattachment 0件 |
+| 旧GitHub URL module・参照移行 | ファイル存在確認と`rg` | 旧module不存在、旧参照0件 |
+| 差分整合 | `git diff --check` | 成功 |

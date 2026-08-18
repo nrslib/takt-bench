@@ -1,0 +1,52 @@
+# 修正完了検証
+
+## 結果: incomplete
+
+## サマリー
+
+`F-PR-IMAGE-LIFECYCLE` の主要経路は修正されていますが、routing では cleanup 関数取得後から `finally` 開始前、および実際の `process.exit()` 経路が保証境界外です。計画の前提・修正方法は有効であり、`plan_invalid` ではありません。
+
+## 修正単位の整合性
+
+| 修正単位 | 対象 finding | 前提・方法・証拠能力の整合性 | 判定 |
+|----------|--------------|-------------------------------|------|
+| `F-PR-IMAGE-LIFECYCLE` | `AI-NEW-infra-github-L309`、`FU-PRIMG-PRODUCER-TOKEN`、`FU-PRIMG-INTERACTIVE-CANCEL`、`FU-PRIMG-ADD-SELECTION-ERROR` | 一時ディレクトリ生成後の全 consumer で cleanup を保証する計画は契約に適合する。主要な例外経路は修正済みだが、routing の pre-dispatch 例外と `process.exit()` が境界外に残る | 適合 |
+
+## 完了義務の独立検証
+
+| 修正単位 | 義務ID | 対象 finding | 不変条件と対象経路 | 独立に用いた反例・観測点 | 観測結果 | 証拠 | 判定 |
+|----------|--------|--------------|--------------------|--------------------------|----------|------|------|
+| `F-PR-IMAGE-LIFECYCLE` | `OBL-1` | `FU-PRIMG-PRODUCER-TOKEN` | token取得失敗時に producer の一時ディレクトリを削除する | `getToken` を reject させ、tmpRoot を列挙 | 成立 | `prReviewImageAttachments.ts:390-424`、integration test | 完了 |
+| `F-PR-IMAGE-LIFECYCLE` | `OBL-2` | `AI-NEW-infra-github-L309` | pipeline の成功・既知失敗・workflow例外で cleanup する | `executeTask` を false / reject にする | 成立 | `execute.ts:40-96`、pipeline 対象テスト | 完了 |
+| `F-PR-IMAGE-LIFECYCLE` | `OBL-3-CANCEL` | `FU-PRIMG-INTERACTIVE-CANCEL` | workflow/mode 選択キャンセルで cleanup する | 選択結果を null にする | 成立 | `routing.ts:175-201`、routing 対象テスト | 完了 |
+| `F-PR-IMAGE-LIFECYCLE` | `OBL-3-WORKFLOW-EXCEPTION` | `FU-PRIMG-INTERACTIVE-CANCEL` | workflow選択例外で cleanup する | `determineWorkflow` を reject | 成立 | `routing.ts:175-201`、回帰テスト | 完了 |
+| `F-PR-IMAGE-LIFECYCLE` | `OBL-3-MODE-EXCEPTION` | `FU-PRIMG-INTERACTIVE-CANCEL` | mode選択例外で cleanup する | `selectInteractiveMode` を reject | 成立 | `routing.ts:194-201`、回帰テスト | 完了 |
+| `F-PR-IMAGE-LIFECYCLE` | `OBL-3-DISPATCH-EXCEPTION` | `AI-NEW-infra-github-L309` | dispatch 後の例外で cleanup する | `selectAndExecuteTask` を reject | 成立 | `routing.ts:283-348`、回帰テスト | 完了 |
+| `F-PR-IMAGE-LIFECYCLE` | `OBL-4-CANCEL` | `FU-PRIMG-ADD-SELECTION-ERROR` | `add --pr` の選択キャンセルで cleanup する | workflow を null にする | 成立 | `add/index.ts:222-225`、回帰テスト | 完了 |
+| `F-PR-IMAGE-LIFECYCLE` | `OBL-4-WORKFLOW-EXCEPTION` | `FU-PRIMG-ADD-SELECTION-ERROR` | `determineWorkflow` 例外で cleanup する | workflow選択を reject | 成立 | `add/index.ts:214-220`、回帰テスト | 完了 |
+| `F-PR-IMAGE-LIFECYCLE` | `OBL-4-SAVE-EXCEPTION` | `AI-NEW-infra-github-L309` | 保存例外でも cleanup とエラー伝播を保証する | 保存処理を reject | 成立 | `add/index.ts:235-245`、回帰テスト | 完了 |
+| `F-PR-IMAGE-LIFECYCLE` | `OBL-3-PRE-DISPATCH-EXCEPTION` | `FU-PRIMG-INTERACTIVE-CANCEL` | cleanup 関数取得後、選択開始前の例外でも cleanup する | `resolveBaseBranch` / `createPullRequestContext` の例外経路を追跡 | 違反 | `routing.ts:123-148` は `finally` の外。`process.exit(1)` に到達し cleanup されない | 未完了 |
+| `F-PR-IMAGE-LIFECYCLE` | `OBL-3-CONFIG-EXCEPTION` | `FU-PRIMG-INTERACTIVE-CANCEL` | PR解決後の設定解決例外でも cleanup する | `resolveConfigValues` の例外経路を追跡 | 違反 | `routing.ts:168-172` が cleanup 用 `try` の外 | 未完了 |
+| `F-PR-IMAGE-LIFECYCLE` | `OBL-3-TERMINAL-EXIT` | `AI-NEW-infra-github-L309` | 実際の終了経路でも一時ディレクトリを残さない | `save_task` 内の `process.exit(1)` を追跡 | 違反 | `routing.ts:320-322`。`process.exit()` は `finally` を実行せずプロセスを終了する | 未完了 |
+| `F-PR-IMAGE-LIFECYCLE` | `OBL-5` | `AI-NEW-infra-github-L309 new #2` | Response読み取り・redirect・画像形式の既存契約を保持する | 差分と実装を確認 | 成立 | `arrayBuffer()` の通常経路は維持。裁定済み false positive | 完了 |
+
+## 不成立・未確認事項
+
+| 修正単位 | 義務ID | 種別 | 根拠 | 修正報告の証拠が検出できなかった理由 | 同じ検出パターンで再監査した範囲 | 必要な対応 |
+|----------|--------|------|------|----------------------------------------|----------------------------------|--------------|
+| `F-PR-IMAGE-LIFECYCLE` | `OBL-3-PRE-DISPATCH-EXCEPTION` | 実装不足 | `routing.ts:129` で cleanup を取得後、`resolveBaseBranch` と `createPullRequestContext` が `finally` の外で実行される | workflow/mode 選択例外だけをテストし、選択開始前の例外を確認していない | cleanup 所有開始直後から dispatch 完了までを同一の `try/finally` 境界で覆う |
+| `F-PR-IMAGE-LIFECYCLE` | `OBL-3-CONFIG-EXCEPTION` | 実装不足 | `routing.ts:168-172` の設定解決が cleanup 境界外 | 設定解決例外の反例がない | PR画像取得後の設定解決を cleanup 保証境界内へ移動する |
+| `F-PR-IMAGE-LIFECYCLE` | `OBL-3-TERMINAL-EXIT` | 実装不足 | `routing.ts:320-322` の実 `process.exit(1)` は cleanup `finally` を迂回する | テストでは `process.exit` を throw に差し替えており、実終了経路を検証していない | 終了前に cleanup を保証する構造へ変更し、該当経路を回帰テストする |
+
+## 環境要因により実証できない後続確認（判定非ブロッキング）
+
+なし。
+
+## 実行証跡
+
+| 対象 | 方法 | 結果 |
+|------|------|------|
+| producer、pipeline、routing、add の対象テスト | `npm test -- src/__tests__/cli-routing-pr-resolve.test.ts src/__tests__/addTask.test.ts src/__tests__/pipelineExecution.test.ts src/__tests__/prReviewImageAttachments.integration.test.ts` | 成功。4ファイル、115テスト |
+| IT分類契約 | `npm test -- src/__tests__/releaseVerificationWiring.test.ts` | 成功。20テスト |
+| routing pre-dispatch 例外 | `routing.ts` の呼び出し境界を静的追跡 | 未完了 |
+| routing 実 `process.exit()` | `routing.ts:320-322` を静的追跡 | 未完了 |

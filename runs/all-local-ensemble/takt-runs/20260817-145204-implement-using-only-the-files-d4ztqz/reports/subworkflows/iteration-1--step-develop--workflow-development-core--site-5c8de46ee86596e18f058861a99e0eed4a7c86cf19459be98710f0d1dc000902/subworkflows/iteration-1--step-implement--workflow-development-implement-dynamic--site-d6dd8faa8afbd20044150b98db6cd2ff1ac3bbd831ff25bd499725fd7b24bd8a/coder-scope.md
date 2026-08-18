@@ -1,0 +1,27 @@
+# 変更スコープ宣言
+
+## タスク
+PR コメント内の画像をダウンロードして task attachments に配置する機能を実装する。
+
+## 変更予定
+| 種別 | ファイル |
+|------|---------|
+| 作成 | `src/infra/git/imageExtraction.ts` |
+| 作成 | `src/infra/github/imageDownload.ts` |
+| 作成 | `src/__tests__/imageExtraction.test.ts` |
+| 作成 | `src/__tests__/imageDownload.test.ts` |
+| 変更 | `src/features/pipeline/steps.ts` |
+| 変更 | `src/features/pipeline/execute.ts` |
+| 変更 | `src/features/tasks/add/index.ts` |
+| 変更 | `src/__tests__/pipelineExecution.test.ts` |
+| 変更 | `src/__tests__/addTask.test.ts` |
+| 変更 | `src/__tests__/git-cwd-propagation.test.ts` |
+| 変更 | `scripts/test-classification.mjs` |
+
+## 推定規模
+Medium
+
+## 影響範囲
+- `takt add --pr` の PR タスク作成経路
+- pipeline の `--pr` 実行経路
+- task attachment の保存・参照機構（既存の `prepareTaskSpecDirectory` / `resolveTaskSpecForExecution` を再利用）

@@ -1,0 +1,51 @@
+# 修正完了検証
+
+## 結果: incomplete
+
+## サマリー
+
+修正計画自体は有効です。正本関数の追加、PR／interactive consumer の移行、旧 placeholder 実装の削除、基本的な境界値テストは成立しています。
+
+ただし、retry 経路で複数 placeholder を再採番する際、順次 `replaceAll` により異なる添付が同じ placeholder になります。既存契約保存と retry consumer 移行の完了条件を満たさないため、実装は `incomplete` です。
+
+## 修正単位の整合性
+
+| 修正単位 | 対象 finding | 前提・方法・証拠能力の整合性 | 判定 |
+|----------|--------------|------------------------------|------|
+| `PRIMG-PLACEHOLDER-GRAMMAR-OWNER` | `AI-NEW-image-attach-L35`, `ADJ-FOLLOWUP-retry-placeholder-grammar` | 正本 `imageAttachmentReferences.ts` に抽出・生成を集約し、PR／interactive／retry を移行する計画は、元 finding と受入条件に適合する。retry の複数置換反例も本計画の対象範囲で修正可能 | 適合 |
+
+## 完了義務の独立検証
+
+| 修正単位 | 義務ID | 対象 finding | 不変条件と対象経路 | 独立に用いた反例・観測点 | 観測結果 | 証拠 | 判定 |
+|----------|--------|--------------|--------------------|----------------------------|----------|------|------|
+| `PRIMG-PLACEHOLDER-GRAMMAR-OWNER` | `OBL-1` | `AI-NEW-image-attach-L35` | 正規 placeholder から番号を抽出する | `[Image #12]`、非数値入力を直接確認 | 成立 | `imageAttachmentReferences.test.ts`、`extractImagePlaceholderNumber` | 完了 |
+| `PRIMG-PLACEHOLDER-GRAMMAR-OWNER` | `OBL-2` | `AI-NEW-image-attach-L35`, `ADJ-FOLLOWUP-retry-placeholder-grammar` | `0` および先頭ゼロを拒絶する | `[Image #0]`、`[Image #01]` を直接確認 | 成立 | `imageAttachmentReferences.test.ts` | 完了 |
+| `PRIMG-PLACEHOLDER-GRAMMAR-OWNER` | `OBL-3` | `AI-NEW-image-attach-L35` | 正の整数から正規 placeholder を生成し、不正値を拒絶する | `1`、`12`、`0`、`-1` を直接確認 | 成立 | `imageAttachmentReferences.test.ts` | 完了 |
+| `PRIMG-PLACEHOLDER-GRAMMAR-OWNER` | `OBL-4` | `AI-NEW-image-attach-L35` | PR consumer が正本関数を使い、既存番号との衝突を避ける | 既存 `[Image #1]` と新規画像 URL を同時入力 | 成立 | `prReviewImageAttachments.test.ts`、PR consumer の import と呼び出し | 完了 |
+| `PRIMG-PLACEHOLDER-GRAMMAR-OWNER` | `OBL-5` | `AI-NEW-image-attach-L35` | interactive consumer が最大番号の次を生成する | 初期 `[Image #3]` の後に画像を保存 | 成立 | `imageAttachments.test.ts`、`createImageAttachmentPlaceholder` 呼び出し | 完了 |
+| `PRIMG-PLACEHOLDER-GRAMMAR-OWNER` | `OBL-6` | `ADJ-FOLLOWUP-retry-placeholder-grammar` | retry consumer が複数添付を一意に再採番し、retry note を正しく置換する | 本文最大番号 `2`、retry note に `[Image #1]` と `[Image #3]`、添付2件を入力 | 違反 | 実結果は `Use [Image #4] and [Image #4].`。`retryTaskSpecAttachments.ts:93-96` の順次 `replaceAll` | 未完了 |
+| `PRIMG-PLACEHOLDER-GRAMMAR-OWNER` | `OBL-7` | `AI-NEW-image-attach-L35`, `ADJ-FOLLOWUP-retry-placeholder-grammar` | 3 consumer から旧 placeholder リテラルと独自 placeholder regex を削除する | 対象3ファイルを静的検索 | 成立 | `rg` 結果。placeholder リテラルなし、`\d+` は retry の別契約であるファイル名 regex のみ | 完了 |
+| `PRIMG-PLACEHOLDER-GRAMMAR-OWNER` | `OBL-8` | `AI-NEW-image-attach-L35`, `ADJ-FOLLOWUP-retry-placeholder-grammar` | 既存の採番・生成・retry 置換契約を維持する | PR／interactive／retry の正常系と複数 placeholder 反例を比較 | 一部違反 | PR／interactive は成立。retry の複数 placeholder で同一番号化を再現 | 未完了 |
+
+## 不成立・未確認事項
+
+| 修正単位 | 義務ID | 種別 | 根拠 | 修正報告の証拠が検出できなかった理由 | 同じ検出パターンで再監査した範囲 | 必要な対応 |
+|----------|--------|------|------|----------------------------------------|----------------------------------|--------------|
+| `PRIMG-PLACEHOLDER-GRAMMAR-OWNER` | `OBL-6` | 実装不足 | `[Image #1]` と `[Image #3]` が、再採番後にともに `[Image #4]` になる | retry テストは連番の置換先のみ確認し、置換先が別の元 placeholder と一致する反例を含んでいない | PR／interactive／retry の全 consumer を再確認し、retry の複数非連番 placeholder ケースで再現 | 1回の走査で元 placeholder から置換する処理へ修正し、複数添付の回帰テストを追加 |
+| `PRIMG-PLACEHOLDER-GRAMMAR-OWNER` | `OBL-8` | 実装不足 | 異なる添付に同一 placeholder が割り当てられ、添付参照の既存契約が破壊される | 広いテストスイート成功と既存の連番テストでは置換の再変換を検出できない | 正本関数、PR、interactive、retry、task attachment 出力を確認。問題は retry のみ | retry の出力 placeholder が一意であることを検証し、既存採番契約を復元 |
+
+## 環境要因により実証できない後続確認（判定非ブロッキング）
+
+| 対象 | 環境要因 | リポジトリ内で解消不能な根拠 | 現在確認した代替証拠 | 後続確認 |
+|------|----------|------------------------------|--------------------------|----------|
+| なし | なし | なし | なし | なし |
+
+## 実行証跡
+
+| 対象 | 方法 | 結果 |
+|------|------|------|
+| 正本関数、PR、interactive、retry の対象テスト | `npm test -- src/__tests__/imageAttachmentReferences.test.ts src/__tests__/prReviewImageAttachments.test.ts src/__tests__/imageAttachments.test.ts src/__tests__/retryTaskSpecAttachments.test.ts` | 成功。ただし既存 retry テストは問題の反例を含まない |
+| 型チェック・ビルド | `npm run build` | 成功 |
+| placeholder 正常系・拒否系 | 対象 unit test と直接入力確認 | 成功 |
+| 3 consumer の旧経路削除 | 対象ファイルへの `rg` 静的検索 | 成功 |
+| retry 複数 placeholder 再採番 | 本文最大番号 `2`、retry note `[Image #1]`／`[Image #3]`、添付2件で実行 | 失敗。両方 `[Image #4]` になった |

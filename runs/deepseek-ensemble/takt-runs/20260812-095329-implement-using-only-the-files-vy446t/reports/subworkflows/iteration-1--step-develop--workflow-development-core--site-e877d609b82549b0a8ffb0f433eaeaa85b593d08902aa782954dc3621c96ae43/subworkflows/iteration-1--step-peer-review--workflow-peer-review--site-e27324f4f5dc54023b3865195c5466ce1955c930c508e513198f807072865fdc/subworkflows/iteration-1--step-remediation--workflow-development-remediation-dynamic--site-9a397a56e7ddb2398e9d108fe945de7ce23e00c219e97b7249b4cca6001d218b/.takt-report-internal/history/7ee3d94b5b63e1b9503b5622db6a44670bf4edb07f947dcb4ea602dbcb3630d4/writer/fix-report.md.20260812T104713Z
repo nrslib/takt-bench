@@ -1,0 +1,44 @@
+# 修正レポート
+## サマリー
+`F-PR-IMAGE-LIFECYCLE` の修正計画（4工程）をすべて実装し、一時画像ディレクトリの cleanup を例外・キャンセル経路まで含めて保証境界で覆った。修正計画の実施順序どおりに、producer（`downloadPrReviewImageAttachments`）と consumer 3経路（pipeline / 対話 / `add --pr`）をそれぞれ局所修正した。各経路に退行確認テストを追加し、build / lint / npm test / test:it / test:e2e:mock / test:e2e:smoke をすべて成功させた。計画の受入条件「成功・失敗・キャンセル・例外すべてで削除されること」を満たす。
+
+## 修正単位
+| 修正単位 | 対象 finding | 契約の正本 | 実施内容・反映先 | 状態 |
+|----------|--------------|------------|-----------------|------|
+| F-PR-IMAGE-LIFECYCLE | `AI-NEW-infra-github-L309` / `ai-antipattern-review.md` new #1、`FU-PRIMG-PRODUCER-TOKEN`、`FU-PRIMG-INTERACTIVE-CANCEL`、`FU-PRIMG-ADD-SELECTION-ERROR` | PRレビュー画像の一時保存仕様（生成された一時ディレクトリは処理の成否に関わらず必ず削除される） | 局所修正。`downloadPrReviewImageAttachments` の try 範囲拡大、pipeline の try/finally 化、対話経路のキャンセル分岐への cleanup 追加、`add --pr` の workflow 選択例外への cleanup 追加 | 完了 |
+
+## 完了義務
+| 修正単位 | 義務ID | 種別 | 対象 finding | 不変条件と対象経路 | 違反を検出する反例・観測点 | 修正前または差し戻し時の結果 | 実装根拠 | 修正後の証拠 | 状態 |
+|----------|--------|------|--------------|--------------------|------------------------------|--------------------------------|----------|--------------|------|
+| F-PR-IMAGE-LIFECYCLE | OBL-1 | 振る舞い修正 | `FU-PRIMG-PRODUCER-TOKEN` | token取得失敗時に一時ディレクトリが削除される（生成: `downloadPrReviewImageAttachments`） | `getToken` を reject させ、`fs.readdirSync(tmpRoot)` が空になること | token取得が try の外にあり失敗時にディレクトリ残留 | `src/infra/github/prReviewImageAttachments.ts` で `getToken` を try 内に移動 | `prReviewImageAttachments.integration.test.ts` の token 失敗テストで `fs.readdirSync(tmpRoot)` が `[]` を確認 | 完了 |
+| F-PR-IMAGE-LIFECYCLE | OBL-2 | 振る舞い修正 | `AI-NEW-infra-github-L309` new #1 | workflow 実行例外時に `attachmentCleanup` が実行される（Consumer: `executePipeline` の `runWorkflow`） | `runWorkflow`（executeTask）を reject させ、cleanup が1回呼ばれること | `runWorkflow` が reject すると後続の return 前 cleanup に到達しない | `src/features/pipeline/execute.ts` で `runPipeline` 本体を try/finally 化し `finally` で cleanup | `pipelineExecution.test.ts` の workflow 例外テストで cleanup 1回を確認 | 完了 |
+| F-PR-IMAGE-LIFECYCLE | OBL-3 | 振る舞い修正 | `FU-PRIMG-INTERACTIVE-CANCEL` | ワークフロー選択・モード選択キャンセル時に `prAttachmentsCleanup` が実行される（Consumer: `executeDefaultAction`） | `determineWorkflow` が null を返し、cleanup が1回呼ばれること | キャンセル分岐が dispatch 前の早期 return で cleanup finally に到達しない | `src/app/cli/routing.ts` の workflow 選択キャンセル・mode 選択キャンセル分岐に `prAttachmentsCleanup?.()` を追加 | `cli-routing-pr-resolve.test.ts` の workflow 選択キャンセルテストで cleanup 1回を確認 | 完了 |
+| F-PR-IMAGE-LIFECYCLE | OBL-4 | 振る舞い修正 | `FU-PRIMG-ADD-SELECTION-ERROR` | `add --pr` の workflow 選択例外時に `cleanup` が実行される（Consumer: `addTask`） | `determineWorkflow` を reject させ、cleanup が1回呼ばれること | `determineWorkflow` が例外になるとキャンセル分岐にも保存処理の finally にも到達しない | `src/features/tasks/add/index.ts` で `determineWorkflow` を try/catch し例外時に `resolved.cleanup()` | `addTask.test.ts` の workflow 選択例外テストで cleanup 1回とエラーログを確認 | 完了 |
+| F-PR-IMAGE-LIFECYCLE | OBL-5 | 既存契約保存 | `AI-NEW-infra-github-L309` new #2（Response 読み取り） | Response 読み取り方式・redirect 処理・画像形式は変更しない | — | 裁定で false_positive とされたため対象外 | 変更せず維持 | 対象外のため変更なし | 該当なし |
+
+## 受入条件
+| finding ID | 受入条件 | 証拠 | 状態 |
+|------------|----------|------|------|
+| F-PR-IMAGE-LIFECYCLE | 一時ディレクトリ生成後の成功・失敗・キャンセル・例外すべてで削除される | token 失敗（integration）、workflow 例外（pipeline）、workflow 選択キャンセル（routing）、workflow 選択例外（addTask）の各退行テストで cleanup 実行を確認。cleanup の冪等性（`cleaned` フラグ）は維持 | 完了 |
+
+## 差し戻し後の証拠修正
+| 修正単位 | 義務ID | verifier が確認した不足 | 前回の証拠が検出できなかった理由 | 修正した反例・観測点 | 同じ証明手段から再開・再確認した義務 |
+|----------|--------|--------------------------|----------------------------------|----------------------|----------------------------------------|
+| 該当なし | — | — | — | — | — |
+
+## 品質ゲート
+| 種別 | 結果 | 証拠 |
+|------|------|------|
+| ビルド | 成功 | `npm run build`（tsc / prompt-evals / copy-build-assets）成功 |
+| リント | 成功 | `npm run lint`（eslint src/）成功 |
+| 単体テスト | 成功 | `npm test` 全シャード成功（1862 / 1519 / 1499 / 1161 件、失敗なし） |
+| 対象テストファイル | 成功 | `npm test -- prReviewImageAttachments.integration.test.ts addTask.test.ts pipelineExecution.test.ts cli-routing-pr-resolve.test.ts` 全成功（83 + 29 件） |
+| 分類契約 | 成功 | `npm test -- src/__tests__/releaseVerificationWiring.test.ts` 成功（20 件） |
+| 統合テスト | 成功 | `HOME=/tmp/takt-bench-v3-home npm run test:it` 全成功（2357 件） |
+| mock E2E | 成功 | `npm run test:e2e:mock` 4シャード全成功（52+27+28+55 件、失敗なし） |
+| smoke E2E | 成功 | `npm run test:e2e:smoke` 成功（21 passed / 1 skipped、失敗なし） |
+
+## 未完了義務
+- なし（計画の修正単位 `F-PR-IMAGE-LIFECYCLE` の全完了義務を閉じた）。
+
+編集後セルフスキャン（必須）: 今回の編集で追加した import / 変数 / 分岐に未使用化・依存方向違反・共通責務の重複は確認されず、追加コードはすべて cleanup 呼び出しとそのテストに使用された。

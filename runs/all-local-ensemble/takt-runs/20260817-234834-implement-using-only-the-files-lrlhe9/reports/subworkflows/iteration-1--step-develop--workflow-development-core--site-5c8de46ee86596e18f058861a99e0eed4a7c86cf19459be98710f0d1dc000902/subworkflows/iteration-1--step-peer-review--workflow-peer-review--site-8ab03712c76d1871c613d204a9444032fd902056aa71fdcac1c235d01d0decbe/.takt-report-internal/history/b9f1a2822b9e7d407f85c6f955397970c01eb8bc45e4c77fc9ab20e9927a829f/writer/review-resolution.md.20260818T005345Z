@@ -1,0 +1,50 @@
+# レビュー指摘裁定
+
+## 結果: 修正対象なし
+
+## 裁定サマリー
+提出元は `iteration-2--step-reviewers` 配下の5レポート（coding / architecture / security / testing / ai-antipattern）。finding を提出したのは coding-review（1件: CODE-NEW-infra-github-imageDownload-L126）と architecture-review（1件: ARCH-001）。security / testing / ai-antipattern は APPROVE。
+
+2件の新規指摘はいずれも技術的観察としては妥当だが、修正権限の根拠（受入条件の直接違反・今回差分の退行・必須 consumer migration・採用済み family の閉鎖）を持たないため `out_of_scope` と裁定した。前回の唯一の actionable（`image-content-type-validation` / FG-IMG-001）は iteration-2 remediation で解消済み・verified であり、現在コードでも Content-Type 検証の実装を確認した。よって今回の修正対象 family は存在しない。
+
+## 要件の判定根拠
+| 対象 | 状態 | 根拠 |
+|------|------|------|
+| PR コメント内の画像 URL 検出（order.md:11,27-31） | 充足 | `src/infra/git/imageExtraction.ts:21` `extractImageUrls`。Markdown と HTML `<img>` の両対応、コードブロック除外 |
+| 画像ダウンロード（order.md:12） | 充足 | `src/infra/github/imageDownload.ts:64-84` `downloadImage`（`gh api --include` 経由、private repo 対応） |
+| attachments 保存（order.md:13） | 充足 | `downloadPrImages`（imageDownload.ts:100-152）が `StoredImageAttachment[]` を返し、`attachments.ts:88` `promoteTaskAttachments` が `attachments/` へコピー |
+| order.md 追記（order.md:14,16-20） | 充足 | `attachments.ts:35` `buildTaskOrderContent` が既存形式 `## 添付画像` / `- [Image #N]: ...` で追記 |
+| 本文の画像参照置換（order.md:22） | 充足 | `imageExtraction.ts:57` `replaceImageReferences`、`imageDownload.ts:147-149` で PR body・comments・reviews 全本文に適用 |
+| pipeline `--pr` 経路の画像参照（order.md:23） | 充足 | `steps.ts:228` で `downloadPrImages` 呼び出し、`steps.ts:360-372` で attachment 付き taskSpec 組み立て。`execute.ts:59` で `taskContent.attachments` を `runWorkflow` へ伝播 |
+| 形式検証（PNG/JPEG/GIF/WebP、order.md:35） | 充足 | `imageDownload.ts:38-60` `detectImageFormat` が magic bytes で判定 |
+| Content-Type 検証（order.md:36） | 解消済み | `imageDownload.ts:126-129` で Content-Type 不一致・欠落を throw。`SUPPORTED_CONTENT_TYPES`（L62）は4形式。`downloadImage`（L64-84）は `gh api --include` でヘッダを `\r\n\r\n` 分割し lower-case 正規化してパース。iteration-2 fix-verification.md で verified |
+| サイズ上限（order.md:37） | 充足 | `imageDownload.ts:18` `MAX_IMAGE_BYTES`（10MB）、`:134-136` で超過拒否 |
+| `gh api` 経由の取得（order.md:38） | 充足 | `imageDownload.ts:65` `execFileSync('gh', ['api', '--include', url])` |
+| 外部 URL の無制限取得防止（order.md:39） | 充足 | `imageDownload.ts:16,34-36` `isGitHubAttachmentUrl` が GitHub attachment URL のみ許可 |
+| 前段 finding TEST-001（`addTask --pr` 経路の添付伝播） | 解消済み | `src/__tests__/addTask.test.ts:391-415` に非空 attachments のテスト。iteration-1 fix-verification.md で verified。現在コード（add/index.ts:199,214-218）と経路一致 |
+| 前段 finding CODE-NEW-1/2/3（`image-download-safety`） | overreach | 前回裁定どおり反証済み。実在する欠陥の証拠なし。今回も再提出なし |
+
+## 再発台帳の引き継ぎ
+引き継ぎ元: `subworkflows/iteration-2--step-remediation--workflow-development-remediation-dynamic--site-867525fd280a81b847bb3dd91d14daab8bfa752e418753f6a77595994516852d/fix-verification.md`（数値 N=2 が最大の直近 remediation。再発記録の全行・全13項目を無変更で転記）
+
+| 修正単位 | family ID | 不変条件の名前 | 担当箇所 | 今回の検証回数 | 前回の検証回数 | 前回経路 | 今回経路 | 同一不変条件・再発判定 | 累積 `incomplete` 回数 | 別経路での再発が確認済みか | 強制点候補 | 記録の完全性 |
+|----------|-----------|------------------|----------|------------------|------------------|----------|----------|------------------------|-------------------------|--------------------|------------|--------------|
+| U1(前回): `addTask --pr` 経路の添付伝播テスト追加 | `attachment-propagation` | `addTask --pr` 経路の添付伝播 | `src/features/tasks/add/index.ts` の `addTask --pr` 経路（`downloadPrImages` の戻りを `saveTaskFile` へ渡す配線） | 1（初回） | なし | なし | なし | 維持（判定できない（初回）） | 0 | 未確認 | 該当なし | 完全 |
+| U1: 画像ダウンロード時の Content-Type ヘッダ検証の追加 | `image-content-type-validation` | 画像ダウンロード時の Content-Type 検証 | `src/infra/github/imageDownload.ts` の `downloadPrImages`（Content-Type 検証を追加すべき検証境界） | なし | なし | なし | なし | 維持 | 0 | 未確認 | 不要: 独立した局所欠陥かつ初回検証のため、既存の担当箇所（`downloadPrImages`）で直接修正。同一不変条件が別経路で2回以上壊れた場合は強制点の導入を再計画する | 完全 |
+
+- 引き継ぎ元の全13項目を無変更で転記した。今回の検証で両不変条件とも `incomplete` ではないため、検証回数・経路・回数・別経路での再発を更新せず、記録済みの値を維持した。
+
+## 修正対象 family
+（該当なし — 今回の裁定で actionable と判定した family は存在しない）
+
+## 指摘ごとの裁定
+| finding ID / 出典 | 技術的妥当性 | 裁定 | 対象 family | 同じ原因で変更される理由 | 合流根拠 | authorization basis | 初回に含まれなかった理由 | 根拠 |
+|-------------------|----------------|------|-------------|--------------------------|----------|---------------------|--------------------------|------|
+| CODE-NEW-infra-github-imageDownload-L126 / coding-review | 確認済み | out_of_scope | なし | 該当なし（修正対象外） | 該当なし | なし | 該当なし | `downloadPrImages`（imageDownload.ts:100-152）のループ内で `downloadImage`（`execFileSync('gh', ...)`、L65）と明示的 `throw`（L127-136）が発生し、呼び出し元 `addTask`（add/index.ts:199）と `resolveTaskContent`（steps.ts:228）は try-catch で囲んでいない。例外はトップレベル `src/app/cli/index.ts:55` の `.catch` で捕捉され `process.exit(1)` となるため「Unhandled Exception でクラッシュ」という表現は不正確だが、画像1枚の失敗で `takt add` / pipeline 全体が exit(1) で中断する影響は実在する。ただし order.md に画像1枚の失敗をスキップして継続する要件はなく、レビュアー自身も authorization basis を「該当なし」と記載。受入条件の直接違反・退行・必須 migration・採用済み family のいずれにも該当しないため修正権限なし |
+| ARCH-001 / architecture-review | 確認済み | out_of_scope | なし | 該当なし（修正対象外） | 該当なし | なし | 該当なし | `downloadPrImages` は `.takt/tmp/pr-images` を `fs.mkdirSync`（imageDownload.ts:106-107）で作成し `fs.writeFileSync`（L140）で書くが、この一時ディレクトリの削除処理はコード全体に存在しない（`pr-images` の `rmSync` は grep で該当なし）。`promoteTaskAttachments`（attachments.ts:88-108）は `tempPath` から `attachments/` へコピーするだけで元の一時ファイルは残るため、一時ファイルの蓄積は実在する。ただし order.md に一時ファイルのクリーンアップ要件はなく、レビュアー自身も authorization basis を「該当なし」と記載。アーキテクチャポリシーの資源所有権基準（last consumer より前に解放する REJECT）は「解放しない」ケースを直接対象にしておらず、権限根拠にならないため修正権限なし |
+| FG-IMG-001 / final-gate（前段） | 確認済み | 解消済み | `image-content-type-validation` | 該当なし（解消済み） | 該当なし | 元要件（order.md:36）の直接違反 | 該当なし | iteration-2 fix-verification.md で verified。`imageDownload.ts:126-129` の Content-Type 検証、`SUPPORTED_CONTENT_TYPES`（L62）、`gh api --include` によるヘッダ取得を現在コードで再確認。受入条件「Content-Type ヘッダが supported 形式に一致する画像を許可し、不一致・欠落を拒否する」を満たす |
+| TEST-001 / 前段 review | 確認済み | 解消済み | なし | 該当なし（解消済み） | 該当なし | 元要件（order.md:13-14） | 該当なし | `src/__tests__/addTask.test.ts:391-415` に非空 attachments のテスト。iteration-1 fix-verification.md で verified。現在コード（add/index.ts:199,214-218）と経路一致 |
+| CODE-NEW-1 / 2 / 3（`image-download-safety`）/ 前段 review | 反証済み | overreach | なし | 該当なし | 該当なし | なし | 該当なし | 前回裁定どおり反証済み。実在する欠陥の証拠なし。今回も再提出なし |
+
+## 未解決の前提
+- なし（競合する要求・計画・指摘はなく、再計画は不要。今回の2件は `out_of_scope` であり、修正対象 family は存在しない。最終判定は final-gate が行う）

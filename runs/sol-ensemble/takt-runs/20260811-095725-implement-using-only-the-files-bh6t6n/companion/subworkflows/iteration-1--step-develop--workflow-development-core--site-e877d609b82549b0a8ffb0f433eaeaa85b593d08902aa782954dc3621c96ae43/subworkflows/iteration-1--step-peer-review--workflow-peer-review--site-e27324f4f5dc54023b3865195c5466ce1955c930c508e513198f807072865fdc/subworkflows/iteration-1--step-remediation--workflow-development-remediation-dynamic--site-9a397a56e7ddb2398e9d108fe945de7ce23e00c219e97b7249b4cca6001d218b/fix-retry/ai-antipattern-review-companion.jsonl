@@ -1,0 +1,79 @@
+{"id":"ai-antipattern-review-companion-1","severity":"must_fix","file":"src/features/tasks/prReviewAttachments.ts","line":36,"finding":"引用ブロック内の fenced code を認識できません。`findFencedCodeRange` は行頭から空白3文字以内の fence しか受理しないため、追加された `> ~~~md` のテストでは fence 内の画像までダウンロード・置換され、期待値に反して失敗します。引用コンテナを含む実際の Markdown 構造としてリテラル範囲を判定する必要があります。","status":"open"}
+{"id":"ai-antipattern-review-companion-2","severity":"must_fix","file":"src/features/tasks/prReviewAttachments.ts","line":87,"finding":"エスケープされた ``\\` `` と `\\<!--` を実際の inline code／HTML comment の開始として扱っています。追加された2件の反例では画像がリテラル範囲に誤分類されてダウンロードされないため、テスト期待値と実装が矛盾します。開始記号が有効な Markdown delimiter かを、直前のバックスラッシュを含めて判定してください。","status":"open"}
+{"id":"ai-antipattern-review-companion-1","status":"resolved"}
+{"id":"ai-antipattern-review-companion-2","status":"resolved"}
+{"id":"ai-antipattern-review-companion-3","severity":"must_fix","file":"src/features/tasks/prReviewAttachments.ts","line":51,"finding":"fence 認識が block quote だけに個別対応され、list container 内の有効な fenced code（例: `- ```md` に続くインデント済み画像行）を認識できません。その画像はコード例であるにもかかわらずダウンロード・置換されます。前回不足の局所的なテスト追随になっているため、実際の Markdown container 構造に沿って fenced code 範囲を判定する必要があります。","status":"open"}
+{"id":"ai-antipattern-review-companion-4","severity":"must_fix","file":"src/features/tasks/prReviewAttachments.ts","line":139,"finding":"画像参照自体のエスケープを確認していません。`\\![alt](https://github.com/user-attachments/assets/id)` や `\\<img src=\"…\">` は Markdown 上のリテラル表記ですが、正規表現は `!` / `<` から一致してダウンロードし、バックスラッシュだけ残して置換します。delimiter と同様、画像開始記号が有効かを直前の連続バックスラッシュ数で判定してください。","status":"open"}
+{"id":"ai-antipattern-review-companion-1","status":"resolved"}
+{"id":"ai-antipattern-review-companion-2","status":"resolved"}
+{"id":"ai-antipattern-review-companion-3","status":"unresolved"}
+{"id":"ai-antipattern-review-companion-4","status":"resolved"}
+{"id":"ai-antipattern-review-companion-5","severity":"must_fix","file":"src/features/tasks/prReviewAttachments.ts","line":120,"finding":"バッククォート fence の開始行を、info string にバッククォートが含まれる場合も有効として扱っています。CommonMark ではその開始記号は fence にならないため、例えば `````md`invalid`` に続く通常の画像までリテラル範囲としてダウンロード対象外になります。開始行全体について有効な fence か検証する必要があります。","status":"open"}
+{"id":"ai-antipattern-review-companion-6","severity":"must_fix","file":"src/features/tasks/prReviewAttachments.ts","line":154,"finding":"一致する閉じ delimiter がないバッククォート run の内部を、次の走査で短い別 run として再解釈しています。本文中の3連バッククォートに対応する3連の閉じがなく、後方に2連だけがある場合、2文字目からの run と後方の2連が誤って code span になり、その間の有効な画像がダウンロードされません。Markdown delimiter run は途中から再走査せず、run 全体を単位として進める必要があります。","status":"open"}
+{"id":"ai-antipattern-review-companion-1","status":"resolved"}
+{"id":"ai-antipattern-review-companion-2","status":"resolved"}
+{"id":"ai-antipattern-review-companion-3","status":"unresolved"}
+{"id":"ai-antipattern-review-companion-4","status":"resolved"}
+{"id":"ai-antipattern-review-companion-5","status":"unresolved"}
+{"id":"ai-antipattern-review-companion-6","status":"unresolved"}
+{"id":"ai-antipattern-review-companion-1","status":"resolved"}
+{"id":"ai-antipattern-review-companion-2","status":"resolved"}
+{"id":"ai-antipattern-review-companion-3","status":"unresolved"}
+{"id":"ai-antipattern-review-companion-4","status":"resolved"}
+{"id":"ai-antipattern-review-companion-5","status":"resolved"}
+{"id":"ai-antipattern-review-companion-6","status":"resolved"}
+{"id":"ai-antipattern-review-companion-7","severity":"must_fix","file":"src/features/tasks/prReviewAttachments.ts","line":45,"finding":"list container を開始行だけから復元しているため、前行で開始した親 list のインデントを引き継げません。例えば `1.  outer` に続く `    - ```md` は有効なネスト list 内の fence ですが、list marker 前の4空白が `{0,3}` を超えるため認識されず、内部画像をダウンロード・置換します。単一階層だけでなく、先行行で確立した container context を含む実在経路を判定してください。","status":"open"}
+{"id":"ai-antipattern-review-companion-8","severity":"must_fix","file":"src/features/tasks/prReviewAttachments.ts","line":45,"finding":"ordered list marker を常に container とみなし、段落を中断できるか確認していません。段落直後の `2. ```md` は CommonMark では list/fence を開始しませんが、この実装は未閉鎖 fence として後続全体を literal 扱いし、有効な画像をダウンロードしません。ブロック状態を考慮せず行単位で container を推測する方式では、literal 範囲の偽陽性が残ります。","status":"open"}
+{"id":"ai-antipattern-review-companion-1","status":"resolved"}
+{"id":"ai-antipattern-review-companion-2","status":"resolved"}
+{"id":"ai-antipattern-review-companion-3","status":"resolved"}
+{"id":"ai-antipattern-review-companion-4","status":"resolved"}
+{"id":"ai-antipattern-review-companion-5","status":"resolved"}
+{"id":"ai-antipattern-review-companion-6","status":"resolved"}
+{"id":"ai-antipattern-review-companion-7","status":"unresolved"}
+{"id":"ai-antipattern-review-companion-8","status":"unresolved"}
+{"id":"ai-antipattern-review-companion-7","status":"unresolved"}
+{"id":"ai-antipattern-review-companion-8","status":"unresolved"}
+{"id":"ai-antipattern-review-companion-7","status":"unresolved"}
+{"id":"ai-antipattern-review-companion-8","status":"unresolved"}
+{"id":"ai-antipattern-review-companion-7","status":"unresolved"}
+{"id":"ai-antipattern-review-companion-8","status":"unresolved"}
+{"id":"ai-antipattern-review-companion-9","severity":"must_fix","file":"src/features/tasks/prReviewAttachments.ts","line":214,"finding":"block quote 内の fence 継続判定で、`>` のない空行を無条件に同じ container の継続として扱っています。例えば `> ```\\n\\n> ![visible](URL)\\n> ```` では、空行で最初の block quote と未閉鎖 fence が終了し、次の引用内画像は通常の画像ですが、現在の実装は後続の引用を同じ fence に含めてダウンロード対象外にします。空行を container 状態から独立して許可せず、block quote が終了・再開する境界を反映してください。","status":"open"}
+{"id":"ai-antipattern-review-companion-1","status":"resolved"}
+{"id":"ai-antipattern-review-companion-2","status":"resolved"}
+{"id":"ai-antipattern-review-companion-3","status":"resolved"}
+{"id":"ai-antipattern-review-companion-4","status":"resolved"}
+{"id":"ai-antipattern-review-companion-5","status":"resolved"}
+{"id":"ai-antipattern-review-companion-6","status":"resolved"}
+{"id":"ai-antipattern-review-companion-7","status":"unresolved"}
+{"id":"ai-antipattern-review-companion-8","status":"unresolved"}
+{"id":"ai-antipattern-review-companion-9","status":"resolved"}
+{"id":"ai-antipattern-review-companion-10","severity":"must_fix","file":"src/features/tasks/prReviewAttachments.ts","line":302,"finding":"Markdown の indented code block がリテラル範囲に含まれていません。例えば文書先頭の `    ![example](https://github.com/user-attachments/assets/id)` はコード例ですが、現在は画像としてダウンロード・置換されます。fenced code の個別反例だけでなく、実在する Markdown code block 全体を画像抽出対象から除外する必要があります。","status":"open"}
+{"id":"ai-antipattern-review-companion-1","status":"resolved"}
+{"id":"ai-antipattern-review-companion-2","status":"resolved"}
+{"id":"ai-antipattern-review-companion-3","status":"resolved"}
+{"id":"ai-antipattern-review-companion-4","status":"resolved"}
+{"id":"ai-antipattern-review-companion-5","status":"resolved"}
+{"id":"ai-antipattern-review-companion-6","status":"resolved"}
+{"id":"ai-antipattern-review-companion-7","status":"unresolved"}
+{"id":"ai-antipattern-review-companion-8","status":"unresolved"}
+{"id":"ai-antipattern-review-companion-9","status":"resolved"}
+{"id":"ai-antipattern-review-companion-10","status":"resolved"}
+{"id":"ai-antipattern-review-companion-7","status":"unresolved"}
+{"id":"ai-antipattern-review-companion-8","status":"unresolved"}
+{"id":"ai-antipattern-review-companion-7","status":"resolved"}
+{"id":"ai-antipattern-review-companion-8","status":"resolved"}
+{"id":"ai-antipattern-review-companion-10","status":"unresolved"}
+{"id":"ai-antipattern-review-companion-11","severity":"must_fix","file":"src/features/tasks/prReviewAttachments.ts","line":28,"finding":"list marker 後の空白が5文字以上ある場合を誤解釈します。CommonMark では `-     ![example](URL)` は1文字を marker padding、残り4文字を indented code として扱うため画像はリテラルですが、`LIST_ITEM_MARKER_PATTERN` が先頭4空白を spacing として消費し、通常画像としてダウンロード・置換します。list item 内の indented code family が未完了です。","status":"open"}
+{"id":"ai-antipattern-review-companion-10","status":"unresolved"}
+{"id":"ai-antipattern-review-companion-11","status":"unresolved"}
+{"id":"ai-antipattern-review-companion-12","severity":"must_fix","file":"src/features/tasks/prReviewAttachments.ts","line":289,"finding":"`findIndentedCodeRange` の `if` 条件で `!opensListItem` と `previousLine !== undefined` の間の論理演算子が欠落しており、TypeScriptとして構文解析できません。今回追加した indented code family の全経路だけでなくプロジェクトのビルド自体を停止させるため、条件を正しく接続したうえで型チェックと対象反例を再実行する必要があります。","status":"open"}
+{"id":"ai-antipattern-review-companion-10","status":"resolved"}
+{"id":"ai-antipattern-review-companion-11","status":"resolved"}
+{"id":"ai-antipattern-review-companion-12","status":"resolved"}
+{"id":"ai-antipattern-review-companion-13","severity":"must_fix","file":"src/features/tasks/prReviewAttachments.ts","line":284,"finding":"段落直後の4空白内に list marker がある場合を indented code と誤判定します。例えば `Paragraph\\n    -     ![visible](URL)` では、4空白で始まる行は indented code として段落を中断できず画像参照は有効ですが、`opensListItem` が leading indent 4 の marker まで無条件に受理するため段落継続チェックを迂回し、ダウンロード対象外になります。`opensListItem` は現在の container で実際に開始可能な marker（先行空白3以下など）に限定してください。","status":"open"}
+{"id":"ai-antipattern-review-companion-13","status":"resolved"}
+{"id":"ai-antipattern-review-companion-14","severity":"must_fix","file":"src/features/tasks/prReviewAttachments.ts","line":41,"finding":"list marker 後のタブを Markdown の空白として扱っていません。例えば `-\\t\\t![example](https://github.com/user-attachments/assets/id)` は、タブ展開後に list item 内の indented code となるため画像参照はリテラルですが、`LIST_ITEM_MARKER_PATTERN` がスペースだけを受理するためダウンロード・置換されます。list container／indented code family を CommonMark のタブ展開を含むインデント幅で判定してください。","status":"open"}
+{"id":"ai-antipattern-review-companion-14","status":"resolved"}
+{"id":"ai-antipattern-review-companion-15","severity":"must_fix","file":"src/features/tasks/prReviewAttachments.ts","line":233,"finding":"継承した list indent は表示列数ですが、`content.slice(inheritedListIndent)` で文字数として除去しています。例えば `-\\titem` に続く `\\t```md` は4列インデントされた有効な list 内 fence ですが、値4で「タブ＋バッククォート3個」を丸ごと削るため fence を認識できず、内部画像をダウンロード・置換します。追加された同一行の `-\\t\\t![...]` テストだけでは list 継続時のタブ経路を反証できません。既にある列幅対応の `stripIndentColumns` 相当で継承 indent を除去し、タブで継続する fenced/indented code 経路を検証してください。","status":"open"}
+{"id":"ai-antipattern-review-companion-15","status":"resolved"}

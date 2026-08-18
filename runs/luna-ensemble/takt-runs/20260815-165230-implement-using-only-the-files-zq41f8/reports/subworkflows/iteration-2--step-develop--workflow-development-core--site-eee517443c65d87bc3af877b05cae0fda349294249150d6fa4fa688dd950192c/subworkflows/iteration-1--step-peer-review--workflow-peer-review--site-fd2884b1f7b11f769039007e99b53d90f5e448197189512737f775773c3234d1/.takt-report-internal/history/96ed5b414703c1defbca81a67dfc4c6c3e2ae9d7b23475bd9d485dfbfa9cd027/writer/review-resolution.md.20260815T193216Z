@@ -1,0 +1,83 @@
+# レビュー指摘裁定
+
+## 結果: 修正対象あり
+
+## 裁定サマリー
+
+対象レポートは以下の6件です。
+
+- `ai-antipattern-review.md`
+- `architecture-review.md`
+- `backend-review.md`
+- `coding-review.md`
+- `security-review.md`
+- `testing-review.md`
+
+7件の修正対象 family、13件の重複指摘、1件の過剰要求を確定しました。修正対象 family は、API取得、参照順序、参照番号、metadata境界、temp lifecycle、取得スコープ、テスト分類です。
+
+## 要件の判定根拠
+
+| 対象 | 状態 | 根拠 |
+|------|------|------|
+| PR本文・通常コメント・review threadからの画像抽出 | 未充足 | `pr-images.ts:184-205`で抽出経路は存在するが、Markdown/HTML混在時の出現順が壊れる |
+| GitHub画像の認証付きダウンロード | 未充足 | `pr-images.ts:288-290`で完全なWeb URLを`gh api` endpointとして渡している |
+| Content-Type、magic bytes、サイズ検証 | 充足 | `pr-images.ts`の検証実装と`github-pr-images.test.ts`の検証結果で確認済み |
+| task attachmentへの保存と`order.md`追記 | 未充足 | attachment伝播は存在するが、参照順序・番号衝突・cleanupに未解決欠陥がある |
+| 元コメント本文の画像参照置換 | 未充足 | 混在記法の順序不一致と既存`[Image #N]`との衝突がある |
+| pipelineの`--pr`経路 | 未充足 | 通常の伝播経路はあるが、temp lifecycleとテスト分類が未充足 |
+| private repository画像の取得スコープ | 未充足 | `isAllowedGitHubAttachmentUrl()`が別repositoryのassetsを拒否しない |
+| 新規ロジックのテスト・品質ゲート | 未充足 | `releaseVerificationWiring.test.ts`が`pipelineExecution.test.ts`を未分類として検出している |
+| build・lint | 充足 | 各レビュー報告の実行証跡で成功済み |
+| 再発確認 | 未確認 | 先行remediation記録が存在しない |
+
+## 再発台帳の引き継ぎ
+
+引き継ぎ元: **先行 remediation なし**
+
+Report Directory直下に公開済みの `subworkflows/iteration-N--step-remediation-*/fix-verification.md` は存在せず、既存の `review-resolution.md` もありません。引き継ぐ不変条件行はないため、初期値への変換や合成行の作成は行いません。
+
+| 修正単位 | family ID | 不変条件の名前 | 担当箇所 | 今回の検証回数 | 前回の検証回数 | 前回経路 | 今回経路 | 同一不変条件・再発判定 | 累積 `incomplete` 回数 | 別経路での再発が確認済みか | 強制点候補 | 記録の完全性 |
+|----------|-----------|------------------|----------|------------------|------------------|----------|----------|------------------------|-------------------------|--------------------|------------|--------------|
+| 引き継ぎ行なし | — | — | — | — | — | — | — | — | — | — | — | 先行remediationなし |
+
+## 修正対象 family
+
+| family | 担当箇所 | 観測可能な不変条件 | 同じ原因で変更される理由 | finding ID / 出典 | 修正権限の根拠 | 根拠 | 問題 → 根本原因 | 追加した経路 | 関係する契約経路 | 受入条件 | 修正境界 |
+|--------|----------|----------------------|--------------------------|-------------------|----------------|------|-------------------|--------------|--------------------|----------|----------|
+| `F-PRIMG-DOWNLOAD-API` | `downloadGitHubPrImages()` | 許可された画像URLが実在する認証付き取得経路で画像ファイルになる | GitHub Web asset URLと`gh api` endpointを同じものとして扱っている | `AI-PRIMG-001` / `ai-antipattern-review.md` | 受入条件の直接違反 | `pr-images.ts:275-303`、特に`:288-290` | 完全URLを`gh api`に渡すため画像取得が失敗する | PR body/comments/reviews → URL抽出 → download → attachment | 生成 → URL検証 →取得 → Content-Type/magic/size検証 → temp file → add/routing/pipeline | PNG/JPEG/GIF/WebPが実取得され、検証済みbytesがattachmentとして利用できる | 取得方式の詳細設計、HTTP全般の抽象化、再試行戦略は対象外 |
+| `F-PRIMG-REFERENCE-ORDER` | `extractGitHubPrImageReferences()` / `replaceGitHubPrImageReferences()` | placeholder、filename、本文参照が本文中の画像出現順に対応する | MarkdownとHTMLを別々に抽出して連結している | `AI-PRIMG-003`、`ARCH-PRIMG-004`、`CODE-NEW-src-infra-github-pr-images.ts-L184`、`TEST-NEW-PRIMG-01-order` / 各レビュー | 受入条件の直接違反 | `pr-images.ts:184-205`、`:210-252` | HTMLが先に出てもMarkdown画像を先に採番する | raw PR body/comment/review → parser → placeholder置換 → task formatter → `order.md` | 生成 →抽出 → dedupe/順序正規化 →置換 → `formatPrReviewAsTask()` → `buildTaskOrderContent()` → order.md/manifest | 混在記法の双方で出現順、placeholder、filename、order.mdが一致する | Markdown parser全面刷新、非画像リンク、GitLab等の別providerは対象外 |
+| `F-PRIMG-REFERENCE-ALLOCATION` | `extractGitHubPrImageReferences()`の採番 | 新規画像のplaceholderが既存本文のplaceholderや同一attachment群と衝突しない | `references.length + 1`だけで採番している | `CODE-NEW-src-infra-github-pr-images.ts-L198`、`PRIMG-05-IMAGE-NUMBER-COLLISION` / `backend-review.md`, `coding-review.md` | 受入条件の直接違反 | `pr-images.ts:190-204`、既存`[Image #1]`との再現報告 | 既存本文の`[Image #1]`と新規画像が同じ参照名になる | PR body/comment/review → existing placeholder走査 →採番 → attachment manifest → task consumer | 既存placeholder検証 →採番 →本文置換 → attachment保存 →参照解決 | 既存本文と新規画像の参照が一意に解決する | 無関係な既存タスクの一般採番、全attachment機構の再設計は対象外 |
+| `F-PRIMG-FETCH-BOUNDARY` | `fetchPrReviewComments()` | 汎用PR metadata取得が画像download・本文置換というtask専用副作用を持たない | 既存の汎用fetch内へ画像task準備を直接追加している | `ARCH-PRIMG-002`、`CODE-NEW-src-infra-github-pr.ts-L464`、`PRIMG-07-SYSTEM-FETCH-SIDE-EFFECT` / 各レビュー | 必須consumer migration | `pr.ts:426-483`、`system-git-context.ts:72-77`、`DefaultSystemStepServices.ts:111-120` | system context/sync/enqueueでも画像取得が発生し、attachmentsなしで本文だけが置換される | `fetchPrReviewComments()` → system context / sync / enqueue / add / routing / pipeline | gh PR取得 → metadata変換 → 各consumer → `pr_context`/sync/enqueue/task | system系consumerは従来のmetadata本文を受け、画像downloadを発生させない。add/routing/pipelineだけは画像attachmentを受け取る | system APIの新機能追加、metadata consumer全体の再設計、別provider対応は対象外 |
+| `F-PRIMG-TEMP-LIFECYCLE` | `downloadGitHubPrImages()` / `cleanupGitHubPrAttachments()` | 成功・失敗・cancel・明示終了経路でtemp fileと親directoryが解放される | temp directoryの所有情報がcleanupへ伝わらず、`process.exit()`がfinallyを迂回する | `AI-PRIMG-002`、`ARCH-PRIMG-001`、`ARCH-PRIMG-003`、`CODE-NEW-src-infra-github-pr-images.ts-L311`、`PRIMG-06-PROCESS-EXIT-CLEANUP`、`PRIMG-06-TEMP-DIRECTORY-CLEANUP`、`SEC-PRIMG-002`、`TEST-NEW-PRIMG-06-cleanup` / 各レビュー | 受入条件の直接違反 | `pr-images.ts:283-324`、`routing.ts:317-347`、`pipeline/execute.ts:47-106` | fileだけ削除して親directoryを残し、`process.exit()`時はcleanup自体を実行しない | download → add/routing/pipeline → task copy → cleanup / explicit exit | temp生成 → attachment transfer → task保存・workflow実行 → success/failure/cancel/exit terminal | attachment fileと親directoryが各終端後に存在しない | `SIGKILL`対応、無関係なtemp resourceのjanitor、運用監視は対象外 |
+| `F-PRIMG-FETCH-SCOPE` | `isAllowedGitHubAttachmentUrl()`とPR repository context | PR本文が無関係なprivate repository資産を認証付き取得させない | host/pathのみを許可し、現在のPRとのrepository関連を検証していない | `SEC-PRIMG-001` / `security-review.md` | 受入条件の直接違反 | `pr-images.ts:116-139`、`pr.ts:406-436`。`other-private/repo/assets/...`を拒否する検証がない | 低信頼のPR本文から別private repository assetを取得可能な許可条件になっている | PR body/comments/reviews → URL抽出 → repository scope検証 → authenticated download → AI/task attachment | URL生成 → scope検証 →取得 →検証 → attachment → AI/task consumer | 現在のPRまたは検証可能なGitHub attachment関連性の範囲だけを認証取得する | GitHub外hostの一般対応、認証方式全体の変更、未検証の外部URL許可は対象外 |
+| `F-PRIMG-TEST-WIRING` | `pipelineExecution.test.ts`とtest classifier | 実filesystemを使うテストがunit gateに残らず正しいIT runnerへ接続される | 実`node:fs`を使う新規テストをunit分類ファイルへ追加している | `PRIMG-08-TEST-CLASSIFICATION` / `coding-review.md` | 受入条件の直接違反 | `pipelineExecution.test.ts:2-4,1321-1368`、`releaseVerificationWiring.test.ts`の分類失敗 | release verificationが同ファイルを未分類境界として検出する | test file → classifier → runner → release verification | 実filesystem test → integration classification → light/heavy runner → release gate | `releaseVerificationWiring.test.ts`が成功し、unit gateから実filesystem境界が除外される | テスト内容の全面拡張、全体E2E追加、別の未変更テストの分類変更は対象外 |
+
+## 指摘ごとの裁定
+
+| finding ID / 出典 | 技術的妥当性 | 裁定 | 対象 family | 同じ原因で変更される理由 | 合流根拠 | authorization basis | 初回に含まれなかった理由 | 根拠 |
+|-------------------|----------------|------|-------------|--------------------------|----------|---------------------|--------------------------|------|
+| `AI-PRIMG-001` / `ai-antipattern-review.md` | 確認済み | `actionable` | `F-PRIMG-DOWNLOAD-API` | — | `gh api`にWeb完全URLを渡す取得方式の欠陥 | `direct_acceptance_criterion_violation` | 該当なし | `pr-images.ts:288-290`の取得引数 |
+| `AI-PRIMG-002` / `ai-antipattern-review.md` | 確認済み | `actionable` | `F-PRIMG-TEMP-LIFECYCLE` | — | temp fileと親directoryの終端解放契約 | `direct_acceptance_criterion_violation` | 該当なし | `mkdtempSync()`とfile-only cleanup |
+| `AI-PRIMG-003` / `ai-antipattern-review.md` | 確認済み | `actionable` | `F-PRIMG-REFERENCE-ORDER` | — | Markdown/HTML混在時の採番順序欠陥 | `direct_acceptance_criterion_violation` | 該当なし | `pr-images.ts:192-195` |
+| `ARCH-PRIMG-001` / `architecture-review.md` | 確認済み | `duplicate` | `F-PRIMG-TEMP-LIFECYCLE` | 親directory cleanupと同じ | `AI-PRIMG-002`と同じ`mkdtempSync()`所有欠落 | `direct_acceptance_criterion_violation` | 該当なし | cleanup後も親directoryが残るとの再現報告 |
+| `ARCH-PRIMG-002` / `architecture-review.md` | 確認済み | `actionable` | `F-PRIMG-FETCH-BOUNDARY` | — | 汎用fetchとtask準備の責務境界欠陥 | `required_consumer_migration` | 該当なし | system metadata consumerへdownload・置換が到達 |
+| `ARCH-PRIMG-003` / `architecture-review.md` | 確認済み | `duplicate` | `F-PRIMG-TEMP-LIFECYCLE` | 終了時cleanupと同じ | `AI-PRIMG-002`と同じlifecycle欠陥 | `direct_acceptance_criterion_violation` | 該当なし | `routing.ts:319-321`の`process.exit(1)` |
+| `ARCH-PRIMG-004` / `architecture-review.md` | 確認済み | `duplicate` | `F-PRIMG-REFERENCE-ORDER` | 参照順序と同じ | `AI-PRIMG-003`と同じ抽出順序欠陥 | `direct_acceptance_criterion_violation` | 該当なし | HTML先行入力でMarkdownが`Image #1`になる |
+| `CODE-NEW-src-infra-github-pr.ts-L464` / `backend-review.md` | 確認済み | `duplicate` | `F-PRIMG-FETCH-BOUNDARY` | 汎用fetch副作用と同じ | `ARCH-PRIMG-002`と同じ`fetchPrReviewComments()`経路 | `required_consumer_migration` | 該当なし | `pr.ts:464-481` |
+| `CODE-NEW-src-infra-github-pr-images.ts-L311` / `backend-review.md` | 確認済み | `duplicate` | `F-PRIMG-TEMP-LIFECYCLE` | temp cleanupと同じ | `AI-PRIMG-002`のfile/dir cleanup欠陥へ統合 | `direct_acceptance_criterion_violation` | 該当なし | `pr-images.ts:311-324`とroutingのexit経路 |
+| `CODE-NEW-src-infra-github-pr-images.ts-L198` / `backend-review.md` | 確認済み | `actionable` | `F-PRIMG-REFERENCE-ALLOCATION` | — | 既存placeholderを考慮しない採番欠陥 | `direct_acceptance_criterion_violation` | 該当なし | `references.length + 1`採番と既存`[Image #1]`再現 |
+| `CODE-NEW-src-infra-github-pr-images.ts-L184` / `backend-review.md` | 確認済み | `duplicate` | `F-PRIMG-REFERENCE-ORDER` | 抽出順序欠陥と同じ | `AI-PRIMG-003`と同じregex連結処理 | `direct_acceptance_criterion_violation` | 該当なし | `pr-images.ts:184-205` |
+| `PRIMG-07-SYSTEM-FETCH-SIDE-EFFECT` / `coding-review.md` | 確認済み | `duplicate` | `F-PRIMG-FETCH-BOUNDARY` | metadata境界副作用と同じ | `ARCH-PRIMG-002`へ統合 | `required_consumer_migration` | 該当なし | system context/sync/enqueueへの影響 |
+| `PRIMG-06-PROCESS-EXIT-CLEANUP` / `coding-review.md` | 確認済み | `duplicate` | `F-PRIMG-TEMP-LIFECYCLE` | exit時cleanupと同じ | `ARCH-PRIMG-003`へ統合 | `direct_acceptance_criterion_violation` | 該当なし | `routing.ts:145-147,319-321` |
+| `PRIMG-06-TEMP-DIRECTORY-CLEANUP` / `coding-review.md` | 確認済み | `duplicate` | `F-PRIMG-TEMP-LIFECYCLE` | 親directory残留と同じ | `ARCH-PRIMG-001`へ統合 | `direct_acceptance_criterion_violation` | 該当なし | `pr-images.ts:311-324` |
+| `PRIMG-05-IMAGE-NUMBER-COLLISION` / `coding-review.md` | 確認済み | `duplicate` | `F-PRIMG-REFERENCE-ALLOCATION` | placeholder衝突と同じ | `CODE-NEW-src-infra-github-pr-images.ts-L198`へ統合 | `direct_acceptance_criterion_violation` | 該当なし | 既存`[Image #1]`との衝突再現 |
+| `PRIMG-08-TEST-CLASSIFICATION` / `coding-review.md` | 確認済み | `actionable` | `F-PRIMG-TEST-WIRING` | — | 実filesystem testの分類契約違反 | `direct_acceptance_criterion_violation` | 該当なし | `releaseVerificationWiring.test.ts`が分類違反を検出 |
+| `SEC-PRIMG-001` / `security-review.md` | 確認済み | `actionable` | `F-PRIMG-FETCH-SCOPE` | — | 認証取得前のrepository scope検証欠落 | `direct_acceptance_criterion_violation` | 該当なし | `isAllowedGitHubAttachmentUrl()`が別repo assetsを許可 |
+| `SEC-PRIMG-002` / `security-review.md` | 確認済み | `duplicate` | `F-PRIMG-TEMP-LIFECYCLE` | temp残留と同じ | lifecycle欠陥を`AI-PRIMG-002`へ統合。metadata境界部分は独立familyを追加しない | `direct_acceptance_criterion_violation` | 該当なし | system経路のcleanupなし、親directory残留 |
+| `TEST-NEW-PRIMG-01-order` / `testing-review.md` | 確認済み | `duplicate` | `F-PRIMG-REFERENCE-ORDER` | 参照順序欠陥と同じ | `AI-PRIMG-003`へ統合 | `direct_acceptance_criterion_violation` | 該当なし | 混在記法ケースが未検証で、実装も順序を壊す |
+| `TEST-NEW-PRIMG-02-download-content` / `testing-review.md` | 懸念は確認済みだが欠陥は未確認 | `overreach` | なし | — | bytes検証・途中失敗テストの追加要求であり、現行コードの実装欠陥または元要件違反の証拠にならない | なし | 該当なし | `pr-images.ts`はresponse bodyを書き込み、既存テストも新規ロジックを実行している。追加テストは計画対象外 |
+| `TEST-NEW-PRIMG-06-cleanup` / `testing-review.md` | 確認済み | `duplicate` | `F-PRIMG-TEMP-LIFECYCLE` | cleanup欠陥と同じ | `AI-PRIMG-002`へ統合 | `direct_acceptance_criterion_violation` | 該当なし | 親directory未検証だけでなく、実装上も親directoryを削除していない |
+
+## 未解決の前提
+
+なし。競合する要求・計画・指摘は確認されず、7つの修正対象 familyを現行前提のまま確定できます。

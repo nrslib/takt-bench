@@ -1,0 +1,68 @@
+{"id":"ai-antipattern-review-companion-1","severity":"should_fix","file":"src/__tests__/github-pr-image-download.test.ts","line":111,"finding":"「streamed body」の上限検証が、全データを事前に `Buffer.alloc` して `Response` へ渡しているため、実際には逐次読み込み時の上限停止を検証していません。実装が `response.arrayBuffer()` で無制限に全本文をメモリへ読み込んだ後にサイズ判定してもこのテストは成功します。複数チャンクを返す `ReadableStream` を使い、上限超過時に後続チャンクを読まず reader を中止することまで直接検証してください。","status":"open"}
+{"id":"ai-antipattern-review-companion-1","status":"unresolved"}
+{"id":"ai-antipattern-review-companion-2","severity":"must_fix","file":"src/infra/github/prImageDownload.ts","line":2,"finding":"infra 層が `features/interactive` の `MAX_INLINE_IMAGE_BYTES` を import しており、下位層から上位 feature への逆向き依存を新設しています。画像サイズ制約を共有境界へ置くなど、GitHub downloader が feature 実装を参照しない構造にしてください。","status":"open"}
+{"id":"ai-antipattern-review-companion-3","severity":"must_fix","file":"src/infra/github/prImageDownload.ts","line":113,"finding":"`Content-Length` が上限超過の場合、`validateContentLength` が例外を投げるだけで、開始済みの fetch や response body を abort/cancel しません。サイズ制限による拒否後も本文受信と接続が残り得るため、この経路でも確実に中止し、その振る舞いを直接検証してください。","status":"open"}
+{"id":"ai-antipattern-review-companion-4","severity":"should_fix","file":"src/features/tasks/prReviewAttachments.ts","line":2,"finding":"tasks feature が `features/interactive/imageAttachments` のセッション用ストアへ直接依存しています。今回の添付処理は pipeline と保存タスクからも利用されるため interactive 固有責務ではなく、feature 間の横断依存と所有者の不一致になっています。両経路が依存できる既存の共有境界へ配置してください。","status":"open"}
+{"id":"ai-antipattern-review-companion-5","severity":"nit","file":"src/features/tasks/prReviewAttachments.ts","line":14,"finding":"`ImageReferenceMatch.source` は生成されるだけで一度も参照されていないデッドフィールドです。対応する `match[0]` の代入とともに削除してください。","status":"open"}
+{"id":"ai-antipattern-review-companion-1","status":"unresolved"}
+{"id":"ai-antipattern-review-companion-2","status":"resolved"}
+{"id":"ai-antipattern-review-companion-3","status":"unresolved"}
+{"id":"ai-antipattern-review-companion-4","status":"unresolved"}
+{"id":"ai-antipattern-review-companion-5","status":"resolved"}
+{"id":"ai-antipattern-review-companion-1","status":"unresolved"}
+{"id":"ai-antipattern-review-companion-2","status":"resolved"}
+{"id":"ai-antipattern-review-companion-3","status":"unresolved"}
+{"id":"ai-antipattern-review-companion-4","status":"unresolved"}
+{"id":"ai-antipattern-review-companion-5","status":"resolved"}
+{"id":"ai-antipattern-review-companion-1","status":"unresolved"}
+{"id":"ai-antipattern-review-companion-2","status":"resolved"}
+{"id":"ai-antipattern-review-companion-3","status":"unresolved"}
+{"id":"ai-antipattern-review-companion-4","status":"resolved"}
+{"id":"ai-antipattern-review-companion-5","status":"resolved"}
+{"id":"ai-antipattern-review-companion-6","severity":"should_fix","file":"src/features/tasks/add/index.ts","line":32,"finding":"tasks feature が添付クリーンアップのために `features/interactive/imageAttachments` を新たに参照しており、共有ストアへ移した後も feature 間の逆向き依存が別経路に残っています。汎用の cleanup owner/helper を共有境界に置き、tasks から interactive への依存を除いてください。","status":"open"}
+{"id":"ai-antipattern-review-companion-7","severity":"should_fix","file":"src/infra/github/prImageDownload.ts","line":108,"finding":"HTTP エラーレスポンスでは本文を cancel/abort せず直ちに例外を投げるため、認証付きダウンロードの接続と未読 body が残り得ます。サイズ超過経路と同様に、拒否するレスポンス本文を確実に中止し、その副作用をテストで直接検証してください。","status":"open"}
+{"id":"ai-antipattern-review-companion-1","status":"unresolved"}
+{"id":"ai-antipattern-review-companion-2","status":"resolved"}
+{"id":"ai-antipattern-review-companion-3","status":"unresolved"}
+{"id":"ai-antipattern-review-companion-4","status":"resolved"}
+{"id":"ai-antipattern-review-companion-5","status":"resolved"}
+{"id":"ai-antipattern-review-companion-6","status":"unresolved"}
+{"id":"ai-antipattern-review-companion-7","status":"unresolved"}
+{"id":"ai-antipattern-review-companion-8","severity":"should_fix","file":"src/features/tasks/prReviewAttachments.ts","line":55,"finding":"ダウンロード失敗時に `attachmentStore.cleanup()` を直接実行しているため、cleanup 自体が失敗すると本来のダウンロード例外が上書きされます。同じ差分で追加された例外を握って記録する `cleanupImageAttachmentStore` をこの経路でも使用し、元の失敗を維持してください。cleanup 失敗時にもダウンロード例外が返るテストが必要です。","status":"open"}
+{"id":"ai-antipattern-review-companion-1","status":"resolved"}
+{"id":"ai-antipattern-review-companion-2","status":"resolved"}
+{"id":"ai-antipattern-review-companion-3","status":"resolved"}
+{"id":"ai-antipattern-review-companion-4","status":"resolved"}
+{"id":"ai-antipattern-review-companion-5","status":"resolved"}
+{"id":"ai-antipattern-review-companion-6","status":"unresolved"}
+{"id":"ai-antipattern-review-companion-7","status":"unresolved"}
+{"id":"ai-antipattern-review-companion-8","status":"unresolved"}
+{"id":"ai-antipattern-review-companion-9","severity":"should_fix","file":"src/infra/github/prImageDownload.ts","line":32,"finding":"不正または安全な整数でない `Content-Length` を検出した経路は、そのまま例外を投げており、開始済みの認証付きレスポンスを abort/cancel していません。上限超過時だけに中止処理を限定せず、ヘッダー検証で拒否する全経路で本文を中止し、不正な `Content-Length` でも cancel されることを直接テストしてください。","status":"open"}
+{"id":"ai-antipattern-review-companion-1","status":"resolved"}
+{"id":"ai-antipattern-review-companion-2","status":"resolved"}
+{"id":"ai-antipattern-review-companion-3","status":"resolved"}
+{"id":"ai-antipattern-review-companion-4","status":"resolved"}
+{"id":"ai-antipattern-review-companion-5","status":"resolved"}
+{"id":"ai-antipattern-review-companion-6","status":"resolved"}
+{"id":"ai-antipattern-review-companion-7","status":"resolved"}
+{"id":"ai-antipattern-review-companion-8","status":"resolved"}
+{"id":"ai-antipattern-review-companion-9","status":"unresolved"}
+{"id":"ai-antipattern-review-companion-10","severity":"should_fix","file":"src/infra/github/prImageDownload.ts","line":15,"finding":"`abortResponse` が `response.body.cancel()` の失敗をそのまま伝播するため、cancel が reject すると呼び出し側の HTTP エラーや Content-Length 検証エラーが投げられず、後処理の例外に上書きされます。`readImageBody` の上限超過時の `reader.cancel()` も同様です。cancel を best-effort にしつつ必ず abort し、元の制御されたエラーを維持してください。cancel 自体が失敗するケースのテストも必要です。","status":"open"}
+{"id":"ai-antipattern-review-companion-9","status":"unresolved"}
+{"id":"ai-antipattern-review-companion-10","status":"unresolved"}
+{"id":"ai-antipattern-review-companion-11","severity":"should_fix","file":"src/__tests__/prReviewAttachments.test.ts","line":20,"finding":"cleanup 失敗時に元のダウンロード例外を維持するテストが、本番の `cleanupImageAttachmentStore` をモック内で再実装しています。このテストダブル自身が例外を握りつぶすため、本番 helper が cleanup 例外を伝播する実装へ退行しても成功し、修正した契約を証明できません。実際の helper を使用するか、ストア生成だけを差し替えて本番 cleanup 境界を通してください。","status":"open"}
+{"id":"ai-antipattern-review-companion-9","status":"resolved"}
+{"id":"ai-antipattern-review-companion-10","status":"resolved"}
+{"id":"ai-antipattern-review-companion-11","status":"unresolved"}
+{"id":"ai-antipattern-review-companion-11","status":"resolved"}
+{"id":"ai-antipattern-review-companion-1","status":"resolved"}
+{"id":"ai-antipattern-review-companion-2","status":"resolved"}
+{"id":"ai-antipattern-review-companion-3","status":"resolved"}
+{"id":"ai-antipattern-review-companion-4","status":"resolved"}
+{"id":"ai-antipattern-review-companion-5","status":"resolved"}
+{"id":"ai-antipattern-review-companion-6","status":"resolved"}
+{"id":"ai-antipattern-review-companion-7","status":"resolved"}
+{"id":"ai-antipattern-review-companion-8","status":"resolved"}
+{"id":"ai-antipattern-review-companion-9","status":"resolved"}
+{"id":"ai-antipattern-review-companion-10","status":"resolved"}
+{"id":"ai-antipattern-review-companion-11","status":"resolved"}

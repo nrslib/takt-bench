@@ -1,0 +1,2 @@
+{"id":"ai-antipattern-review-companion-1","severity":"should_fix","file":"src/app/cli/routing-inputs.ts","line":73,"finding":"PR画像の保存先・GitHub認証コンテキストに必須の `cwd` を、任意引数のまま `cwd ?? process.cwd()` で補っています。差分内の実運用呼び出し元は既に `resolvedCwd` を渡すよう移行されているため、この省略経路は不要な互換フォールバックです。将来の呼び出し元が省略すると、選択済みプロジェクトではなく起動ディレクトリを使って認証・一時処理を行います。`cwd` を必須にして、全呼び出し元から明示的に渡してください。","status":"open"}
+{"id":"ai-antipattern-review-companion-1","status":"resolved"}

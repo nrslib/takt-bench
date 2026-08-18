@@ -1,0 +1,54 @@
+# 修正完了検証
+
+## 結果: incomplete
+
+## サマリー
+
+実装は、PR attachment store取得直後の同期exit cleanup登録、外側`finally`からの終了関数呼び出し、一回性、実child process終了後の画像削除を満たしている。対象テスト4件もすべて成功した。
+
+ただし、3つのhard-exit routingテストは`process.exit()`モックが最後に例外を投げ、assertionを外側`finally`実行後に行う。このため、旧経路である「生のcleanup関数を外側`finally`だけで呼ぶ実装」へ戻っても合格でき、計画が要求した「exit handler実行時点でcleanup済み」という観測点を持たない。正常終了・取消時も、routing完了後のlistener不存在を直接観測していない。
+
+計画は有効であり、実装不足ではなく回帰証拠の不足であるため`incomplete`と判定する。
+
+## 修正単位の整合性
+
+| 修正単位 | 対象 finding | 前提・方法・証拠能力の整合性 | 判定 |
+|----------|--------------|------------------------------|------|
+| `pr-attachment-cleanup-hard-exit` | `AI-NEW-pr-attachment-cleanup-hard-exit-L307` | 同期`exit` listenerと通常`finally`で一回性cleanupを共有する方法は、既存の終了コード・エラー契約を維持しつつ3経路を保護できる。現在の実装もこの方法に沿う。一方、routing回帰テストの観測時点が計画の要求より弱く、旧経路への退行を検出できない | 適合。ただし実装報告の証拠不足 |
+
+## 完了義務の独立検証
+
+| 修正単位 | 義務ID | 対象 finding | 不変条件と対象経路 | 独立に用いた反例・観測点 | 観測結果 | 証拠 | 判定 |
+|----------|--------|--------------|--------------------|----------------------------|----------|------|------|
+| `pr-attachment-cleanup-hard-exit` | `PACH-01` | `AI-NEW-pr-attachment-cleanup-hard-exit-L307` | 実process終了時に同期cleanupを完了する | 子processを終了コード23で終了させ、親から画像とsession directoryを確認 | 成立 | `it-pr-attachment-process-exit-cleanup.test.ts`で両方の不存在を確認 | 完了 |
+| `pr-attachment-cleanup-hard-exit` | `PACH-02` | 同上 | store取得直後、base branch解決などより前にcleanup境界を登録する | 不正base branchへ進むコード順を追跡 | 成立 | `routing.ts:124-131`で`resolvePrInput()`直後の登録を確認 | 完了 |
+| `pr-attachment-cleanup-hard-exit` | `PACH-03` | 同上 | workflow失敗の`process.exit(1)`前に解放する | `selectAndExecuteTask()`から`process.exit(1)`を呼ぶroutingテスト | 現行実装では成立するが、テストの観測点が不十分 | `cli-routing-pr-resolve.test.ts:433-459`のcleanup assertionは例外後 | 未完了 |
+| `pr-attachment-cleanup-hard-exit` | `PACH-04` | 同上 | PR context検証失敗の`process.exit(1)`前に解放する | `baseRefName: invalid..base`で失敗させるroutingテスト | 現行実装では成立するが、テストの観測点が不十分 | `cli-routing-pr-resolve.test.ts:461-482`のcleanup assertionは例外後 | 未完了 |
+| `pr-attachment-cleanup-hard-exit` | `PACH-05` | 同上 | head branch欠落の`process.exit(1)`前に解放する | head branchなしで`save_task`を選択 | 現行実装では成立するが、テストの観測点が不十分 | `cli-routing-pr-resolve.test.ts:532-557`のcleanup assertionは例外後 | 未完了 |
+| `pr-attachment-cleanup-hard-exit` | `PACH-06` | 同上 | 正常完了・取消・通常例外で解放し、listenerを残さない | 正常実行、workflow選択取消、外側`finally`の例外経路を追跡 | cleanupは成立。routing利用後のlistener不存在は直接未観測 | `routing.ts:121-348`、routing成功・取消テスト、helper unit | 未完了 |
+| `pr-attachment-cleanup-hard-exit` | `PACH-07` | 同上 | exit handlerと`finally`が競合してもcleanupは一度だけ | exit listener実行後に終了関数を再呼び出す | 成立 | `processExitCleanup.test.ts`でcleanup 1回を確認 | 完了 |
+| `pr-attachment-cleanup-hard-exit` | `PACH-08` | 同上 | 生のcleanupを外側`finally`だけで呼ぶ旧経路を残さない | 旧変数名と新helper利用箇所を検索 | 成立 | `cleanupSourceAttachments`なし。`finishSourceAttachmentsCleanup`が登録結果を保持し、外側`finally`で呼ばれる | 完了 |
+| `pr-attachment-cleanup-hard-exit` | `PACH-09` | 同上 | attachment伝播、終了コード、既存エラー表示を維持する | execute/save_task成功と3失敗経路の引数・ログ・終了コードを確認 | 成立 | routingテスト30件成功。PR検証・head欠落の既存文言と終了コード1を確認 | 完了 |
+
+## 不成立・未確認事項
+
+| 修正単位 | 義務ID | 種別 | 根拠 | 修正報告の証拠が検出できなかった理由 | 同じ検出パターンで再監査した範囲 | 必要な対応 |
+|----------|--------|------|------|----------------------------------------|----------------------------------|--------------|
+| `pr-attachment-cleanup-hard-exit` | `PACH-03`、`PACH-04`、`PACH-05` | 証拠不足 | `mockHardProcessExit()`は新規exit listenerを呼んだ後に例外を投げる。各テストは`executeDefaultAction()`のreject後にcleanup回数を確認する | 例外により外側`finally`が実行されるため、生のcleanup関数を外側`finally`だけで呼ぶ旧実装でも同じassertionを満たせる。cleanupがexit handler内で完了した時点を観測していない | workflow失敗、PR context検証失敗、head branch欠落の全3経路を同じ条件で確認し、すべて同じ不足を確認 | `mockHardProcessExit()`へ終了直前の観測callbackを渡すなどし、新規exit listener実行後・例外送出前にcleanup済みであることを3経路すべてでassertする |
+| `pr-attachment-cleanup-hard-exit` | `PACH-06` | 証拠不足 | 正常実行・取消テストはcleanup回数のみを確認し、routing実行前後のexit listener集合を比較していない | helper unitは終了関数単体のlistener解除を証明するが、routingが通常完了時にその終了関数を使用する契約の退行を検出しない。生のcleanupを直接呼ぶ旧経路でもroutingテストとhelper unitが個別に成功できる | 正常実行、save_task成功、workflow選択取消、および外側`finally`の通常例外経路を追跡 | 少なくとも正常完了・取消について、実行前後の`process.rawListeners('exit')`が一致することを確認する。併せてPR source取得後の通常例外でcleanup一回とlistener解除を確認する |
+
+## 環境要因により実証できない後続確認（判定非ブロッキング）
+
+| 対象 | 環境要因 | リポジトリ内で解消不能な根拠 | 現在確認した代替証拠 | 後続確認 |
+|------|----------|------------------------------|--------------------------|----------|
+| なし | なし | なし | Node child processと一時filesystemを現在の環境で利用可能 | なし |
+
+## 実行証跡
+
+| 対象 | 方法 | 結果 |
+|------|------|------|
+| cleanup登録・一回性・listener解除 | `npm test -- src/__tests__/processExitCleanup.test.ts` | 成功、2件 |
+| 3つのhard-exit経路、成功・取消、既存出力契約 | `npm test -- src/__tests__/cli-routing-pr-resolve.test.ts` | 成功、30件。ただし上記の観測点不足あり |
+| 実child process終了後の画像・session directory不存在 | `npm test -- src/__tests__/it-pr-attachment-process-exit-cleanup.test.ts` | 成功、1件 |
+| heavy IT分類・runner配線 | `npm test -- src/__tests__/releaseVerificationWiring.test.ts` | 成功、19件 |
+| 差分形式 | `git diff --check` | 成功 |

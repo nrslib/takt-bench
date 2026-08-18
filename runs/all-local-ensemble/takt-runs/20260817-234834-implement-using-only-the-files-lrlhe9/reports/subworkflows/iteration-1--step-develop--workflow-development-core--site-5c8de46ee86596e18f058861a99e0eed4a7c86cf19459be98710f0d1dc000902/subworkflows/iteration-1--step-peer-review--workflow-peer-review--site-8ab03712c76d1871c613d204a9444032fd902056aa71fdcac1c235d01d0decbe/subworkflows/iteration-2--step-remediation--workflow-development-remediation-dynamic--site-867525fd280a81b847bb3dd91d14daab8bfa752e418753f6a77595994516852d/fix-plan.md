@@ -1,0 +1,47 @@
+# 修正計画
+
+## 結果: 修正計画確定 / タスク全体の再計画が必要
+
+## 指摘カバレッジ
+| finding ID / 出典 | 修正権限の根拠 | 根拠 | 修正単位 / 後続確認 | 問題 → 直接原因 → 根本原因 | 原因を確認した根拠 / 確認して否定した別の原因 | 分類 | 受入条件・修正境界 |
+|-------------------|----------------|------|----------------------|-----------------------------|-------------------------------|------|----------------------|
+| FG-IMG-1 / FG-IMG-001（final-gate、review-resolution.md） | 元要件（order.md:36）の直接違反 | review-resolution.md「修正対象 family」: order.md:36「Content-Type と magic bytes を検証する」。`src/infra/github/imageDownload.ts:38-60` の `detectImageFormat` は magic bytes のみで Content-Type ヘッダ検証なし（grep で確認済み） | U1: 画像ダウンロード時の Content-Type ヘッダ検証の追加 | 問題: Content-Type ヘッダを検証しないため、形式不一致の画像を magic bytes のみで受け入れる。直接原因: `downloadImage`（imageDownload.ts:62-68）が `gh api` を `encoding: null` で生バイトとして受け、Content-Type ヘッダを取得・検証していない。根本原因: 仕様要求（order.md:36 の Content-Type 検証）→ 実装は magic bytes 検証のみで Content-Type 検証を実装していない → Content-Type 検証が未接続の検証境界として欠落 | 原因を確認した根拠: `imageDownload.ts` 全文（L1-133）を読み、`content-type` / `headers` 検索で該当なしを確認。`gh api` は `-i/--include` フラグでヘッダを出力に含める仕様（gh CLI 公式マニュアルで確認）。否定した別の原因: 形式検証自体の欠落ではない（magic bytes は実装済み）。`gh api` の呼び方の問題ではない（private repo 取得は成立）。配線の問題ではない（`downloadPrImages` は add / pipeline 両経路で正しく呼ばれている） | 局所 | 受入条件: ダウンロードした画像の HTTP Content-Type ヘッダが supported 形式（PNG/JPEG/GIF/WebP）に一致する場合のみ受理し、不一致・欠落を拒否（throw）する。修正境界: `src/infra/github/imageDownload.ts` 内の `downloadImage` / `downloadPrImages` と、`src/__tests__/imageDownload.test.ts` のテスト更新のみ。外部契約・他経路（`add/index.ts`、`steps.ts`、`execute.ts`、`imageExtraction.ts`、`attachments.ts`、`git-cwd-propagation.test.ts`、`pipelineExecution.test.ts`、`addTask.test.ts`）の変更なし |
+
+## 不変条件台帳
+引き継ぎ元: `../iteration-1--step-peer-review--workflow-peer-review--site-8ab03712c76d1871c613d204a9444032fd902056aa71fdcac1c235d01d0decbe/review-resolution.md`（同一 iteration-2 remediation ディレクトリ内に先行 fix-verification が 0 件のため review-resolution を使用。review-resolution.md の「再発台帳の引き継ぎ」に記録済みの行を無変更で転記）
+
+### 引き継ぎ元からの行
+| 修正単位 | family ID | 不変条件の名前 | 担当箇所 | 今回の検証回数 | 前回の検証回数 | 前回経路 | 今回経路 | 同一不変条件・再発判定 | 累積 `incomplete` 回数 | 別経路での再発が確認済みか | 強制点候補 | 記録の完全性 |
+|----------|-----------|------------------|---------------------|----------------------------|----------------------------|----------|----------|------------------------|-------------------------|-----------|------------|--------------|
+| U1(前回): `addTask --pr` 経路の添付伝播テスト追加 | `attachment-propagation` | `addTask --pr` 経路の添付伝播 | `src/features/tasks/add/index.ts` の `addTask --pr` 経路（`downloadPrImages` の戻りを `saveTaskFile` へ渡す配線） | 1（初回） | なし | なし | なし | 維持（判定できない（初回）） | 0 | 未確認 | 該当なし | 完全 |
+
+### 新規・現在の計画行
+| 修正単位 | family ID | 不変条件の名前 | 観測可能な不変条件 | 担当箇所 | 分類 | 別経路での再発が確認済みか | 強制点 |
+|----------|-----------|------------------|----------------------|----------|------|------------------------------|--------|
+| U1: 画像ダウンロード時の Content-Type ヘッダ検証の追加 | `image-content-type-validation` | 画像ダウンロード時の Content-Type 検証 | ダウンロードした画像の HTTP Content-Type ヘッダが supported 形式（`image/png` / `image/jpeg` / `image/gif` / `image/webp`）のいずれかに一致する場合のみ受理し、不一致・欠落を拒否（throw）する | `src/infra/github/imageDownload.ts` の `downloadPrImages`（Content-Type 検証を追加すべき検証境界） | 局所 | 未確認 | 不要: 独立した局所欠陥かつ初回検証のため、既存の担当箇所（`downloadPrImages`）で直接修正。同一不変条件が別経路で2回以上壊れた場合は強制点の導入を再計画する |
+
+## 欠陥 family の最終状態
+| 修正単位 | 守る契約 | 完了対象の全不変条件 | 変更後の責務と参照元 | 関係する契約経路 | 成立例・失敗例・境界値 | 移行・削除対象 |
+|----------|------------|----------------------|--------------------|--------------------|--------------------------|----------------|
+| U1: 画像ダウンロード時の Content-Type ヘッダ検証の追加 | order.md:35-36（対応形式は PNG/JPEG/GIF/WebP、Content-Type と magic bytes を検証する） | 画像ダウンロード時の Content-Type 検証: ダウンロードした画像の HTTP Content-Type が supported 形式に一致する場合のみ受理し、不一致・欠落を拒否する。magic bytes 検証（`detectImageFormat`）は維持し、両方を検証する | 本番コードの責務・参照元は `imageDownload.ts` 内で完結。`downloadImage` は `gh api --include` でヘッダ込みを取得し Content-Type を返す非公開関数として維持。`downloadPrImages` で Content-Type と magic bytes の両方を検証してから保存 | 定義・生成・検証: `downloadPrImages`（imageDownload.ts:84）→ `downloadImage`（L62、`gh api --include <url>`）→ Content-Type 検証（新規）＋ `detectImageFormat`（L38、magic bytes）→ 保存・placeholder 置換（L118-130）。consumer: `addTask`（add/index.ts:199）と `resolveTaskContent`（steps.ts:228）が同一の `downloadPrImages` を共有。terminal: 保存ファイル（`attachments/` へ `promoteTaskAttachments` 経由）と order.md の `[Image #N]` 参照 | 成立例: `Content-Type: image/png` ＋ PNG magic bytes → `image-1.png` として受理・保存。失敗例: `Content-Type: text/html` ＋ PNG magic bytes → 拒否（throw）。Content-Type ヘッダなし ＋ PNG magic bytes → 拒否（throw）。境界値: supported 形式の4種（`image/png` / `image/jpeg` / `image/gif` / `image/webp`）のいずれかと一致する場合のみ受理。Content-Type の大文字小文字はヘッダ名を lower-case 正規化して照合する | なし（本番コードは `imageDownload.ts` 内の変更のみで、外部契約・他経路・旧経路の移行・削除は対象外。既存テストは `--include` 形式への更新が必要） |
+
+## 要求シナリオ（条件付き）
+該当なし — 修正単位 U1 は構造化入力の分類・変換や識別子生成・連番の導入・変更を含まない。Content-Type は HTTP レスポンスヘッダの検証であり、同じ字面が位置・文脈で対象/非対象になる分類でも、既存本文・保存済みデータ・同一処理内の生成物と名前空間を共有する識別子でもない。
+
+## 入力・状態・経路の確認表
+| 修正単位 | 軸の正本・根拠 | 具体的な入力・状態 | 入口・経路 | 実装上の制約 | consumer / terminal | 期待結果 | 反証方法・テスト ID |
+|----------|----------------|--------------------|------------|----------------|---------------------|----------|-----------------------|
+| U1 | order.md:36（Content-Type と magic bytes を検証する）、order.md:35（対応形式 PNG/JPEG/GIF/WebP）、`imageDownload.ts:62-68`（`downloadImage` の現行実装）、gh CLI 公式マニュアル（`gh api -i/--include` がステータス行とヘッダを出力に含める） | Content-Type `image/png` ＋ PNG magic bytes → 受理。Content-Type `image/jpeg` ＋ JPEG magic bytes → 受理。Content-Type `image/gif` ＋ GIF magic bytes → 受理。Content-Type `image/webp` ＋ WebP magic bytes → 受理。Content-Type `text/html` ＋ PNG magic bytes → 拒否（throw）。Content-Type ヘッダなし ＋ PNG magic bytes → 拒否（throw）。Content-Type `image/png` ＋ 非対応 magic bytes → 拒否（throw、既存の unsupported format 経路） | 現行: `addTask(cwd, task, { prNumber })`（add/index.ts:164）→ `provider.fetchPrReviewComments`（index.ts:186）→ `downloadPrImages(prReview, cwd)`（index.ts:199 / steps.ts:228）→ `downloadImage(url, cwd)`（imageDownload.ts:62、`execFileSync('gh', ['api', url])`、`encoding: null`）→ `detectImageFormat(data)`（L38、magic bytes のみ）→ 保存・placeholder 置換（L118-130）→ `saveTaskFile`（add/index.ts:214）/ `runWorkflow` へ attachments 伝播（steps.ts:362、execute.ts:59）。問題箇所: `downloadImage` が Content-Type ヘッダを取得・検証しない。修正後: 同じ入口 → `downloadPrImages` → `downloadImage`（`gh api --include` でヘッダ込みを取得し、ヘッダとボディを `\r\n\r\n` で分割して Content-Type をパース）→ Content-Type 検証（不一致・欠落で throw）＋ `detectImageFormat`（magic bytes）→ 両方通過時のみ保存 | 現行の委譲: `downloadImage` は `execFileSync('gh', ['api', url])` を `encoding: null` で呼び、生バイトをそのまま返す。Content-Type ヘッダを取得する経路がない。`gh api` は `-i/--include` でヘッダを出力に含める（gh 公式仕様で確認済み）。Content-Type の大文字小文字は `content-type` に lower-case 正規化して照合する | `downloadPrImages` の戻り（`attachments` と `prReview`）を消費するのは add 経路（`add/index.ts:199` → `saveTaskFile`）と pipeline 経路（`steps.ts:228` → `runWorkflow`）。両者は同一の `downloadPrImages` を共有するため、検証は共有関数で一度行えば双方に適用される。変更: `imageDownload.ts` のみ。`add/index.ts`・`steps.ts`・`execute.ts` は変更なし・検証のみ | 受理時: `Content-Type: image/png` ＋ PNG magic bytes の画像が `image-1.png` として保存され placeholder が置換される。拒否時: Content-Type 不一致・欠落で `downloadPrImages` が throw し、保存・placeholder 置換が行われない | `src/__tests__/imageDownload.test.ts` に追加: supported Content-Type ＋ 一致 magic bytes → 受理を検証。Content-Type 不一致（`text/html`）＋ PNG magic bytes → throw を検証。Content-Type 欠落 ＋ PNG magic bytes → throw を検証。既存の unsupported format（magic bytes 不一致）テストは `--include` 形式のモックへ更新し維持。テスト ID: 新規 `should reject a downloaded image whose Content-Type does not match a supported format` 等 |
+
+## 実施順序
+| 順序 | 修正単位 | 工程 | 依存先 | 変更対象 | 完了条件と証拠 |
+|------|----------|------|--------|----------|----------------|
+| 1 | U1: 画像ダウンロード時の Content-Type ヘッダ検証の追加 | 局所修正（本番コード変更 ＋ テスト更新） | なし | `src/infra/github/imageDownload.ts`（`downloadImage` を `gh api --include` へ変更し Content-Type を返す、`downloadPrImages` で Content-Type 検証を追加）、`src/__tests__/imageDownload.test.ts`（既存テストを `--include` 形式へ更新、Content-Type 不一致・欠落の拒否テストを追加） | `npm test -- src/__tests__/imageDownload.test.ts` が成功し、supported Content-Type ＋ 一致 magic bytes の受理と、Content-Type 不一致・欠落の拒否（throw）を検証できる。`npm run build`、`npm run lint` の成功は fix ステップの品質ゲートで確認 |
+
+## 制約適合性
+| 修正単位 | 制約の参照先 | 実装方法と候補案の採否 | 検証方法・観測点・実行条件 | 適合根拠 |
+|----------|--------------|--------------------------|-----------------------------|----------|
+| U1 | order.md:35-36（対応形式と Content-Type / magic bytes 両方の検証）、コーディングポリシー（Fail Fast: エラーは早期に検出し握りつぶさない）、テストポリシー（変更した契約に関係する入力分類の検証、モックは実契約と一致させる） | 採用: `downloadImage` を `gh api --include` へ変更し、ヘッダとボディを `\r\n\r\n` で分割して `content-type` を lower-case 正規化してパース。`downloadPrImages` で Content-Type が supported 形式以外（または欠落）の場合 throw。magic bytes 検証（`detectImageFormat`）は維持し、両方通過時のみ保存。採否: Content-Type 検証を `detectImageFormat` へ統合する案（L38 は純バイトのみを受け取るため Content-Type を受け渡す設計変更が必要になり修正境界が広がる）は不採用。Content-Type ヘッダを省略し magic bytes のみで充足とみなす案は order.md:36 の明示要件違反のため不採用。外部 URL 検証・サイズ上限・`isGitHubAttachmentUrl` は既に充足済みのため変更しない | 検証: 追加テスト（受理・Content-Type 不一致拒否・Content-Type 欠落拒否）を `npm test -- src/__tests__/imageDownload.test.ts` で実行。`execFileSync` モックに `--include` 形式（`HTTP/2 200 OK\ncontent-type: image/png\n\n<bytes>`）を返させ、受理・拒否を決定的に検証する。環境要因による実証不能はなし（gh CLI 実物はテスト対象外。`--include` の仕様は gh 公式マニュアルで確認済み） | `downloadPrImages` の Content-Type 検証追加は order.md:36 の直接要件を充足し、Fail Fast（不一致・欠落で throw）に適合。`downloadImage` は非公開関数のまま維持し、インフラ層の関数をパブリック API からエクスポートしないアーキテクチャポリシーに適合。外部契約（`add/index.ts`・`steps.ts` の `downloadPrImages` シグネチャ）は変更せず、検証のみのため契約置換ポリシーに適合 |
+
+## 再計画事項
+- なし（修正計画は確定。Content-Type ヘッダ検証は order.md:36 の明示要件であり、修正権限の範囲内で完結する。原因は実コードで確認済みで、追加調査・判断を要する未確認事項はない）

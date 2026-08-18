@@ -1,0 +1,40 @@
+# マージレディネス最終裁定
+
+## 結果: 修正が必要
+
+## 要件・証跡サマリー
+
+| 対象 | 状態 | 根拠 |
+|------|------|------|
+| PR本文・コメント・review内の画像抽出と置換 | 未充足 | `src/infra/github/prReviewImageAttachments.ts:134-160`。抽出は非コード領域に限定されるが、置換は本文全体へ適用されるため、同一URLが通常本文にもある場合はコードフェンス等も置換される |
+| PNG/JPEG/GIF/WebP、MIME・magic bytes検証 | 充足 | iteration 2 remediationの`fix-report.md`および`fix-verification.md`。対象統合テスト14件成功 |
+| GitHub attachment URL制限・repository asset URL対応 | 充足 | `FINAL-NEW-PRIMG-REPO-ASSET-URL`の受入条件を修正検証済み。URL分類単体テスト16件成功 |
+| サイズ上限とストリーム読込停止 | 充足 | `FINAL-NEW-PRIMG-STREAM-SIZE-LIMIT`を修正検証済み。Content-Length事前拒否と超過時cancelを確認 |
+| `takt add --pr`の保存・添付節生成 | 充足 | 最新レビューおよび`addTask.test.ts`23件成功の証跡 |
+| 直接`takt --pr`への添付伝播とcleanup | 充足 | 最新レビューおよび`cli-routing-pr-resolve.test.ts`31件成功の証跡 |
+| pipeline `--pr`のtask spec・実画像・cleanup | 充足 | `pipeline-image-attachments.integration.test.ts`3件成功。実task spec、order、画像、終了後の削除を確認 |
+| build・lint・unit・IT | 充足 | iteration 2 remediationの`fix-report.md`。build、lint、unit 1864件、IT 2357件が成功 |
+| E2E mock | 未確認 | 最新remediation後の品質ゲート証跡に`npm run test:e2e:mock`がない。初回実装時の成功証跡は、その後の修正を含む現行成果物の証跡ではない |
+| 最新レビュー裁定 | 確認済み | `review-resolution.md`は最新5専門レビューをすべてAPPROVE、提出findingなしと裁定 |
+
+## 修正対象 family
+
+| family | finding ID | 根拠 | 問題 → 根本原因 | 関係する契約経路 | 受入条件 | 修正境界 |
+|--------|------------|------|-------------------|--------------------|----------|----------|
+| 保護領域を維持した画像置換 | `FINAL-NEW-PRIMG-PROTECTED-SEGMENT-REWRITE` | `src/infra/github/prReviewImageAttachments.ts:134-160` | コードフェンス等の画像記法も条件付きで置換される → 非コード領域でURLを抽出した後、置換処理を元本文全体へ適用している | PR本文・コメント・review → 非コード領域抽出 → URL対応生成 → 本文置換 → add/direct/pipeline | 同一画像URLが通常本文とコードフェンス、インラインコード、HTMLコメントの両方にある場合、通常本文だけが`[Image #N]`へ置換され、保護領域の文字列は完全に維持される | 非コード領域だけを置換して本文を再構成し、混在入力の単体テストを追加する。Markdownパーサー全面改修、URL形式追加、周辺リファクタリングは除外する。Authorization basisは`direct_acceptance_criterion_violation`。初回証跡は保護領域単独の入力しか検証していなかった |
+| 現行成果物のE2E品質ゲート証跡 | `FINAL-NEW-PRIMG-E2E-EVIDENCE` | iteration 2 remediationの`fix-report.md`品質ゲート表 | 現行成果物に対するE2E mock成功を確認できない → remediation後に必須ゲートを再実行した証跡がない | CLI `add --pr`・直接`--pr`・pipeline `--pr` → E2E mock gate | 上記コード修正後の成果物に対して`npm run test:e2e:mock`が完了し、成功結果が記録される | 既存E2E mock gateの実行と証跡記録のみ。新規E2E基盤、実GitHub資格情報依存、無関係なテスト追加は除外する。Authorization basisは`direct_acceptance_criterion_violation`。初回成功後にremediation差分が追加されたため最新証跡に含まれなかった |
+
+## 前段 finding の扱い
+
+| finding ID | 状態 | 根拠 |
+|------------|------|------|
+| `FINAL-NEW-PRIMG-REPO-ASSET-URL` | resolved | repository asset URLの許可と形式外URL拒否を単体テスト16件で確認 |
+| `FINAL-NEW-PRIMG-STREAM-SIZE-LIMIT` | resolved | Content-Length事前拒否、逐次読込、超過時cancelを統合テスト14件で確認 |
+| `FINAL-NEW-PRIMG-REQUIRED-TEST-EVIDENCE` | resolved | P1/P2のresolver統合テストとpipeline実ファイル結合テスト3件で受入条件を確認 |
+| 最新reviewer iteration 2の提出finding | adjudicated_non_actionable | `review-resolution.md`により提出findingなし、修正対象family 0件と裁定済み |
+
+## 未解決の前提・環境要因
+
+- タスク全体の再計画は不要。
+- 実行環境による判定不能事項はない。
+- 上記2 familyはいずれも現行要件と設計前提を変更せず、局所修正と既存品質ゲート実行で解消可能。

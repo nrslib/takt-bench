@@ -1,0 +1,93 @@
+# 実装レポート
+
+## 変更スコープ宣言
+
+### タスク
+PR コメント内の画像をダウンロードして task attachments に配置する機能を実装する。
+
+### 変更予定
+| 種別 | ファイル |
+|------|---------|
+| 作成 | `src/shared/utils/imageFormat.ts` |
+| 作成 | `src/infra/github/prReviewImageAttachments.ts` |
+| 変更 | `src/infra/git/types.ts`（任意 capability 追加） |
+| 変更 | `src/infra/git/index.ts` |
+| 変更 | `src/infra/github/GitHubProvider.ts` |
+| 変更 | `src/features/interactive/imageAttachments.ts`（共通拡張子関数・採番） |
+| 変更 | `src/features/interactive/inlineImagePaste.ts`（上限定数共通化） |
+| 変更 | `src/features/tasks/add/index.ts` |
+| 変更 | `src/app/cli/routing-inputs.ts` |
+| 変更 | `src/app/cli/routing.ts` |
+| 変更 | `src/features/pipeline/steps.ts` |
+| 変更 | `src/features/pipeline/execute.ts` |
+| 作成 | `src/__tests__/imageFormat.test.ts` |
+| 作成 | `src/__tests__/prReviewImageAttachments.test.ts` |
+| 作成 | `src/__tests__/prReviewImageAttachments.integration.test.ts` |
+| 変更 | `src/__tests__/imageAttachments.test.ts` |
+| 変更 | `src/__tests__/github-provider.test.ts` |
+| 変更 | `src/__tests__/addTask.test.ts` |
+| 変更 | `src/__tests__/cli-routing-pr-resolve.test.ts` |
+| 変更 | `src/__tests__/pipelineExecution.test.ts` |
+| 変更 | `src/__tests__/git-cwd-propagation.test.ts` |
+
+### 推定規模
+Large
+
+### 影響範囲
+- GitHub PR 入力の 3 入口（`add --pr`、直接 `--pr`、pipeline `--pr`）
+- 対話モードの画像貼り付けと採番
+- Git provider 契約（任意 capability）
+
+## 決定ログ
+
+### 1. PR 画像解決を任意 capability として追加
+- **背景**: GitHub 固有の認証・URL・HTTP 処理を provider 境界に閉じ、GitLab に偽の互換実装を要求しない。
+- **検討した選択肢**: 常に `fetchPrReviewComments` 内で取得する / `PrReviewData` へ常設フィールド追加 / 任意 capability で GitHub のみ実装。
+- **理由**: 既存 system workflow 等へ画像取得の副作用を波及させず、GitLab の既存 PR 取得を維持できる。
+
+### 2. ダウンロードの検証は Content-Type と magic bytes の両方を一致させる
+- **背景**: URL 拡張子だけでは GitHub attachment URL が拡張子を持たない場合に対応できない。
+- **検討した選択肢**: URL 拡張子で判断 / Content-Type と magic bytes の両検証。
+- **理由**: order.md の安全性・制約（Content-Type と magic bytes 検証）を直接満たす。
+
+### 3. プレースホルダーとファイル名は検証後の形式で決定
+- **背景**: 抽出時に拡張子未確定のため、参照では `image-N.png` を暫定名とし、ダウンロード成功後に検証済み拡張子へ置換する。
+- **理由**: テスト契約（`fileName` は抽出時 `image-N.png`、保存は `image-N.<実拡張子>`）と既存の attachment 形式を両立する。
+
+### 4. pipeline は task spec（`prepareTaskSpecDirectory`→`resolveTaskSpecForExecution`）を利用
+- **背景**: run context へ画像を stage し、実行 prompt がその task spec を参照できるようにする。
+- **検討した選択肢**: 本文へ一時パスを追加 / 既存 task spec 機構を再利用。
+- **理由**: 一時パスは解放後に参照不能になるため、保存タスクと同じ attachment 形式・run context 複製契約を再利用する。
+
+## 作業結果
+- PR 本文・通常コメント・review summary・thread コメントの Markdown 画像と HTML `<img>` を検出し、`[Image #N]` へ置換する抽出ロジックを実装した。
+- 認証付き（`gh auth token` + Authorization）で GitHub attachment を取得し、Content-Type・magic bytes・サイズ（10 MiB）を検証して private 一時ファイルへ保存する取得ロジックを実装した。
+- コードフェンス・インラインコード・HTML コメント内の画像記法は取得しない。
+- 同一 URL は 1 回取得し全出現箇所を同一プレースホルダーへ置換、既存プレースホルダーと衝突しない採番を行った。
+- `add --pr`・直接 `--pr`・pipeline `--pr` の 3 入口へ attachment を配線し、全終了経路で一時ファイルを cleanup した。
+- 対話モードの後続貼り付け画像が初期 attachment と番号衝突しないよう採番を修正した。
+- PNG 検証を共通の厳密判定（8 byte シグネチャ）へ集約した。
+
+## 変更内容
+- 新規: `imageFormat.ts`、`prReviewImageAttachments.ts`、単体テスト 3 ファイル。
+- 変更: Git provider 契約へ任意 capability、対話画像処理、add / routing / pipeline の配線、既存テスト更新。
+
+## ビルド結果
+- `npm run build`: 成功
+
+## テスト結果
+- `npm run lint`: 成功
+- `npm test`: 成功（unit gate 4 シャード全て pass）
+- `HOME=/tmp/takt-bench-v3-home npm run test:it`: 成功（2357 tests pass）
+- `npm run test:e2e:mock`: 成功（55 passed, 13 skipped, 30 todo）
+- `npm run test:e2e:smoke`: 成功（21 passed, 1 skipped）
+- 対象テスト（imageFormat / prReviewImageAttachments / github-provider / imageAttachments / addTask / cli-routing-pr-resolve / pipelineExecution / git-cwd-propagation / releaseVerificationWiring）: 全て pass
+
+## セルフスキャン結果
+- 未使用化: `fileNameByPlaceholder` 等の中間マップを削除し、参照生成をループ内で直接行うよう整理。
+- 依存方向: GitHub 固有処理は `src/infra/github/` 内に閉じ、provider-neutral 層は任意 capability のみ参照。GitLab への変更なし。
+- 共通責務: 画像形式判定・拡張子変換・上限を `imageFormat.ts` へ集約し、既存 interactive 実装と PR 画像取得が同一契約を共有。
+
+## スコープ外・環境依存
+- 実 GitHub API・実 `gh auth token`・実 HTTP 取得は外部依存のため未実行（test double で検証済み）。実連携の最終確認は手動または E2E で必要。
+- 変更した重い IT（`prReviewImageAttachments.integration.test.ts`、`addTask.test.ts`、`github-provider.test.ts`）は対象実行済み。全重い IT は PR gate で実行される。

@@ -1,0 +1,49 @@
+# レビュー指摘裁定
+
+## 結果: 修正対象あり
+
+## 裁定サマリー
+- 対象レポート: AI生成コードレビュー, アーキテクチャレビュー, コーディングレビュー, セキュリティレビュー, テストレビュー
+- 修正対象 family 数: 5
+- 非修正対象数: 0
+- 判定根拠: GitLabプロバイダーでの画像保存機能の未実装、固定パス使用によるリソースリーク/衝突リスク、重複実装、同期I/Oによるブロッキング、およびエラーハンドリング不足が確認されたため。
+
+## 要件の判定根拠
+| 対象 | 状態 | 根拠 |
+|------|------|------|
+| GitHub PR画像抽出・保存 | 充足 | `src/infra/github/pr.ts`, `src/infra/github/image-downloader.ts` 等で実装済み |
+| GitLab MR画像抽出・保存 | 未充足 | `src/infra/gitlab/pr.ts` で抽出のみ行い、保存処理を呼び出していない (CODE-NEW-gitlab-pr-L240) |
+| 安全な一時ファイル管理 | 未充足 | `/tmp/image-n.png` という固定パスを使用しており、衝突・リークのリスクがある (CODE-NEW-pipeline-steps-L236) |
+| 同期I/Oの回避 | 未充足 | 10MB上限の画像保存に `fs.writeFileSync` 等の同期APIを使用している (AI-NEW-feature-sync-L317) |
+| エラー通知の適切性 | 未充足 | ダウンロード失敗時に `null` でフィルタリングし、原因を破棄している (AI-NEW-feature-error-L240) |
+
+## 再発台帳の引き継ぎ
+引き継ぎ元: 先行 remediation なし
+
+| 修正単位 | family ID | 不変条件の名前 | 担当箇所 | 今回の検証回数 | 前回の検証回数 | 前回経路 | 今回経路 | 同一不変条件・再発判定 | 累積 `incomplete` 回数 | 別経路での再発が確認済みか | 強制点候補 | 記録の完全性 |
+|----------|-----------|------------------|----------|------------------|------------------|----------|----------|------------------------|-------------------------|--------------------|------------|--------------|
+| なし | - | - | - | - | - | - | - | - | - | - | - | - |
+
+## 修正対象 family
+| family | 担当箇所 | 観測可能な不変条件 | 同じ原因で変更される理由 | finding ID / 出典 | 修正権限の根拠 | 根拠 | 問題 → 根本原因 | 追加した経路 | 関係する契約経路 | 受入条件 | 修正境界 |
+|--------|----------|----------------------|--------------------------|-------------------|----------------|------|-------------------|--------------|--------------------|----------|----------|
+| `gitlab-support` | `src/infra/gitlab/pr.ts` | GitLab MR の画像も整合的に抽出・保存されること | プロバイダー間の機能整合性確保 | AI-NEW-infra-gitlab-L11, CODE-NEW-gitlab-pr-L240, CODE-NEW-image-downloader-L19 | 受入条件の直接違反 | `src/infra/gitlab/pr.ts:240` (保存呼出なし), `src/infra/github/image-downloader.ts:19` (GitHub限定URLチェック) | GitLab対応が抽出のみで止まっており、保存基盤がGitHub専用であるため | なし | `src/infra/gitlab/pr.ts` $\rightarrow$ `src/infra/github/image-downloader.ts` $\rightarrow$ 保存フロー | GitLab URLを許容し、MR抽出後に保存フローが正しく実行されること | GitLabプロバイダーの保存呼出実装、URLバリデーションの汎用化。GitHub内部実装への直接依存解消。 |
+| `image-lifecycle` | `src/features/pipeline/steps.ts` | 一時ファイルは一意に生成され、処理後に確実に消去されること | リソースリークとファイル衝突の防止 | AI-NEW-feature-tmp-L234, CODE-NEW-pipeline-steps-L236 | 受入条件の直接違反 | `src/features/pipeline/steps.ts:236` (固定パス `/tmp/image-n.png`) | 固定パス使用により並行実行時の衝突および永続的なリークが発生するため | なし | `/tmp` 保存 $\rightarrow$ `promoteTaskAttachments` | `os.tmpdir()` 等によるユニークパスの使用と、`finally` 等による確実な削除が実装されていること | 一時ファイル生成・削除ロジックの修正。最終保存先へのコピー処理は維持。 |
+| `image-download-logic` | TaskAttachment 管理責任 | 画像のダウンロードから `TaskAttachment` 生成までのフローが統一されていること | 共通ロジックの変更を一箇所で完結させるため | ARCH-NEW-DRY-IMAGE-DL | 構造・設計違反 (DRY) | `src/features/pipeline/steps.ts` と `src/features/tasks/add/index.ts` の重複実装 | 同一ロジックがエントリーポイントごとにハードコードされているため | なし | `addTask` / `pipeline` $\rightarrow$ ダウンロード・変換フロー | 重複ロジックが `src/features/tasks/attachments.ts` 等の共通所有者に集約されていること | 共通関数の抽出とリファクタリング。通信仕様自体の変更は除外。 |
+| `image-io-performance` | `src/features/tasks/attachments.ts` | 大容量ファイルのI/Oがイベントループをブロッキングしないこと | パフォーマンスおよび応答性の確保 | AI-NEW-feature-sync-L317 | 受入条件の直接違反 | `src/features/tasks/attachments.ts:317` 等の同期API使用 | 10MBのファイル操作を同期的に行うことでNode.jsのメインスレッドを停止させるため | なし | `src/features/tasks/attachments.ts` $\rightarrow$ `fs.writeFileSync` 等 | `fs.promises` 等の非同期APIに置換され、ブロッキングが解消されていること | I/O処理の非同期化。ファイルフォーマットの変更は除外。 |
+| `image-download-observability` | `src/features/pipeline/steps.ts` | 画像ダウンロード失敗時に、原因を特定可能なエラーまたは警告がユーザーに通知されること | 運用監視およびトラブルシューティングの容易化 | AI-NEW-feature-error-L240 | 受入条件の直接違反 | `src/features/pipeline/steps.ts:240` (`null` フィルタリング) | エラー発生時に詳細を破棄しているため、失敗原因の切り分けが不可能であるため | なし | `src/features/pipeline/steps.ts` $\rightarrow$ エラーハンドリング $\rightarrow$ ユーザー通知 | 失敗時に `null` で無視せず、適切なエラー種別に応じた通知またはログ出力が行われること | エラーハンドリングの強化。リトライメカニズムの導入は除外。 |
+
+## 指摘ごとの裁定
+| finding ID / 出典 | 技術的妥当性 | 裁定 | 対象 family | 同じ原因で変更される理由 | 合流根拠 | authorization basis | 初回に含まれなかった理由 | 根拠 |
+|-------------------|----------------|------|-------------|--------------------------|----------|---------------------|--------------------------|------|
+| AI-NEW-infra-gitlab-L11 (AI) | 確認済み | `actionable` | `gitlab-support` | プロバイダー間の機能整合性 | 境界違反による依存関係の不備 | direct_acceptance_criterion_violation | 該当なし | `src/infra/gitlab/pr.ts:11` が GitHub 内部実装に依存 |
+| AI-NEW-feature-tmp-L234 (AI) | 確認済み | `duplicate` | `image-lifecycle` | リソースリークとファイル衝突の防止 | 固定パス使用という同一原因 | 該当なし | 該当なし | `src/features/pipeline/steps.ts:234` の固定パス使用 |
+| AI-NEW-feature-sync-L317 (AI) | 確認済み | `actionable` | `image-io-performance` | パフォーマンスおよび応答性の確保 | 同期I/Oによるブロッキング | direct_acceptance_criterion_violation | 該当なし | `src/features/tasks/attachments.ts:317` 等の同期API使用 |
+| AI-NEW-feature-error-L240 (AI) | 確認済み | `actionable` | `image-download-observability` | 運用監視およびトラブルシューティングの容易化 | エラー詳細の破棄 | direct_acceptance_criterion_violation | 該当なし | `src/features/pipeline/steps.ts:240` で `null` フィルタリング |
+| ARCH-NEW-DRY-IMAGE-DL (Arch) | 確認済み | `actionable` | `image-download-logic` | 共通ロジックの変更を一箇所で完結させるため | 重複実装による保守性低下 | 該当なし | 該当なし | `steps.ts` と `add/index.ts` での重複実装 |
+| CODE-NEW-pipeline-steps-L236 (Coding) | 確認済み | `actionable` | `image-lifecycle` | リソースリークとファイル衝突の防止 | 固定パスおよび削除処理欠落 | direct_acceptance_criterion_violation | 初回 | `src/features/pipeline/steps.ts:236` の固定パス使用と削除欠落 |
+| CODE-NEW-gitlab-pr-L240 (Coding) | 確認済み | `actionable` | `gitlab-support` | プロバイダー間の機能整合性 | 保存処理の未実装 | direct_acceptance_criterion_violation | 初回 | `src/infra/gitlab/pr.ts:240` で抽出のみ行い保存を呼んでいない |
+| CODE-NEW-image-downloader-L19 (Coding) | 確認済み | `actionable` | `gitlab-support` | プロバイダー間の機能整合性 | URLバリデーションの限定性 | direct_acceptance_criterion_violation | 初回 | `src/infra/github/image-downloader.ts:19` のGitHub専用チェック |
+
+## 未解決の前提
+- なし

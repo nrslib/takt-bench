@@ -1,0 +1,43 @@
+{
+  "version": 1,
+  "sourceRunSlug": "20260812-080454-implement-using-only-the-files-djn29j",
+  "targetRunSlug": "20260812-095329-implement-using-only-the-files-vy446t",
+  "createdAt": "2026-08-12T09:53:30.357Z",
+  "files": [
+    {
+      "path": "subworkflows/iteration-1--step-develop--workflow-development-core--site-e877d609b82549b0a8ffb0f433eaeaa85b593d08902aa782954dc3621c96ae43/.takt-report-internal/history/da585fddc8fed7b3f3fb5c8cafe2395024aba799bd4934803547c29d3feea230/writer/test-report.md.20260812T082932Z",
+      "size": 4794,
+      "sha256": "10f54b121bfedcd35f8936593bfefdb5d5389e64bce070330f902720d6ab6454"
+    },
+    {
+      "path": "subworkflows/iteration-1--step-develop--workflow-development-core--site-e877d609b82549b0a8ffb0f433eaeaa85b593d08902aa782954dc3621c96ae43/plan.md",
+      "size": 29406,
+      "sha256": "d1d781a4ea88c098013872e1653c6d4add1672325b9ef90a459b39508f5554c1"
+    },
+    {
+      "path": "subworkflows/iteration-1--step-develop--workflow-development-core--site-e877d609b82549b0a8ffb0f433eaeaa85b593d08902aa782954dc3621c96ae43/subworkflows/iteration-1--step-implement--workflow-development-implement-dynamic--site-0deaa201be4f742f37a26e8a300b40ed8eaa2ce48668f3bf7df088ab8026f272/.takt-report-internal/history/1c9ad58a767fd5e094d32732d7565413952da5a551d10eb3adcd7f99363f5e7b/writer/implementation-report.md.20260812T091349Z",
+      "size": 6274,
+      "sha256": "9b2f7f98cf70077fc6d242a90720adfd2d7b407177879b95f9e7ef1d55daee1e"
+    },
+    {
+      "path": "subworkflows/iteration-1--step-develop--workflow-development-core--site-e877d609b82549b0a8ffb0f433eaeaa85b593d08902aa782954dc3621c96ae43/subworkflows/iteration-1--step-implement--workflow-development-implement-dynamic--site-0deaa201be4f742f37a26e8a300b40ed8eaa2ce48668f3bf7df088ab8026f272/coder-decisions.md",
+      "size": 3221,
+      "sha256": "ecff039880cd0ead605abeab3ed259443d8dc6e96c765bd1cbe972eb97a40c1f"
+    },
+    {
+      "path": "subworkflows/iteration-1--step-develop--workflow-development-core--site-e877d609b82549b0a8ffb0f433eaeaa85b593d08902aa782954dc3621c96ae43/subworkflows/iteration-1--step-implement--workflow-development-implement-dynamic--site-0deaa201be4f742f37a26e8a300b40ed8eaa2ce48668f3bf7df088ab8026f272/coder-scope.md",
+      "size": 1569,
+      "sha256": "e53323036df4b785ea6c30b18131aea45d55c4a415496fc29d5d58941f66c42b"
+    },
+    {
+      "path": "subworkflows/iteration-1--step-develop--workflow-development-core--site-e877d609b82549b0a8ffb0f433eaeaa85b593d08902aa782954dc3621c96ae43/subworkflows/iteration-1--step-implement--workflow-development-implement-dynamic--site-0deaa201be4f742f37a26e8a300b40ed8eaa2ce48668f3bf7df088ab8026f272/implementation-report.md",
+      "size": 15178,
+      "sha256": "3810e2614b44d10e578b7f8b6e1b8a368ad09cea0f88acd6248438388b836a0e"
+    },
+    {
+      "path": "subworkflows/iteration-1--step-develop--workflow-development-core--site-e877d609b82549b0a8ffb0f433eaeaa85b593d08902aa782954dc3621c96ae43/test-report.md",
+      "size": 13712,
+      "sha256": "9d6f1823a01d6469a9563a0f2b34d7fad56acf13f2fbe0591f1709eb98c8d592"
+    }
+  ]
+}

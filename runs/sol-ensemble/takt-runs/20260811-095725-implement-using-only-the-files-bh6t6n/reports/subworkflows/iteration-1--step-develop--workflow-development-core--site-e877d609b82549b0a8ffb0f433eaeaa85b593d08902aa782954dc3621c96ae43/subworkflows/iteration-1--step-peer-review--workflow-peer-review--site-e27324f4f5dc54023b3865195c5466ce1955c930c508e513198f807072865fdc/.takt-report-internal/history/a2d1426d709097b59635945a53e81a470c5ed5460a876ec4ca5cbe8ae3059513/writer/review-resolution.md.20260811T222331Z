@@ -1,0 +1,23 @@
+# レビュー指摘裁定
+
+## 結果: 修正対象あり
+
+## 裁定サマリー
+
+iteration 5 の最新 reviewer レポート5件を対象とした。提出された現行 finding は1件で、現在のコードと実終了時の再現証拠により欠陥を確認できたため、1つの actionable family として確定した。duplicate および非修正対象は0件。過去 finding の resolved 参照は現行 finding へ再計上していない。競合する要求や未解決前提はなく、タスク全体の再計画は不要である。
+
+## 修正対象 family
+
+| family | finding ID / 出典 | 根拠 | 問題 → 根本原因 | 関係する契約経路 | 受入条件 | 修正境界 |
+|--------|-------------------|------|-------------------|--------------------|----------|----------|
+| `pr-attachment-cleanup-hard-exit` | `AI-NEW-pr-attachment-cleanup-hard-exit-L307` / `ai-antipattern-review.md` | `src/app/cli/routing.ts:117-129`でPR画像の一時storeとcleanup関数を取得し、解放は同`:342-346`の外側`finally`が所有する。一方、workflow失敗時は`src/features/tasks/execute/selectAndExecute.ts:211-215`、attachment取得後のPR検証失敗は`routing.ts:146-148`、head branch欠落は同`:317-321`で`process.exit()`する。実終了の再現でも終了コード7の後に`finally`は実行されず、一時画像が残存した。`src/__tests__/cli-routing-pr-resolve.test.ts:420-440`は本番実行関数をrejectするmockへ、同`:491-510`は`process.exit()`をthrowするmockへ置換しているため、実終了時のcleanupを証明しない。 | private PR画像が一時ディレクトリに残る → attachment所有スコープ内のhard exitがスタックを巻き戻さず、唯一のcleanup境界である外側`finally`を迂回する | PR取得・画像download・一時store生成 → 対話CLI seedへのattachment伝播 → executeまたはsave_task → workflow失敗、PR context検証失敗、head branch欠落 → cleanup → CLI終了状態 | PR attachment取得後のworkflow失敗、PR検証失敗、head branch欠落の各経路で、プロセス終了前に一時storeが解放され、終了後に画像ファイルが残らない。実終了境界を忠実に通る回帰テストで不存在を観測する。既存の成功時挙動、終了状態、利用者向けエラーを維持する。heavy ITを追加・変更する場合は対象テストと分類契約テストを完了する。 | 対話CLIのPR attachment所有・cleanup経路と必要最小限の回帰テストに限定する。既存の`exitOnFailure: false`利用は選択肢だが方式として固定しない。`selectAndExecuteTask()`全体の既定終了契約、非PR経路、add・pipeline経路、画像解析・download・MIME・サイズ・認証、広域CLI再設計、新しい互換・運用保証は除外する。 |
+
+## 指摘ごとの裁定
+
+| finding ID / 出典 | 裁定 | 対象 family | 根拠 |
+|-------------------|------|-------------|------|
+| `AI-NEW-pr-attachment-cleanup-hard-exit-L307` / `ai-antipattern-review.md` | `actionable` | `pr-attachment-cleanup-hard-exit` | 現行コード上の3つのhard-exit経路が、一時store取得後に唯一のcleanup `finally`を迂回する。実終了後の一時画像残存も再現され、現在のテストダブルは本番の終了契約との差異を隠している。今回追加されたprivate PR画像の一時保存経路に直接関係する、副作用解放・データ保護・テスト品質上の欠陥である。 |
+
+## 未解決の前提
+
+- なし。現行要求と既存の終了契約を維持した最小内部修正が可能であり、タスク全体の再計画は不要である。

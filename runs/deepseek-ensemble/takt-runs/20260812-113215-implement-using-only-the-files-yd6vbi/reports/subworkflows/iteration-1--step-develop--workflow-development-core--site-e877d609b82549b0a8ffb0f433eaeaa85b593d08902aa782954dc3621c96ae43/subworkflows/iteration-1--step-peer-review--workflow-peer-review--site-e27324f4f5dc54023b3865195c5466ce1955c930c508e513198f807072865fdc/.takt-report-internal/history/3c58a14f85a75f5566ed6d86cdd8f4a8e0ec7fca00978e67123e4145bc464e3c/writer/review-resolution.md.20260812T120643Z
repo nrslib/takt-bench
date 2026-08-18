@@ -1,0 +1,30 @@
+# レビュー指摘裁定
+
+## 結果: 修正対象あり
+
+## 裁定サマリー
+
+対象は Report Directory 配下の最新 `architecture-review.md`、`coding-review.md`、`security-review.md`、`testing-review.md`、`ai-antipattern-review.md`。提出された4件の finding のうち1件を修正対象、3件を非修正対象とした。さらに、採用済み PR 画像 lifecycle family の完了証拠を照合し、terminal exit 回帰テストの不足1件を follow-up として修正対象に確定した。
+
+修正対象は2 family。interactive mode の網羅性を `result!` が型検査から隠す今回差分の退行と、`process.exit(1)` 前の PR attachment cleanup を直接観測していないテスト証拠の不足である。pipeline と `add --pr` の cleanup 漏れは現行の `try/finally` に反証され、`routing-inputs` の条件付き展開は optional property の有無を制御する有意な処理である。
+
+## 修正対象 family
+
+| family | finding ID / 出典 | 修正権限の根拠 | 根拠 | 問題 → 根本原因 | 関係する契約経路 | 受入条件 | 修正境界 |
+|--------|-------------------|----------------|------|-------------------|--------------------|----------|----------|
+| `F-INTERACTIVE-RESULT-TOTALITY` | `AI-NEW-routing-L283` / 最新 `ai-antipattern-review.md` | 今回差分の退行 | `src/app/cli/routing.ts:152,221-284`、`src/core/models/interactive-mode.ts:13-16`、差分上の変更前 `let result: InteractiveModeResult` | 現行5モードでは全switch分岐がresultを生成するため現在のTypeErrorは再現しないが、変更前の definite-assignment 検査が `InteractiveModeResult \| undefined` と `result!` に置換された → cleanup保証境界の拡張時にモード処理の全域性を非null assertionで迂回した | 定義: `INTERACTIVE_MODES`、選択: `selectInteractiveMode`、生成: assistant・grill-me・passthrough・quiet・persona、consumer: `dispatchConversationAction`、terminal: execute・save_task・create_issue・cancel | 非nullの選択モードは未検証castやnon-null assertionなしで必ず `InteractiveModeResult` を生成する。モード追加時のhandler漏れをコンパイル時または明示的なexhaustive checkで検出できる。既存5モード、cancel、dispatchの挙動を維持する | result生成からdispatchまでの型安全な接続のみを最小変更する。黙示的な早期return、新しいfallback、新モード追加、routing全体の再設計は除外する |
+| `F-PR-IMAGE-LIFECYCLE` | `FU-PRIMG-TERMINAL-EXIT-TEST` / 裁定時follow-up | 採用済み family の閉鎖、受入条件への直接違反 | `src/app/cli/routing.ts:319-327`、`src/__tests__/cli-routing-pr-resolve.test.ts:367-387`、remediation の `fix-report.md` と `fix-verification.md` | exit前cleanupの実装は存在するが、完了証拠とされたテストはexit code・エラー表示・保存未実行しか検証しておらず、PR attachment cleanupを設定・観測していない → `process.exit` をthrowへ置換したことでouter finallyが動く偽陽性を排除できず、完了報告とテストの証明能力が一致しない | 生成: `resolvePrInput`、所有: `prAttachmentsCleanup`、consumer: interactive `save_task`、failure: PR head branch欠落、terminal: cleanup後の `process.exit(1)` | PR head branch欠落時、PR attachment cleanupがexitより前に呼ばれることを決定的テストで観測する。exit code、エラー文、保存未実行、cleanupの冪等性を維持する | terminal-exit回帰テストの証拠補完のみを対象とする。cleanup設計の再変更、全 `process.exit` の抽象化、他のCLI終了経路、画像処理方式の変更は除外する |
+
+## 指摘ごとの裁定
+
+| finding ID / 出典 | 技術的妥当性 | 裁定 | 対象 family | authorization basis | 初回に含まれなかった理由 | 根拠 |
+|-------------------|----------------|------|-------------|---------------------|--------------------------|------|
+| `AI-NEW-routing-L283` / 最新 `ai-antipattern-review.md` | 限定的に確認済み。現在のTypeError主張は反証されたが、型安全性の退行は確認済み | `actionable` | `F-INTERACTIVE-RESULT-TOTALITY` | `remediation_regression` | 該当なし | `InteractiveMode` は現行5値の閉じたunionでswitchは全値を処理するため、現在の `result === undefined` 経路はない。一方、`src/app/cli/routing.ts:283` の `result!` は将来のunion追加時にもhandler漏れを隠し、今回差分前の definite-assignment 保証を失わせている |
+| `AI-NEW-pipeline-L94` / 最新 `ai-antipattern-review.md` | 反証済み | `no_issue_after_verification` | なし | なし | 該当なし | `src/features/pipeline/execute.ts:43-96` ではtaskContent取得後の早期return・throwが同じfinallyを通り、`attachmentCleanup` が実行される。既知失敗と例外のテストもcleanupを直接観測している |
+| `AI-NEW-addTask-L243` / 最新 `ai-antipattern-review.md` | 反証済み | `no_issue_after_verification` | なし | なし | 該当なし | `src/features/tasks/add/index.ts:235-245` で `saveTaskFile` はtry内、`resolved.cleanup()` はfinally内にある。保存reject時のテストも例外伝播とcleanup 1回を直接検証している |
+| `AI-NEW-routing-inputs-L68` / 最新 `ai-antipattern-review.md` | 反証済み | `no_issue_after_verification` | なし | なし | 該当なし | resolver呼び出しの有無を選ぶ分岐は必要であり、返却時の条件付き展開も空配列の場合にoptional `attachments` property自体を省略する意味を持つ。破損シナリオ、型安全性違反、同一契約知識の重複は確認できない |
+| `FU-PRIMG-TERMINAL-EXIT-TEST` / 裁定時follow-up | 確認済み | `actionable` | `F-PR-IMAGE-LIFECYCLE` | `direct_acceptance_criterion_violation` | remediation の `fix-report.md` と `fix-verification.md` がterminal exit回帰テストを完了済みと報告し、最新reviewersもその前提を採用したため | `src/__tests__/cli-routing-pr-resolve.test.ts:367-387` はcleanup mockを設定せず、cleanupがexitより前に呼ばれたことをassertしていない。採用済みfamilyの受入条件に対する証拠が未閉鎖である |
+
+## 未解決の前提
+
+- なし。要求、計画、指摘間に、現行の前提で修正対象を確定できない競合はなく、タスク全体の再計画は不要。

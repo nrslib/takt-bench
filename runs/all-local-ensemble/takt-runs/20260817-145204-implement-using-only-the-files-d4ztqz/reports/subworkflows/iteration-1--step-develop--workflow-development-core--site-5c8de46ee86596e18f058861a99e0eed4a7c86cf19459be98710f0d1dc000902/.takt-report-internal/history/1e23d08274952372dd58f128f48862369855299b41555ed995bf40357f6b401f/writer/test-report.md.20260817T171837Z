@@ -1,0 +1,65 @@
+# テスト作成レポート
+
+## 完了契約-テスト対応表
+| 契約ID | 由来 | 観測可能な契約 | 入口/経路 | テスト | 結果 | 未カバー理由 |
+|--------|------|----------------|-----------|--------|------|--------------|
+| `PR-1` | 計画 | `--pr` 指定時に PR コメントが取得され、後続処理へ渡る | CLI（add コマンド `--pr`） | `src/__tests__/addTask.test.ts` "should create task from PR review comments with PR-specific task settings" | 既存 | なし（既存実装・既存テストで充足） |
+| `PR-2` | 計画 | ダウンロード結果が `PrReviewData` 型の値として生成される | 実行時（`fetchPrReviewComments`） | `src/__tests__/github-pr.test.ts` "maps PR review metadata and thread comments across the provider boundary" | 既存 | なし（既存実装・既存テストで充足） |
+| `PR-3` | 計画 | PR コメントがタスク形式のデータへ変換される | 実行時（`formatPrReviewAsTask`） | `src/__tests__/git-format.test.ts` "preserves review bodies and thread metadata across classifications" | 既存 | なし（既存実装・既存テストで充足） |
+| `PR-4` | 計画 | 変換されたタスクが既存フローで取り込まれる | CLI（add フロー保存） | `src/__tests__/addTask.test.ts` "should create task from PR review comments with PR-specific task settings" | 既存 | なし（既存実装・既存テストで充足） |
+
+## 検証境界（外部境界または環境依存境界を持つ契約のみ）
+| 契約ID | モックで確認した範囲 | 実連携範囲 | テスト環境 / HOME / 設定の分離 | 未確認理由 |
+|--------|----------------------|------------|--------------------------------|------------|
+| `PR-1` | `checkCliStatus` / `fetchPrReviewComments` をモックし、`--pr` 経路の分岐を検証 | `gh` CLI 実連携は未確認 | `addTask.test.ts` は `../infra/git/index.js` をモック | 既存実装のため本ステップでは追加検証なし |
+| `PR-2` | `execFileSync` をモックし、`gh pr view` 応答のマッピングを検証 | `gh` CLI 実連携は未確認 | `github-pr.test.ts` は `node:child_process` をモック | 既存実装のため本ステップでは追加検証なし |
+
+## 危険分岐・識別テスト
+| 契約ID | 分岐 | 失敗させたい誤実装 | 拒否する入力 / 状態とassertion | テスト | 未カバー理由 |
+|--------|------|--------------------|--------------------------------|--------|--------------|
+| `PR-1` | `--pr` 未指定時と同じ動作になる、またはオプションが無視される | `--pr` 指定時に PR 取得が走らない誤実装 | `mockFetchPrReviewComments` が呼ばれること、`mockIsIssueReference` が呼ばれないことを検証 | `src/__tests__/addTask.test.ts` "should not perform issue parsing when PR task text looks like issue reference" | なし（既存テストで充足） |
+| `PR-1` | PR にレビューコメントがない場合 | コメントなし PR でもタスクを作成する誤実装 | `comments: []` / `reviews: []` で `mockFormatPrReviewAsTask` が呼ばれず `tasks.yaml` が作られないことを検証 | `src/__tests__/addTask.test.ts` "should not create a PR task when PR has no review comments" | なし（既存テストで充足） |
+
+## 影響経路テスト（該当する契約のみ）
+| 契約ID | 経路 | 生成側 | 消費側 | 保証する契約 | テスト | 未カバー理由 |
+|--------|------|----------|----------|--------------|--------|--------------|
+| `PR-4` | add `--pr` → `fetchPrReviewComments` → `formatPrReviewAsTask` → `saveTaskFile` → `.takt/tasks/<slug>/order.md` | `addTask`（`src/features/tasks/add/index.ts`） | `saveTaskFile` / `prepareTaskSpecDirectory` | 変換結果が既存 add フローで取り込まれる | `src/__tests__/addTask.test.ts` "should create task from PR review comments with PR-specific task settings" | なし（既存テストで充足） |
+
+## 連続実行・所有権・並行性（該当する場合）
+該当なし — 計画の完了契約（PR-1〜PR-4）は既存の `--pr` 配線・型・変換・統合であり、連続実行・所有権・並行性の軸を持たない。
+
+## 否定契約
+| 契約ID | 禁止する挙動 | 観測方法 | テスト | 未カバー理由 |
+|--------|----------------|----------|--------|--------------|
+| `PR-1` | `--pr` 指定時に issue 参照パース（`isIssueReference` / `parseIssueNumbers` / `resolveIssueTask`）を実行しない | `mockIsIssueReference` / `mockParseIssueNumbers` / `mockResolveIssueTask` が呼ばれないことを検証 | `src/__tests__/addTask.test.ts` "should not perform issue parsing when PR task text looks like issue reference" | なし（既存テストで充足） |
+
+## 作成テスト
+| ファイル | 種別 | テスト数 | 概要 |
+|---------|------|---------|------|
+| （なし） | — | 0 | 本ステップでは新規テストファイルを作成しなかった |
+
+## 未カバー項目
+| 要件/分岐 | 未カバー理由 | 後続で必要な確認 |
+|-----------|--------------|------------------|
+| PR 本文・通常コメント・review thread コメント内の画像 URL 検出（Markdown image 構文・HTML `<img>`） | 計画の完了契約（PR-1〜PR-4）に画像ダウンロード要件が含まれていない。計画は既存の `--pr` 配線・`PrReviewData`・`formatPrReviewAsTask` を対象としており、`order.md` の画像ダウンロード機能（画像 URL 抽出、ダウンロード、`attachments/` 配置、`order.md` 追記、`[Image #N]` 参照置換、pipeline 経路）を契約として定義していない | 再計画（replan）で `order.md` の画像ダウンロード要件を完了契約として追加し、その契約に対するテストを本ステップで作成する |
+| 画像ダウンロードとローカル保存（`.takt/tasks/<slug>/attachments/image-1.png`） | 同上（計画契約に未定義） | 再計画後にテスト作成 |
+| Content-Type と magic bytes の検証（PNG/JPEG/GIF/WebP） | 同上（計画契約に未定義） | 再計画後にテスト作成 |
+| サイズ上限 | 同上（計画契約に未定義） | 再計画後にテスト作成 |
+| `gh api` / 認証済み `gh` 経由の取得優先、GitHub attachment URL への制限 | 同上（計画契約に未定義） | 再計画後にテスト作成 |
+| `order.md` への既存 attachment 形式での追記と `[Image #N]` 参照置換 | 同上（計画契約に未定義） | 再計画後にテスト作成 |
+| pipeline `--pr` 経路での画像参照 | 同上（計画契約に未定義） | 再計画後にテスト作成 |
+
+## 実行結果（参考）
+本ステップではテストファイルを作成・実行していないため、実行結果はない。
+
+| 状態 | 件数 | 備考 |
+|------|------|------|
+| Pass | 0 | テスト未作成のため |
+| Fail / Import Error（想定内） | 0 | テスト未作成のため |
+| Error（要対応） | 0 | テスト未作成のため |
+
+## 備考（判断がある場合のみ）
+- **計画と仕様の乖離（要対応）**: 計画 `plan.md` の完了契約（PR-1〜PR-4）は、`add` コマンドの `--pr` オプション配線、`PrReviewData` 型、`formatPrReviewAsTask`、既存 add フローへの統合を対象としている。しかし実コードを確認した結果、これらはすべて既に実装済みであり（`src/features/tasks/add/index.ts` の `addTask` の `--pr` 分岐、`src/infra/git/types.ts` の `PrReviewData`、`src/infra/git/format.ts` の `formatPrReviewAsTask`、`src/features/pipeline/steps.ts` の `resolveTaskContent`）、既存テスト（`addTask.test.ts`、`git-format.test.ts`、`github-pr.test.ts`）でカバーされている。
+- **`order.md` の実要件が計画に未反映**: 正本である `order.md` の実要件は「PR コメント内の画像をダウンロードして task attachments に配置する」機能であり、画像 URL 抽出、ダウンロード、Content-Type / magic bytes 検証、サイズ上限、`gh api` 経由取得、GitHub attachment URL 制限、`attachments/` 配置、`order.md` 追記、`[Image #N]` 参照置換、pipeline 経路の同等対応を含む。これらの要件は計画の完了契約に一切含まれていない。
+- **本ステップの判断**: 計画の完了契約が既存実装を対象としており、`order.md` の画像ダウンロード要件に対する契約が存在しないため、test-first で作成すべき新規テストの対象（契約）を特定できなかった。誤った契約（既存機能）に対するテストを新規作成することは、テストポリシーの「既存テストで回帰を検出できない場合のみテスト追加」および「観測可能な契約を基準に作成・更新・削除を判断」に反するため、新規テストの作成を見送った。
+- **後続への依頼**: 再計画（replan）ステップで `order.md` の画像ダウンロード要件を完了契約として追加し、その契約に対するテストを本ステップで作成する必要がある。

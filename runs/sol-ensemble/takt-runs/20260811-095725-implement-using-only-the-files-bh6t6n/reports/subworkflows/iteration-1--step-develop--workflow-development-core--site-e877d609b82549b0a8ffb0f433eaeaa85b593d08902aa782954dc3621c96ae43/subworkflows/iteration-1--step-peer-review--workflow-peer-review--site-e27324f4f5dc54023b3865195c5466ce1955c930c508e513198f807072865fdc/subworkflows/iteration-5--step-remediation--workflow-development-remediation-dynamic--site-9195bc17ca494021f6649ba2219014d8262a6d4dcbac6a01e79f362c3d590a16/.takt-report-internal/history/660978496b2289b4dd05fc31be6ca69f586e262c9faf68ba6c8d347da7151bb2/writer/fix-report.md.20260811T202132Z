@@ -1,0 +1,63 @@
+# 修正レポート
+## サマリー
+PR本文と各コメント本文を独立したMarkdown文書として解析する断片境界を導入し、未閉鎖フェンスが後続コメントの画像検出を妨げる問題を修正した。add、対話CLI、pipelineの3入口を構造化フォーマッターへ移行し、URL重複排除、画像採番、出現順、コードリテラル除外、一時保存cleanup、既存文字列整形契約を維持した。
+
+E2E mock runnerでは、command構築と隔離attempt実行を分離した。実child processへのcwd・隔離env伝播、attemptごとの環境分離、正常終了・spawn失敗時のcleanup、初回・birpc再測定の共通executor利用をheavy ITで検証した。
+
+Companionの旧`formatPrReviewAsTask()`削除指摘は、確定修正計画が同APIの観測可能な整形契約を明示的に維持すると定めており、変更前から公開・利用されていることを再確認したため、削除しなかった。
+
+## 修正単位
+| 修正単位 | 対象 finding | 契約の正本 | 実施内容・反映先 | 状態 |
+|----------|--------------|------------|-----------------|------|
+| `pr-review-markdown-fragment-isolation` | `CODE-NEW-pr-review-fragment-isolation-L92` | `order.md`のPR本文・通常コメント・review thread画像検出要件、確定修正計画の断片解析契約 | `src/infra/git/format.ts`でtask文字列とMarkdown断片範囲を生成し、`prReviewAttachments.ts`で断片別解析を実施。add、対話CLI、pipelineを移行し、旧直接解析経路を除去 | 完了 |
+| `e2e-runner-attempt-boundary` | `TEST-NEW-e2e-runner-attempt-boundary-L31` | 確定修正計画の実process境界・隔離資源所有・cleanup契約 | `run-e2e-mock-shards.mjs`に共通attempt executorを追加し、`runTeedCommand()`へcwd・envを伝播。実child heavy ITと分類確認を追加 | 完了 |
+
+## 完了義務
+| 修正単位 | 義務ID | 種別 | 対象 finding | 不変条件と対象経路 | 違反を検出する反例・観測点 | 修正前または差し戻し時の結果 | 実装根拠 | 修正後の証拠 | 状態 |
+|----------|--------|------|--------------|--------------------|------------------------------|--------------------------------|----------|--------------|------|
+| `pr-review-markdown-fragment-isolation` | `PR-FRAGMENT-01` | 振る舞い修正 | `CODE-NEW-pr-review-fragment-isolation-L92` | PR本文と各コメント本文を独立したMarkdown文書として解析する | PR本文の未閉鎖fence後に置いたsummary・thread・通常コメント画像 | 連結文字列全体の解析では後続画像が検出されなかった | `formatPrReviewTask()`が各本文の範囲を生成し、`findTaskImageReferences()`が断片ごとに`fromMarkdown()`を実行 | `prReviewAttachments.test.ts` 33件成功 | 完了 |
+| `pr-review-markdown-fragment-isolation` | `PR-ORDER-02` | 振る舞い修正 | 同上 | summary、active、outdated-unresolved、resolved、legacy、通常コメントをtask出力順で処理する | 複数カテゴリに画像を配置しplaceholderとattachment順を比較 | 全体parser状態に後続カテゴリが依存していた | formatterの既存分類順を単一のparts列と断片範囲の正本にした | カテゴリ横断のplaceholder順・attachment順assertion成功 | 完了 |
+| `pr-review-markdown-fragment-isolation` | `PR-LITERAL-03` | 振る舞い修正 | 同上 | 同一断片内のfenced code、inline code、HTML comment、`pre`内を画像扱いしない | コードリテラル内にGitHub画像URLを配置する | parser境界を分離しても同一断片内の除外維持が必要だった | mdast・parse5による構文ノード解析を維持 | `prReviewAttachments.test.ts`の非検出ケース成功 | 完了 |
+| `pr-review-markdown-fragment-isolation` | `PR-DEDUPE-04` | 振る舞い修正 | 同上 | 全断片でURL重複排除を共有する | 異なる断片に同一URLを配置する | 断片ごとに独立状態を持つと重複download・保存が起こり得た | `placeholderByUrl`をtask全体の処理スコープに保持 | 同一URLが1 attachment・同一placeholderになるassertion成功 | 完了 |
+| `pr-review-markdown-fragment-isolation` | `PR-INDEX-05` | 振る舞い修正 | 同上 | 予約済み画像番号と新規採番状態をtask全体で共有する | 既存`[Image #N]`と複数断片画像を併置する | 断片単位採番では番号衝突の可能性があった | `createImageAttachmentIndexAssigner([taskContent])`を全断片で共有 | 予約済み番号を避けた連続採番テスト成功 | 完了 |
+| `pr-review-markdown-fragment-isolation` | `PR-CLEANUP-06` | 振る舞い修正 | 同上 | download・保存失敗時に一時attachment storeをcleanupする | downloadまたは保存を失敗させ、一時rootの残存を確認する | 既存cleanup契約を境界変更後も維持する必要があった | 共通storeを`try/catch`で所有し、失敗時にcleanupして再throw | cleanup失敗経路テスト成功 | 完了 |
+| `pr-review-markdown-fragment-isolation` | `PR-MIGRATE-07` | 利用側移行 | 同上 | add、対話CLI、pipelineの3入口が同じ構造化契約を使用する | 各入口のformatter出力とattachment伝播引数を確認する | テスト・モックを含む一部利用側が旧文字列契約を参照していた | `add/index.ts`、`routing-inputs.ts`、`pipeline/steps.ts`と各モックを`formatPrReviewTask()`へ移行 | `addTask` 21件、CLI PR 29件、pipeline 56件成功 | 完了 |
+| `pr-review-markdown-fragment-isolation` | `PR-OLDPATH-08` | 旧経路削除 | 同上 | 完成task文字列をattachment parserへ直接渡す本番経路を残さない | `preparePrReviewAttachments`とformatter参照を検索する | 3入口が連結済み文字列を渡していた | 本番3入口を`FormattedPrReviewTask`へ統一 | `rg`で本番の旧直接解析呼び出しなし | 完了 |
+| `pr-review-markdown-fragment-isolation` | `PR-PUBLIC-09` | 既存契約保存 | 同上 | `formatPrReviewAsTask(): string`の既存整形結果を維持する | 既存formatterテストと変更前公開exportを照合する | 変更前から関数・re-export・利用テストが存在した | wrapperは`formatPrReviewTask(prReview).taskContent`へ委譲 | `git-format.test.ts` 25件成功、`git show HEAD`で変更前契約を確認 | 完了 |
+| `pr-review-markdown-fragment-isolation` | `PR-DATAFLOW-10` | 利用側移行 | 同上 | 実filesystemのtask attachmentとrun contextへ画像を伝播する | 未閉鎖PR本文後のコメント画像を保存し、bytesと参照先を確認する | parser単体だけでは保存・staging経路を証明できなかった | task保存・`prepareTaskSpecDirectory()`を通るlight ITを追加 | `pr-image-dataflow.integration.test.ts` 1件成功 | 完了 |
+| `e2e-runner-attempt-boundary` | `E2E-ENV-01` | 振る舞い修正 | `TEST-NEW-e2e-runner-attempt-boundary-L31` | 非空shardの各attemptが新しい隔離環境を取得する | 同一shardを複数回実行しrootを比較する | unitがattempt全体を差し替え、本番環境取得を観測できなかった | `runE2eMockAttempt()`が呼出しごとにenvironment factoryを実行 | 実child heavy ITで全rootが一意 | 完了 |
+| `e2e-runner-attempt-boundary` | `E2E-PROPAGATE-02` | 振る舞い修正 | 同上 | cwd、HOME、XDG、TMPDIR、TAKT系envを実childへ渡す | childが`process.cwd()`と対象envをJSON出力する | 既存heavy ITは追加optionsを使わず実伝播を検証しなかった | `runTeedCommand()`のspawn optionsへcwd・envを渡す | heavy ITでchild出力が期待値と一致 | 完了 |
+| `e2e-runner-attempt-boundary` | `E2E-CLEANUP-03` | 振る舞い修正 | 同上 | 正常終了後にattempt rootを削除する | child exit 0後にrootの存在を確認する | 実process所有境界でcleanupを確認できなかった | `runE2eMockAttempt()`の`finally`でcleanup | 複数正常attempt後に全root不存在 | 完了 |
+| `e2e-runner-attempt-boundary` | `E2E-SPAWN-04` | 振る舞い修正 | 同上 | spawn失敗でも同じ所有者がattempt rootを削除する | 存在しないexecutableでENOENTを発生させる | 代表的な起動失敗時cleanupの証拠がなかった | `runTeedCommand()`のrejectを`finally`へ通す | ENOENT伝播とroot不存在をheavy ITで確認 | 完了 |
+| `e2e-runner-attempt-boundary` | `E2E-REMEASURE-05` | 利用側移行 | 同上 | 初回とbirpc再測定が同じattempt executorを通る | shard 2初回だけbirpc noiseを返し再測定順を観測する | unit差し替えでは本番executor利用を証明できなかった | 初回・再測定とも同じ`runAttempt`を`executeAttempt()`へ渡す | attempt順`[1,2,3,4,2]`、5つの実child・一意rootを確認 | 完了 |
+| `e2e-runner-attempt-boundary` | `E2E-POLICY-06` | 既存契約保存 | 同上 | 空shard、shard構成、timeout、再測定条件、結果判定を変更しない | 空filterとbirpc/noise判定のunitを実行する | runner境界変更に伴う回帰リスクがあった | command構築とattempt実行のみ分離し、orchestration条件を維持 | `e2eMockRunner.test.ts` 7件成功、正式mock E2E成功 | 完了 |
+| `e2e-runner-attempt-boundary` | `E2E-CLASSIFY-07` | 利用側移行 | 同上 | 新規`it-*.test.ts`がheavy ITへ一意に分類される | unit/light/heavy分類契約を確認する | 新規heavy ITのCI配線確認が必要だった | 命名規則を使用し明示リストを追加しなかった | `releaseVerificationWiring.test.ts` 19件成功 | 完了 |
+
+## 受入条件
+| finding ID | 受入条件 | 証拠 | 状態 |
+|------------|----------|------|------|
+| `CODE-NEW-pr-review-fragment-isolation-L92` | PR本文に未閉鎖fenceがあっても後続summary・thread・通常コメント画像を検出、保存、置換し、除外・重複排除・順序・採番・cleanup・3入口を維持する | parser unit 33件、dataflow light IT 1件、add 21件、CLI PR 29件、pipeline 56件が成功 | 完了 |
+| `TEST-NEW-e2e-runner-attempt-boundary-L31` | 実childでcwd・隔離env、attempt分離、正常・spawn失敗cleanup、初回・再測定共通契約を検証し、heavy分類を確認する | 新規heavy IT 3件、teed-command heavy IT 4件、runner unit 7件、分類契約19件、正式mock E2Eが成功 | 完了 |
+| `ai-antipattern-review-companion-2` | 旧wrapperが要求外の互換経路である場合に削除する | 確定修正計画は同API維持を明記。`git show HEAD`で変更前からの関数・re-exportを確認し、現行テスト利用も確認 | 異議 |
+
+## 差し戻し後の証拠修正
+| 修正単位 | 義務ID | verifier が確認した不足 | 前回の証拠が検出できなかった理由 | 修正した反例・観測点 | 同じ証明手段から再開・再確認した義務 |
+|----------|--------|--------------------------|----------------------------------|----------------------|----------------------------------------|
+| `pr-review-markdown-fragment-isolation` | `PR-MIGRATE-07` | テスト利用側と`infra/git/index.js`モックに旧文字列契約が残っていた | 本番3入口だけを検索し、テスト・モックを契約利用側として走査し切れていなかった | 全テスト利用側とモックを構造化formatterへ移行し、対象ファイルを丸ごと再実行 | `PR-FRAGMENT-01`、`PR-MIGRATE-07`、`PR-OLDPATH-08`、`PR-DATAFLOW-10` |
+| `pr-review-markdown-fragment-isolation` | `PR-PUBLIC-09` | Companionが旧wrapperとre-exportを不要な後方互換経路と判定した | 内部parser契約の置換と変更対象外の公開文字列整形契約が混同された | 確定修正計画、変更前HEAD、現行利用箇所を再照合し、formatter対象テストを再実行 | `PR-MIGRATE-07`、`PR-OLDPATH-08`、`PR-PUBLIC-09` |
+
+## 品質ゲート
+| 種別 | 結果 | 証拠 |
+|------|------|------|
+| ビルド | 成功 | `npm run build` 終了コード0 |
+| lint | 成功 | `npm run lint` 終了コード0 |
+| fast unit gate | 成功 | `npm test`、4 shardすべて成功 |
+| light IT | 成功 | `HOME=/tmp/takt-bench-v3-home npm run test:it`、159 files・2358 tests成功 |
+| mock E2E | 成功 | `npm run test:e2e:mock`。birpc noise検出後のshard 2再測定を含め終了コード0 |
+| smoke E2E | 成功 | `npm run test:e2e:smoke`、21 tests成功・1 skipped |
+| PR断片対象テスト | 成功 | `prReviewAttachments` 33件、`git-format` 25件、dataflow IT 1件、add 21件、CLI PR 29件、pipeline 56件 |
+| runner対象テスト | 成功 | runner unit 7件、新規heavy IT 3件、teed-command heavy IT 4件、分類契約19件 |
+| 差分セルフスキャン | 成功 | `git diff --check`指摘なし。未使用参照、依存方向、共通責務、旧直接解析経路を検索し問題なし |
+
+## 未完了義務
+- なし。全heavy IT一括実行は確定修正計画の完了条件外であり、変更したheavy ITと分類契約は対象実行済み。

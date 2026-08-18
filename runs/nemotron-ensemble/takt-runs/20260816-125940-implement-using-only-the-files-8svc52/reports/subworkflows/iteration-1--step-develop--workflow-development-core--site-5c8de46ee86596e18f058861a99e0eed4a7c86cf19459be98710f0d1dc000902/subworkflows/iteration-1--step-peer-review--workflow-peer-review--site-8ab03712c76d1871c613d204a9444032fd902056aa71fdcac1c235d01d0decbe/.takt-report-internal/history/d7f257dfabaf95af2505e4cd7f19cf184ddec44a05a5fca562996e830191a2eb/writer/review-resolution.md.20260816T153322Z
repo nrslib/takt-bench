@@ -1,0 +1,50 @@
+# レビュー指摘裁定
+
+## 結果: 修正対象あり
+
+## 裁定サマリー
+- 対象レポート: AI生成コードレビュー, アーキテクチャレビュー, コーディングレビュー, セキュリティレビュー, テストレビュー
+- 修正対象 family 数: 2
+- 非修正対象数: 4
+- 判定根拠: 前回の修正で機能の大部分は実装されたが、保存処理（`saveImageAttachments`）の呼び出し漏れにより、実際に画像が保存され `order.md` に反映されないという致命的な機能未完が判明した。また、品質要件で定められた単体テストが完全に欠落しているため、これらを修正対象とする。
+
+## 要件の判定根拠
+| 対象 | 状態 | 根拠 |
+|------|------|------|
+| GitHub PR画像抽出・保存 | 充足 | `src/infra/github/pr.ts` 等で抽出・ダウンロードまで実装済み |
+| GitLab MR画像抽出・保存 | 充足 | `gitlab-support` 修正により対応済み |
+| 安全な一時ファイル管理 | 充足 | `image-lifecycle` 修正により UUID パス化と削除を実装済み |
+| 同期I/Oの回避 | 充足 | `image-io-performance` 修正により非同期 API へ移行済み |
+| エラー通知の適切性 | 充足 | `image-download-observability` 修正により詳細出力と警告を実装済み |
+| 画像の保存と order.md 追記 | 未充足 | `saveImageAttachments` 関数は定義されているが、呼び出し箇所が存在しない (CODE-NEW-attachments-save) |
+| 単体テストの追加 | 未充足 | 新規ロジックに対するテストファイルが `src/__tests__/` 下に存在しない (TEST-NEW-01) |
+
+## 再発台帳の引き継ぎ
+引き継ぎ元: subworkflows/iteration-1--step-remediation--workflow-development-remediation-dynamic--site-65bb1aaf70bbdd8893b8ef5f19670e7c92b19b03a156b308045bc8808559b892/fix-verification.md
+
+| 修正単位 | family ID | 不変条件の名前 | 担当箇所 | 今回の検証回数 | 前回の検証回数 | 前回経路 | 今回経路 | 同一不変条件・再発判定 | 累積 `incomplete` 回数 | 別経路での再発が確認済みか | 強制点候補 | 記録の完全性 |
+|----------|-----------|------------------|----------|------------------|------------------|----------|----------|------------------------|-------------------------|--------------------|------------|--------------|
+| `image-download-logic` | `image-download-logic` | 画像のダウンロードから `TaskAttachment` 生成までのフローが統一されていること | `src/features/tasks/attachments.ts` | 0 | なし | なし | 共通関数経由でのダウンロード→保存→TaskAttachment生成フロー | 判定できない（初回） | 0 | 未確認 | `src/features/tasks/attachments.ts` に `downloadImageAsAttachment` 等の共通関数を定義し、全入口からこの関数のみを呼び出す。 | 完全 |
+| `gitlab-support` | `gitlab-support` | GitLab MR の画像も整合的に抽出・保存されること | `src/infra/gitlab/pr.ts` | 0 | なし | なし | `fetchMrReviewComments` $\rightarrow$ `downloadImageAsAttachment` $\rightarrow$ 保存 フロー | 判定できない（初回） | 0 | 未確認 | バリデーションをプロバイダー非依存に拡張し、GitLab プロバイダーから共通保存関数を呼び出す。 | 完全 |
+| `image-lifecycle` | `image-lifecycle` | 一時ファイルは一意に生成され、処理後に確実に消去されること | `src/features/pipeline/steps.ts` | 0 | なし | なし | ユニークパス作成→`promoteTaskAttachments`→`unlink` フロー | 判定できない（初回） | 0 | 未確認 | `os.tmpdir()` と UUID 等を用いた一意なパス生成および `finally` ブロックでの `fs.unlink` 実装。 | 完全 |
+| `image-io-performance` | `image-io-performance` | 大容量ファイルの I/O がイベントループをブロッキングしないこと | `src/features/tasks/attachments.ts` | 0 | なし | なし | `fs.promises.copyFile` $\rightarrow$ terminal フロー | 判定できない（初回） | 0 | 未確認 | `fs.promises` API への完全な移行（`writeFileSync` $\rightarrow$ `writeFile` 等）。 | 完全 |
+| `image-download-observability` | `image-download-observability` | 画像ダウンロード失敗時に、原因を特定可能なエラーまたは警告がユーザーに通知されること | `src/features/pipeline/steps.ts` | 0 | なし | なし | `resolveTaskContent` $\rightarrow$ `catch` $\rightarrow$ `ui.warn` $\rightarrow$ terminal フロー | 判定できない（初回） | 0 | 未確認 | 不要: 既存の担当箇所で直接修正。`null` 返却を廃し、UI 通知関数を呼び出す。 | 完全 |
+
+## 修正対象 family
+| family | 担当箇所 | 観測可能な不変条件 | 同じ原因で変更される理由 | finding ID / 出典 | 修正権限の根拠 | 根拠 | 問題 → 根本原因 | 追加した経路 | 関係する契約経路 | 受入条件 | 修正境界 |
+|--------|----------|----------------------|--------------------------|-------------------|----------------|------|-------------------|--------------|--------------------|----------|----------|
+| `image-attachment-persistence` | `src/features/tasks/attachments.ts` | ダウンロードされた画像はタスクディレクトリに保存され、`order.md` に記載されること | 画像の自動収集機能の実装 | CODE-NEW-attachments-save (Coding) | 受入条件の直接違反 | `saveImageAttachments` が定義されているが呼び出し箇所がない | 機能未完：ダウンロード後に保存・追記処理が実行されないため | なし | `addTask` / `pipeline` $\rightarrow$ ダウンロード $\rightarrow$ `saveImageAttachments` $\rightarrow$ ファイル保存/order.md追記 | `takt add --pr` 等の実行時に、画像が `.takt/tasks/<slug>/attachments/` に保存され `order.md` に追記されること | `saveImageAttachments` の呼び出し経路の追加。保存ロジック自体の変更は除外。 |
+| `pr-image-attachment-test` | `src/infra/github/image-downloader.ts` 等 | 新規導入ロジック（抽出・検証・保存）が単体テストで担保されていること | 品質要件（単体テスト追加）の充足 | TEST-NEW-01 (Testing) | 受入条件の直接違反 | `src/__tests__/` に新規機能のテストが存在しない | テスト欠落：セキュリティ制約や境界値が未検証であるため | なし | `extractImageUrls`, `validateAndDownloadImage`, `saveImageAttachments` $\rightarrow$ Unit Test | `extractImageUrls`, `validateAndDownloadImage`, `saveImageAttachments` に対する単体テストが実装され、成功すること | 新規機能に関連する単体テストの作成。既存テストの修正は除外。 |
+
+## 指摘ごとの裁定
+| finding ID / 出典 | 技術的妥当性 | 裁定 | 対象 family | 同じ原因で変更される理由 | 合流根拠 | authorization basis | 初回に含まれなかった理由 | 根拠 |
+|-------------------|----------------|------|-------------|--------------------------|----------|---------------------|--------------------------|------|
+| ai-redundant-branch-overrides (AI) | 確認済み | `out_of_scope` | なし | 該当なし | 該当なし | なし | 該当なし | 単なるコーディングスタイルの改善であり、不変条件の違反ではないため |
+| ai-callback-capture-like (AI) | 確認済み | `out_of_scope` | なし | 該当なし | 該当なし | なし | 該当なし | テスト容易性の向上提案であり、現状の受入条件を直接的に阻害していないため |
+| ARCH-NEW-attachments-L34 (Arch) | 確認済み | `duplicate` | `image-lifecycle` | 一時ファイルの消去防止 | 同一原因 | なし | 該当なし | 既に `image-lifecycle` family で裁定済み |
+| ARCH-NEW-logic-dup (Arch) | 確認済み | `duplicate` | `image-download-logic` | 共通ロジックの集約 | 同一原因 | なし | 該当なし | 既に `image-download-logic` family で裁定済み |
+| CODE-NEW-attachments-save (Coding) | 確認済み | `actionable` | `image-attachment-persistence` | 画像の自動収集機能の実装 | 該当なし | direct_acceptance_criterion_violation | 該当なし | `saveImageAttachments` の呼び出し漏れにより保存・追記が行われない |
+| TEST-NEW-01 (Testing) | 確認済み | `actionable` | `pr-image-attachment-test` | 品質要件（単体テスト追加）の充足 | 該当なし | direct_acceptance_criterion_violation | 該当なし | 新規導入ロジックに対する単体テストが完全に欠落している |
+
+## 未解決の前提
+- なし

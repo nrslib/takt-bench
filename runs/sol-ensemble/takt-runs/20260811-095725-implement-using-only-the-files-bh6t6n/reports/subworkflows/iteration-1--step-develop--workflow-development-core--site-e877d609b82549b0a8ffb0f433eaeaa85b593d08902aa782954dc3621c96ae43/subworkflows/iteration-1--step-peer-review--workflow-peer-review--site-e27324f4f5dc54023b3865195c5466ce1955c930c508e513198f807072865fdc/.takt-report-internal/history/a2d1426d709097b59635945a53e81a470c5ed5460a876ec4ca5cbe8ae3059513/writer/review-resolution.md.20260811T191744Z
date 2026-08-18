@@ -1,0 +1,41 @@
+# マージレディネス最終裁定
+
+## 結果: 修正が必要
+
+## 要件・証跡サマリー
+
+| 対象 | 状態 | 根拠 |
+|------|------|------|
+| PR本文・通常コメント・review summary・review threadの画像検出と参照置換 | 充足 | 最新`coding-review.md`の契約入口チェック、`prReviewAttachments.test.ts`31件成功 |
+| PNG/JPEG/GIF/WebP、Content-Type、magic bytes、10 MiB上限、GitHub URL・認証制限 | 充足 | 最新`security-review.md`で全項目APPROVE、最新`review-resolution.md`の未解決前提なし |
+| `takt add --pr`でのattachment保存と`order.md`追記 | 充足 | iteration 3 `fix-verification.md`で`addTask.test.ts`21件成功 |
+| 対話CLI・pipeline `--pr`・保存済みtaskからrun contextへの伝播 | 充足 | iteration 3 `fix-verification.md`でCLI 29件、pipeline 56件、データフローIT 1件成功 |
+| 保存・実行・download失敗時のcleanup | 充足 | 最新`review-resolution.md`の`TEST-NEW-pr-image-cleanup-L301`裁定、iteration 3 `fix-verification.md` |
+| 任意長画像番号と既存fileNameの衝突回避 | 解消済み | iteration 3 `fix-verification.md`の`IAIP-01`〜`IAIP-06`がすべて完了 |
+| 累積差分の整合性 | 確認済み | 最新`architecture-review.md`で変更対象34ファイル、旧経路削除、依存方向、`git diff --check`成功を確認 |
+| build・lint・fast unit・light IT | 充足 | iteration 3 `fix-report.md`でbuild、lint、6,059 unit、2,357 light ITが成功 |
+| 分類契約・変更対象heavy IT | 充足 | iteration 3 `fix-report.md`で分類契約19件成功、最新`testing-review.md`でheavy IT 5ファイル112件成功 |
+| 最終コードに対するmock E2E | 未充足 | 最後の`npm run test:e2e:mock`成功はiteration 2 `fix-report.md`。その後iteration 3で対話seed、retry attachment、共通allocatorが変更されたが、最新`fix-report.md`・`fix-verification.md`に再実行証跡がない |
+
+## 修正対象 family
+
+| family | finding ID | 根拠 | 問題 → 根本原因 | 関係する契約経路 | 受入条件 | 修正境界 |
+|--------|------------|------|-------------------|--------------------|----------|----------|
+| `final-state-mock-e2e-evidence` | `FINAL-NEW-MOCK-E2E-EVIDENCE-01` | iteration 2 `fix-report.md`にmock E2E成功、iteration 3 `fix-report.md`に後続変更と最終品質ゲートが記録されているがmock E2Eは未記載 | 最終コードのE2E証跡がない → 後続remediationでタスク全体のmock E2Eゲートを再実行しなかった | `--pr` CLI → attachment付き対話seed → conversation store、およびpipeline `--pr` → attachment付きtask spec → workflow実行 | 現在の最終作業ツリーで`npm run test:e2e:mock`が終了コード0で完了し、その結果が記録される | 成功すればコード変更不要。失敗時だけ再現原因を最小修正し、影響するゲートを再実行する。実private GitHub通信、全heavy IT、release gate、周辺リファクタリングは除外する |
+
+## 前段 finding の扱い
+
+| finding ID | 状態 | 根拠 |
+|------------|------|------|
+| `ARCH-NEW-src-features-tasks-attachments-L31` | resolved | iteration 3 `fix-verification.md`で任意長番号、既存fileName、同一バッチの非衝突を確認 |
+| `CODE-NEW-imageAttachmentIndex-L37` | adjudicated_non_actionable | 最新`review-resolution.md`で`no_issue_after_verification` |
+| `AI-NEW-IMAGE-INDEX-PRECISION-31` | adjudicated_non_actionable | 最新`review-resolution.md`で`no_issue_after_verification` |
+| `AI-NEW-MARKDOWN-LITERAL-SCAN-158` | adjudicated_non_actionable | 最新`review-resolution.md`で前方走査実装と30,000行回帰テストを確認 |
+| `TEST-NEW-pr-image-dataflow-L29` | adjudicated_non_actionable | 最新`review-resolution.md`で保存済みtaskからrun contextまでのITを確認 |
+| `TEST-NEW-pr-image-cleanup-L301` | adjudicated_non_actionable | 最新`review-resolution.md`で保存・実行失敗時cleanupテストを確認 |
+| `ai-antipattern-review-companion-1`、`ai-antipattern-review-companion-2` | resolved | iteration 3 `fix-report.md`・`fix-verification.md`で完了 |
+
+## 未解決の前提・環境要因
+
+- 実private GitHub repositoryとの通信は未実施だが、外部資格情報を必要とし、認証・URL・形式・サイズ境界は決定的テストで確認済みのため非ブロッキング。
+- タスク全体の再計画は不要。最終コードに対するmock E2E成功証跡の取得だけで再裁定可能。

@@ -1,0 +1,39 @@
+{"id":"ai-antipattern-review-companion-1","severity":"must_fix","file":"src/__tests__/github-pr-image-download.test.ts","line":18,"finding":"PNG の成功ケースが4バイトしか渡していませんが、実装の `inferSupportedImageMimeType` は8バイトのPNGシグネチャを要求するため、このパラメータ化テストは必ず失敗します。成功用fixtureを完全なPNGシグネチャにするか、要求契約に従って判定側と期待値を一致させてください。","status":"open"}
+{"id":"ai-antipattern-review-companion-2","severity":"must_fix","file":"src/__tests__/github-pr-image-download.test.ts","line":47,"finding":"テストは `gh auth token` の2引数を期待していますが、実装は `gh auth token --hostname github.com` を呼ぶため、全成功ケースで呼び出し検証が失敗します。実際に採用する認証コマンドの契約へテストと実装を揃えてください。","status":"open"}
+{"id":"ai-antipattern-review-companion-1","status":"resolved"}
+{"id":"ai-antipattern-review-companion-2","status":"resolved"}
+{"id":"ai-antipattern-review-companion-3","severity":"must_fix","file":"src/shared/utils/imageAttachmentStore.ts","line":34,"finding":"既存の `createImageAttachmentStore` は元のモジュールから引き続き公開されていますが、共通化に伴って未対応 MIME のエラー文言が `Unsupported pasted image type: ...` から `Unsupported image attachment type: ...` に変わっています。PR画像対応に不要な既存の観測可能契約変更なので、従来の呼び出し経路のエラー契約を維持してください。","status":"open"}
+{"id":"ai-antipattern-review-companion-1","status":"resolved"}
+{"id":"ai-antipattern-review-companion-2","status":"resolved"}
+{"id":"ai-antipattern-review-companion-3","status":"unresolved"}
+{"id":"ai-antipattern-review-companion-4","severity":"must_fix","file":"src/features/tasks/add/index.ts","line":194,"finding":"画像のみのPRを許可するための条件変更が、画像を含まない任意の本文だけのPRまで有効化しています。従来は reviews/comments が空なら作成しなかったため、`body: 'description only', comments: [], reviews: []` でもタスクが作成されるのは要求外の契約変更です。レビュー入力がない場合の既存拒否を維持しつつ、実際に対象画像がある場合だけ例外にし、その反例テストを追加してください。","status":"open"}
+{"id":"ai-antipattern-review-companion-5","severity":"must_fix","file":"src/shared/utils/imageAttachmentStore.ts","line":49,"finding":"共通化前の cleanup 失敗ログは `interactive` 名前空間でしたが、同じ公開経路を再exportしたまま `image-attachment` に変更されています。既存のデバッグフィルタや観測ログが要求外で変わるため、従来の interactive 経路のログ契約を維持してください。","status":"open"}
+{"id":"ai-antipattern-review-companion-1","status":"resolved"}
+{"id":"ai-antipattern-review-companion-2","status":"resolved"}
+{"id":"ai-antipattern-review-companion-3","status":"unresolved"}
+{"id":"ai-antipattern-review-companion-4","status":"unresolved"}
+{"id":"ai-antipattern-review-companion-5","status":"unresolved"}
+{"id":"ai-antipattern-review-companion-1","status":"resolved"}
+{"id":"ai-antipattern-review-companion-2","status":"resolved"}
+{"id":"ai-antipattern-review-companion-3","status":"unresolved"}
+{"id":"ai-antipattern-review-companion-4","status":"unresolved"}
+{"id":"ai-antipattern-review-companion-5","status":"unresolved"}
+{"id":"ai-antipattern-review-companion-1","status":"resolved"}
+{"id":"ai-antipattern-review-companion-2","status":"resolved"}
+{"id":"ai-antipattern-review-companion-3","status":"unresolved"}
+{"id":"ai-antipattern-review-companion-4","status":"unresolved"}
+{"id":"ai-antipattern-review-companion-5","status":"unresolved"}
+{"id":"ai-antipattern-review-companion-3","status":"unresolved"}
+{"id":"ai-antipattern-review-companion-4","status":"unresolved"}
+{"id":"ai-antipattern-review-companion-5","status":"unresolved"}
+{"id":"ai-antipattern-review-companion-1","status":"resolved"}
+{"id":"ai-antipattern-review-companion-2","status":"resolved"}
+{"id":"ai-antipattern-review-companion-3","status":"resolved"}
+{"id":"ai-antipattern-review-companion-4","status":"unresolved"}
+{"id":"ai-antipattern-review-companion-5","status":"resolved"}
+{"id":"ai-antipattern-review-companion-1","status":"resolved"}
+{"id":"ai-antipattern-review-companion-2","status":"resolved"}
+{"id":"ai-antipattern-review-companion-3","status":"resolved"}
+{"id":"ai-antipattern-review-companion-4","status":"unresolved"}
+{"id":"ai-antipattern-review-companion-5","status":"resolved"}
+{"id":"ai-antipattern-review-companion-4","status":"unresolved"}

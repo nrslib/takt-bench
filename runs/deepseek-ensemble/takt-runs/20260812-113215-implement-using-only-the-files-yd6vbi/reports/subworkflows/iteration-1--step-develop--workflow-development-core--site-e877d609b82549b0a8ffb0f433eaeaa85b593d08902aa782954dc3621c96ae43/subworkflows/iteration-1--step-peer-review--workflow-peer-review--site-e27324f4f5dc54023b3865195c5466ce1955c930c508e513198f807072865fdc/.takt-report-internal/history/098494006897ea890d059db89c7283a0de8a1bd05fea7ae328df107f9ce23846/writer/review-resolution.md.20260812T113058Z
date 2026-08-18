@@ -1,0 +1,29 @@
+# レビュー指摘裁定
+
+## 結果: 修正対象あり
+
+## 裁定サマリー
+
+対象は Report Directory 内の `architecture-review.md`、`coding-review.md`、`security-review.md`、`testing-review.md`、`ai-antipattern-review.md`。提出 finding は `ai-antipattern-review.md` の2行のみで、修正対象は1 family、非修正対象は1件。さらに bounded horizontal comparison で、同じ一時画像ディレクトリの所有権・cleanup不変条件・根本原因を共有する未訪問経路3件を同じ family に統合した。
+
+修正対象は、今回追加されたPR画像一時ファイルの lifecycle が例外・早期終了経路で閉じていない退行である。Response API の指摘は、現行型定義と実コードが主張に反するため修正対象から除外する。
+
+## 修正対象 family
+
+| family | finding ID / 出典 | 修正権限の根拠 | 根拠 | 問題 → 根本原因 | 関係する契約経路 | 受入条件 | 修正境界 |
+|--------|-------------------|----------------|------|-------------------|--------------------|----------|----------|
+| `F-PR-IMAGE-LIFECYCLE` | `AI-NEW-infra-github-L309` / `ai-antipattern-review.md` new #1、`FU-PRIMG-PRODUCER-TOKEN`、`FU-PRIMG-INTERACTIVE-CANCEL`、`FU-PRIMG-ADD-SELECTION-ERROR` | 今回差分の退行。未訪問経路は採用済み family の閉鎖 | `src/infra/github/prReviewImageAttachments.ts:390-413`、`src/features/pipeline/execute.ts:40-85`、`src/app/cli/routing.ts:174-200`、`src/features/tasks/add/index.ts:207-236` | 一時画像ディレクトリを生成した後、cleanupの所有期間全体が単一の保証境界で覆われていない。そのため、通常returnでは削除されても、token取得失敗、pipelineのworkflow例外、対話経路の選択キャンセル・例外、`add --pr` のworkflow選択例外で残留する | 生成: `downloadPrReviewImageAttachments`。consumer: `takt add --pr`、pipeline `--pr`、対話 `--pr`。失敗・中断: token取得、workflow実行、workflow/mode選択。永続化・再注入: `saveTaskFile`、`prepareTaskSpecDirectory`、`executeTask`。terminal: 成功、既知の失敗、例外、キャンセル | 一時ディレクトリ生成後の成功・失敗・キャンセル・例外すべてで削除される。token取得失敗、pipeline workflow例外、対話経路のworkflow/mode選択キャンセル・例外、`add --pr` のworkflow選択例外を決定的テストで確認する。正常終了、既知の失敗、cleanupの冪等性を維持する | cleanupの所有期間と関連テストだけを最小変更する。Response読み取り方式、redirect処理、画像形式、並列ダウンロード、transaction・rollback、外部URL対応拡大、周辺リファクタリングは除外する |
+
+## 指摘ごとの裁定
+
+| finding ID / 出典 | 技術的妥当性 | 裁定 | 対象 family | authorization basis | 初回に含まれなかった理由 | 根拠 |
+|-------------------|----------------|------|-------------|---------------------|--------------------------|------|
+| `AI-NEW-infra-github-L309` / `ai-antipattern-review.md` new #1 | 確認済み。ただし「pipelineでcleanupが一切呼ばれない」という表現は過大で、欠陥は例外経路に限定される | `actionable` | `F-PR-IMAGE-LIFECYCLE` | `remediation_regression` | 該当なし | `src/features/pipeline/execute.ts:54,62,69,78,85` は通常returnと既知の失敗でcleanupするが、`src/features/pipeline/execute.ts:60` の `runWorkflow()` がrejectすると後続cleanupへ到達しない。`runWorkflow` 内のfinallyはprepared task specのみを削除する |
+| `FU-PRIMG-PRODUCER-TOKEN` / 裁定時follow-up | 確認済み | `duplicate` | `F-PR-IMAGE-LIFECYCLE` | `remediation_regression` | 初回指摘がpipeline consumerだけを確認し、producerのtoken取得前後を訪問していなかった | `src/infra/github/prReviewImageAttachments.ts:390` で一時ディレクトリを作成した後、`src/infra/github/prReviewImageAttachments.ts:391` のtoken取得がcleanup対象のtryより前にある。token取得失敗時はディレクトリが残る |
+| `FU-PRIMG-INTERACTIVE-CANCEL` / 裁定時follow-up | 確認済み | `duplicate` | `F-PR-IMAGE-LIFECYCLE` | `accepted_family_unvisited_consumer` | 初回指摘が対話consumerのdispatch前早期終了を訪問していなかった | `src/app/cli/routing.ts:174-200` のworkflow選択・mode選択のキャンセルや例外は、`src/app/cli/routing.ts:281-345` のcleanup finallyより前に発生する |
+| `FU-PRIMG-ADD-SELECTION-ERROR` / 裁定時follow-up | 確認済み | `duplicate` | `F-PR-IMAGE-LIFECYCLE` | `accepted_family_unvisited_consumer` | 初回指摘が `takt add --pr` のworkflow選択例外を訪問していなかった | `src/features/tasks/add/index.ts:213` の `determineWorkflow()` が例外になると、キャンセル分岐のcleanupにも、保存処理のfinallyにも到達しない |
+| `AI-NEW-infra-github-L309` / `ai-antipattern-review.md` new #2 | 反証済み | `false_positive` | なし | なし | 該当なし | `Response` は `Body` を継承し、現行TypeScript DOM型にも `body` と `arrayBuffer()` が定義されている。実コードは `src/infra/github/prReviewImageAttachments.ts:305-307` で先に標準の `arrayBuffer()` を使用する。`body` のBuffer判定はテストダブル用fallbackであり、「存在しないResponseプロパティを通常取得に使用している」という主張とは一致しない |
+
+## 未解決の前提
+
+- なし。`ai-antipattern-review.md` が異なる2指摘へ同一の finding ID を付与しているため、裁定上は出典の `new #1` と `new #2` を併記して一意に追跡する。要求・計画との競合はなく、タスク全体の再計画は不要。

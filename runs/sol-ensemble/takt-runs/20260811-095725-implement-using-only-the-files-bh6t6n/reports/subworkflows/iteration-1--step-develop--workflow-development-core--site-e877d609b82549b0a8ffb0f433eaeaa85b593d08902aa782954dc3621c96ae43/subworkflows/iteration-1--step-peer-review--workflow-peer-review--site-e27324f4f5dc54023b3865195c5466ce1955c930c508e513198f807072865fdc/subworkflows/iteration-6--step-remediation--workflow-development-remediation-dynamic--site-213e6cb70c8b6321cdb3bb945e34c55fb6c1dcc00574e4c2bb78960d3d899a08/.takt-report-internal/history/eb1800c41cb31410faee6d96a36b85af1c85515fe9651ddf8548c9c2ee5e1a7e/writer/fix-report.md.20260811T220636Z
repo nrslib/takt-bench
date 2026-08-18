@@ -1,0 +1,61 @@
+# 修正レポート
+
+## サマリー
+
+PR添付画像の一時store取得後に`process.exit(1)`が実行されると、外側の`finally`を通らず画像が残る問題を修正した。同期`exit`イベントと通常の`finally`が共有する一回性cleanup境界を追加し、workflow失敗、PR context検証失敗、head branch欠落の3経路を保護した。
+
+正常終了、取消、例外時のcleanup、attachment伝播、既存の終了コードとエラー表示は維持した。対象unit、routing回帰、実child process heavy IT、分類契約、全品質ゲートは成功した。
+
+## 修正単位
+
+| 修正単位 | 対象 finding | 契約の正本 | 実施内容・反映先 | 状態 |
+|----------|--------------|------------|-----------------|------|
+| `pr-attachment-cleanup-hard-exit` | `AI-NEW-pr-attachment-cleanup-hard-exit-L307` | private PR画像の安全な一時保存要件、対話CLIの既存終了・エラー契約 | `processExitCleanup.ts`へ同期exit cleanup境界を追加し、`routing.ts`でPR attachment取得直後に登録。旧来の外側`finally`専用cleanup経路を同じ終了関数へ移行。route unit、専用unit、実child process heavy ITを追加 | 完了 |
+
+## 完了義務
+
+| 修正単位 | 義務ID | 種別 | 対象 finding | 不変条件と対象経路 | 違反を検出する反例・観測点 | 修正前または差し戻し時の結果 | 実装根拠 | 修正後の証拠 | 状態 |
+|----------|--------|------|--------------|--------------------|------------------------------|--------------------------------|----------|--------------|------|
+| `pr-attachment-cleanup-hard-exit` | `PACH-01` | 振る舞い修正 | `AI-NEW-pr-attachment-cleanup-hard-exit-L307` | process終了時に同期cleanupを完了する | 実child processを非0終了させ、終了後の画像とsessionディレクトリを確認 | `process.exit()`では外側の`finally`が実行されず、一時画像が残り得た | `processExitCleanup.ts`で`process.once('exit', finish)`を登録 | heavy ITで終了コード23、画像・sessionディレクトリとも不存在 | 完了 |
+| `pr-attachment-cleanup-hard-exit` | `PACH-02` | 利用側移行 | 同上 | `resolvePrInput()`成功直後、後続の失敗可能処理より前にcleanupを登録する | 不正base branchによりPR context生成を失敗させる | cleanupは外側`finally`からのみ呼ばれていた | `routing.ts`でPR結果取得直後に`registerProcessExitCleanup()`を呼び出す | PR context検証失敗テストでexit前cleanupを1回観測 | 完了 |
+| `pr-attachment-cleanup-hard-exit` | `PACH-03` | 振る舞い修正 | 同上 | workflow失敗の既定`process.exit(1)`経路でも解放する | `selectAndExecuteTask()`のhard-exit契約を再現 | reject-only mockでは実hard-exit境界を検証できなかった | routingの登録済みexit handlerをworkflow失敗時に実行 | routing回帰テストでcleanup 1回、終了コード1を確認 | 完了 |
+| `pr-attachment-cleanup-hard-exit` | `PACH-04` | 振る舞い修正 | 同上 | PR context検証失敗のcatch内`process.exit(1)`でも解放する | `baseRefName: invalid..base`を入力 | store取得後の検証失敗で外側`finally`が実行されなかった | PR取得直後の登録により検証処理より先に所有境界を確立 | cleanup 1回、既存エラー文言、終了コード1を確認 | 完了 |
+| `pr-attachment-cleanup-hard-exit` | `PACH-05` | 振る舞い修正 | 同上 | save_task時のhead branch欠落でも解放する | head branchなしで`save_task`を選択 | handler内`process.exit(1)`が外側`finally`を迂回した | 同じexit cleanup handlerをroutingスコープ全体で維持 | cleanup 1回、既存エラー文言、終了コード1、保存未実行を確認 | 完了 |
+| `pr-attachment-cleanup-hard-exit` | `PACH-06` | 既存契約保存 | 同上 | 正常完了、取消、通常例外では従来どおり解放し、listenerを残さない | 終了関数の通常呼び出し、workflow選択取消 | 通常経路では既存`finally`がcleanupを担当していた | 外側`finally`が登録時に返された終了関数を呼ぶ | 専用unitでlistener数復元、routingテストで成功・取消時cleanupを確認 | 完了 |
+| `pr-attachment-cleanup-hard-exit` | `PACH-07` | 既存契約保存 | 同上 | exit handlerと`finally`が競合しても実cleanupは一度だけ | exit listener実行後に終了関数を再呼び出す | 二重実行防止を所有する共通境界がなかった | `finished`状態をcleanup境界内に閉じ込めた | 専用unitでcleanupが1回だけ呼ばれることを確認 | 完了 |
+| `pr-attachment-cleanup-hard-exit` | `PACH-08` | 旧経路削除 | 同上 | 生のcleanup関数を外側`finally`だけで呼ぶ旧経路を残さない | `cleanupSourceAttachments`と旧wrapper呼び出しを検索 | hard-exitを所有しない旧経路が存在した | `finishSourceAttachmentsCleanup`へ置換 | 検索で旧変数・旧wrapper経路なし、`git diff --check`成功 | 完了 |
+| `pr-attachment-cleanup-hard-exit` | `PACH-09` | 既存契約保存 | 同上 | 成功時のattachment伝播、終了コード、利用者向けエラーを変更しない | execute/save_task成功、3つの失敗経路の引数・ログを観測 | 既存routing契約が基準 | attachment生成・実行・保存処理は変更せずcleanup境界のみ移行 | routing全30テスト、全unit、mock E2E、smoke E2E成功 | 完了 |
+
+## 受入条件
+
+| finding ID | 受入条件 | 証拠 | 状態 |
+|------------|----------|------|------|
+| `AI-NEW-pr-attachment-cleanup-hard-exit-L307` | workflow失敗、PR context検証失敗、head branch欠落の全hard-exit経路でプロセス終了前にstoreを解放する | routing回帰テスト3経路でcleanup 1回と終了コード1を確認 | 完了 |
+| `AI-NEW-pr-attachment-cleanup-hard-exit-L307` | 実child process終了後に一時画像が存在しない | heavy ITで非0終了後の画像・sessionディレクトリ不存在を確認 | 完了 |
+| `AI-NEW-pr-attachment-cleanup-hard-exit-L307` | 成功時挙動、終了コード、利用者向けエラーを維持する | routing全30テスト、全unit、mock E2E、smoke E2E成功 | 完了 |
+| `AI-NEW-pr-attachment-cleanup-hard-exit-L307` | cleanupを重複実行せず、通常完了後にlistenerを残さない | `processExitCleanup.test.ts`の2テストで一回性とlistener解除を確認 | 完了 |
+
+## 差し戻し後の証拠修正
+
+該当なし。Companionから一時的に「helper未配線」の指摘が届いたが、現在の`routing.ts`でimportとPR取得直後の呼び出しを再確認し、レコードは`resolved`となった。
+
+## 品質ゲート
+
+| 種別 | 結果 | 証拠 |
+|------|------|------|
+| 専用unit | 成功 | `npm test -- src/__tests__/processExitCleanup.test.ts`：2件成功 |
+| routing回帰 | 成功 | `npm test -- src/__tests__/cli-routing-pr-resolve.test.ts`：30件成功 |
+| heavy IT | 成功 | `npm test -- src/__tests__/it-pr-attachment-process-exit-cleanup.test.ts`：1件成功 |
+| 分類契約 | 成功 | `npm test -- src/__tests__/releaseVerificationWiring.test.ts`：19件成功、heavy runner配線を確認 |
+| ビルド | 成功 | `npm run build` |
+| Lint | 成功 | `npm run lint` |
+| 全unit | 成功 | `npm test`：4 shardすべて成功 |
+| light IT | 成功 | `HOME=/tmp/takt-bench-v3-home npm run test:it`：159ファイル、2358件成功 |
+| mock E2E | 成功 | `npm run test:e2e:mock`：RPCノイズ発生shardを自動再計測後、終了コード0 |
+| smoke E2E | 成功 | `npm run test:e2e:smoke`：21件成功、外部GitHub依存1件は既定skip |
+| 差分検査 | 成功 | `git diff --check`成功 |
+| セルフスキャン | 成功 | 未使用import/export、旧cleanup経路、依存方向違反、同一責務の重複なし |
+
+## 未完了義務
+
+- なし

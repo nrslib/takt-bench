@@ -1,0 +1,25 @@
+# レビュー指摘裁定
+
+## 結果: 修正対象あり
+
+## 裁定サマリー
+
+iteration 4 の最新 reviewer レポート4件を対象とした。提出された現行 finding は2件で、いずれも現在のコードと証跡で確認でき、根本原因と受入条件が異なるため、2つの actionable family として確定した。非修正対象は0件、duplicate は0件。タスク全体の再計画は不要である。
+
+## 修正対象 family
+
+| family | finding ID / 出典 | 根拠 | 問題 → 根本原因 | 関係する契約経路 | 受入条件 | 修正境界 |
+|--------|-------------------|------|-------------------|--------------------|----------|----------|
+| `pr-review-markdown-fragment-isolation` | `CODE-NEW-pr-review-fragment-isolation-L92` / `coding-review.md` | `src/infra/git/format.ts:197-264`でPR本文・review・通常コメントを連結し、`src/features/tasks/prReviewAttachments.ts:91-124`で連結後の文字列を単一の`fromMarkdown()`へ渡している。未閉鎖コードフェンスを含むPR本文と後続画像コメントの再現では、AST画像ノード0件、attachment 0件となる。 | 後続コメントの画像が検出されない → 独立したMarkdown本文を連結してから解析し、先行本文の構文状態を後続本文へ漏らしている | `PrReviewData`生成 → PR task整形 → 画像抽出・download・placeholder置換 → `takt add --pr`、対話CLI `--pr`、pipeline `--pr` → task attachment保存・実行 | 未閉鎖フェンスを含む先行本文があっても、後続の通常コメント・review summary・review threadにある画像が検出、保存、置換される。同一断片内のコードリテラルは引き続き画像扱いしない。URL重複排除、出現順、画像番号割当を断片間で維持し、3入口が共通の修正済み経路を使用する | PR本文・各コメントの解析境界、必要な内部契約、3利用側、回帰テストに限定する。Markdown parser交換、壊れたMarkdown自体の補正、download・MIME・サイズ・認証制約の変更、legacy fallback、周辺リファクタリングは除外する |
+| `e2e-runner-attempt-boundary` | `TEST-NEW-e2e-runner-attempt-boundary-L31` / `testing-review.md` | `scripts/run-e2e-mock-shards.mjs:138-157`が本番attemptで隔離環境を作成し、`scripts/teed-command.mjs:14-20`へ`cwd`・`env`を渡す。一方、`src/__tests__/e2eMockRunner.test.ts:49-181`は全ケースで`runAttempt`を差し替え、`src/__tests__/it-teed-command.test.ts:31-84`も追加されたoptionsを使用していない。正式E2E成功と手動probeは恒久的な回帰テスト不足を反証しない。 | 本番attemptの環境伝播・cleanupが回帰しても対象テストが検出できない → orchestration用test doubleがproduction process境界を置換し、変更された`cwd`・隔離env・cleanup契約を永続テストが観測していない | `npm run test:e2e:mock` → `runCli()` → 初回・再測定の`runShardAttempt()` → `runTeedCommand()` → child process → attempt環境cleanup | 実child processで指定`cwd`と隔離`env`の伝播を観測する。各production attemptが個別の隔離環境を使い、成功時と代表的な起動失敗時にcleanupされることを検証する。初回と再測定が同じattempt契約を使うことを確認する。追加・変更したheavy ITを対象実行し、分類契約テストも単体実行する | runner境界のテスト可能性と必要最小限の回帰テストに限定する。再測定条件、shard構成、timeout、正式E2Eの外部挙動、全heavy IT実行、広域なrunner再設計、新しい運用保証は除外する |
+
+## 指摘ごとの裁定
+
+| finding ID / 出典 | 裁定 | 対象 family | 根拠 |
+|-------------------|------|-------------|------|
+| `CODE-NEW-pr-review-fragment-isolation-L92` / `coding-review.md` | `actionable` | `pr-review-markdown-fragment-isolation` | 未閉鎖フェンスによる後続画像欠落を再現でき、`order.md`のPR本文・通常コメント・review thread画像検出要件に直接違反する。3つの`--pr`入口が同じ連結後解析経路を使用する。 |
+| `TEST-NEW-e2e-runner-attempt-boundary-L31` / `testing-review.md` | `actionable` | `e2e-runner-attempt-boundary` | 今回変更された実process境界について、現在のrunner unitは本番attemptを通らず、既存process ITも新しいoptionsを検証していない。変更に直接関係するテスト品質上の欠陥であり、実境界に沿った最小のheavy ITで解消できる。 |
+
+## 未解決の前提
+
+- なし。2件の修正対象は現行要求・設計前提のまま独立して修正可能であり、競合する要求や再計画を要する前提はない。

@@ -1,0 +1,7 @@
+{"id":"ai-antipattern-review-companion-1","severity":"must_fix","file":"src/shared/utils/imageAttachmentStore.ts","line":79,"finding":"初期添付の番号が連番であると仮定して `attachments.length + 1` を採番していますが、新しい `createImageAttachmentIndexAssigner` は既存本文の番号を予約するため疎な番号を生成します。例えば本文に `[Image #1]` があり、PR画像が `[Image #2]` として初期化された状態では、対話中に貼り付けた次の画像も `[Image #2]` / `image-2.*` になり、参照衝突や保存時の上書きが発生します。初期添付の実際の placeholder・fileName を予約したうえで未使用番号を割り当て、疎な初期番号からの追加を契約経路で検証する必要があります。","status":"open"}
+{"id":"ai-antipattern-review-companion-1","status":"unresolved"}
+{"id":"ai-antipattern-review-companion-1","status":"unresolved"}
+{"id":"ai-antipattern-review-companion-1","status":"unresolved"}
+{"id":"ai-antipattern-review-companion-1","status":"unresolved"}
+{"id":"ai-antipattern-review-companion-1","status":"unresolved"}
+{"id":"ai-antipattern-review-companion-1","status":"unresolved"}

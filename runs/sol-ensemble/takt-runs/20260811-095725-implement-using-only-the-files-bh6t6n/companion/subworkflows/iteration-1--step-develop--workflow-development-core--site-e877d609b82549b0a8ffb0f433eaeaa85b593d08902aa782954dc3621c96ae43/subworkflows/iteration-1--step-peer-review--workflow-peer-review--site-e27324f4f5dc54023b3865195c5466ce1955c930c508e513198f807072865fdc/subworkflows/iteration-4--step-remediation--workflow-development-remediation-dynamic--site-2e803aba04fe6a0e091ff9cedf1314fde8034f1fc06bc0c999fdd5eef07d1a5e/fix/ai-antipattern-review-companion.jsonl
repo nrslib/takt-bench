@@ -1,0 +1,32 @@
+{"id":"ai-antipattern-review-companion-1","severity":"must_fix","file":"src/features/tasks/prReviewAttachments.ts","line":527,"finding":"独自の正規表現は Markdown の画像契約を完全に表現できません。例えば `<pre>\\n![example](https://github.com/user-attachments/assets/x)\\n</pre>` 内のリテラルを実画像としてダウンロード・置換する一方、`![screenshot][img]` と参照定義による実画像は検出しません。PR本文を意図せず改変したり画像を実行コンテキストへ保存できなかったりするため、Markdownの構文境界に基づいて画像ノードだけを処理し、raw HTMLリテラルと参照形式を含む反例で検証する必要があります。","status":"open"}
+{"id":"ai-antipattern-review-companion-1","status":"unresolved"}
+{"id":"ai-antipattern-review-companion-2","severity":"must_fix","file":"package.json","line":153,"finding":"`mdast-util-from-markdown` と `parse5` を本番依存へ追加していますが、提示されたコードではどちらも import・利用されておらず、`prReviewAttachments.ts` は引き続き独自の Markdown/HTML 解析を行っています。未使用依存を追加しただけでは既報の構文境界問題を修正できず、不要な依存と大規模な lockfile 差分だけが増えています。Markdown の画像ノードと HTML の `<img>` 要素を実際に解析する経路へ配線するか、使用しない依存を削除してください。","status":"open"}
+{"id":"ai-antipattern-review-companion-1","status":"unresolved"}
+{"id":"ai-antipattern-review-companion-2","status":"unresolved"}
+{"id":"ai-antipattern-review-companion-1","status":"unresolved"}
+{"id":"ai-antipattern-review-companion-2","status":"unresolved"}
+{"id":"ai-antipattern-review-companion-1","status":"unresolved"}
+{"id":"ai-antipattern-review-companion-2","status":"unresolved"}
+{"id":"ai-antipattern-review-companion-1","status":"resolved"}
+{"id":"ai-antipattern-review-companion-2","status":"resolved"}
+{"id":"ai-antipattern-review-companion-1","status":"resolved"}
+{"id":"ai-antipattern-review-companion-2","status":"resolved"}
+{"id":"ai-antipattern-review-companion-1","status":"resolved"}
+{"id":"ai-antipattern-review-companion-2","status":"resolved"}
+{"id":"ai-antipattern-review-companion-1","status":"resolved"}
+{"id":"ai-antipattern-review-companion-2","status":"resolved"}
+{"id":"ai-antipattern-review-companion-1","status":"resolved"}
+{"id":"ai-antipattern-review-companion-2","status":"resolved"}
+{"id":"ai-antipattern-review-companion-1","status":"resolved"}
+{"id":"ai-antipattern-review-companion-2","status":"resolved"}
+{"id":"ai-antipattern-review-companion-3","severity":"must_fix","file":"src/shared/utils/imageAttachmentReferences.ts","line":6,"finding":"`IMAGE_ATTACHMENT_INDEX_PATTERN` が添付パス境界なしで `image-(\\d+).ext` を検索するため、通常の本文や外部画像 URL（例: `https://example.com/image-1.png`）まで添付 index 1 と誤認します。その結果、実在する `[Image #1]` や `attachments/image-1.png` がないのに新規画像が `[Image #2]` となり、「未使用の最小 index を割り当てる」契約を破ります。ファイル名側は実際の添付参照である `attachments/image-N.ext` に限定し、無関係なファイル名を含む反例を追加してください。","status":"open"}
+{"id":"ai-antipattern-review-companion-3","status":"unresolved"}
+{"id":"ai-antipattern-review-companion-1","status":"resolved"}
+{"id":"ai-antipattern-review-companion-2","status":"resolved"}
+{"id":"ai-antipattern-review-companion-3","status":"unresolved"}
+{"id":"ai-antipattern-review-companion-3","status":"unresolved"}
+{"id":"ai-antipattern-review-companion-3","status":"unresolved"}
+{"id":"ai-antipattern-review-companion-1","status":"resolved"}
+{"id":"ai-antipattern-review-companion-2","status":"resolved"}
+{"id":"ai-antipattern-review-companion-3","status":"unresolved"}
+{"id":"ai-antipattern-review-companion-3","status":"resolved"}

@@ -1,0 +1,28 @@
+# v3 PR attachment benchmark runtime configuration.
+language: ja
+logging:
+  usage_events: true
+  debug: true
+
+workflow_command_gates:
+  custom_scripts: true
+
+
+
+workflow_overrides:
+  steps:
+    implement:
+      quality_gates:
+        - "Run `npm run build` and verify the build succeeds"
+        - "Run `npm run lint` and verify lint passes"
+        - "Run `npm test` and verify unit tests pass"
+        - "Run `HOME=/tmp/takt-bench-v3-home npm run test:it` and verify integration tests pass"
+        - "Run `npm run test:e2e:mock` and verify full mock E2E tests pass"
+    fix:
+      quality_gates:
+        - "Run `npm run build` and verify the build succeeds"
+        - "Run `npm run lint` and verify lint passes"
+        - "Run `npm test` and verify unit tests pass"
+        - "Run `HOME=/tmp/takt-bench-v3-home npm run test:it` and verify integration tests pass"
+        - "Run `npm run test:e2e:mock` and verify full mock E2E tests pass"
+

@@ -1,0 +1,35 @@
+# 実装レポート
+
+## 作業結果
+PR コメント内の画像をダウンロードして task attachments に配置する機能を実装した。
+
+- `src/infra/git/imageExtraction.ts`: Markdown 画像構文と HTML `<img>` から URL を抽出し、プレースホルダへ置換する provider 非依存ユーティリティ
+- `src/infra/github/imageDownload.ts`: GitHub attachment URL を `gh api` でダウンロードし、magic bytes とサイズ上限を検証して `StoredImageAttachment[]` に変換する
+- `src/features/pipeline/steps.ts`: `--pr` 経路で `downloadPrImages` を呼び、attachment 付き taskSpec を組み立てて `executeTask` に渡す
+- `src/features/tasks/add/index.ts`: `takt add --pr` 経路で `downloadPrImages` を呼び、attachment を `saveTaskFile` に渡す
+
+## 変更内容
+- 新規: `src/infra/git/imageExtraction.ts`、`src/infra/github/imageDownload.ts`
+- 変更: `src/features/pipeline/steps.ts`、`src/features/pipeline/execute.ts`、`src/features/tasks/add/index.ts`
+- テスト: `src/__tests__/imageExtraction.test.ts`、`src/__tests__/imageDownload.test.ts` を新規作成し、`pipelineExecution.test.ts`、`addTask.test.ts`、`git-cwd-propagation.test.ts` を更新
+- 分類: `scripts/test-classification.mjs` に `imageDownload.test.ts` をファイルシステム統合テストとして追加
+
+## ビルド結果
+- `npm run build`: 成功
+
+## テスト結果
+- `npm run lint`: 成功
+- `npm test`: 4 シャードすべて成功（849 / 1597 / 1453 / 1351 件）
+- `HOME=/tmp/takt-bench-v3-home npm run test:it`: 成功（1796 件）
+- `npm run test:e2e:mock`: 成功（48 passed / 13 skipped）
+- 対象テストファイル（全ファイル実行）:
+  - `npm test -- src/__tests__/imageDownload.test.ts`: 9 passed
+  - `npm test -- src/__tests__/imageExtraction.test.ts`: 11 passed
+  - `npm test -- src/__tests__/pipelineExecution.test.ts`: 52 passed
+  - `npm test -- src/__tests__/addTask.test.ts`: 17 passed
+  - `npm test -- src/__tests__/git-cwd-propagation.test.ts`: 12 passed
+  - `npm test -- src/__tests__/releaseVerificationWiring.test.ts`: 17 passed
+
+## 編集後セルフスキャン
+- 未使用化: 新規モジュール・変更箇所に未使用の import / 引数 / 変数は残っていないことを確認した。`imageDownload.ts` の `MutableBody` は全フィールド使用。
+- 依存方向: `imageDownload.ts` は `features/tasks` ではなく `shared/types` の `StoredImageAttachment` を参照し、infra → features の逆依存を回避した。`imageExtraction.ts` は provider 非依存の `infra/git` 層に配置。

@@ -1,0 +1,78 @@
+# レビュー指摘裁定
+
+## 結果: 修正対象あり
+
+## 裁定サマリー
+
+対象は初回レビュー6件と follow-up reviewers 6件です。既存修正の解消を確認し、新規の修正対象は2 family、3 findingです。21件は解消済み、重複、または過剰要求として修正対象から除外します。
+
+最新の公開 remediation が存在するため、既存 `review-resolution.md` の「先行 remediation なし」ではなく、最新 `fix-verification.md` を再発台帳の引き継ぎ元とします。
+
+## 要件の判定根拠
+
+| 対象 | 状態 | 根拠 |
+|---|---|---|
+| PR本文・通常コメント・review threadからの画像抽出 | 解消済み | `reviewers/*/backend-review.md` の契約入口チェック |
+| GitHub画像の認証付きダウンロード | 解消済み | `ai-antipattern-review.md`、`backend-review.md` の resolved 記録 |
+| Content-Type・magic bytes・サイズ検証 | 充足 | `github-pr-images.test.ts` の検証結果 |
+| task attachment保存 | 解消済み | `addTask.test.ts`、`pipelineExecution.test.ts` の成功記録 |
+| 本文参照・添付一覧の表示順 | 未充足 | `reviewers/*/coding-review.md` の `PRIMG-09-FORMATTED-ORDER`。抽出順と `formatPrReviewAsTask()` の出力順が不一致 |
+| Markdown/HTML混在の双方向テスト | 未充足 | `reviewers/*/testing-review.md` の `TEST-FOLLOWUP-PRIMG-01-order`。HTML→Markdownのみテスト済み |
+| pipeline失敗時のtemp cleanup検証 | 未充足 | `reviewers/*/testing-review.md` の `TEST-FOLLOWUP-PRIMG-06-pipeline-failure-cleanup` |
+| private repository画像の取得スコープ | 解消済み | `security-review.md` の `SEC-PRIMG-001` resolved 記録 |
+| テスト分類 | 解消済み | `releaseVerificationWiring.test.ts` 17件成功 |
+| build・lint | 充足 | 最新 reviewers および remediation の成功記録 |
+
+## 再発台帳の引き継ぎ
+
+引き継ぎ元: `subworkflows/iteration-1--step-remediation--workflow-development-remediation-dynamic--site-d9addbd19e4443d2c14133ce9f102ca3b49843833a159a516825cd1ee29a7a86/fix-verification.md`
+
+| 修正単位 | family ID | 不変条件の名前 | 担当箇所 | 今回の検証回数 | 前回の検証回数 | 前回経路 | 今回経路 | 同一不変条件・再発判定 | 累積 `incomplete` 回数 | 別経路での再発が確認済みか | 強制点候補 | 記録の完全性 |
+|----------|-----------|------------------|----------|------------------|------------------|----------|----------|------------------------|-------------------------|--------------------|------------|--------------|
+| U1-PR metadata副作用分離 | `F-PRIMG-FETCH-BOUNDARY` | PR metadata副作用分離 | `fetchPrReviewComments()` | なし（据え置き） | なし | なし | なし | 判定できない（初回） | 0 | 未確認 | task専用PR準備境界 | 完全 |
+| U2-画像参照出現順整合 | `F-PRIMG-REFERENCE-ORDER` | 画像参照出現順整合 | `extractGitHubPrImageReferences()` / `replaceGitHubPrImageReferences()` | なし（据え置き） | なし | なし | なし | 判定できない（初回） | 0 | 未確認 | parser内のmatch位置統合 | 完全 |
+| U3-画像参照名前空間一意性 | `F-PRIMG-REFERENCE-ALLOCATION` | 画像参照名前空間一意性 | `extractGitHubPrImageReferences()`の採番責務 | なし（据え置き） | なし | なし | なし | 判定できない（初回） | 0 | 未確認 | 使用済み番号集合による単一採番 | 完全 |
+| U4-認証取得repository scope | `F-PRIMG-FETCH-SCOPE` | 認証取得repository scope | `isAllowedGitHubAttachmentUrl()`とPR repository context | なし（据え置き） | なし | なし | なし | 判定できない（初回） | 0 | 未確認 | credential付与直前の単一分類境界 | 完全 |
+| U5-実在画像取得 | `F-PRIMG-DOWNLOAD-API` | 許可画像の実在取得 | `downloadGitHubPrImages()` | なし（据え置き） | なし | なし | なし | 判定できない（初回） | 0 | 未確認 | HTTP取得と既存payload validator | 完全 |
+| U6-temp資源終端解放 | `F-PRIMG-TEMP-LIFECYCLE` | PR画像一時資源終端解放 | `downloadGitHubPrImages()` / resource cleanup | なし（据え置き） | なし | なし | なし | 判定できない（初回） | 0 | 未確認 | 親directoryを所有するresource handleと同期exit cleanup | 完全 |
+| U7-実境界テスト分類 | `F-PRIMG-TEST-WIRING` | 実境界テスト分類 | test classifier | なし（据え置き） | なし | なし | なし | 判定できない（初回） | 0 | 未確認 | filesystem分類のsingle source of truth | 完全 |
+
+## 修正対象 family
+
+| family | 担当箇所 | 観測可能な不変条件 | 同じ原因で変更される理由 | finding ID / 出典 | 修正権限の根拠 | 根拠 | 問題 → 根本原因 | 追加した経路 | 関係する契約経路 | 受入条件 | 修正境界 |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| `F-PRIMG-REFERENCE-ORDER` | `extractGitHubPrImageReferences()` / `replaceGitHubPrImageReferences()` | placeholder、filename、本文参照、添付一覧、最終task本文の表示順が一致する | parserの採番順とformatterの表示順を同じ画像順序契約で維持する必要がある | `PRIMG-09-FORMATTED-ORDER` / `coding-review.md`; `TEST-FOLLOWUP-PRIMG-01-order` / `testing-review.md` | 採用済みfamilyの閉鎖、受入条件の直接違反 | `pr-images.ts:49-54`、`src/infra/git/format.ts:242-253`、`github-pr-images.test.ts:70-86` | comments→reviewsで採番する一方、formatterがreviews→commentsで出力する。双方向混在テストも不足 | PR metadata → body/comments/reviews抽出 → placeholder置換 → formatter → `buildTaskOrderContent()` → order.md/manifest → add/routing/pipeline | 抽出・採番・置換・formatter・添付一覧の順序を一貫させる | コメントとreviewの最終本文順、Markdown→HTMLおよびHTML→Markdownの双方でplaceholder・filename・添付一覧が一致する | Markdown parser全面刷新、別provider、非画像リンク、無関係なreview表示順変更は対象外 |
+| `F-PRIMG-TEMP-LIFECYCLE` | `downloadGitHubPrImages()` / resource cleanup | 成功・失敗・cancel・明示終了でtemp fileと親directoryが解放される | 同一resourceのpipeline終端経路を検証し、既存cleanup契約を閉じる必要がある | `TEST-FOLLOWUP-PRIMG-06-pipeline-failure-cleanup` / `testing-review.md` | 採用済みfamilyの閉鎖 | `pipeline/execute.ts:76-107`、`pipelineExecution.test.ts` のPR成功テストと一般workflow失敗テストの差分 | PR画像付きpipelineのworkflow false/例外経路が独立検証されていない | PR画像準備 → task spec生成 → workflow実行 → false/例外terminal → task spec cleanup → image resource cleanup | pipelineの失敗terminalでもfile、task spec、親directoryが残らない | PR画像付きpipelineのfalseおよび例外経路でcleanupを観測できる | SIGKILL、一般temp janitor、無関係なresource lifecycle変更は対象外 |
+
+## 指摘ごとの裁定
+
+| finding ID / 出典 | 技術的妥当性 | 裁定 | 対象 family | 同じ原因で変更される理由 | 合流根拠 | authorization basis | 初回に含まれなかった理由 | 根拠 |
+|---|---|---|---|---|---|---|---|---|
+| `AI-PRIMG-001` / `ai-antipattern-review.md` | 確認済み | `no_issue_after_verification` | なし（`F-PRIMG-DOWNLOAD-API`は解消済み） | 該当なし | remediation後にHTTP取得へ置換済み | 該当なし | 該当なし | reviewersのresolved記録 |
+| `AI-PRIMG-002` / `ai-antipattern-review.md` | 確認済み | `no_issue_after_verification` | なし（`F-PRIMG-TEMP-LIFECYCLE`は解消済み） | 該当なし | resource handleと親directory cleanupを確認済み | 該当なし | 該当なし | reviewersのresolved記録 |
+| `AI-PRIMG-003` / `ai-antipattern-review.md` | 確認済み | `no_issue_after_verification` | なし（`F-PRIMG-REFERENCE-ORDER`はfollow-up対象のみ継続） | 該当なし | parser内の位置順統合を確認済み | 該当なし | 該当なし | reviewersのresolved記録 |
+| `ARCH-PRIMG-001` / `architecture-review.md` | 確認済み | `duplicate` | `F-PRIMG-TEMP-LIFECYCLE` | 親directory cleanupという同一契約 | canonical cleanup familyへ統合済み | 該当なし | 該当なし | 既存裁定と最新resolved記録 |
+| `ARCH-PRIMG-002` / `architecture-review.md` | 確認済み | `no_issue_after_verification` | なし（`F-PRIMG-FETCH-BOUNDARY`は解消済み） | 該当なし | metadata-only fetchを確認済み | 該当なし | 該当なし | reviewersのresolved記録 |
+| `ARCH-PRIMG-003` / `architecture-review.md` | 確認済み | `duplicate` | `F-PRIMG-TEMP-LIFECYCLE` | 明示終了時cleanupという同一契約 | canonical lifecycle familyへ統合済み | 該当なし | 該当なし | 既存裁定と最新resolved記録 |
+| `ARCH-PRIMG-004` / `architecture-review.md` | 確認済み | `duplicate` | `F-PRIMG-REFERENCE-ORDER` | syntax混在時の順序という同一契約 | canonical order familyへ統合済み | 該当なし | 該当なし | 既存裁定と最新resolved記録 |
+| `CODE-NEW-src-infra-github-pr.ts-L464` / `backend-review.md` | 確認済み | `duplicate` | `F-PRIMG-FETCH-BOUNDARY` | 汎用fetch副作用という同一原因 | canonical metadata boundaryへ統合済み | 該当なし | 該当なし | 既存裁定と最新resolved記録 |
+| `CODE-NEW-src-infra-github-pr-images.ts-L311` / `backend-review.md` | 確認済み | `duplicate` | `F-PRIMG-TEMP-LIFECYCLE` | file/directory cleanupという同一契約 | canonical lifecycle familyへ統合済み | 該当なし | 該当なし | 既存裁定と最新resolved記録 |
+| `CODE-NEW-src-infra-github-pr-images.ts-L198` / `backend-review.md` | 確認済み | `no_issue_after_verification` | なし（`F-PRIMG-REFERENCE-ALLOCATION`は解消済み） | 該当なし | 既存placeholder回避を確認済み | 該当なし | 該当なし | reviewersのresolved記録 |
+| `CODE-NEW-src-infra-github-pr-images.ts-L184` / `backend-review.md` | 確認済み | `duplicate` | `F-PRIMG-REFERENCE-ORDER` | syntax別抽出順序という同一原因 | canonical order familyへ統合済み | 該当なし | 該当なし | 既存裁定と最新resolved記録 |
+| `PRIMG-07-SYSTEM-FETCH-SIDE-EFFECT` / `coding-review.md` | 確認済み | `duplicate` | `F-PRIMG-FETCH-BOUNDARY` | metadata境界副作用という同一契約 | canonical metadata boundaryへ統合済み | 該当なし | 該当なし | 既存裁定と最新resolved記録 |
+| `PRIMG-06-PROCESS-EXIT-CLEANUP` / `coding-review.md` | 確認済み | `duplicate` | `F-PRIMG-TEMP-LIFECYCLE` | exit時cleanupという同一契約 | canonical lifecycle familyへ統合済み | 該当なし | 該当なし | 既存裁定と最新resolved記録 |
+| `PRIMG-06-TEMP-DIRECTORY-CLEANUP` / `coding-review.md` | 確認済み | `duplicate` | `F-PRIMG-TEMP-LIFECYCLE` | 親directory cleanupという同一契約 | canonical lifecycle familyへ統合済み | 該当なし | 該当なし | 既存裁定と最新resolved記録 |
+| `PRIMG-05-IMAGE-NUMBER-COLLISION` / `coding-review.md` | 確認済み | `duplicate` | `F-PRIMG-REFERENCE-ALLOCATION` | placeholder番号衝突という同一原因 | canonical allocation familyへ統合済み | 該当なし | 該当なし | 既存裁定と最新resolved記録 |
+| `PRIMG-08-TEST-CLASSIFICATION` / `coding-review.md` | 確認済み | `no_issue_after_verification` | なし（`F-PRIMG-TEST-WIRING`は解消済み） | 該当なし | classifierとrelease wiringの成功を確認済み | 該当なし | 該当なし | reviewersのresolved記録 |
+| `SEC-PRIMG-001` / `security-review.md` | 確認済み | `no_issue_after_verification` | なし（`F-PRIMG-FETCH-SCOPE`は解消済み） | 該当なし | repository scopeとAuthorization条件を確認済み | 該当なし | 該当なし | reviewersのresolved記録 |
+| `SEC-PRIMG-002` / `security-review.md` | 確認済み | `duplicate` | `F-PRIMG-TEMP-LIFECYCLE` | system経路のcleanupとtemp残留という同一契約 | canonical lifecycle familyへ統合済み | 該当なし | 該当なし | 既存裁定と最新resolved記録 |
+| `TEST-NEW-PRIMG-01-order` / `testing-review.md` | 確認済み | `duplicate` | `F-PRIMG-REFERENCE-ORDER` | 混在記法順序という同一契約 | canonical order familyへ統合済み | 該当なし | 該当なし | 既存裁定と最新resolved記録 |
+| `TEST-NEW-PRIMG-02-download-content` / `testing-review.md` | 未確認 | `overreach` | なし | 追加bytes検証・途中失敗テストの要求であり、現行欠陥の証拠なし | 該当なし | なし | 該当なし | 既存裁定と最新reviewersの対象外記録 |
+| `TEST-NEW-PRIMG-06-cleanup` / `testing-review.md` | 確認済み | `duplicate` | `F-PRIMG-TEMP-LIFECYCLE` | cleanupという同一契約 | canonical lifecycle familyへ統合済み | 該当なし | 該当なし | 既存裁定と最新resolved記録 |
+| `PRIMG-09-FORMATTED-ORDER` / `reviewers/coding-review.md` | 確認済み | `actionable` | `F-PRIMG-REFERENCE-ORDER` | parserの採番順とformatterの表示順を同一契約で閉じる必要がある | accepted familyの未確認formatter consumer | `accepted_family_unvisited_consumer` | 初回・前回修正では単一本文内の混在順のみ確認し、最終formatterの複数コメント種別順を確認していなかった | `coding-review.md` の `PRIMG-09-FORMATTED-ORDER` |
+| `TEST-FOLLOWUP-PRIMG-01-order` / `reviewers/testing-review.md` | 確認済み | `actionable` | `F-PRIMG-REFERENCE-ORDER` | 双方向の混在入力も同じ参照順不変条件を検証する必要がある | 採用済みU2の双方向テスト条件に合流 | `direct_acceptance_criterion_violation` | 初回レビュー後、HTML→Markdownのケースのみ追加され、Markdown→HTMLが未追加だった | `testing-review.md` の `TEST-FOLLOWUP-PRIMG-01-order` |
+| `TEST-FOLLOWUP-PRIMG-06-pipeline-failure-cleanup` / `reviewers/testing-review.md` | 確認済み | `actionable` | `F-PRIMG-TEMP-LIFECYCLE` | pipeline失敗も同じresource終端不変条件に属する | accepted familyの未確認pipeline failure terminal | `accepted_family_unvisited_consumer` | 成功、routing初期化失敗、process exitは確認したが、PR画像付きpipelineのfalse/例外経路を確認していなかった | `testing-review.md` の `TEST-FOLLOWUP-PRIMG-06-pipeline-failure-cleanup` |
+
+## 未解決の前提
+
+- なし。実private GitHub E2E未実施は、最新 security review および remediation で環境依存の非ブロッキング事項として記録されています。

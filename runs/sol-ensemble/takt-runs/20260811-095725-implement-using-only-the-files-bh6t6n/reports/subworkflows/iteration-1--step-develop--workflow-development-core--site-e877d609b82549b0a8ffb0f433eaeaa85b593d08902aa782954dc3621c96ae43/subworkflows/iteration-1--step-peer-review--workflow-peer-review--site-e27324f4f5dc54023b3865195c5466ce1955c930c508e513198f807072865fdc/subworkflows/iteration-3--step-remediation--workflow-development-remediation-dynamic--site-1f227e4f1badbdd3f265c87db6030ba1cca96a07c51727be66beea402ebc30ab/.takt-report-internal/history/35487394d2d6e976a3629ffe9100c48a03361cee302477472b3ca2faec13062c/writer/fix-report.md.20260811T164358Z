@@ -1,0 +1,52 @@
+# 修正レポート
+## サマリー
+画像attachment番号を有限精度の`number`ではなく、任意長の10進文字列として予約・採番する共通allocatorへ置換した。PR・retry・対話中の画像保存を共通責務へ移行し、既存placeholder、既存fileName、同一バッチ内割当との衝突を防止した。安全整数上限・上限超過・400桁値・疎な番号・同一URL再利用・実ファイル保存・cleanupを検証した。
+
+Companionが検出した対話ストアの`attachments.length + 1`採番も除去し、初期添付と本文の予約番号を対話経路からストアへ伝播した。
+
+## 修正単位
+| 修正単位 | 対象 finding | 契約の正本 | 実施内容・反映先 | 状態 |
+|----------|--------------|------------|-----------------|------|
+| `image-attachment-index-precision` | `ARCH-NEW-src-features-tasks-attachments-L31`、`CODE-NEW-imageAttachmentIndex-L37`、`AI-NEW-IMAGE-INDEX-PRECISION-31`、`ai-antipattern-review-companion-1` | `context/task/order.md`のPR画像保存、既存`TaskAttachment`形式、pipeline・retry・対話経路、および任意長番号を衝突なく扱う受入条件 | 共通allocatorの実装、PR・retry・対話ストアの移行、旧数値採番の削除、境界・保存・cleanupテストの追加 | 完了 |
+
+## 完了義務
+| 修正単位 | 義務ID | 種別 | 対象 finding | 不変条件と対象経路 | 違反を検出する反例・観測点 | 修正前または差し戻し時の結果 | 実装根拠 | 修正後の証拠 | 状態 |
+|----------|--------|------|--------------|--------------------|------------------------------|--------------------------------|----------|--------------|------|
+| `image-attachment-index-precision` | `IAIP-01` | 振る舞い修正 | `ARCH-NEW-src-features-tasks-attachments-L31`、`CODE-NEW-imageAttachmentIndex-L37`、`AI-NEW-IMAGE-INDEX-PRECISION-31` | `[Image #N]`と`attachments/image-N.ext`を数値変換せず予約し、正の通常10進表記で最小の未使用番号を割り当てる | 安全整数上限、上限超過値、400桁値を含む本文から2画像を採番し、`Infinity`、指数表記、重複がないこと | `Number`変換により精度損失、同一番号反復、`Infinity`生成が可能だった | `src/shared/utils/imageAttachmentReferences.ts`の共通allocatorと`src/features/tasks/attachments.ts`のassigner | PR・retry・対話ストアの境界テストが成功 | 完了 |
+| `image-attachment-index-precision` | `IAIP-02` | 利用側移行 | `ARCH-NEW-src-features-tasks-attachments-L31`、`CODE-NEW-imageAttachmentIndex-L37` | PR処理ごとにassignerを1個共有し、異なるURLへ異なる番号、同一URLへ同一placeholderを割り当てる | 本文に`#1`、`image-3`、境界値を置き、異なる2 URLと同一URL再参照を処理する | 利用側で最大値へ手動加算していた | `src/features/tasks/prReviewAttachments.ts`で処理単位のassignerを生成し、URL別保存時に適用 | `src/__tests__/prReviewAttachments.test.ts`全31テスト成功 | 完了 |
+| `image-attachment-index-precision` | `IAIP-03` | 利用側移行 | 同上 | retry処理ごとにassignerを共有し、元placeholder対応、既存添付コピー、新規添付保存を維持する | `image-1.png`・`image-3.png`を持つ実task directoryへ2画像を追加し、`image-2.png`・`image-4.png`の内容を確認する | 手動`+1`採番により重複destinationが発生し得た | `src/features/tasks/retryTaskSpecAttachments.ts`を共通assignerへ移行 | `src/__tests__/retryTaskSpecAttachments.test.ts`全4テスト成功。4ファイルの内容とorder.mdを確認 | 完了 |
+| `image-attachment-index-precision` | `IAIP-04` | 旧経路削除 | 3件の当初finding | 旧最大値helper、公開単発assigner、手動加算、件数採番が残らない | `resolveMaxImageAttachmentIndex`、旧export、`attachments.length + 1`、手動加算を検索する | 旧数値採番と対話ストアの件数採番が存在した | PR・retry・対話ストアを共通allocatorへ統一 | 最終`rg`で旧経路該当なし | 完了 |
+| `image-attachment-index-precision` | `IAIP-05` | 既存契約保存 | 3件の当初finding | extension、`TaskAttachment`形式、validator、保存、既存添付コピー、cleanupを維持する | 実ファイル拡張子・内容、order.md、失敗時cleanup、明示cleanupを観測する | 既存公開形式と保存境界が基準値 | 既存validator・保存・cleanup境界を変更せず採番のみ置換 | PR・retry・対話attachmentテスト成功 | 完了 |
+| `image-attachment-index-precision` | `IAIP-06` | 利用側移行 | `ai-antipattern-review-companion-1` | 対話開始時の本文と初期添付の実番号を予約し、後続pasteが衝突しない | 本文に`#1`・`image-3`、初期添付に`#2`・`#4`を与え、追加2画像が`#5`・`#6`になること | `attachments.length + 1`では初期`#2`に対して次も`#2`となる | `src/shared/utils/imageAttachmentStore.ts`がplaceholder・fileName・reservedContentを共通allocatorへ渡す。`conversationLoop.ts`と`quietMode.ts`が初期添付とsourceContextを伝播 | `src/__tests__/imageAttachments.test.ts`全20テスト成功。追加画像の実ファイル内容も一致 | 完了 |
+| `image-attachment-index-precision` | `IAIP-07` | 既存契約保存 | 全finding | 今回の差分が未使用コード、逆方向依存、同義重複、空白不整合を導入しない | 参照検索、依存方向検索、旧経路検索、`git diff --check` | 該当なし | 共通allocatorをshared所有者に配置し、featuresから下位層へ依存 | 未使用参照・逆方向import・同義重複なし、`git diff --check`成功 | 完了 |
+
+## 受入条件
+| finding ID | 受入条件 | 証拠 | 状態 |
+|------------|----------|------|------|
+| `ARCH-NEW-src-features-tasks-attachments-L31` | 任意長番号を損失なく予約し、既存placeholder・fileName・同一バッチと衝突しない | PR・retry境界テストで`#2`・`#4`と対応fileNameを確認 | 完了 |
+| `CODE-NEW-imageAttachmentIndex-L37` | 異なる2画像が異なるplaceholder・fileNameで保存され、destination重複を起こさない | retry実ファイル保存テストとPR複数URLテストが成功 | 完了 |
+| `AI-NEW-IMAGE-INDEX-PRECISION-31` | 安全整数上限、上限超過、400桁値で`Infinity`・指数表記・重複を生成しない | PR・retry双方の境界テストが成功 | 完了 |
+| `ai-antipattern-review-companion-1` | 疎な初期添付と本文の番号を予約し、対話中pasteが衝突しない | `#1`〜`#4`予約状態から`#5`・`#6`を実保存するテストが成功。旧件数採番は検索該当なし | 完了 |
+
+## 差し戻し後の証拠修正
+| 修正単位 | 義務ID | verifier が確認した不足 | 前回の証拠が検出できなかった理由 | 修正した反例・観測点 | 同じ証明手段から再開・再確認した義務 |
+|----------|--------|--------------------------|----------------------------------|----------------------|----------------------------------------|
+| `image-attachment-index-precision` | `IAIP-06` | 対話ストアが初期添付件数を次番号として使用し、疎なPR添付と衝突する | 当初の証拠がPR・retry採番に集中し、PR添付を初期値として受け取る対話中paste経路を走査していなかった | 本文`#1`・fileName`#3`、初期添付`#2`・`#4`から追加画像`#5`・`#6`と実ファイル内容を観測するテストを追加 | `IAIP-01`、`IAIP-04`、`IAIP-05`、`IAIP-06`、`IAIP-07` |
+
+## 品質ゲート
+| 種別 | 結果 | 証拠 |
+|------|------|------|
+| 対象テスト | 成功 | `npm test -- src/__tests__/imageAttachments.test.ts src/__tests__/prReviewAttachments.test.ts src/__tests__/retryTaskSpecAttachments.test.ts`：55テスト通過 |
+| テスト分類契約 | 成功 | `npm test -- src/__tests__/releaseVerificationWiring.test.ts`：19テスト通過 |
+| ビルド | 成功 | `npm run build` |
+| Lint | 成功 | `npm run lint` |
+| Fast unit gate | 成功 | `npm test`：379ファイル、6,059テスト通過 |
+| Light integration gate | 成功 | `HOME=/tmp/takt-bench-v3-home npm run test:it`：159ファイル、2,356テスト通過 |
+| Mock E2E並列ラッパー | 失敗 | `npm run test:e2e:mock`：全テスト本体通過後、Vitest RPCの`onTaskUpdate`タイムアウトで終了コード1 |
+| Mock E2E直列代替 | 成功 | `npm run test:e2e:mock:serial`：51ファイル通過・1スキップ、175テスト通過・4スキップ・30 todo |
+| Smoke E2E | 成功 | `npm run test:e2e:smoke`：5ファイル通過・1スキップ、21テスト通過・1スキップ |
+| Companion再確認 | 成功 | 対象テスト再実行：`src/__tests__/imageAttachments.test.ts`の20テスト通過。旧件数採番なし |
+| 差分検査 | 成功 | `git diff --check`。旧採番helper、手動加算、逆方向import、未使用参照なし |
+
+## 未完了義務
+- なし。Mock E2E並列ラッパーのRPC通知タイムアウトは、同一全スイートのプロジェクト定義直列実行でテスト本体の成功を確認済み。

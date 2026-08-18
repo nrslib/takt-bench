@@ -1,0 +1,35 @@
+# 変更スコープ宣言
+
+## タスク
+PR本文・通常コメント・レビュー要約・review thread内のGitHub画像を安全に取得し、`add --pr` とpipeline `--pr` のtask attachmentとして参照可能にする。
+
+## 変更予定
+| 種別 | ファイル |
+|------|---------|
+| 作成 | `src/shared/utils/githubAttachmentUrl.ts` |
+| 作成 | `src/shared/utils/imageMimeType.ts` |
+| 作成 | `src/shared/utils/imageAttachmentStore.ts` |
+| 作成 | `src/infra/github/prImageDownload.ts` |
+| 作成 | `src/features/tasks/prReviewAttachments.ts` |
+| 変更 | `src/features/interactive/inlineImagePaste.ts` |
+| 変更 | `src/features/interactive/imageAttachments.ts` |
+| 変更 | `src/features/tasks/add/index.ts` |
+| 変更 | `src/app/cli/routing-inputs.ts` |
+| 変更 | `src/app/cli/routing.ts` |
+| 変更 | `src/features/pipeline/steps.ts` |
+| 変更 | `src/features/pipeline/execute.ts` |
+| 変更 | `src/__tests__/addTask.test.ts` |
+| 変更 | `src/__tests__/cli-routing-pr-resolve.test.ts` |
+| 変更 | `src/__tests__/pipelineExecution.test.ts` |
+| 作成 | `src/__tests__/github-pr-image-download.test.ts` |
+| 作成 | `src/__tests__/prReviewAttachments.test.ts` |
+
+## 推定規模
+Large
+
+## 影響範囲
+- GitHub PR画像のURL許可判定、認証済み取得、Content-Type・magic bytes・サイズ上限検証
+- PRレビュー本文からのMarkdown／HTML画像抽出、重複排除、`TaskAttachment[]` 生成
+- `takt add --pr` の永続task attachment保存と一時ファイル解放
+- 対話CLI `--pr` の初期attachment伝播と全終了経路での解放
+- pipeline `--pr` の一時task spec作成、run contextへのattachment配置、全終了経路での解放

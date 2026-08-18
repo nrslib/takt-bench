@@ -1,0 +1,39 @@
+# 修正計画
+
+## 結果: 修正計画確定
+
+## 指摘カバレッジ
+
+| finding ID / 出典 | 根拠 | 修正単位 / 後続確認 | 問題 → 直接原因 → 根本原因 | 分類 | 受入条件 |
+|-------------------|------|----------------------|-----------------------------|------|----------|
+| `FINAL-NEW-MOCK-E2E-EVIDENCE-01` / 最新マージレディネス最終裁定 | `review-resolution.md`の`final-state-mock-e2e-evidence`裁定。iteration 2の`fix-report.md`にはmock E2E成功があるが、iteration 3の`fix-report.md`・`fix-verification.md`には後続変更後の再実行記録がない | `FSME-01` | 最終コードのE2E証跡がない → iteration 3で対話seed、retry attachment、共通allocatorを変更した後にmock E2Eを再実行していない → remediation完了時の最終作業ツリーに対するE2Eゲート実行が工程から欠落した | 局所 | 現在の最終作業ツリーで`npm run test:e2e:mock`が全シャード完了・終了コード0となり、コマンドと完了結果が修正レポートへ記録される |
+
+`ARCH-NEW-src-features-tasks-attachments-L31`、`CODE-NEW-imageAttachmentIndex-L37`、`AI-NEW-IMAGE-INDEX-PRECISION-31`、`AI-NEW-MARKDOWN-LITERAL-SCAN-158`、`TEST-NEW-pr-image-dataflow-L29`、`TEST-NEW-pr-image-cleanup-L301`、`ai-antipattern-review-companion-1`、`ai-antipattern-review-companion-2`は、裁定上resolvedまたは`adjudicated_non_actionable`であり、再審査・再修正しない。
+
+## 欠陥 family の最終状態
+
+| 修正単位 | 契約の正本 | 完了対象の全不変条件 | 変更後の責務・正本 | 関係する契約経路 | 成立例・失敗例・境界値 | 移行・削除対象 |
+|----------|------------|----------------------|--------------------|--------------------|--------------------------|----------------|
+| `FSME-01` | `order.md`の品質要件、最新`review-resolution.md`の`final-state-mock-e2e-evidence`受入条件、`package.json:70`の正式なmock E2Eスクリプト | 現在の最終作業ツリーを対象にする。正式スクリプトを使用する。4シャードすべてを完了させる。終了コード0を確認する。実行中・timeout・signal終了・一部spec成功を完了扱いにしない。結果をレポートへ記録する。初回成功時はコードを変更しない | 実装責務と契約の正本は変更しない。完了証拠の所有者である修正工程が最終E2Eを実行・記録する | 対話CLI `--pr` → attachment付き`InteractiveSeedInput` → conversation store → workflow実行。pipeline `--pr` → attachment付きtask spec → run context stage → workflow実行。失敗時はmock E2E shard → failing spec →公開入口の観測結果を追跡する | 成立例: 全シャード終了コード0。失敗例: いずれかのshardまたはspecが非0、signal、timeout。境界値: 対象specだけの成功は再現証拠にはなるが最終受入証拠にはならない | 初回成功時はなし。契約移行、旧経路削除、互換経路追加は行わない |
+
+## 実施順序
+
+| 順序 | 修正単位 | 工程 | 依存先 | 変更対象 | 完了条件と証拠 |
+|------|----------|------|--------|----------|----------------|
+| 1 | `FSME-01` | 検証実行 | なし | ソース変更なし。`package.json:70`の`npm run test:e2e:mock` | 全mock E2E shardが完了し、プロセス終了コード0。コマンド、終了コード、成功したテスト・シャード数を記録する。成功時はここで完了 |
+| 2 | `FSME-01` | 条件付き局所修正 | 順序1が失敗した場合のみ | failing shardの出力と`e2e/results/mock-shard-*.json`から特定したspecおよび実際に原因となるコードだけ | `npm run test:e2e:mock -- <spec-path>`で期待結果と実結果を再現し、現在の変更に起因する決定的な原因を特定する。テストskipや期待値の弱体化をせず、原因を最小修正する |
+| 3 | `FSME-01` | 影響ゲート再実行 | 順序2を実施した場合のみ | 実際に変更したproduction/testファイル | 対象テスト、`npm run build`、`npm run lint`、`npm test`、`npm run test:it`を成功させる。IT変更時は`npm test -- src/__tests__/releaseVerificationWiring.test.ts`も成功させる |
+| 4 | `FSME-01` | 最終検証 | 順序2を実施した場合のみ | ソース変更なし | 修正後の最終作業ツリーで`npm run test:e2e:mock`を再実行し、全シャード終了コード0を記録する |
+
+## 制約適合性
+
+| 修正単位 | 制約の参照先 | 実装方法と候補案の採否 | 検証方法・観測点・実行条件 | 適合根拠 | 品質ゲート |
+|----------|--------------|--------------------------|-----------------------------|----------|--------------|
+| `FSME-01` | 最新`review-resolution.md`の受入条件・修正境界、テスト実行ポリシー、`package.json:70`、`scripts/run-e2e-mock-shards.mjs` | 初手はコード変更ではなく正式ゲートの実行を採用する。既存E2E追加、release gate、全heavy IT、周辺リファクタリングは裁定境界外のため不採用。失敗時のみ、再現できた原因へ限定した修正を採用する | runnerがmock provider、隔離されたHOME/XDG/TMPDIR、4シャードを使用する。最終観測点は全体コマンドの終了コード。JSON結果は補助証拠とし、開始ログや対象specのみの成功で代用しない | mock E2Eは外部資格情報を必要とせず現在環境で決定的に実行可能。成功時コード変更不要という裁定を保持し、失敗時も原因に結び付く最小範囲だけを修正する | 初回は`npm run test:e2e:mock`のみ。コード修正時は対象テスト、build、lint、fast unit、light IT、必要な分類契約を実行後、全mock E2Eを再実行 |
+
+実private GitHub repositoryとの通信は外部資格情報を必要とし、最新裁定で非ブロッキングかつ修正境界外とされているため、現在の完了条件や実施順序へ含めない。
+
+## 再計画事項
+
+- なし。初回mock E2Eが成功すればコード変更なしで完了する。
+- mock E2E失敗時も、失敗経路を再現して原因を特定できるため、現時点でタスク全体の再計画は不要。

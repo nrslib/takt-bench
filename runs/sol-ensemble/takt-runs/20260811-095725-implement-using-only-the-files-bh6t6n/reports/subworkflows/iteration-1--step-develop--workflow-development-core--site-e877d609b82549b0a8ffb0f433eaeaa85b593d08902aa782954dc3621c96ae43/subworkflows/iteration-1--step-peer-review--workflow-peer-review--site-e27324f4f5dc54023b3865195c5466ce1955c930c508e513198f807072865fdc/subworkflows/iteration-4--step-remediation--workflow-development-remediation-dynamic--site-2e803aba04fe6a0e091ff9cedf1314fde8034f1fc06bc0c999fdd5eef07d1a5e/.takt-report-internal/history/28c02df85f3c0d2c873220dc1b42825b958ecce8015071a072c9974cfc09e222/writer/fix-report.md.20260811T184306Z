@@ -1,0 +1,51 @@
+# 修正レポート
+## サマリー
+PRレビュー本文の画像抽出を、独自正規表現・手書きMarkdownリテラル解析から構文木ベースへ置換した。Markdown画像、参照形式画像、HTMLの実`img`要素を処理し、`<pre>`内のMarkdownリテラルは保存する反例テストを追加した。Companionのmust-fix 2件はresolvedとなった。対象テスト、build、lint、全unit、light IT、smoke E2Eは成功した。全mock E2Eはshard 2のVitest worker RPCタイムアウトにより終了コード1であり、最終ゲートのみ未完了。
+
+## 修正単位
+| 修正単位 | 対象 finding | 契約の正本 | 実施内容・反映先 | 状態 |
+|----------|--------------|------------|-----------------|------|
+| `PRMA-01` | `ai-antipattern-review-companion-1`, `ai-antipattern-review-companion-2` | `order.md`のMarkdown画像・HTML画像抽出契約、および元コメント本文の非画像リテラルを改変しない契約 | `src/features/tasks/prReviewAttachments.ts`をMarkdown/HTML AST解析へ置換し、`src/__tests__/prReviewAttachments.test.ts`へraw HTMLと参照形式の反例を追加。`package.json`・`package-lock.json`へ使用する直接依存を追加 | 完了 |
+| `FSME-01` | `FINAL-NEW-MOCK-E2E-EVIDENCE-01` | 正式な`npm run test:e2e:mock`が4シャード終了コード0となること | 最終コードで正式ゲートを実行。shard 1・3・4は成功したが、shard 2がVitest worker RPCタイムアウトで終了コード1 | blocker |
+
+## 完了義務
+| 修正単位 | 義務ID | 種別 | 対象 finding | 不変条件と対象経路 | 違反を検出する反例・観測点 | 修正前または差し戻し時の結果 | 実装根拠 | 修正後の証拠 | 状態 |
+|----------|--------|------|--------------|--------------------|------------------------------|--------------------------------|----------|--------------|------|
+| `PRMA-01` | `PRMA-01-1` | 振る舞い修正 | `ai-antipattern-review-companion-1` | Markdown構文上の画像ノードだけをダウンロード・置換する | `<pre>`内に`![example](URL)`を配置し、後続の実画像だけがダウンロードされるテスト | 独自正規表現がraw HTML内のMarkdownリテラルを画像として検出した | `mdast-util-from-markdown`の`image`・`imageReference`ノードとsource offsetを使用 | 対象単体テスト33件成功。raw HTML反例成功 | 完了 |
+| `PRMA-01` | `PRMA-01-2` | 振る舞い修正 | `ai-antipattern-review-companion-1` | full・collapsed・shortcut形式のMarkdown参照画像を参照定義から解決する | `![screenshot][img]`、`![collapsed][]`、`![shortcut]`と各定義を入力するテスト | 独自正規表現はインライン形式のみを検出し、参照形式を検出しなかった | ASTの`imageReference.identifier`と先勝ちのdefinition mapを使用 | 3形式すべてが順番どおりplaceholderへ置換されるテスト成功 | 完了 |
+| `PRMA-01` | `PRMA-01-3` | 既存契約保存 | `ai-antipattern-review-companion-1` | HTMLの実`img`要素は従来どおりGitHub attachmentとして処理する | PR各セクションのMarkdown画像・HTML画像を混在させる既存テスト | raw HTMLの構文境界とHTML画像抽出が同じ正規表現に混在していた | `parse5`でHTMLノードを解析し、source locationを持つ実`img`開始タグだけを置換 | PR各セクションの画像順序、重複URL、unsupported URLを含む既存テスト成功 | 完了 |
+| `PRMA-01` | `PRMA-01-4` | 旧経路削除 | `ai-antipattern-review-companion-1` | 手書きMarkdownリテラル解析と画像正規表現が残存しない | `findLiteralRanges`、`findFencedCodeRange`、`imageReferencePattern`等の検索 | 約500行の独自構文解析が存在した | 独自parser関数・型・正規表現を削除 | 旧parser symbol検索結果0、lint成功 | 完了 |
+| `PRMA-01` | `PRMA-01-5` | 利用側移行 | `ai-antipattern-review-companion-2` | 追加依存がproduction経路から実際にimport・使用される | package依存と`prReviewAttachments.ts`のimport・呼び出しを検索 | 依存追加直後の一時状態では未配線としてCompanionに検出された | `fromMarkdown`と`parseFragment`を画像抽出経路へ直接配線 | `npm ls`で両依存を確認、build・対象テスト成功、Companion resolved | 完了 |
+| `FSME-01` | `FSME-01-1` | 既存契約保存 | `FINAL-NEW-MOCK-E2E-EVIDENCE-01` | 最終作業ツリーで全mock E2Eが4シャード終了コード0となる | 正式な`npm run test:e2e:mock`全体終了コード | shard 2で`Timeout calling "onTaskUpdate"`が反復発生 | ソースや期待値を弱体化せず正式runnerを実行 | shard 1・3・4成功。shard 2は失敗テスト0だがworker未処理エラーで終了コード1 | 未完了 |
+
+## 受入条件
+| finding ID | 受入条件 | 証拠 | 状態 |
+|------------|----------|------|------|
+| `ai-antipattern-review-companion-1` | Markdown画像ノードだけを処理し、raw HTMLリテラルを保存し、参照形式画像も処理する | raw HTML `<pre>`反例、full・collapsed・shortcut参照形式を含む対象単体テスト33件成功 | 完了 |
+| `ai-antipattern-review-companion-2` | 追加したMarkdown/HTML parser依存が実装経路で使用され、不要依存になっていない | production import確認、`npm ls`成功、build・lint成功、Companion resolved | 完了 |
+| `FINAL-NEW-MOCK-E2E-EVIDENCE-01` | 最終コードで全mock E2Eの4シャードが終了コード0 | shard 2のVitest worker RPCタイムアウトにより全体終了コード1 | blocker |
+
+## 差し戻し後の証拠修正
+| 修正単位 | 義務ID | verifier が確認した不足 | 前回の証拠が検出できなかった理由 | 修正した反例・観測点 | 同じ証明手段から再開・再確認した義務 |
+|----------|--------|--------------------------|----------------------------------|----------------------|----------------------------------------|
+| `PRMA-01` | `PRMA-01-1` | `<pre>`内のMarkdownリテラルを実画像として処理する | fenced code・inline code・HTML commentだけを独自走査し、raw HTML要素の構文境界を扱っていなかった | `<pre>`内リテラルと後続実画像を同時に入力するテストを追加 | `PRMA-01-1`, `PRMA-01-3`, `PRMA-01-4` |
+| `PRMA-01` | `PRMA-01-2` | Markdown参照形式画像を検出しない | インライン画像形式だけを表す正規表現を観測点にしていた | full・collapsed・shortcut参照形式と参照定義のテストを追加 | `PRMA-01-2`, `PRMA-01-4` |
+| `PRMA-01` | `PRMA-01-5` | parser依存が追加されたが未使用だった | 依存追加とproductionコード配線の間の一時状態をCompanionが検出した | production import・AST処理経路・対象テスト・依存ツリーを確認 | `PRMA-01-1`から`PRMA-01-5` |
+
+## 品質ゲート
+| 種別 | 結果 | 証拠 |
+|------|------|------|
+| 対象単体テスト | 成功 | `npm test -- src/__tests__/prReviewAttachments.test.ts`、1ファイル・33件成功 |
+| 対象統合テスト | 成功 | `npm test -- src/__tests__/pr-image-dataflow.integration.test.ts`、1件成功 |
+| ビルド | 成功 | `npm run build`、終了コード0 |
+| Lint | 成功 | `npm run lint`、終了コード0 |
+| Fast unit | 成功 | `npm test`、全4 shard成功 |
+| Light IT | 成功 | `HOME=/tmp/takt-bench-v3-home npm run test:it`、159ファイル・2357件成功 |
+| Smoke E2E | 成功 | `npm run test:e2e:smoke`、21件成功・1件skip |
+| Full mock E2E | 失敗 | `npm run test:e2e:mock`。shard 1・3・4成功、shard 2がVitest worker `onTaskUpdate`タイムアウトで終了コード1 |
+| Lockfile整合 | 成功 | `npm ci --dry-run --ignore-scripts`、`npm ls mdast-util-from-markdown parse5 --depth=1`成功 |
+| 差分セルフスキャン | 成功 | `git diff --check`成功。旧parser symbol・未使用依存・重複画像解析責務なし。lockfileの無関係メタデータ差分を除去 |
+| Companion | 成功 | `ai-antipattern-review-companion-1`、`ai-antipattern-review-companion-2`ともに最終状態resolved |
+
+## 未完了義務
+- `FSME-01-1`: 全mock E2Eの終了コード0が未達。shard 2のVitest worker RPCタイムアウトについて、正式runner側の再測定または実行資源制御を修正計画として明示したうえで再実行する必要がある。

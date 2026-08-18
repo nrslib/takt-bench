@@ -1,0 +1,52 @@
+# 修正完了検証
+
+## 結果: incomplete
+
+## サマリー
+
+任意長の画像番号を文字列として予約し、候補のみを正確に順送りする共通allocator、PR・retry・対話ストアへの移行、旧数値採番の削除は確認できた。安全整数上限・上限超過・400桁値を含む対象55テストと分類契約19テストも成功した。
+
+ただし、retryでは`order.md`に記載されていない既存`attachments/image-1.png`を採番時に予約しない。既存ファイルをコピーした後、新規画像も`image-1.png`として保存しようとしてdestination重複エラーになることを現在ソースで再現した。また、対話経路のテストはstoreを直接構築しており、`InteractiveSeedInput → conversationLoop → store → paste`の伝播を壊した場合に失敗する証拠になっていない。
+
+修正計画の不変条件と修正境界は有効であり、同じ修正単位内で対応可能なため`plan_invalid`ではない。
+
+## 修正単位の整合性
+
+| 修正単位 | 対象 finding | 前提・方法・証拠能力の整合性 | 判定 |
+|----------|--------------|------------------------------|------|
+| `image-attachment-index-precision` | `ARCH-NEW-src-features-tasks-attachments-L31`、`CODE-NEW-imageAttachmentIndex-L37`、`AI-NEW-IMAGE-INDEX-PRECISION-31`、`ai-antipattern-review-companion-1` | 任意長番号を数値変換せず、既存placeholder・fileName・同一バッチ割当を共通allocatorで予約する前提は正しい。PRと対話ストアでは成立するが、retryの実ディレクトリに存在するfileNameがallocatorへ渡されていない。計画変更なしで実装と反例テストを補完できる | 適合 |
+
+## 完了義務の独立検証
+
+| 修正単位 | 義務ID | 対象 finding | 不変条件と対象経路 | 独立に用いた反例・観測点 | 観測結果 | 証拠 | 判定 |
+|----------|--------|--------------|--------------------|----------------------------|----------|------|------|
+| `image-attachment-index-precision` | `IAIP-01` | `ARCH-NEW-src-features-tasks-attachments-L31`、`CODE-NEW-imageAttachmentIndex-L37`、`AI-NEW-IMAGE-INDEX-PRECISION-31` | 任意長のplaceholder／fileNameを精度損失なく予約し、正の通常10進番号を割り当てる | `9007199254740991`、`9007199254740992`、400桁値、疎な`#1`・`image-3.png`、同一バッチ2画像 | 成立 | `src/shared/utils/imageAttachmentReferences.ts:21-44`、PR・retry・store境界テスト | 完了 |
+| `image-attachment-index-precision` | `IAIP-02` | `ARCH-NEW-src-features-tasks-attachments-L31`、`CODE-NEW-imageAttachmentIndex-L37` | PR処理単位でassignerを共有し、異なるURLは異なる番号、同一URLは同一placeholderを得る | 境界値を含む本文、異なる2 URL、同一URL再参照、明示cleanup | 成立 | `src/features/tasks/prReviewAttachments.ts:559-590`、`src/__tests__/prReviewAttachments.test.ts`31件成功 | 完了 |
+| `image-attachment-index-precision` | `IAIP-03` | `ARCH-NEW-src-features-tasks-attachments-L31`、`CODE-NEW-imageAttachmentIndex-L37` | retryで既存placeholder・既存fileName・同一バッチ割当と衝突せず、既存添付コピーと新規保存を維持する | `order.md`には画像参照なし、source taskの実`attachments/`には`image-1.png`あり、新規画像1件 | 違反。新規画像も`image-1.png`となりdestination重複エラー | `src/features/tasks/retryTaskSpecAttachments.ts:34-85`、`src/features/tasks/attachments.ts:274-301`、現在ソースによる再現実行 | 未完了 |
+| `image-attachment-index-precision` | `IAIP-04` | 当初3 finding、`ai-antipattern-review-companion-1` | 旧最大値helper、単発assigner、手動加算、件数採番を残さない | 旧シンボル、`attachments.length + 1`、画像採番の数値変換・手動加算を検索 | 成立 | `resolveMaxImageAttachmentIndex`等は該当なし。PR・retry・storeは共通allocatorを参照 | 完了 |
+| `image-attachment-index-precision` | `IAIP-05` | 当初3 finding | extension、`TaskAttachment`形式、validator、保存、既存添付コピー、cleanupを維持する | PR成功・後続download失敗、retry実保存・明示cleanup、本文と実ファイル名が一致しないretry | 一部違反。通常保存・検証・cleanupは成立するが、本文未記載の既存fileNameとの衝突で保存成功契約を満たさない | PR・retry・image attachment対象テスト、およびretry重複destination再現 | 未完了 |
+| `image-attachment-index-precision` | `IAIP-06` | `ai-antipattern-review-companion-1` | 対話開始時のsource contextと初期添付番号を予約し、後続pasteと衝突しない | `#1`・`image-3`を含むcontent、初期`#2`・`#4`、追加2画像 | store単体では成立。実際の`InteractiveSeedInput → conversationLoop → store → paste`経路は未確認 | `src/features/interactive/conversationLoop.ts:137-146`と`quietMode.ts:60-65`の静的配線、`src/__tests__/imageAttachments.test.ts:78-113`のstore直接テスト | 未完了 |
+| `image-attachment-index-precision` | `IAIP-07` | 全finding | 未使用コード、逆方向依存、同義重複、空白不整合を導入しない | 参照・import・旧経路検索、`git diff --check` | 成立 | 共通allocatorはshared所有者にあり、featuresからsharedへの依存。差分検査成功 | 完了 |
+
+## 不成立・未確認事項
+
+| 修正単位 | 義務ID | 種別 | 根拠 | 修正報告の証拠が検出できなかった理由 | 同じ検出パターンで再監査した範囲 | 必要な対応 |
+|----------|--------|------|------|----------------------------------------|----------------------------------|--------------|
+| `image-attachment-index-precision` | `IAIP-03` | 実装不足 | retryのassignerは`order.md`本文だけを予約元にする一方、保存時にはsource taskの`attachments/`を丸ごとコピーする。本文未記載の`image-1.png`と新規`image-1.png`が衝突した | 修正報告のretryテストは、実ファイル`image-1.png`・`image-3.png`と同じ番号を`order.md`にも記載しており、本文だけを予約する実装でも成功した | PRは保存対象が今回生成したattachmentだけで成立。対話storeは初期attachmentのplaceholder・fileNameを直接予約して成立。retry固有のsource directoryコピーだけが違反 | source taskの実在する画像fileNameも採番時の予約集合へ含める。`order.md`に参照がない既存`image-1.png`と複数新規画像を使い、異なるfileNameで保存成功するretry回帰テストを追加する |
+| `image-attachment-index-precision` | `IAIP-05` | 実装不足 | 既存添付コピー後の新規保存が重複destinationで失敗し、既存fileNameとの非衝突および保存成功契約を満たさない | 保存成功テストが本文と実ファイル名を常に同期させていたため、実保存境界での逆方向反例を含んでいなかった | validator、extension、通常保存、PR失敗時cleanup、retry明示cleanupは成立。既存fileNameとの非衝突だけが不成立 | `IAIP-03`と同じ修正で実ディレクトリの予約を反映し、既存内容保持、新規保存、order.md、cleanupを同じ反例で確認する |
+| `image-attachment-index-precision` | `IAIP-06` | 証拠不足 | `reservedContent`の境界テストはstoreを直接生成しており、`conversationLoop.ts`からの`sourceContext`伝播を削除しても失敗しない | consumer単体の成功を、producer・伝播・consumerを通る対話経路の証拠として扱っていた | PR・retry・quietMode・conversationLoopの呼び出しを検索。静的配線は存在するが、対話中pasteまで通る対象テストはない | `sourceContext`に`#1`・`image-3`、初期添付に`#2`・`#4`を与えた`runConversationLoop`経路でpasteを実行し、`#5`・`#6`、実ファイル内容、cleanupを観測する回帰テストを追加する |
+
+## 環境要因により実証できない後続確認（判定非ブロッキング）
+
+なし。
+
+## 実行証跡
+
+| 対象 | 方法 | 結果 |
+|------|------|------|
+| PR・retry・対話storeの境界値、保存、cleanup | `npm test -- src/__tests__/imageAttachments.test.ts src/__tests__/prReviewAttachments.test.ts src/__tests__/retryTaskSpecAttachments.test.ts` | 成功。3ファイル、55テスト通過 |
+| テスト分類契約 | `npm test -- src/__tests__/releaseVerificationWiring.test.ts` | 成功。19テスト通過 |
+| retryの本文未記載既存fileName反例 | source taskの`order.md`を画像参照なしとし、実`attachments/image-1.png`と新規`image-1.png`を`prepareRetryTaskSpecWithAttachments()`へ渡した | 失敗。`Task attachment destination already exists: .../attachments/image-1.png`を現在ソースで再現 |
+| 旧採番経路削除 | 旧helper、件数採番、画像番号の数値変換・手動加算を`rg`で検索 | 成功。該当なし |
+| 対話経路の予約値伝播 | `conversationLoop.ts`、`quietMode.ts`、store生成、関連テストをコード照合 | 静的配線は成立。経路を通る反例テストは未確認 |
+| 差分整合 | `git diff --check` | 成功 |

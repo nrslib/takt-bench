@@ -1,0 +1,20 @@
+問題は、元要件・最新裁定・修正履歴・品質ゲート証跡・現在の累積差分を照合し、未解決のマージ阻害事項があるかを最終判定することです。まず指定された Knowledge／Policy を全文読了し、次に task と最新 report 群、最後に現在差分と関連コードを必要最小限だけ確認します。編集やテスト再実行は行いません。
+指定された Knowledge 1,024行と Policy 1,387行を EOF まで確認しました。今回の変更に直接適用される主な基準は、PR添付画像の取得・保存・cleanupという副作用契約、失敗／hard-exit経路の回帰検証、重いITの分類・対象実行、ビルド成功、そして要求外の互換経路や契約変更を追加しないことです。これから正本の task と report 履歴を照合します。
+最新履歴の照合結果は、fix-verification が全10義務を `verified`、最新専門レビュー5件が全て `APPROVE`、最新裁定が actionable finding 0件です。品質証跡には build、lint、全unit、light IT、変更heavy IT、分類契約、mock E2E の成功が記録されています。次は、レポートが示す base `7d623634f205` から現在の HEAD／作業ツリーまでの累積差分を一次証拠として確認します。
+累積差分では削除ファイルはなく、テストの skip／todo 追加もありません。製品側の変更は、画像抽出・認証取得・検証・一時保存、task保存、対話CLI／pipeline伝播、添付番号衝突回避、cleanupに対応しています。E2E runner変更も、過去裁定済みの「全テスト成功後の限定的 birpc noise をローカルで1回だけ再計測する」品質証跡修正であり、通常失敗・再計測失敗・signal・CI失敗を成功扱いしないテストが追加されています。要求外の契約削除やテスト弱体化を示す差分は確認されませんでした。
+## 最終裁定: マージ可能
+
+未解決のマージ阻害 finding、要求競合、修正可能な証跡不足はありません。
+
+要件との対応は以下のとおり閉じています。
+
+- PR本文・通常コメント・review threadのMarkdown／HTML画像を抽出し、本文を `[Image #N]` に置換しています。[prReviewAttachments.ts](/Users/nrs/work/git/takt-worktrees/20260811T0957-pr-komento-no-wodaunroodoshite-bc1d7fe94d416276/src/features/tasks/prReviewAttachments.ts:145)
+- GitHub attachment URLのみを許可し、`gh`認証、10 MiB上限、PNG/JPEG/GIF/WebPのContent-Type・magic bytes一致を検証しています。[prImageDownload.ts](/Users/nrs/work/git/takt-worktrees/20260811T0957-pr-komento-no-wodaunroodoshite-bc1d7fe94d416276/src/infra/github/prImageDownload.ts:41)
+- `takt add --pr` は画像をtask attachmentsへ保存し、`order.md`へ既存形式で追記します。[add/index.ts](/Users/nrs/work/git/takt-worktrees/20260811T0957-pr-komento-no-wodaunroodoshite-bc1d7fe94d416276/src/features/tasks/add/index.ts:203) [attachments.ts](/Users/nrs/work/git/takt-worktrees/20260811T0957-pr-komento-no-wodaunroodoshite-bc1d7fe94d416276/src/features/tasks/attachments.ts:57)
+- 対話CLIとpipelineの両方でattachment付きtask specが実行経路まで伝播します。[steps.ts](/Users/nrs/work/git/takt-worktrees/20260811T0957-pr-komento-no-wodaunroodoshite-bc1d7fe94d416276/src/features/pipeline/steps.ts:222)
+- 保存からrun context stagingまで画像と参照が維持されるlight ITがあります。[pr-image-dataflow.integration.test.ts](/Users/nrs/work/git/takt-worktrees/20260811T0957-pr-komento-no-wodaunroodoshite-bc1d7fe94d416276/src/__tests__/pr-image-dataflow.integration.test.ts:41)
+- hard exit cleanup findingは、同期exit listener、一回性、通常終了時のlistener解除、実child process検証まで完了しています。[processExitCleanup.ts](/Users/nrs/work/git/takt-worktrees/20260811T0957-pr-komento-no-wodaunroodoshite-bc1d7fe94d416276/src/app/cli/processExitCleanup.ts:1) [fix-verification.md](/Users/nrs/work/git/takt-worktrees/20260811T0957-pr-komento-no-wodaunroodoshite-bc1d7fe94d416276/.takt/runs/20260811-095725-implement-using-only-the-files-bh6t6n/reports/subworkflows/iteration-1--step-develop--workflow-development-core--site-e877d609b82549b0a8ffb0f433eaeaa85b593d08902aa782954dc3621c96ae43/subworkflows/iteration-1--step-peer-review--workflow-peer-review--site-e27324f4f5dc54023b3865195c5466ce1955c930c508e513198f807072865fdc/subworkflows/iteration-6--step-remediation--workflow-development-remediation-dynamic--site-213e6cb70c8b6321cdb3bb945e34c55fb6c1dcc00574e4c2bb78960d3d899a08/fix-verification.md:3)
+
+品質ゲート証跡は、build、lint、全unit、light IT 2,358件、変更heavy IT、分類契約、mock E2Eの最終終了コード0を確認済みです。[fix-report.md](/Users/nrs/work/git/takt-worktrees/20260811T0957-pr-komento-no-wodaunroodoshite-bc1d7fe94d416276/.takt/runs/20260811-095725-implement-using-only-the-files-bh6t6n/reports/subworkflows/iteration-1--step-develop--workflow-development-core--site-e877d609b82549b0a8ffb0f433eaeaa85b593d08902aa782954dc3621c96ae43/subworkflows/iteration-1--step-peer-review--workflow-peer-review--site-e27324f4f5dc54023b3865195c5466ce1955c930c508e513198f807072865fdc/subworkflows/iteration-6--step-remediation--workflow-development-remediation-dynamic--site-213e6cb70c8b6321cdb3bb945e34c55fb6c1dcc00574e4c2bb78960d3d899a08/fix-report.md:55)
+
+累積差分50対象には削除ファイル、テストskip追加、要求外の互換経路はなく、現在の `git diff --check` も成功しています。実private GitHubとの通信は外部資格情報依存のため未実施ですが、認証ホスト・token伝播・URL制限は決定的テストで確認されており、非ブロッキングです。全heavy ITはリポジトリ方針どおりPR gateの責務として分離されています。

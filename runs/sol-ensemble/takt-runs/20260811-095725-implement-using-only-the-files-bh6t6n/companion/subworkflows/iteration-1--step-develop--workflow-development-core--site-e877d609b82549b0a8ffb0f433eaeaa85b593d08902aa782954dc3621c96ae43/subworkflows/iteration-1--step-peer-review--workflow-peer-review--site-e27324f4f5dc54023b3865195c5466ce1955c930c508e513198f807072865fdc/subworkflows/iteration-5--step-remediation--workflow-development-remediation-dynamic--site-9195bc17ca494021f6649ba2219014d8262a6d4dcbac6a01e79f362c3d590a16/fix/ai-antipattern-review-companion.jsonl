@@ -1,0 +1,17 @@
+{"id":"ai-antipattern-review-companion-1","severity":"must_fix","file":"src/__tests__/prReviewAttachments.test.ts","line":78,"finding":"`preparePrReviewAttachments` の契約は `FormattedPrReviewTask` に置換されていますが、このテスト群と `pr-image-dataflow.integration.test.ts` は旧来の文字列を渡したままで、型検査が失敗します。さらに add/routing/pipeline の `infra/git/index.js` モックも旧 `formatPrReviewAsTask` だけを公開しており、本実装が参照する `formatPrReviewTask` が欠落するため実行時にも失敗します。文字列対応の fallback を追加せず、全テスト利用側とモックを構造化フォーマッター契約へ移行してください。","status":"open"}
+{"id":"ai-antipattern-review-companion-1","status":"unresolved"}
+{"id":"ai-antipattern-review-companion-1","status":"resolved"}
+{"id":"ai-antipattern-review-companion-2","severity":"must_fix","file":"src/infra/git/format.ts","line":309,"finding":"構造化された `FormattedPrReviewTask` への契約置換後も、旧 `formatPrReviewAsTask` wrapper が残存しています。さらに `src/infra/git/index.ts` からも再公開されており、要求ソースにない後方互換経路を維持しています。現行テスト利用側とモックは `formatPrReviewTask` へ移行済みなので、旧関数と re-export を削除してください。","status":"open"}
+{"id":"ai-antipattern-review-companion-1","status":"resolved"}
+{"id":"ai-antipattern-review-companion-2","status":"unresolved"}
+{"id":"ai-antipattern-review-companion-1","status":"resolved"}
+{"id":"ai-antipattern-review-companion-2","status":"unresolved"}
+{"id":"ai-antipattern-review-companion-1","status":"resolved"}
+{"id":"ai-antipattern-review-companion-2","status":"unresolved"}
+{"id":"ai-antipattern-review-companion-1","status":"resolved"}
+{"id":"ai-antipattern-review-companion-2","status":"unresolved"}
+{"id":"ai-antipattern-review-companion-1","status":"resolved"}
+{"id":"ai-antipattern-review-companion-2","status":"unresolved"}
+{"id":"ai-antipattern-review-companion-1","status":"resolved"}
+{"id":"ai-antipattern-review-companion-2","status":"unresolved"}
+{"id":"ai-antipattern-review-companion-2","status":"wontfix_accepted"}

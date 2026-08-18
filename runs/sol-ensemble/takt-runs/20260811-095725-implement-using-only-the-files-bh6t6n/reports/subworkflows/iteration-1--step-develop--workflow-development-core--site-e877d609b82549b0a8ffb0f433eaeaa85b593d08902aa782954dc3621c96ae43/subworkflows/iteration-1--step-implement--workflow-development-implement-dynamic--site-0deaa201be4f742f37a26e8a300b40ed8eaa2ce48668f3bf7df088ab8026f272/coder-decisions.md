@@ -1,0 +1,16 @@
+# 決定ログ
+
+## 1. 画像添付ストアを共有ユーティリティへ移す
+- **背景**: PR画像の一時保存はtasks、pipeline、interactiveの複数機能から利用し、interactive機能を所有者にするとfeature間の逆向き依存が生じるため。
+- **検討した選択肢**: interactiveの既存ストアを直接利用する／同等処理をtasks側へ複製する／既存ストアを共有層へ移す。
+- **理由**: 既存の一時ファイル権限、命名、解放契約を維持しつつ、単一の責務所有者から各機能へ依存できるため。
+
+## 2. pipelineのPR画像は一時task specを介して実行する
+- **背景**: pipeline直実行には永続taskがなく、既存のattachment解決処理はtask specを入力としてrun contextへ画像を配置するため。
+- **検討した選択肢**: pipeline専用の画像コピー処理を追加する／既存のtask spec attachment経路を一時ディレクトリで利用する。
+- **理由**: 既存のattachment参照形式とrun context配置契約を再利用し、実行終了時に一時specを確実に解放できるため。
+
+## 3. 認証情報の取得と画像HTTP取得を分離する
+- **背景**: private repository画像にはGitHub認証が必要であり、同時に外部URLへの無制限な認証情報送信を防ぐ必要があるため。
+- **検討した選択肢**: 無認証fetch／任意URLへの認証付きfetch／GitHub attachment URLを検証後に`gh auth token`を使う認証付きfetch。
+- **理由**: 許可するHTTPSホストとパスを取得前に限定し、GitHub認証をprivate画像の取得に利用しながら、トークンをエラーへ露出させないため。

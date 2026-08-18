@@ -1,0 +1,57 @@
+# 修正完了検証
+
+## 結果: incomplete
+
+## サマリー
+
+URL分類とストリーム読込の一部は修正されていますが、指定形式外URLの過剰許可、容量超過時の読込停止不足、pipeline実ファイル検証の不足が残っています。計画自体は局所修正で成立可能であり、`plan_invalid` ではありません。
+
+## 修正単位の整合性
+
+| 修正単位 | 対象 finding | 前提・方法・証拠能力の整合性 | 判定 |
+|----------|--------------|------------------------------|------|
+| UNIT-URL-CLASSIFY | FINAL-NEW-PRIMG-REPO-ASSET-URL | 指定形式の許可と無関係URL拒否という受入条件は妥当。ただし `assets` セグメントの存在だけで判定すると形式外パスを許可する | 適合 |
+| UNIT-SIZE-LIMIT | FINAL-NEW-PRIMG-STREAM-SIZE-LIMIT | ストリーム逐次読込という方法は妥当。ただし Content-Length の事前拒否とストリームcancelの観測が不足 | 適合 |
+| UNIT-TEST-EVIDENCE | FINAL-NEW-PRIMG-REQUIRED-TEST-EVIDENCE | P1/P2は実経路で確認されているが、pipelineはtask spec・実ファイル・order内容をモックしている | 適合 |
+
+## 完了義務の独立検証
+
+| 修正単位 | 義務ID | 対象 finding | 不変条件と対象経路 | 独立に用いた反例・観測点 | 観測結果 | 証拠 | 判定 |
+|----------|--------|--------------|--------------------|----------------------------|----------|------|------|
+| UNIT-URL-CLASSIFY | URL-1 | FINAL-NEW-PRIMG-REPO-ASSET-URL | `/owner/repo/assets/<id>`を抽出し本文を置換 | 指定形式のMarkdown画像を抽出 | 成立 | `prReviewImageAttachments.ts:138-148`、対象単体テスト15件成功 | 完了 |
+| UNIT-URL-CLASSIFY | URL-2 | FINAL-NEW-PRIMG-REPO-ASSET-URL | 外部・非HTTPS・形式外GitHub URLを拒否 | `https://github.com/owner/repo/issues/assets/123` と `/assets/123` を分類 | 違反 | `prReviewImageAttachments.ts:58-60` の `segments.includes('assets')` が両方を許可 | 未完了 |
+| UNIT-SIZE-LIMIT | SIZE-1 | FINAL-NEW-PRIMG-STREAM-SIZE-LIMIT | 上限内のストリームをBuffer化し保存 | 複数chunkのPNGストリームを読込 | 成立 | `prReviewImageAttachments.integration.test.ts:188-202`、12件成功 | 完了 |
+| UNIT-SIZE-LIMIT | SIZE-2 | FINAL-NEW-PRIMG-STREAM-SIZE-LIMIT | 上限超過時に全読込前に停止し清掃 | Content-Length超過および超過ストリームの読込回数・cancelを観測 | 違反 | `prReviewImageAttachments.ts:291-293` は本文読込後に判定。実測で宣言超過時も読込回数1、超過ストリームはpull回数2・cancel回数0 | 未完了 |
+| UNIT-SIZE-LIMIT | SIZE-3 | FINAL-NEW-PRIMG-STREAM-SIZE-LIMIT | 旧 `arrayBuffer()` 全読込経路を削除 | 実装を静的確認 | 成立 | `readResponseBody` は `getReader().read()` のみを使用 | 完了 |
+| UNIT-TEST-EVIDENCE | TEST-1 | FINAL-NEW-PRIMG-REQUIRED-TEST-EVIDENCE | PR本文の置換と添付1件の生成 | `resolvePrReviewImageAttachments` を実行し本文・一時ファイルを確認 | 成立 | `prReviewImageAttachments.integration.test.ts:220-243` | 完了 |
+| UNIT-TEST-EVIDENCE | TEST-2 | FINAL-NEW-PRIMG-REQUIRED-TEST-EVIDENCE | 通常コメント2 URLから一意なplaceholder・ファイル名を生成 | コメント本文に異なる2 URLを設定 | 成立 | `prReviewImageAttachments.integration.test.ts:245-278` | 完了 |
+| UNIT-TEST-EVIDENCE | TEST-3 | FINAL-NEW-PRIMG-REQUIRED-TEST-EVIDENCE | pipelineでtask spec・実ファイルを作成しcleanupで削除 | `executeTask`を含むpipelineを実行し、order・画像・削除を観測 | 未確認 | `pipelineExecution.test.ts:1571-1613` はresolver、task spec準備、実行をモック。統合テストはresolver直接実行のみ | 未完了 |
+
+## 不成立・未確認事項
+
+| 修正単位 | 義務ID | 種別 | 根拠 | 修正報告の証拠が検出できなかった理由 | 同じ検出パターンで再監査した範囲 | 必要な対応 |
+|----------|--------|------|------|----------------------------------------|----------------------------------|--------------|
+| UNIT-URL-CLASSIFY | URL-2 | 実装不足 | `segments.includes('assets')` が `/issues/assets/123` などを許可 | 正例と `/issues/123` のみをテストし、`assets` を含む形式外パスを検証していない | 本URL分類経路を再確認 | owner/repo/assets/id の厳密なパス構造を検証し、形式外URLの反例を追加 |
+| UNIT-SIZE-LIMIT | SIZE-2 | 実装不足 | Content-Length確認が本文読込後、超過時に `cancel()` なし | テストがrejectのみを確認し、早期終了・読込回数・cancelを観測していない | Buffer経路、ストリーム経路、容量超過経路を確認 | Content-Lengthを本文読込前に拒否し、超過時にストリームを明示的に停止・清掃する |
+| UNIT-TEST-EVIDENCE | TEST-3 | 証拠不足 | pipelineテストが実ファイル・order・task specを観測していない | モック戻り値の存在とcleanup関数呼出しだけでpipeline結合を完了扱いしている | add、直接`--pr`、pipelineの添付配線とcleanup経路を確認 | 実task spec準備、order内容、添付ファイル作成、`executeTask`後の削除を同一結合テストで観測する |
+
+## 環境要因により実証できない後続確認（判定非ブロッキング）
+
+| 対象 | 環境要因 | リポジトリ内で解消不能な根拠 | 現在確認した代替証拠 | 後続確認 |
+|------|----------|------------------------------|--------------------------|----------|
+| なし | なし | 決定的なモック・実filesystemテストで検証可能 | 対象単体・統合テストおよび静的確認を実行済み | なし |
+
+## 実行証跡
+
+| 対象 | 方法 | 結果 |
+|------|------|------|
+| URL分類 | `npm test -- src/__tests__/prReviewImageAttachments.test.ts` | 15件成功。ただし形式外`assets`パスの拒否は未検証 |
+| 画像ダウンロード | `npm test -- src/__tests__/prReviewImageAttachments.integration.test.ts` | 12件成功。ただし即時停止の観測は不足 |
+| pipeline | `npm test -- src/__tests__/pipelineExecution.test.ts` | 54件成功。ただし主要依存をモック |
+| add経路 | `npm test -- src/__tests__/addTask.test.ts` | 23件成功 |
+| 直接`--pr`経路 | `npm test -- src/__tests__/cli-routing-pr-resolve.test.ts` | 31件成功 |
+| GitHub Provider経路 | `npm test -- src/__tests__/github-provider.test.ts` | 40件成功 |
+| 分類契約 | `npm test -- src/__tests__/releaseVerificationWiring.test.ts` | 20件成功 |
+| URL形式外反例 | `issues/assets/123`、`assets/123`を直接分類 | いずれも誤って許可 |
+| ストリーム停止 | 超過ストリームのpull/cancelを観測 | pull回数2、cancel回数0 |
+| Content-Length上限 | 上限超過宣言レスポンスを観測 | 本文読込が1回発生し、事前拒否されない |

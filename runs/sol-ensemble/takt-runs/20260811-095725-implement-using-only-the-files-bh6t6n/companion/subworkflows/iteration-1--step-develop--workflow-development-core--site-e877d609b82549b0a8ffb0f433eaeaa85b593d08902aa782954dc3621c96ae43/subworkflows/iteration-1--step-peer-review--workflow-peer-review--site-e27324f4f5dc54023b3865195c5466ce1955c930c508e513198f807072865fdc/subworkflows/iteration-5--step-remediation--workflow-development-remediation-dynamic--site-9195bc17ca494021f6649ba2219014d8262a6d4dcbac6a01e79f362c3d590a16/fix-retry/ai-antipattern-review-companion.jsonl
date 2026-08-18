@@ -1,0 +1,10 @@
+{"id":"ai-antipattern-review-companion-1","severity":"must_fix","file":"src/infra/git/format.ts","line":326,"finding":"全ての現行利用側を `formatPrReviewTask` へ移行した後も、旧契約 `formatPrReviewAsTask` を互換 wrapper として残し、`infra/git/index.ts` からも再公開しています。明示された legacy/API 互換支援なしに置換対象の旧経路を維持する契約置換違反です。wrapper と旧 re-export を削除してください。","status":"open"}
+{"id":"ai-antipattern-review-companion-1","status":"unresolved"}
+{"id":"ai-antipattern-review-companion-1","status":"unresolved"}
+{"id":"ai-antipattern-review-companion-1","status":"wontfix_accepted"}
+{"id":"ai-antipattern-review-companion-1","status":"wontfix_accepted"}
+{"id":"ai-antipattern-review-companion-2","severity":"must_fix","file":"src/features/tasks/prReviewAttachments.ts","line":104,"finding":"インライン HTML の `<pre>...</pre>` 境界を追跡できていません。mdast では開始タグ・Markdown image・終了タグが兄弟ノードになり得るため、`htmlImageReferences` 内で `pre` の子を除外しても、ここでは `<pre>` 内の `image` / `imageReference` を通常画像として収集します。追加された「inline/nested pre 内の画像を保持する」テスト条件に反し、URLをダウンロードしてプレースホルダーへ置換します。Markdown断片全体で raw HTML の開始・終了状態を考慮して参照を抽出してください。","status":"open"}
+{"id":"ai-antipattern-review-companion-1","status":"wontfix_accepted"}
+{"id":"ai-antipattern-review-companion-2","status":"resolved"}
+{"id":"ai-antipattern-review-companion-1","status":"wontfix_accepted"}
+{"id":"ai-antipattern-review-companion-2","status":"resolved"}

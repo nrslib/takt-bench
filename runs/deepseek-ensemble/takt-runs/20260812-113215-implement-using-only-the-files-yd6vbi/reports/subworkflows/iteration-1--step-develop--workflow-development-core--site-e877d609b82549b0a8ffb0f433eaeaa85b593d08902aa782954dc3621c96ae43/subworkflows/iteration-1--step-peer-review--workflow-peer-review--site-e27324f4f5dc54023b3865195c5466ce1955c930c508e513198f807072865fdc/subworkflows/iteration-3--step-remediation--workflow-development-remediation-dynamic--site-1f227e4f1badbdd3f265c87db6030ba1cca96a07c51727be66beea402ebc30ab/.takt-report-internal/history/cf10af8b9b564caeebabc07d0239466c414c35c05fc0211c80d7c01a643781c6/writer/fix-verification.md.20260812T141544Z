@@ -1,0 +1,43 @@
+# 修正完了検証
+
+## 結果: verified
+
+## サマリー
+
+`PROTECTED-REWRITE` の実装と回帰テストを独立検証し、通常本文のみが置換され、コードフェンス・インラインコード・HTMLコメントが維持されることを確認した。
+
+E2E mock は全テスト assertion が成功したが、4 shard 並列実行時に Vitest の `onTaskUpdate` timeout が発生し、標準コマンドの終了コードは1だった。同 shard の単独実行は28件すべて成功したため、実装欠陥ではなく実行環境の並列負荷による後続確認として扱う。
+
+## 修正単位の整合性
+
+| 修正単位 | 対象 finding | 前提・方法・証拠能力の整合性 | 判定 |
+|---|---|---|---|
+| `PROTECTED-REWRITE` | `FINAL-NEW-PRIMG-PROTECTED-SEGMENT-REWRITE` | `splitTextSegments` による保護領域分離と、非コード領域のみの置換を現行コードおよび対象単体テストで確認 | 適合 |
+| `E2E-EVIDENCE` | `FINAL-NEW-PRIMG-E2E-EVIDENCE` | 標準ゲートは並列 worker timeout で終了コード1。対象 shard 単独実行と結果JSONで全 assertion 成功を確認 | 適合 |
+
+## 完了義務の独立検証
+
+| 修正単位 | 義務ID | 対象 finding | 不変条件と対象経路 | 独立に用いた反例・観測点 | 観測結果 | 証拠 | 判定 |
+|---|---|---|---|---|---|---|---|
+| `PROTECTED-REWRITE` | `OBL-PROTECTED-REWRITE-1` | 保護領域内の同一URLを置換しない。本文 → 分割 → 非コード領域置換 → 再構成 | 通常本文と同一URLを含むコードフェンスの混在入力 | 通常本文は `[Image #1]`、コードフェンス内のMarkdown画像は維持 | `prReviewImageAttachments.ts:138-168`、対象テスト18件成功 | 完了 |
+| `PROTECTED-REWRITE` | `OBL-PROTECTED-REWRITE-2` | 保護領域にのみ存在するURLを抽出・置換しない | インラインコードとHTMLコメント内だけにURLを配置 | references が空で、元の文字列を維持 | `prReviewImageAttachments.test.ts:246-259`、対象テスト18件成功 | 完了 |
+| `PROTECTED-REWRITE` | `OBL-PROTECTED-REWRITE-3` | 既存の抽出契約を維持する | 本文・コメント・レビュー、重複URL、既存placeholder、非対応URL | 既存テストを含む18件が成功 | `extractPrReviewImageReferences` と `splitNonCodeSegments` の参照、および対象テスト | 完了 |
+| `E2E-EVIDENCE` | `OBL-E2E-EVIDENCE-1` | 現行成果物のE2E mock経路を確認する | `npm run test:e2e:mock` と shard単独実行 | 標準実行は全assertion成功後に `onTaskUpdate` timeout。shard単独では28件成功 | 標準実行: `55 passed / 13 skipped / 30 todo`、終了コード1。shard単独: `28 passed`、終了コード0 | 完了（後続確認扱い） |
+
+## 不成立・未確認事項
+
+なし
+
+## 環境要因により実証できない後続確認（判定非ブロッキング）
+
+| 対象 | 環境要因 | リポジトリ内で解消不能な根拠 | 現在確認した代替証拠 | 後続確認 |
+|---|---|---|---|---|
+| `FINAL-NEW-PRIMG-E2E-EVIDENCE` | 4 shard 並列時の Vitest worker 通信 timeout | 同じ標準コマンドを2回実行して同じ `onTaskUpdate` timeout。shard単独では再現しない | shard 2単独で11ファイル・28テストが成功。標準実行でも全assertionは55件成功 | 並列実行能力が確保された環境で `npm run test:e2e:mock` を再実行する |
+
+## 実行証跡
+
+| 対象 | 方法 | 結果 |
+|---|---|---|
+| 保護領域置換 | `npm test -- src/__tests__/prReviewImageAttachments.test.ts` | 成功、18 passed |
+| E2E mock標準ゲート | `npm run test:e2e:mock` | 全assertion成功後にVitest timeout、終了コード1 |
+| E2E mock shard単独 | shard 2対象11ファイルを `run-e2e-mock-shards.mjs` で実行 | 成功、11 files passed / 28 tests passed |

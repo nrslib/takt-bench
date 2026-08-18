@@ -1,0 +1,24 @@
+{"id":"ai-antipattern-review-companion-1","severity":"must_fix","file":"src/features/tasks/prReviewAttachments.ts","line":559,"finding":"既存本文中の添付プレースホルダーを予約せず、ストアが常に `[Image #1]` から採番しています。例えば `Compare [Image #1] with ![actual](URL)` は両方が同じ添付参照になり、変更対象外の本文まで画像参照として再解釈されます。入力に存在するプレースホルダーとの衝突を避ける採番と、その反例テストが必要です。","status":"open"}
+{"id":"ai-antipattern-review-companion-2","severity":"must_fix","file":"src/features/tasks/prReviewAttachments.ts","line":416,"finding":"`updateActiveListIndents` が受け取った配列を `length = 0`、`pop()`、`push()` で直接変更しており、提示された状態直接変更禁止の基準に反します。同じ family の `buildMarkdownLineContexts` 内の配列変更も含め、更新後の配列を返して所有側で置き換える形にしてください。","status":"open"}
+{"id":"ai-antipattern-review-companion-1","status":"unresolved"}
+{"id":"ai-antipattern-review-companion-2","status":"unresolved"}
+{"id":"ai-antipattern-review-companion-1","status":"unresolved"}
+{"id":"ai-antipattern-review-companion-2","status":"unresolved"}
+{"id":"ai-antipattern-review-companion-1","status":"unresolved"}
+{"id":"ai-antipattern-review-companion-2","status":"unresolved"}
+{"id":"ai-antipattern-review-companion-3","severity":"must_fix","file":"src/features/tasks/attachments.ts","line":31,"finding":"`resolveMaxImageAttachmentIndex` は追加されていますが、累積差分内に import・呼び出しがなく、PR画像ストアの採番は依然 `[Image #1]` から始まります。既存プレースホルダーとの衝突を解消しない未使用 public export なので、採番経路へ実際に配線して反例テストを追加するか、この関数を削除して別の直接的な修正を行う必要があります。","status":"open"}
+{"id":"ai-antipattern-review-companion-1","status":"unresolved"}
+{"id":"ai-antipattern-review-companion-2","status":"unresolved"}
+{"id":"ai-antipattern-review-companion-3","status":"unresolved"}
+{"id":"ai-antipattern-review-companion-1","status":"unresolved"}
+{"id":"ai-antipattern-review-companion-2","status":"unresolved"}
+{"id":"ai-antipattern-review-companion-3","status":"unresolved"}
+{"id":"ai-antipattern-review-companion-1","status":"unresolved"}
+{"id":"ai-antipattern-review-companion-2","status":"unresolved"}
+{"id":"ai-antipattern-review-companion-3","status":"unresolved"}
+{"id":"ai-antipattern-review-companion-1","status":"unresolved"}
+{"id":"ai-antipattern-review-companion-2","status":"resolved"}
+{"id":"ai-antipattern-review-companion-3","status":"resolved"}
+{"id":"ai-antipattern-review-companion-1","status":"resolved"}
+{"id":"ai-antipattern-review-companion-2","status":"resolved"}
+{"id":"ai-antipattern-review-companion-3","status":"resolved"}

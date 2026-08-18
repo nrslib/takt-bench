@@ -1,0 +1,19 @@
+# レビュー指摘裁定
+
+## 結果: 修正対象なし
+
+## 裁定サマリー
+
+iteration 6 の最新 reviewer レポート5件を対象とした。全レポートが APPROVE であり、提出された一意な finding は過去指摘の解消済み参照1件のみだった。
+
+現行コードでは、PR画像の一時store取得直後に同期exit cleanupを登録し、hard exit、通常終了、例外の各経路で一回だけcleanupする配線が確認できる。routeテストは3つのhard-exit経路をexit listener実行直後に観測し、実child processのheavy ITも終了後の画像・session directory不存在を確認している。このため修正対象 family は0件、非修正対象は1件である。競合する要求や未解決前提はなく、再計画は不要である。
+
+## 指摘ごとの裁定
+
+| finding ID / 出典 | 裁定 | 対象 family | 根拠 |
+|-------------------|------|-------------|------|
+| `AI-NEW-pr-attachment-cleanup-hard-exit-L307` / `ai-antipattern-review.md`、`coding-review.md`、`testing-review.md` | `no_issue_after_verification` | なし | `src/app/cli/routing.ts:124-125,346-348`で一時store取得直後にcleanupを登録し、通常終了時も同じ終了関数を呼ぶ。`src/app/cli/processExitCleanup.ts:1-15`は同期exit listener、一回性、listener解除を実装し、実cleanupは`src/shared/utils/imageAttachmentStore.ts:56-61,110-112`の同期`rmSync`へ到達する。`src/__tests__/cli-routing-pr-resolve.test.ts:436-493,564-590`はworkflow失敗、PR context検証失敗、head branch欠落についてexit listener実行直後のcleanupを観測する。`src/__tests__/it-pr-attachment-process-exit-cleanup.test.ts:12-34`と最新レビューの実行証跡では、実child processの非0終了後に画像とsession directoryが存在しないことを確認している。元の欠陥は解消済みで、現在追加すべき修正はない。 |
+
+## 未解決の前提
+
+- なし。actionable finding は残っておらず、最終マージ準備ゲートへ送る。

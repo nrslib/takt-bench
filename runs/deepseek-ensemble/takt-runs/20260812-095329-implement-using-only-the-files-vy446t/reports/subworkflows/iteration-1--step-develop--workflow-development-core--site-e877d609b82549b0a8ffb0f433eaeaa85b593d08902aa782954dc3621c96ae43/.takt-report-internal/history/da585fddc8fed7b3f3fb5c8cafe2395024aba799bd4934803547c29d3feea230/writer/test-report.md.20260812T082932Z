@@ -1,0 +1,60 @@
+# write_tests レポート
+
+## 概要
+
+`order.md` の要求（PR コメント内の画像をダウンロードして task attachments に配置する）に対する test-first 工程。計画 `plan.md` の完了契約 `PRIMG-EXTRACT` / `PRIMG-VALIDATE` / `PRIMG-ADD` / `PRIMG-DIRECT` / `PRIMG-PIPELINE` / `PRIMG-MAINTAIN` / `PRIMG-QUALITY` を直接観測するテストを作成した。プロダクションコードは変更していない。
+
+## 作成・更新したテスト
+
+### 新規（単体）
+
+- `src/__tests__/imageFormat.test.ts` — `src/shared/utils/imageFormat.ts` の magic bytes 判定、MIME→拡張子変換、サイズ上限を検証。
+- `src/__tests__/prReviewImageAttachments.test.ts` — `src/infra/github/prReviewImageAttachments.ts` の抽出・分類・採番を検証。PR 本文 / 通常コメント / review summary / thread コメント、Markdown 画像 / HTML `<img>`、コードフェンス / インラインコード / HTML コメント / 外部 URL の非検出、重複 URL 集約、既存プレースホルダー衝突回避、入力不変性。
+
+### 新規（軽量統合）
+
+- `src/__tests__/prReviewImageAttachments.integration.test.ts` — 認証トークン取得と HTTP 応答を test double に置き換え、実一時ファイルで Content-Type 不一致、magic 不一致、サイズ超過、途中失敗時清掃、認証ヘッダ付与を検証。`*.integration.test.ts` 命名で heavy parallel glob に分類される。
+
+### 更新（既存入口テスト）
+
+- `src/__tests__/imageAttachments.test.ts` — 非連番の初期 attachment 後の採番（`[Image #3]` 初期 → 次は `[Image #4]`）。
+- `src/__tests__/github-provider.test.ts` — `resolvePrReviewImageAttachments` capability の委譲。
+- `src/__tests__/addTask.test.ts` — PR 画像の保存・添付節生成、本文画像のみの PR 保存、workflow キャンセル時 / 解決失敗時の清掃。
+- `src/__tests__/cli-routing-pr-resolve.test.ts` — interactive seed への attachments 伝播、キャンセル / 例外時の清掃。
+- `src/__tests__/pipelineExecution.test.ts` — attachment 付き task spec の実行、実行失敗時の清掃。
+
+## 実行結果（test-first 検証）
+
+未実装のプロダクション動作を理由に失敗することを確認した。既存テストは回帰なし。
+
+| 対象 | 結果 |
+|------|------|
+| `imageFormat.test.ts` / `prReviewImageAttachments.test.ts`（unit） | モジュール未存在で失敗（期待どおり） |
+| `prReviewImageAttachments.integration.test.ts`（heavy IT） | モジュール未存在で失敗（期待どおり） |
+| `imageAttachments.test.ts` / `github-provider.test.ts`（heavy IT） | 新規 2 件が未実装動作で失敗、既存 54 件は成功 |
+| `addTask.test.ts`（heavy IT） | 新規 4 件が未実装動作で失敗、既存 17 件は成功 |
+| `cli-routing-pr-resolve.test.ts` / `pipelineExecution.test.ts`（unit） | 新規 5 件が未実装動作で失敗、既存 76 件は成功 |
+| `releaseVerificationWiring.test.ts` | 20 件成功（分類契約維持） |
+
+`npx tsc --noEmit` は成功。テストファイルは eslint の ignore 対象（既存規約どおり）。
+
+## 誤実装を拒否する入力・assertion の対応
+
+- コードフェンス / インラインコード / HTML コメント内の画像記法 → 取得せず本文維持（`prReviewImageAttachments.test.ts`）。
+- 外部 URL / 非 HTTPS → 取得しない（同）。
+- 既存 `[Image #N]` との衝突 → 未使用番号を割り当て（同）。
+- 同一 URL 重複 → 1 回だけ取得し全出現を同一プレースホルダーへ（同）。
+- Content-Type / magic 不一致、サイズ超過 → 失敗（integration）。
+- 途中失敗時 → 作成済み一時ファイルを清掃（integration）。
+- 本文画像のみの PR → コメントなしとして拒否しない（`addTask.test.ts`）。
+- workflow キャンセル / 解決失敗 → 一時画像を清掃（`addTask.test.ts`、`cli-routing-pr-resolve.test.ts`）。
+- pipeline 実行失敗 → task spec と一時画像を清掃（`pipelineExecution.test.ts`）。
+
+## 未カバー理由
+
+- 実 HTTP 取得・`gh auth token` 実呼び出しは外部依存のため test double で代替（integration で検証）。
+- 実 run context への画像複製は既存 `stageTaskSpecForExecution()` の契約であり、pipeline テストで `taskSpec` / `reportDirName` の一致を観測する。
+
+## セルフスキャン
+
+今回の編集差分（テストファイルのみ）を走査した。未使用 import / 変数なし、依存方向の逆転なし、共通責務の重複なし。`package-lock.json` は `npm install` による無関係な integrity 差分を検出し revert 済み。
